@@ -94,3 +94,6 @@ CONSENSUS_MAX_CALLS_PER_HOUR = _env_int("CONSENSUS_MAX_CALLS_PER_HOUR", 20)
 OPENAI_MODEL = _env("OPENAI_MODEL", "gpt-4o")
 CLAUDE_MODEL = _env("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 PERPLEXITY_MODEL = _env("PERPLEXITY_MODEL", "sonar-pro")
+
+# ── Notifications ─────────────────────────────────────────────────
+SLACK_WEBHOOK_URL = _env("SLACK_WEBHOOK_URL", "")

@@ -1,6 +1,6 @@
 """
 Consensus Engine - Multi-AI Jury System.
-Claude + GPT must both agree to BUY. Perplexity breaks ties.
+Claude + GPT must both agree on direction (BUY or SHORT). Perplexity breaks ties.
 """
 
 import asyncio
@@ -21,7 +21,7 @@ from config import settings
 @dataclass
 class ModelVote:
     model: str
-    decision: str  # "BUY" or "SKIP"
+    decision: str  # "BUY", "SHORT", or "SKIP"
     confidence: int  # 0-100
     reasoning: str = ""
     target_price: Optional[float] = None
@@ -32,7 +32,7 @@ class ModelVote:
 @dataclass
 class ConsensusResult:
     symbol: str
-    final_decision: str  # "BUY" or "SKIP"
+    final_decision: str  # "BUY", "SHORT", or "SKIP"
     size_modifier: float  # 1.0 = full, 0.75 = reduced, 0.0 = no trade
     avg_confidence: float
     claude_vote: Optional[ModelVote] = None
@@ -58,7 +58,7 @@ class ConsensusResult:
 
 # ── Prompt ────────────────────────────────────────────────────────
 
-ANALYSIS_PROMPT = """You are a SHORT-TERM MOMENTUM TRADER. Your job is to find stocks likely to move up 2-5% in the next few hours.
+ANALYSIS_PROMPT = """You are a SHORT-TERM MOMENTUM TRADER. Your job is to find stocks likely to move 2-5% in the next few hours — UP or DOWN.
 
 CRITICAL CONTEXT: We have a TRAILING STOP at 3% protecting every position. If we're wrong, we lose 3% max. If we're right and it runs 20%, the trailing stop locks in the profit. Our ONLY job is to pick stocks more likely to go UP than DOWN in the near term. We are NOT evaluating this as a long-term investment.
 
@@ -84,26 +84,31 @@ DECISION FRAMEWORK:
 - BUY if: momentum is strong, sentiment is positive, volume is elevated, stock has room to run
 - BUY if: social buzz is high and price is still moving up (momentum intact)
 - BUY if: news catalyst + volume spike (early stage of a move)
-- SKIP ONLY if: momentum is clearly exhausted, sentiment is turning bearish, stock is extended and dumping, or no volume
+- SHORT if: stock ran 30%+ yesterday and is showing weakness/profit-taking today (fade the runner)
+- SHORT if: sentiment is turning very bearish, volume is spiking on the downside, breaking key support
+- SHORT if: bad news catalyst (earnings miss, FDA rejection, SEC investigation) with heavy selling
+- SKIP ONLY if: no clear direction, low volume, or mixed signals that don't favor either side
 - DO NOT skip just because a stock already moved today — momentum stocks keep running
 - DO NOT evaluate as a long-term hold — we're in and out within hours
 - Remember: 3% trailing stop protects us. The question is NOT "is this safe?" but "is this likely to go higher?"
 
 Respond with ONLY valid JSON (no markdown):
-{{"decision": "BUY" or "SKIP", "confidence": 0-100, "reasoning": "brief explanation", "target_price": number or null, "stop_price": number or null}}"""
+{{"decision": "BUY" or "SHORT" or "SKIP", "confidence": 0-100, "reasoning": "brief explanation", "target_price": number or null, "stop_price": number or null}}"""
 
 PERPLEXITY_PROMPT = """Search for the latest news about {symbol} ({company}) in the last 4 hours.
 
-We're a SHORT-TERM MOMENTUM TRADER deciding whether to buy this stock for a few hours, with a 3% trailing stop protecting us.
+We're a SHORT-TERM MOMENTUM TRADER deciding whether to BUY (long) or SHORT this stock for a few hours, with a trailing stop protecting us.
 
 The question is simple: Based on current news, is this stock more likely to go UP or DOWN in the next few hours?
 
-- If news is positive, neutral, or there's a catalyst driving the move → BUY
-- If news reveals fraud, SEC investigation, or the move is clearly over → SKIP
-- If no news found, default to BUY if the stock has momentum (we have a trailing stop)
+- If news is positive, neutral, or there's a catalyst driving the move UP → BUY
+- If news reveals fraud, SEC investigation, earnings miss, FDA rejection → SHORT (profit from the drop)
+- If stock ran huge yesterday and is fading today → SHORT (fade the runner)
+- If no news found, default to BUY if the stock has upward momentum (we have a trailing stop)
+- SKIP only if truly no clear direction
 
 Respond with ONLY valid JSON (no markdown):
-{{"decision": "BUY" or "SKIP", "confidence": 0-100, "reasoning": "what the latest news says"}}"""
+{{"decision": "BUY" or "SHORT" or "SKIP", "confidence": 0-100, "reasoning": "what the latest news says"}}"""
 
 
 # ── Engine ────────────────────────────────────────────────────────
@@ -370,23 +375,24 @@ class ConsensusEngine:
                 avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
                 reasoning="Both models say SKIP")
 
-        # Both BUY — when both models agree, trust them
-        if claude.decision == "BUY" and gpt.decision == "BUY":
+        # Both agree on direction (BUY or SHORT)
+        if claude.decision == gpt.decision and claude.decision in ("BUY", "SHORT"):
+            direction = claude.decision
             if avg_conf >= 60:
                 return ConsensusResult(
-                    symbol=symbol, final_decision="BUY", size_modifier=1.0,
+                    symbol=symbol, final_decision=direction, size_modifier=1.0,
                     avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both BUY, strong ({avg_conf:.0f}%) — full size")
+                    reasoning=f"Both {direction}, strong ({avg_conf:.0f}%) — full size")
             elif avg_conf >= 40:
                 return ConsensusResult(
-                    symbol=symbol, final_decision="BUY", size_modifier=0.75,
+                    symbol=symbol, final_decision=direction, size_modifier=0.75,
                     avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both BUY, moderate ({avg_conf:.0f}%) — 75% size")
+                    reasoning=f"Both {direction}, moderate ({avg_conf:.0f}%) — 75% size")
             else:
                 return ConsensusResult(
-                    symbol=symbol, final_decision="BUY", size_modifier=0.5,
+                    symbol=symbol, final_decision=direction, size_modifier=0.5,
                     avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both BUY, low confidence ({avg_conf:.0f}%) — 50% size")
+                    reasoning=f"Both {direction}, low confidence ({avg_conf:.0f}%) — 50% size")
 
         # Disagreement → Perplexity tie-breaker
         logger.info(f"🔀 Tie-breaker needed for {symbol} (Claude={claude.decision}, GPT={gpt.decision})")
@@ -399,12 +405,12 @@ class ConsensusEngine:
                 perplexity_vote=pplx,
                 reasoning="Tie-breaker failed — conservative SKIP")
 
-        if pplx.decision == "BUY":
+        if pplx.decision in ("BUY", "SHORT"):
             return ConsensusResult(
-                symbol=symbol, final_decision="BUY", size_modifier=0.75,
+                symbol=symbol, final_decision=pplx.decision, size_modifier=0.75,
                 avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
                 perplexity_vote=pplx,
-                reasoning=f"Tie-break: Perplexity says BUY — reduced size")
+                reasoning=f"Tie-break: Perplexity says {pplx.decision} — reduced size")
         else:
             return ConsensusResult(
                 symbol=symbol, final_decision="SKIP", size_modifier=0.0,

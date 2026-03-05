@@ -29,6 +29,7 @@ from signals.twitter import TwitterSentimentClient
 from signals.pharma_catalyst import PharmaCatalystScanner
 from signals.fade_runner import FadeRunnerScanner
 from signals.watchlist import DynamicWatchlist
+from signals.edgar import EdgarScanner
 from dashboard.dashboard import log_activity
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
@@ -120,6 +121,9 @@ class TradingBot:
 
         # Fade runner scanner (short yesterday's big runners)
         self.fade_scanner = FadeRunnerScanner(polygon_client=self.polygon_client)
+
+        # EDGAR SEC filing scanner (free, no auth)
+        self.edgar_scanner = EdgarScanner()
 
         # Dynamic watchlist (built overnight, used during trading)
         self.watchlist = DynamicWatchlist()
@@ -215,8 +219,8 @@ class TradingBot:
                         await self._overnight_session(et)
                         await asyncio.sleep(300)  # 5 min between overnight cycles
                         continue
-                    # Extended hours: scan but don't trade (unless pharma catalyst)
-                    logger.debug(f"📡 Extended hours scanning ({et.strftime('%H:%M')} ET)")
+                    # Extended hours: scan AND trade (earnings, FDA, filings drop in AH/PM)
+                    logger.debug(f"📡 Extended hours active ({et.strftime('%H:%M')} ET) — scanning + trading")
 
                 if self.paused:
                     await asyncio.sleep(5)
@@ -377,6 +381,25 @@ class TradingBot:
                             {"watchlist_count": len(self.watchlist), "bias": thesis.get("market_bias", "?")})
             except Exception as e:
                 logger.debug(f"Overnight thesis/watchlist failed: {e}")
+
+        # ── EDGAR: Scan SEC filings for material events (every 30 min) ──
+        last_edgar = state.get("last_edgar_scan", 0)
+        if now - last_edgar > 1800:
+            try:
+                filings = await self.edgar_scanner.scan_recent_filings()
+                if filings:
+                    state["last_edgar_scan"] = now
+                    tasks_run.append("edgar")
+                    for f in filings[:5]:
+                        ticker = f.get("ticker", "?")
+                        form = f.get("form_type", "?")
+                        log_activity("research", f"📋 SEC {form}: {ticker} — {f.get('description', '')[:80]}")
+                        # Add 8-K filers to watchlist as potential catalysts
+                        if form == "8-K" and ticker:
+                            self.watchlist.add(ticker, side="long", conviction=0.5,
+                                              source="edgar", reason=f"8-K filing: {f.get('description', '')[:50]}")
+            except Exception as e:
+                logger.debug(f"EDGAR scan failed: {e}")
 
         # ── NEWS: Scan overnight news for market-moving events (every 2 hours) ──
         if now - last_news > 2 * 3600:
@@ -549,7 +572,7 @@ class TradingBot:
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
                 continue
 
-            # Consensus engine — Claude + GPT jury must agree
+            # Consensus engine — Claude + GPT jury must agree on direction
             if self.consensus_engine:
                 try:
                     consensus = await self.consensus_engine.evaluate(
@@ -558,70 +581,172 @@ class TradingBot:
                         signals_data=candidate,
                     )
                     self.ai_layers["last_consensus"] = consensus.to_dict()
-                    if consensus.final_decision != "BUY":
+                    if consensus.final_decision not in ("BUY", "SHORT"):
                         logger.info(f"🗳️ Consensus SKIP for {symbol}: {consensus.reasoning}")
                         log_activity("ai", f"🗳️ {symbol}: SKIP — {consensus.reasoning[:100]}")
                         continue
-                    log_activity("trade", f"🗳️ {symbol}: BUY consensus! conf={consensus.avg_confidence}% size={consensus.size_modifier}%")
-                    # Apply size modifier to sentiment_data for entry manager
+                    direction = consensus.final_decision
+                    log_activity("trade", f"🗳️ {symbol}: {direction} consensus! conf={consensus.avg_confidence}% size={consensus.size_modifier}%")
                     sentiment_data["consensus_size_modifier"] = consensus.size_modifier
                     sentiment_data["consensus_confidence"] = consensus.avg_confidence
+                    sentiment_data["consensus_direction"] = direction
                 except Exception as e:
                     logger.error(f"Consensus error for {symbol}: {e}")
+                    continue  # Never trade without consensus
 
             can = await self.entry_manager.can_enter(symbol, sentiment_score, positions)
             if can:
-                logger.info(f"📈 Entry signal: {symbol} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
-                pos = await self.entry_manager.enter_position(symbol, sentiment_data)
+                direction = sentiment_data.get("consensus_direction", "BUY")
+                logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
+                if direction == "SHORT":
+                    pos = await self.entry_manager.enter_short(symbol, sentiment_data)
+                else:
+                    pos = await self.entry_manager.enter_position(symbol, sentiment_data)
                 if pos:
+                    self._send_trade_alert(pos, direction)
                     positions = self.entry_manager.get_positions()
 
     async def _monitor_positions(self):
-        """Check exit conditions for all open positions."""
+        """
+        Monitor positions — but DO NOT exit them.
+        Trailing stop % on Alpaca is the ONLY exit strategy.
+        This method only:
+          1. Verifies trailing stops exist (retries if missing)
+          2. Syncs positions with Alpaca (detect fills from trailing stops)
+          3. Records completed trades to history
+        """
         positions = self.entry_manager.get_positions()
         if not positions:
+            return
+
+        # Get actual Alpaca positions to detect trailing stop fills
+        try:
+            alpaca_positions = await asyncio.get_event_loop().run_in_executor(
+                None, self.alpaca_client.get_positions
+            )
+            alpaca_symbols = {p["symbol"] for p in alpaca_positions}
+        except Exception as e:
+            logger.debug(f"Alpaca position sync error: {e}")
             return
 
         for pos in list(positions):
             symbol = pos["symbol"]
             try:
-                price = await asyncio.get_event_loop().run_in_executor(
-                    None, self.polygon_client.get_price, symbol
-                )
-                if price <= 0:
-                    continue
+                # ── DETECT TRAILING STOP FILLS ──
+                # If we're tracking it but Alpaca no longer has it → trailing stop fired
+                if symbol not in alpaca_symbols:
+                    entry_price = pos.get("entry_price", 0)
+                    # Get the last fill price from closed orders
+                    exit_price = entry_price  # default
+                    try:
+                        orders = await asyncio.get_event_loop().run_in_executor(
+                            None, self.alpaca_client.get_orders, "closed"
+                        )
+                        for o in orders:
+                            if o.get("symbol") == symbol and o.get("type") == "trailing_stop":
+                                exit_price = float(o.get("filled_avg_price", entry_price))
+                                break
+                    except Exception:
+                        pass
 
-                self.entry_manager.update_peak_price(symbol, price)
+                    qty = pos.get("quantity", 0)
+                    side = pos.get("side", "long")
+                    if side == "short":
+                        pnl = (entry_price - exit_price) * qty
+                    else:
+                        pnl = (exit_price - entry_price) * qty
+                    pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
+                    if side == "short":
+                        pnl_pct = -pnl_pct
 
-                sent = self.sentiment_analyzer.get_cached(symbol)
-                sent_score = sent["score"] if sent else 0
-
-                # Exit manager uses dynamic stop from risk tier
-                trade = await self.exit_manager.check_and_exit(pos, price, sent_score)
-                if trade:
-                    logger.info(f"📊 Exit: {symbol} → {trade['reason']} P&L: ${trade['pnl']:.2f}")
-                    # Persist to trade history
                     trade_record = {
                         "symbol": symbol,
-                        "side": "sell",
-                        "entry_price": trade.get("entry_price", 0),
-                        "exit_price": trade.get("exit_price", 0),
-                        "quantity": trade.get("quantity", 0),
-                        "pnl": trade.get("pnl", 0),
-                        "pnl_pct": trade.get("pnl_pct", 0),
-                        "reason": trade.get("reason", ""),
-                        "hold_seconds": trade.get("hold_seconds", 0),
+                        "side": "sell" if side == "long" else "buy_to_cover",
+                        "entry_price": entry_price,
+                        "exit_price": exit_price,
+                        "quantity": qty,
+                        "pnl": pnl,
+                        "pnl_pct": pnl_pct,
+                        "reason": "trailing_stop",
+                        "hold_seconds": time.time() - pos.get("entry_time", time.time()),
                         "entry_time": pos.get("entry_time", 0),
                         "exit_time": time.time(),
                         "sentiment_at_entry": pos.get("sentiment_at_entry", 0),
-                        "sentiment_at_exit": sent_score,
                         "conviction_level": pos.get("conviction_level", "normal"),
                         "risk_tier": self.risk_manager.get_risk_tier().get("name", "?"),
                     }
                     trade_history.record_trade(trade_record)
+                    self.entry_manager.remove_position(symbol)
+                    self.risk_manager.record_trade_pnl(pnl)
+
+                    emoji = "✅" if pnl >= 0 else "❌"
+                    logger.info(f"{emoji} TRAILING STOP EXIT: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                    log_activity("trade", f"{emoji} {symbol} stopped out: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                    self._send_exit_alert(symbol, pnl, pnl_pct, pos.get("trail_pct", 3.0))
+                    continue
+
+                # ── VERIFY TRAILING STOP EXISTS ──
+                if not pos.get("has_trailing_stop"):
+                    logger.warning(f"⚠️ {symbol} has NO trailing stop — retrying placement")
+                    qty = int(float(pos.get("quantity", 0)))
+                    trail_pct = pos.get("trail_pct", 3.0)
+                    if qty >= 1:
+                        stop_order = await asyncio.get_event_loop().run_in_executor(
+                            None, self.alpaca_client.place_trailing_stop, symbol, qty, trail_pct
+                        )
+                        if stop_order:
+                            pos["has_trailing_stop"] = True
+                            pos["trailing_stop_order_id"] = stop_order.get("id")
+                            logger.success(f"📈 Trailing stop recovered: {symbol} trail={trail_pct}%")
+                        else:
+                            # Last resort: market sell to protect capital
+                            logger.error(f"🚨 TRAILING STOP FAILED 3x for {symbol} — MARKET SELLING for protection")
+                            await asyncio.get_event_loop().run_in_executor(
+                                None, self.alpaca_client.place_market_sell, symbol, qty
+                            )
+                            self.entry_manager.remove_position(symbol)
+                            log_activity("alert", f"🚨 Emergency market sell: {symbol} — trailing stop could not be placed")
 
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")
+
+    def _send_trade_alert(self, pos: dict, direction: str):
+        """Send Slack webhook alert on trade entry."""
+        try:
+            import httpx
+            webhook_url = getattr(settings, 'SLACK_WEBHOOK_URL', None)
+            if not webhook_url:
+                return
+            symbol = pos.get("symbol", "?")
+            price = pos.get("entry_price", 0)
+            notional = pos.get("notional", 0)
+            trail = pos.get("trail_pct", 3.0)
+            emoji = "📈" if direction == "BUY" else "📉"
+            text = (
+                f"{emoji} *Velox {direction}*: `{symbol}` @ ${price:.2f}\n"
+                f"Size: ${notional:.2f} | Trail: {trail}% | "
+                f"Conviction: {pos.get('conviction_level', '?')} | "
+                f"{'🛡️ Trailing stop active' if pos.get('has_trailing_stop') else '⚠️ NO STOP'}"
+            )
+            httpx.post(webhook_url, json={"text": text}, timeout=5)
+        except Exception as e:
+            logger.debug(f"Slack alert failed: {e}")
+
+    def _send_exit_alert(self, symbol: str, pnl: float, pnl_pct: float, trail_pct: float):
+        """Send Slack webhook alert on trade exit."""
+        try:
+            import httpx
+            webhook_url = getattr(settings, 'SLACK_WEBHOOK_URL', None)
+            if not webhook_url:
+                return
+            emoji = "✅" if pnl >= 0 else "❌"
+            text = (
+                f"{emoji} *Velox EXIT*: `{symbol}` — P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)\n"
+                f"Trail: {trail_pct}% | Reason: trailing stop"
+            )
+            httpx.post(webhook_url, json={"text": text}, timeout=5)
+        except Exception as e:
+            logger.debug(f"Slack alert failed: {e}")
 
     async def shutdown(self):
         """Graceful shutdown."""
