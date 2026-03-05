@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "market_assessment": "Market session in progress (mid-morning), but portfolio is 99.2% cash with only $197 deployed \u2014 essentially flat/inactive positioning.",
+    "position_health": [
+      {
+        "symbol": "SOC",
+        "status": "dying",
+        "note": "Fractional position worth ~$10, zero movement from entry ($12.76 flat), too small to matter \u2014 likely residual/error position"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Position worth ~$187, up slightly (peak $29.60 vs entry $29.56), has trailing stop protection active \u2014 properly managed but very small"
+      }
+    ],
+    "risk_flags": [
+      "Extreme cash drag: 99.2% idle capital ($24,801) earning nothing while markets are open",
+      "Heat utilization critical: only 0.2% of allowable 2.5% position size deployed",
+      "Fractional SOC position ($10) is below any meaningful trading threshold \u2014 cleanup needed",
+      "Zero trades executed today despite being mid-session \u2014 capital velocity is nonexistent",
+      "Open risk at $1.97 is negligible but prevents these positions from being productive"
+    ],
+    "what_working": [
+      "Trailing stop discipline on TTD shows proper risk management structure",
+      "TTD showing small profit \u2014 green is green"
+    ],
+    "what_not_working": [
+      "Capital deployment strategy completely stalled \u2014 can't compound what isn't working",
+      "Position sizing far too conservative relative to account rules (2.5% = $625 max, only using ~$197 total)",
+      "SOC position appears abandoned/orphaned \u2014 taking up mental overhead for $10 exposure",
+      "Scanner showing zero candidates \u2014 either market has no opportunities OR scanning logic needs adjustment"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772728396.2857559
+  }
+]

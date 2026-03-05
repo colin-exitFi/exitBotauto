@@ -3,32 +3,24 @@
     "symbol": "SOC",
     "entry_price": 12.76,
     "quantity": 0.777429467,
-    "entry_time": 1772728235.160658,
+    "entry_time": 1772728376.258129,
     "sentiment_at_entry": 0,
     "peak_price": 12.76,
     "order_id": "",
     "partial_exit": false,
-    "from_brokerage": true,
-    "_trail_retry_count": 1
+    "from_brokerage": true
   },
   "TTD": {
     "symbol": "TTD",
-    "entry_price": 29.555,
-    "quantity": 6.343901,
-    "entry_time": 1772728350.405469,
-    "sentiment_at_entry": 0.0909,
-    "peak_price": 29.555,
-    "side": "long",
-    "order_id": "d41fe219-3f14-4eb0-8a7e-6118f1e3c94d",
+    "entry_price": 29.56,
+    "quantity": 6.342692828,
+    "entry_time": 1772728376.258236,
+    "sentiment_at_entry": 0,
+    "peak_price": 29.6,
+    "order_id": "",
     "partial_exit": false,
-    "atr_at_entry": null,
-    "extended_hours_entry": false,
-    "conviction_level": "speculative",
-    "risk_tier": "COMPOUND",
-    "notional": 187.494,
-    "trail_pct": 3.0,
-    "trailing_stop_order_id": null,
-    "has_trailing_stop": false,
-    "order_status": "filled"
+    "from_brokerage": true,
+    "has_trailing_stop": true,
+    "trailing_stop_order_id": "4e60b50a-0796-40c6-9932-598064bc8530"
   }
 }
