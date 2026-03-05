@@ -277,7 +277,10 @@ class TradingBot:
 
         scan_interval = settings.SCAN_INTERVAL_SECONDS
         self.scan_regime = "mixed"
+        self.scan_regime_raw = "mixed"
+        self._scan_regime_history = []
         self.ai_layers["scan_regime"] = self.scan_regime
+        self.ai_layers["scan_regime_raw"] = self.scan_regime_raw
         self.ai_layers["scan_interval_seconds"] = scan_interval
         monitor_interval = 5
         last_scan = 0
@@ -353,13 +356,25 @@ class TradingBot:
                             await self.market_stream.subscribe(top_symbols + pos_symbols)
                         await self._process_candidates(candidates)
 
-                        new_regime = self.scanner.get_last_market_regime() if self.scanner else "mixed"
-                        new_scan_interval = self._determine_scan_interval(new_regime)
-                        if new_regime != self.scan_regime or new_scan_interval != scan_interval:
-                            logger.info(f"⏱️ Adaptive scan cadence: regime={new_regime}, interval={new_scan_interval}s")
-                            log_activity("scan", f"Adaptive cadence: regime={new_regime}, interval={new_scan_interval}s")
-                        self.scan_regime = new_regime
+                        raw_regime = self.scanner.get_last_market_regime() if self.scanner else "mixed"
+                        effective_regime = self._smooth_scan_regime(raw_regime)
+                        new_scan_interval = self._determine_scan_interval(effective_regime)
+                        if (
+                            raw_regime != self.scan_regime_raw
+                            or effective_regime != self.scan_regime
+                            or new_scan_interval != scan_interval
+                        ):
+                            logger.info(
+                                f"⏱️ Adaptive scan cadence: raw={raw_regime}, regime={effective_regime}, interval={new_scan_interval}s"
+                            )
+                            log_activity(
+                                "scan",
+                                f"Adaptive cadence: raw={raw_regime}, regime={effective_regime}, interval={new_scan_interval}s",
+                            )
+                        self.scan_regime_raw = raw_regime
+                        self.scan_regime = effective_regime
                         scan_interval = new_scan_interval
+                        self.ai_layers["scan_regime_raw"] = self.scan_regime_raw
                         self.ai_layers["scan_regime"] = self.scan_regime
                         self.ai_layers["scan_interval_seconds"] = scan_interval
                     except Exception as e:
@@ -852,6 +867,28 @@ class TradingBot:
         if regime == "choppy":
             return slow
         return baseline
+
+    def _smooth_scan_regime(self, raw_regime: str) -> str:
+        """
+        Apply hysteresis to avoid cadence flapping when regime signal flickers.
+        """
+        history_window = max(1, int(getattr(settings, "SCAN_REGIME_HYSTERESIS_WINDOW", 3)))
+        confirmations = max(1, int(getattr(settings, "SCAN_REGIME_MIN_CONFIRMATIONS", 2)))
+
+        if not hasattr(self, "_scan_regime_history"):
+            self._scan_regime_history = []
+
+        self._scan_regime_history.append(raw_regime or "mixed")
+        self._scan_regime_history = self._scan_regime_history[-history_window:]
+
+        current = getattr(self, "scan_regime", "mixed") or "mixed"
+        if raw_regime == current:
+            return current
+
+        votes = self._scan_regime_history.count(raw_regime)
+        if votes >= confirmations:
+            return raw_regime
+        return current
 
     @staticmethod
     def _compute_entry_slippage_bps(entry_price: float, signal_price: float, side: str) -> float:

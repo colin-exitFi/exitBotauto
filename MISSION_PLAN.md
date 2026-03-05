@@ -60,6 +60,12 @@ P0/P1 fixes implemented:
     - Scan regime + active cadence are surfaced in AI-layer state for observability.
 20. Concurrency replay test coverage added:
     - New integration-style test validates monitor-path and websocket-path exit handling under overlap, proving single-record behavior.
+21. Regime engine upgraded with index context:
+    - Scanner now blends candidate tape with SPY/QQQ/DIA direction for less biased regime classification.
+    - Candidate telemetry now includes broad-market index average change context.
+22. Adaptive-cadence hysteresis added:
+    - Scan regime now uses confirmation-based smoothing to avoid frequent interval flapping on noisy transitions.
+    - Raw regime and smoothed regime are both surfaced for observability.
 
 ### 0.2 Remaining high-risk debt (must be tracked)
 

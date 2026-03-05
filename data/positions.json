@@ -33,7 +33,7 @@
     "risk_tier": "COMPOUND",
     "notional": 748.048,
     "trail_pct": 3.0,
-    "trailing_stop_order_id": "19c50d3c-3072-4907-bb47-83db46a5ead6",
+    "trailing_stop_order_id": "594d7305-45ac-4ee2-886c-401d488ee569",
     "has_trailing_stop": true,
     "order_status": "filled",
     "_trail_retry_count": 0
@@ -94,8 +94,8 @@
     "conviction_level": "high",
     "risk_tier": "COMPOUND",
     "notional": 747.368,
-    "trail_pct": 5.0,
-    "trailing_stop_order_id": "df2a99f4-8e8f-4b7e-be3c-27aff335bfcf",
+    "trail_pct": 3.0,
+    "trailing_stop_order_id": "d43f679a-c98a-46b9-ad0b-f70039302a05",
     "has_trailing_stop": true,
     "order_status": "filled",
     "_trail_retry_count": 0
@@ -115,8 +115,8 @@
     "conviction_level": "normal",
     "risk_tier": "COMPOUND",
     "notional": 498.248,
-    "trail_pct": 4.5,
-    "trailing_stop_order_id": "c4c1b61d-49bb-4b34-bcec-1228437ee2f6",
+    "trail_pct": 4.0,
+    "trailing_stop_order_id": "719884d2-eaf8-44f3-91bc-2d5683014af4",
     "has_trailing_stop": true,
     "order_status": "filled",
     "_trail_retry_count": 0

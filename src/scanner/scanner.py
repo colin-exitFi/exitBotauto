@@ -44,6 +44,9 @@ class Scanner:
         self._performance_cache: Dict = {}
         self._performance_cache_at = 0.0
         self._performance_cache_ttl = 300  # 5 min
+        self._index_context_cache: Dict = {}
+        self._index_context_cache_at = 0.0
+        self._index_context_cache_ttl = 60  # 1 min
         self._last_market_regime = "mixed"
         logger.info("Scanner initialized")
 
@@ -205,14 +208,24 @@ class Scanner:
         logger.info(f"After filter: {len(filtered)} candidates (from {len(candidates)} enriched)")
 
         # ── SCORE & RANK (adaptive by regime + recent hit-rate) ───
-        regime = self._detect_market_regime(filtered)
+        index_context = await self._load_index_context()
+        regime = self._detect_market_regime(filtered, index_context=index_context)
         self._last_market_regime = regime
         performance = self._load_performance_snapshot()
-        logger.info(f"Market regime: {regime}")
+        if index_context.get("count", 0) >= 2:
+            logger.info(
+                f"Market regime: {regime} (indices avg {index_context.get('avg_change_pct', 0.0):+.2f}%: "
+                f"SPY {index_context.get('SPY', 0.0):+.2f}% "
+                f"QQQ {index_context.get('QQQ', 0.0):+.2f}% "
+                f"DIA {index_context.get('DIA', 0.0):+.2f}%)"
+            )
+        else:
+            logger.info(f"Market regime: {regime}")
         for c in filtered:
             c["strategy_tag"] = self._derive_strategy_tag(c)
             c["signal_sources"] = self._extract_signal_sources(c)
             c["market_regime"] = regime
+            c["index_avg_change_pct"] = round(float(index_context.get("avg_change_pct", 0.0) or 0.0), 2)
             c["strategy_win_rate_pct"] = round(
                 self._estimate_strategy_hit_rate(c["strategy_tag"], performance) * 100, 1
             )
@@ -471,13 +484,67 @@ class Scanner:
     def _clamp(value: float, low: float, high: float) -> float:
         return max(low, min(high, value))
 
-    def _detect_market_regime(self, candidates: List[Dict]) -> str:
+    async def _load_index_context(self) -> Dict:
         """
-        Lightweight regime inference from current candidate tape.
+        Load broad-market context from SPY/QQQ/DIA snapshots.
+        Cached briefly to avoid repeated index requests within tight loops.
+        """
+        now = time.time()
+        if self._index_context_cache and (now - self._index_context_cache_at) < self._index_context_cache_ttl:
+            return self._index_context_cache
+
+        context = {"SPY": 0.0, "QQQ": 0.0, "DIA": 0.0, "avg_change_pct": 0.0, "count": 0}
+        changes = []
+        try:
+            if not self.polygon:
+                return context
+
+            loop = asyncio.get_event_loop()
+            for sym in ("SPY", "QQQ", "DIA"):
+                snap = await loop.run_in_executor(None, self.polygon.get_snapshot, sym)
+                chg = float((snap or {}).get("change_pct", 0) or 0)
+                if not chg and self.alpaca:
+                    # Fall back to Alpaca snapshot when Polygon day-change is stale or absent.
+                    alp = await loop.run_in_executor(None, self._get_alpaca_snapshot, sym)
+                    chg = float((alp or {}).get("change_pct", 0) or 0)
+                context[sym] = chg
+                if chg:
+                    changes.append(chg)
+
+            if changes:
+                context["count"] = len(changes)
+                context["avg_change_pct"] = sum(changes) / len(changes)
+        except Exception as e:
+            logger.debug(f"Index context unavailable: {e}")
+
+        self._index_context_cache = context
+        self._index_context_cache_at = now
+        return context
+
+    @staticmethod
+    def _derive_index_regime(index_context: Dict) -> str:
+        count = int(index_context.get("count", 0) or 0)
+        if count < 2:
+            return "mixed"
+
+        avg_change = float(index_context.get("avg_change_pct", 0.0) or 0.0)
+        if avg_change >= 0.35:
+            return "risk_on"
+        if avg_change <= -0.35:
+            return "risk_off"
+        if abs(avg_change) <= 0.15:
+            return "choppy"
+        return "mixed"
+
+    def _detect_market_regime(self, candidates: List[Dict], index_context: Optional[Dict] = None) -> str:
+        """
+        Lightweight regime inference from:
+          1) candidate tape internals
+          2) broad index direction (SPY/QQQ/DIA) when available.
         Returns: risk_on, risk_off, choppy, mixed.
         """
         if not candidates:
-            return "choppy"
+            return self._derive_index_regime(index_context or {})
 
         moves = [float(c.get("change_pct", 0) or 0) for c in candidates]
         avg_abs_move = sum(abs(m) for m in moves) / max(1, len(moves))
@@ -486,13 +553,39 @@ class Scanner:
         breadth_total = max(1, advancers + decliners)
         breadth = advancers / breadth_total
 
+        tape_regime = "mixed"
         if avg_abs_move >= 3.0 and breadth >= 0.62:
-            return "risk_on"
-        if avg_abs_move >= 3.0 and breadth <= 0.38:
-            return "risk_off"
-        if avg_abs_move <= 1.2:
-            return "choppy"
-        return "mixed"
+            tape_regime = "risk_on"
+        elif avg_abs_move >= 3.0 and breadth <= 0.38:
+            tape_regime = "risk_off"
+        elif avg_abs_move <= 1.2:
+            tape_regime = "choppy"
+
+        index_regime = self._derive_index_regime(index_context or {})
+
+        # Agreement between tape and index is high confidence.
+        if tape_regime in ("risk_on", "risk_off") and tape_regime == index_regime:
+            return tape_regime
+
+        # If index strongly trends while tape is mixed/choppy, trust broad market.
+        if tape_regime in ("mixed", "choppy") and index_regime in ("risk_on", "risk_off"):
+            return index_regime
+
+        # If tape looks directional but index is flat/choppy, soften to mixed.
+        if tape_regime in ("risk_on", "risk_off") and index_regime == "choppy":
+            return "mixed"
+
+        # Conflicting directional signals: avoid overfitting to a biased candidate set.
+        if tape_regime in ("risk_on", "risk_off") and index_regime in ("risk_on", "risk_off"):
+            return "mixed"
+
+        # Prefer whichever is more informative when one side is mixed.
+        if tape_regime == "mixed":
+            return index_regime
+        if index_regime == "mixed":
+            return tape_regime
+
+        return tape_regime
 
     def _load_performance_snapshot(self) -> Dict:
         """

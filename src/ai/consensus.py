@@ -409,7 +409,7 @@ class ConsensusEngine:
             return ModelVote(model="gpt", decision="ERR", confidence=0,
                            error=f"GPT disabled (billing issue, retry in {remaining}s)")
 
-        model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.2')
+        model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.4')
         try:
             async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
                 resp = await client.post(

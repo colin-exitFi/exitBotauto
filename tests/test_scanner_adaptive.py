@@ -61,3 +61,24 @@ class ScannerAdaptiveScoringTests(unittest.TestCase):
         self.assertGreater(mult, 1.0)
         self.assertLessEqual(mult, 1.25)
 
+    def test_detect_market_regime_uses_index_when_tape_is_mixed(self):
+        candidates = [
+            {"change_pct": 1.0},
+            {"change_pct": -1.0},
+            {"change_pct": 0.8},
+            {"change_pct": -0.7},
+        ]
+        index_context = {"SPY": -0.9, "QQQ": -1.1, "DIA": -0.8, "avg_change_pct": -0.93, "count": 3}
+        regime = self.scanner._detect_market_regime(candidates, index_context=index_context)
+        self.assertEqual(regime, "risk_off")
+
+    def test_detect_market_regime_conflicting_tape_and_index_returns_mixed(self):
+        candidates = [
+            {"change_pct": 4.0},
+            {"change_pct": 5.0},
+            {"change_pct": 3.5},
+            {"change_pct": -0.6},
+        ]
+        index_context = {"SPY": -0.8, "QQQ": -1.0, "DIA": -0.7, "avg_change_pct": -0.83, "count": 3}
+        regime = self.scanner._detect_market_regime(candidates, index_context=index_context)
+        self.assertEqual(regime, "mixed")

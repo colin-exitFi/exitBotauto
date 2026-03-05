@@ -118,7 +118,7 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     if not _check_rate_limit("gpt"):
         logger.warning("Rate limit reached — skipping GPT call")
         return None
-    model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.2')
+    model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.4')
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             resp = await client.post(

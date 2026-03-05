@@ -1075,5 +1075,161 @@
     "overall_sentiment": "bullish",
     "urgency": "high",
     "timestamp": 1772747082.2490392
+  },
+  {
+    "market_assessment": "Market close (4:54pm ET) - extended hours trading active with strong momentum continuing in tech/semis (MRVL +7.85%, IOT +3.15%),yday action showed volatility with SOC flash crash but overall bullish bias in our sectors",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position flat at entry, working as intended"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Flat at entry $30.055, trailing stop active, needs room to develop"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "CRITICAL - flat at entry $9.875 with 5% trail, this is our momentum play"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Flat at $8.88, 3% trail active"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "WINNER - up 9.66% today to $12.26 from $12 entry, +2.17% unrealized, 4.5% trail protecting gains"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Flat at $250.52, 4.5% trail, needs development"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Tight 2% trail on normal conviction - may get shaken out easily"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "Flat at $11, 3% trail, good sentiment entry"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry $29.60 - NO TRAILING STOP YET, order pending, exposed"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry $81.56 - NO TRAILING STOP YET, order pending, MRVL now at $84.22 (+3.26% move!), unprotected"
+      }
+    ],
+    "risk_flags": [
+      "TWO EXTENDED HOURS POSITIONS WITHOUT TRAILING STOPS - IOT and MRVL orders pending, combined $1,305 exposure unprotected",
+      "MRVL already up 3.26% from our entry but gains unprotected - urgent to get trail placed",
+      "10 positions open = MAX capacity, no room for new opportunities without closing something",
+      "Heat at 15.3% reasonable but concentrated in many small positions vs fewer larger winners",
+      "SOC flash crash -5.32% shows volatility risk - good emergency exit worked but we need vigilance",
+      "Only $19.4K cash vs $24.7K equity = 78% cash position is TOO DEFENSIVE for our mission"
+    ],
+    "what_working": [
+      "VG momentum play +2.17% working perfectly - bought the breakout at $12, now $12.26",
+      "Extended hours aggression capturing MRVL move (+3.26% already)",
+      "Trailing stops saved us from worse damage on SOC",
+      "High conviction entries with good sentiment scores (0.7-1.0 range)",
+      "3 consecutive wins building confidence"
+    ],
+    "what_not_working": [
+      "Too many positions spreading capital thin - $500-750 each vs concentration",
+      "SOC flash crash lost $40 in 2 minutes - volatility is real",
+      "Most positions flat/slightly negative - not enough momentum follow-through yet",
+      "Extended hours execution lag leaving positions unprotected",
+      "TNGX tight 2% trail on normal conviction = likely premature stop out"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772747694.335252
+  },
+  {
+    "market_assessment": "After-hours momentum play with strong runners (PDYN +33.87%, VG +9.66%, MRVL +7.85%) - classic late-day continuation setup into extended hours",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position at peak, trailing stop active, clean entry"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Fresh entry, stop in place, waiting for momentum"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "MONSTER - up 33.87% and we're IN IT with 5% trail, this is the winner"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Fresh entry, trailing stop active"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Strong +9.66% runner, we're positioned, stop active"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Normal conviction, 4% trail, stable"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Only 2% trail - tightest stop, most vulnerable to noise"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "High conviction, 3% trail, good sentiment"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO TRAILING STOP YET - needs immediate attention"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry +7.85% runner, NO TRAILING STOP YET - needs immediate attention"
+      }
+    ],
+    "risk_flags": [
+      "TWO positions (IOT, MRVL) have NO trailing stops - extended hours execution lag",
+      "At 10/10 max positions - fully deployed, no capacity for new runners",
+      "Heat at 15.3% - moderate exposure but concentrated",
+      "SOC emergency exit -5.32% shows volatility risk is REAL in this momentum environment",
+      "Extended hours trading adds execution risk - wider spreads, lower liquidity"
+    ],
+    "what_working": [
+      "Momentum chasing - PDYN +33.87% proves the strategy works",
+      "High conviction sizing on runners (VG, PDYN, NCI all $745+ notional)",
+      "Trailing stops catching moves (3-5% trails letting winners run)",
+      "Extended hours aggression (IOT, MRVL entries show we're not backing down)"
+    ],
+    "what_not_working": [
+      "SOC flash crash -5.32% in 2 minutes = momentum can reverse FAST",
+      "Too tight trails on some (TNGX 2% will get chopped)",
+      "Execution gaps - extended hours orders not getting stops immediately"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772748296.1413782
   }
 ]
