@@ -28,6 +28,7 @@ from signals.stocktwits import StockTwitsClient
 from signals.twitter import TwitterSentimentClient
 from signals.pharma_catalyst import PharmaCatalystScanner
 from signals.fade_runner import FadeRunnerScanner
+from signals.watchlist import DynamicWatchlist
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
 from risk.risk_manager import RiskManager
@@ -118,6 +119,9 @@ class TradingBot:
 
         # Fade runner scanner (short yesterday's big runners)
         self.fade_scanner = FadeRunnerScanner(polygon_client=self.polygon_client)
+
+        # Dynamic watchlist (built overnight, used during trading)
+        self.watchlist = DynamicWatchlist()
 
         # Scanner (with StockTwits + Pharma + Fade)
         self.scanner = Scanner(
@@ -297,19 +301,79 @@ class TradingBot:
             except Exception as e:
                 logger.debug(f"Pharma refresh failed: {e}")
 
-        # ── THESIS: Build tomorrow's strategy (once per night, after 10PM ET) ──
+        # ── WATCHLIST + THESIS: Full overnight research (once per night, after 10PM ET) ──
         if hour >= 22 and (now - last_thesis > 8 * 3600):
             try:
+                # 1. Get Perplexity market thesis + stock picks
                 thesis = await self._build_overnight_thesis()
+                perplexity_picks = thesis.get("watchlist", []) if thesis else []
+                
+                # 2. Get StockTwits trending with sentiment
+                stocktwits_data = []
+                if self.stocktwits_client:
+                    try:
+                        trending = await asyncio.get_event_loop().run_in_executor(
+                            None, self.stocktwits_client.get_trending)
+                        for t in trending:
+                            sym = t.get("symbol", "")
+                            if sym and sym.isalpha() and len(sym) <= 5:
+                                sent = await asyncio.get_event_loop().run_in_executor(
+                                    None, self.stocktwits_client.get_sentiment, sym)
+                                stocktwits_data.append({
+                                    "symbol": sym,
+                                    "trending_score": t.get("trending_score", 0),
+                                    "sentiment_score": sent.get("score", 0),
+                                    "bullish": sent.get("bullish", 0),
+                                    "bearish": sent.get("bearish", 0),
+                                })
+                        logger.info(f"📊 StockTwits overnight: {len(stocktwits_data)} tickers with sentiment")
+                    except Exception as e:
+                        logger.debug(f"StockTwits overnight failed: {e}")
+
+                # 3. Get Twitter/X mentions (if available)
+                twitter_data = []
+                if hasattr(self, 'twitter_client') and self.twitter_client:
+                    try:
+                        # Get sentiment for top StockTwits tickers on Twitter too
+                        for st in stocktwits_data[:10]:
+                            sent = await asyncio.get_event_loop().run_in_executor(
+                                None, self.twitter_client.get_sentiment, st["symbol"])
+                            if sent and sent.get("count", 0) > 0:
+                                twitter_data.append(sent)
+                    except Exception:
+                        pass
+
+                # 4. Get pharma catalysts
+                pharma_signals = []
+                if self.pharma_scanner:
+                    pharma_signals = await self.pharma_scanner.scan()
+
+                # 5. Get fade candidates
+                fade_candidates = []
+                if self.fade_scanner:
+                    fade_candidates = self.fade_scanner.get_fade_candidates()
+
+                # 6. REBUILD WATCHLIST from all sources
+                self.watchlist.rebuild_overnight(
+                    stocktwits_trending=stocktwits_data,
+                    twitter_mentions=twitter_data,
+                    perplexity_picks=perplexity_picks,
+                    pharma_catalysts=pharma_signals,
+                    fade_candidates=fade_candidates,
+                )
+
+                # Save thesis
                 if thesis:
                     thesis_file = Path(__file__).parent.parent / "data" / "tomorrow_thesis.json"
                     with open(thesis_file, "w") as f:
                         json.dump(thesis, f, indent=2)
-                    state["last_thesis"] = now
-                    tasks_run.append("thesis")
-                    logger.success(f"📋 Tomorrow's thesis: {len(thesis.get('watchlist', []))} tickers, bias={thesis.get('market_bias', '?')}")
+
+                state["last_thesis"] = now
+                tasks_run.append("watchlist_rebuild")
+                tasks_run.append("thesis")
+                logger.success(f"📋 Tomorrow's thesis: bias={thesis.get('market_bias', '?')}, watchlist={len(self.watchlist)} tickers")
             except Exception as e:
-                logger.debug(f"Thesis build failed: {e}")
+                logger.debug(f"Overnight thesis/watchlist failed: {e}")
 
         # ── NEWS: Scan overnight news for market-moving events (every 2 hours) ──
         if now - last_news > 2 * 3600:
