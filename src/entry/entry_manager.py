@@ -468,6 +468,19 @@ class EntryManager:
                     "from_brokerage": True,  # flag so we know this was pre-existing
                 }
                 logger.info(f"📦 Loaded position: {qty:.4f} {sym} @ ${avg_price:.2f} (current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f})")
+            # Check for existing trailing stop orders and mark positions accordingly
+            try:
+                open_orders = self.broker.get_orders(status="open")
+                for order in open_orders:
+                    sym = order.get("symbol", "")
+                    otype = order.get("type", "")
+                    if sym in self.positions and otype == "trailing_stop":
+                        self.positions[sym]["has_trailing_stop"] = True
+                        self.positions[sym]["trailing_stop_order_id"] = order.get("id", "")
+                        logger.info(f"🔗 {sym} has existing trailing stop order {order.get('id', '')[:8]}...")
+            except Exception as e:
+                logger.warning(f"Could not check existing trailing stop orders: {e}")
+
             logger.success(f"Loaded {len(self.positions)} existing positions from Alpaca")
         except Exception as e:
             logger.error(f"Failed to load brokerage positions: {e}")

@@ -1,72 +1,5 @@
 [
   {
-    "strategy": "Hold fire until market open, then deploy aggressively into first quality setups \u2014 we need battle data fast",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "financials",
-        "energy"
-      ],
-      "avoid": []
-    },
-    "aggression_level": "maintain",
-    "parameter_suggestions": [
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.35,
-        "suggested": 0.3,
-        "reason": "Lower threshold slightly to catch more initial opportunities - we need trade data to learn from"
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 45,
-        "reason": "Scan more frequently in first hour of trading to catch momentum early"
-      }
-    ],
-    "key_insight": "You're in startup mode - the $1K isn't the risk, sitting idle is. First 5-10 trades are discovery phase: we need to see how entries perform, where winners stall, and how fast losers hurt. Deploy into first 2-3 quality signals at market open (9:30 ET) without hesitation. Current parameters are appropriately aggressive (7% sizing, 1.5% stops). The real learning starts when money moves. After 10 trades, I'll have pattern data to give you sharper directional advice. Until then: execute the system, stack data, stay mechanical.",
-    "timestamp": 1772677354.1222432
-  },
-  {
-    "strategy": "Prepare for aggressive opening bell deployment \u2014 target 3-5 positions within first 60 minutes to kickstart capital velocity engine.",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "healthcare",
-        "consumer_discretionary"
-      ],
-      "avoid": [
-        "utilities",
-        "real_estate"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "In first 2 hours of trading, scan every 30sec to catch momentum breakouts faster \u2014 scanner is our only edge with zero positions"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.4,
-        "reason": "Cold start demands quality over quantity \u2014 slightly higher bar prevents desperate entries just to deploy capital"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "Lower TP1 to 1.2% for first 5 trades \u2014 establishes win psychology and captures volatility in opening hour when moves are sharper"
-      }
-    ],
-    "key_insight": "We have a COLD START problem. At 09:30 ET tomorrow, every second without deployment is bleeding opportunity. Priority sequence: (1) Deploy $210-280 in first 30min on high-conviction scanner hits, (2) Take TP1 aggressively to bank first wins and prove the system, (3) Let 1-2 runners hold for TP2 if momentum sustains. The first 3 wins will define our psychological momentum \u2014 make them count. Avoid the trap of perfectionism paralysis; 'good enough' entries that hit TP1 beat waiting for 'perfect' setups that never come.",
-    "timestamp": 1772677533.268673
-  },
-  {
     "strategy": "Pre-market positioning: verify scanner config tonight, execute aggressive momentum capture at open with tight profit-taking discipline",
     "position_advice": [],
     "sector_bias": {
@@ -1758,5 +1691,159 @@
     ],
     "key_insight": "You're up +1.72% on the day with $437 banked profit \u2014 this is ALREADY a win. The mission now is DEFENSE, not offense. Exit the two blind positions (SOC, CRMD), trim 50% of PDYN to lock the win, and STOP taking new entries until you're back to 4 positions. You're 51% to the next milestone ($50K) \u2014 protect this gain, don't give it back chasing. Idle cash beats dead capital. The 11-minute entry cluster from 10:49-11:00 ET was momentum chasing, not disciplined hunting. Recalibrate.",
     "timestamp": 1772724321.238219
+  },
+  {
+    "strategy": "EMERGENCY TRIAGE MODE: Exit dead capital immediately, protect SOC bleed, redeploy into fresh momentum \u2014 56 minutes of flatline is unacceptable",
+    "position_advice": [
+      {
+        "symbol": "SOC",
+        "action": "exit",
+        "reason": "Classic pump-dump: spiked +4.6% to $12.89, gave it ALL back per Observer. Likely red now. Cut before it bleeds further \u2014 $1,620 at risk."
+      },
+      {
+        "symbol": "AMPX",
+        "action": "exit",
+        "reason": "56 minutes at exact entry $14.67 = ZERO catalyst, ZERO volume, ZERO edge. Dead $3,257 that could be working elsewhere."
+      },
+      {
+        "symbol": "OKTA",
+        "action": "exit",
+        "reason": "Another corpse \u2014 flat at $79.59 for 56min. Large cap with no pre-market catalyst = wrong vehicle. Free up $1,455."
+      },
+      {
+        "symbol": "PDYN",
+        "action": "trim",
+        "reason": "Peaked +1.6% at $9.595 but Observer flags retracement. Historic winner (100% WR, $442 profit) \u2014 take profit on 50%, let rest run with tight trail."
+      },
+      {
+        "symbol": "STEM",
+        "action": "exit",
+        "reason": "Peaked +1.3% but 'showing weakness' per Observer. Energy sector dragging. $813 position not worth babysitting \u2014 redeploy."
+      },
+      {
+        "symbol": "CRMD",
+        "action": "hold",
+        "reason": "Micro-green at $6.35 (+0.1%). Small position ($1,377), needs 5-10 more minutes to confirm direction. Trail tight."
+      },
+      {
+        "symbol": "AVGO",
+        "action": "hold",
+        "reason": "Large cap anchor at $330.89 \u2014 likely stable, low volatility. Keep as ballast while churning small caps. Check if it's actually moving."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "small-cap biotech with news catalysts",
+        "momentum plays <$15 with volume"
+      ],
+      "avoid": [
+        "energy (STEM weakness confirms sector drag)",
+        "large-cap tech without intraday catalyst (OKTA, AVGO prove this)",
+        "anything that's been flat >30min"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.0,
+        "suggested": 2.5,
+        "reason": "We're at COMPOUND tier (2.5% allowed) but only using 2.0%. PDYN's 100% win rate proves small-cap momentum works \u2014 size up winners."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Zero scanner candidates in 56min is unacceptable. Markets move fast 9:30-10:30am \u2014 need faster refresh to catch breakouts."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "SOC bled -4.6% because stop was too loose. Tighter stop = faster exit on failed setups. We need capital velocity, not bag-holding."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.5,
+        "suggested": 0.6,
+        "reason": "3 of 7 positions are dead on arrival (AMPX, OKTA, SOC fade). Raise bar slightly \u2014 only take setups with confirmed edge."
+      }
+    ],
+    "key_insight": "CAPITAL VELOCITY IS BROKEN: $7,200+ (56% of deployed capital) is dead money sitting flat for an hour. This portfolio isn't compounding \u2014 it's rusting. Exit the corpses NOW, tighten stops, scan faster, and get back into the game. PDYN proves the edge exists (100% WR, $442 profit) \u2014 we just need MORE trades like that, not fewer. The Observer is right: we're flying blind without real-time prices, but the pattern is clear: overnight holds are killing us, and we're not replacing them fast enough. Fix the scanner, tighten the exits, and LET THE MONEY MOVE.",
+    "timestamp": 1772724477.386718
+  },
+  {
+    "strategy": "Lock profits on momentum runners (PDYN/SOC) before giveback, rotate capital into fresh setups, validate or exit flat inherited positions by 11:30 ET.",
+    "position_advice": [
+      {
+        "symbol": "PDYN",
+        "action": "trim",
+        "reason": "Peaked +2.4% ($9.67 from $9.44) \u2014 historical data shows 100% win rate across 3 trades with $442.80 profit. This is a proven winner. Take 50% off here, let rest run with tight trail. Don't give back gains."
+      },
+      {
+        "symbol": "SOC",
+        "action": "trim",
+        "reason": "Peaked +5.3% ($12.98 from $12.32) \u2014 largest unrealized gain in portfolio. No trade history to validate edge. Biotech/volatile sector. Trim 50-75% NOW before retracement wipes the gain."
+      },
+      {
+        "symbol": "CRMD",
+        "action": "hold",
+        "reason": "Small gain visible (+0.4%), biotech showing positive momentum. Only loss in history was -$5.14. Let it breathe but watch for TP1 at +1.5%."
+      },
+      {
+        "symbol": "AMPX",
+        "action": "exit",
+        "reason": "Dead flat at entry, largest position ($3.2K), biotech volatility without conviction. One historical win was only +$12.41. Capital better deployed elsewhere. Exit by 11:30 if no movement."
+      },
+      {
+        "symbol": "AVGO",
+        "action": "hold",
+        "reason": "Large cap stability, flat but defensible. Small position ($1.8K). Can afford to give it until 12:00 ET to show direction."
+      },
+      {
+        "symbol": "OKTA",
+        "action": "hold",
+        "reason": "Cybersecurity strength, flat at entry but sector has momentum. Hold through midday, reassess at 12:00 ET."
+      },
+      {
+        "symbol": "STEM",
+        "action": "hold",
+        "reason": "Clean energy +1% from entry, small position ($813). Let it run toward TP1."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "momentum stocks with historical edge (PDYN-type setups)",
+        "cybersecurity",
+        "clean energy"
+      ],
+      "avoid": [
+        "flat biotech without catalyst",
+        "inherited positions without fresh conviction after 11:30 ET"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 1.8,
+        "reason": "PDYN history shows winners ran to +2.4% before trailing stop. TP1 at 1.5% may be leaving meat on bone. Bump to 1.8% to capture more of the run."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "All 7 positions show sentiment=0 (inherited, no conviction). Scanner showing zero candidates suggests bar is too low. Raise to 0.3 to force quality over quantity."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 45,
+        "reason": "50% capital deployed but scanner silent. Either market is dead or we're missing windows. Tighten scan interval to catch momentum shifts faster in first 90min of session."
+      }
+    ],
+    "key_insight": "You're sitting on $500+ of unrealized gains (PDYN +$58, SOC +$86 visible in peaks) but risk giving it all back. Historical edge on PDYN is PROVEN \u2014 lock it. SOC is unproven \u2014 take profit. Dead capital in AMPX ($3.2K flat) is a $3.2K opportunity cost. Trim winners, exit laggards, redeploy into fresh momentum by 11:30 ET. Capital velocity wins the long game \u2014 idle cash watching flat positions is how you stay at $25K instead of compounding to $50K.",
+    "timestamp": 1772724531.1770391
   }
 ]

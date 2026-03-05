@@ -150,5 +150,19 @@
     "entry_time": 1772723552.128285,
     "exit_time": 1772724277.594919,
     "recorded_at": 1772724277.5949728
+  },
+  {
+    "symbol": "AMPX",
+    "side": "sell",
+    "entry_price": 14.671475,
+    "exit_price": 14.58,
+    "quantity": 56.0,
+    "pnl": -5.122599999999949,
+    "pnl_pct": -0.6234887766908173,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 62.71720004081726,
+    "entry_time": 1772724481.57581,
+    "exit_time": 1772724544.293011,
+    "recorded_at": 1772724544.29307
   }
 ]

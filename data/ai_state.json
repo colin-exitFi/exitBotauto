@@ -1,37 +1,16 @@
 {
-  "last_observation": "Strong bullish momentum in tech/semiconductors (AVGO +5%, PDYN +26%), volume spikes on hype-driven names suggest momentum chase environment with elevated risk of fast reversals.",
-  "last_advice": "Lock profits and eliminate dead weight \u2014 trim winners taking heat, exit CRMD immediately, freeze new entries until portfolio drops to 4 positions max.",
+  "last_observation": "First scan of the day at 10:28 ET \u2014 positions inherited from overnight hold, no intraday price action visible yet, scanner empty suggesting either pre-market quiet or waiting for volatility.",
+  "last_advice": "Lock profits on momentum runners (PDYN/SOC) before giveback, rotate capital into fresh setups, validate or exit flat inherited positions by 11:30 ET.",
   "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.15\u21920.5, MAX_CONCURRENT_POSITIONS:12\u21928, POSITION_SIZE_PCT:2.5\u21922.0",
-  "last_game_film_summary": null,
+  "last_game_film_summary": "6 trades, 66.7% WR, $420.22",
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
     "symbol": "OKTA",
-    "final_decision": "BUY",
-    "size_modifier": 1.0,
-    "avg_confidence": 71.66666666666667,
-    "claude": {
-      "model": "claude",
-      "decision": "BUY",
-      "confidence": 68,
-      "reasoning": "OKTA up 10.37% with strong bullish momentum. Price above VWAP by 3.6%, RSI at 42.9 shows room to run before overbought. StockTwits sentiment maxed at 1.00 indicating retail enthusiasm. Volume data mis",
-      "error": null
-    },
-    "gpt": {
-      "model": "gpt",
-      "decision": "BUY",
-      "confidence": 62,
-      "reasoning": "OKTA showing strong intraday momentum (+10.4%) and holding above VWAP (+3.6%), with bullish social sentiment. RSI ~43 suggests it\u2019s not overbought, leaving room for continuation. No clear negative cat",
-      "error": null
-    },
-    "grok": {
-      "model": "grok",
-      "decision": "BUY",
-      "confidence": 85,
-      "reasoning": "Stock up 10.37% today with max bullish StockTwits sentiment (1.00), above VWAP, RSI in healthy 40-70 range; momentum favors continuation despite low volume and mixed news.",
-      "error": null
-    },
-    "perplexity": null,
-    "reasoning": "Unanimous BUY (3/3) \u2014 full size, conf=72%",
-    "timestamp": 1772724178.588779
+    "decision": "SKIP",
+    "size_pct": 0,
+    "trail_pct": 3.0,
+    "reasoning": "Skip cooldown (2 min)",
+    "confidence": 0.0,
+    "timestamp": 1772724597.1739478
   }
 }
