@@ -1,16 +1,16 @@
 """
 Earnings Calendar Scanner — Track upcoming earnings for momentum plays.
 
-Sources:
-  1. Yahoo Finance earnings calendar (free, no auth)
-  2. Nasdaq earnings calendar API (free)
+Source: Nasdaq earnings calendar API (free, no auth, reliable dates)
+  GET https://api.nasdaq.com/api/calendar/earnings?date=YYYY-MM-DD
 
 Strategies:
   - Pre-earnings run-up: Stocks tend to run 3-5 days before earnings
   - Post-earnings drift: Surprise direction continues for days
   - Earnings gap plays: Big gaps on earnings → momentum trade
+  - After-hours earnings: Position before close for the gap
 
-Data cached and refreshed every 6 hours.
+Data cached per-date and refreshed every 6 hours.
 """
 
 import asyncio
@@ -23,13 +23,18 @@ from loguru import logger
 
 import httpx
 
-
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 CACHE_FILE = DATA_DIR / "earnings_calendar.json"
 
 
 class EarningsScanner:
-    """Scan for upcoming earnings to find momentum catalysts."""
+    """Scan for upcoming earnings using Nasdaq calendar API."""
+
+    NASDAQ_URL = "https://api.nasdaq.com/api/calendar/earnings"
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json",
+    }
 
     def __init__(self):
         self._calendar: List[Dict] = []
@@ -39,7 +44,6 @@ class EarningsScanner:
         logger.info(f"Earnings scanner initialized ({len(self._calendar)} cached earnings)")
 
     def _load_cache(self):
-        """Load cached earnings calendar."""
         try:
             if CACHE_FILE.exists():
                 with open(CACHE_FILE) as f:
@@ -50,65 +54,96 @@ class EarningsScanner:
             pass
 
     def _save_cache(self):
-        """Save earnings calendar to disk."""
         try:
             DATA_DIR.mkdir(exist_ok=True)
             with open(CACHE_FILE, "w") as f:
-                json.dump({
-                    "earnings": self._calendar,
-                    "fetched_at": time.time(),
-                }, f, indent=2)
+                json.dump({"earnings": self._calendar, "fetched_at": time.time()}, f, indent=2)
         except Exception:
             pass
 
     async def refresh(self) -> List[Dict]:
-        """Fetch upcoming earnings calendar. Returns list of earnings events."""
+        """Fetch upcoming earnings calendar from Nasdaq API."""
         now = time.time()
         if now - self._last_fetch < self._fetch_interval and self._calendar:
             return self._calendar
 
         earnings = []
+        today = datetime.now()
 
-        # Source 1: Yahoo Finance
-        try:
-            yahoo_earnings = await self._fetch_yahoo_earnings()
-            earnings.extend(yahoo_earnings)
-        except Exception as e:
-            logger.debug(f"Yahoo earnings fetch failed: {e}")
+        async with httpx.AsyncClient(timeout=15, headers=self.HEADERS) as client:
+            # Fetch next 7 trading days
+            for day_offset in range(10):
+                date = today + timedelta(days=day_offset)
+                # Skip weekends
+                if date.weekday() >= 5:
+                    continue
+                date_str = date.strftime("%Y-%m-%d")
 
-        # Source 2: Nasdaq API fallback
-        if not earnings:
-            try:
-                nasdaq_earnings = await self._fetch_nasdaq_earnings()
-                earnings.extend(nasdaq_earnings)
-            except Exception as e:
-                logger.debug(f"Nasdaq earnings fetch failed: {e}")
+                try:
+                    resp = await client.get(self.NASDAQ_URL, params={"date": date_str})
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        rows = data.get("data", {}).get("rows", [])
+                        if rows:
+                            for row in rows:
+                                ticker = row.get("symbol", "")
+                                if not ticker or not ticker.replace(".", "").isalpha():
+                                    continue
+                                # Skip ADRs with dots (PBR.A etc)
+                                if "." in ticker:
+                                    continue
+
+                                timing_raw = row.get("time", "")
+                                if "pre" in timing_raw:
+                                    timing = "BMO"  # Before Market Open
+                                elif "after" in timing_raw:
+                                    timing = "AMC"  # After Market Close
+                                else:
+                                    timing = "unknown"
+
+                                earnings.append({
+                                    "ticker": ticker,
+                                    "company": row.get("name", ""),
+                                    "date": date_str,
+                                    "timing": timing,
+                                    "eps_estimate": row.get("epsForecast", ""),
+                                    "market_cap": row.get("marketCap", ""),
+                                    "source": "nasdaq",
+                                })
+                            logger.debug(f"📅 {date_str}: {len(rows)} earnings")
+                    await asyncio.sleep(0.3)  # Rate limit
+                except Exception as e:
+                    logger.debug(f"Nasdaq earnings fetch failed for {date_str}: {e}")
+                    continue
 
         if earnings:
             self._calendar = earnings
             self._last_fetch = now
             self._save_cache()
-            logger.info(f"📅 Earnings calendar refreshed: {len(earnings)} upcoming earnings")
+            # Log summary
+            today_str = today.strftime("%Y-%m-%d")
+            today_count = sum(1 for e in earnings if e["date"] == today_str)
+            logger.info(f"📅 Earnings calendar refreshed: {len(earnings)} total, {today_count} today")
 
         return self._calendar
 
     async def get_upcoming(self, days: int = 7) -> List[Dict]:
         """Get earnings happening in the next N days."""
         await self.refresh()
-        cutoff = (datetime.utcnow() + timedelta(days=days)).strftime("%Y-%m-%d")
-        today = datetime.utcnow().strftime("%Y-%m-%d")
+        cutoff = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+        today = datetime.now().strftime("%Y-%m-%d")
         return [e for e in self._calendar if today <= e.get("date", "") <= cutoff]
 
     async def get_today(self) -> List[Dict]:
-        """Get earnings reporting today (before/after market)."""
+        """Get earnings reporting today."""
         await self.refresh()
-        today = datetime.utcnow().strftime("%Y-%m-%d")
+        today = datetime.now().strftime("%Y-%m-%d")
         return [e for e in self._calendar if e.get("date", "") == today]
 
     async def get_tomorrow(self) -> List[Dict]:
         """Get earnings reporting tomorrow."""
         await self.refresh()
-        tomorrow = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         return [e for e in self._calendar if e.get("date", "") == tomorrow]
 
     async def check_ticker(self, ticker: str) -> Optional[Dict]:
@@ -122,9 +157,8 @@ class EarningsScanner:
     def get_pre_earnings_candidates(self) -> List[Dict]:
         """
         Get stocks 2-5 days before earnings — pre-earnings run-up play.
-        These tend to drift upward as traders position for the event.
         """
-        today = datetime.utcnow()
+        today = datetime.now()
         candidates = []
         for e in self._calendar:
             try:
@@ -138,95 +172,10 @@ class EarningsScanner:
                 continue
         return candidates
 
-    # ── Data Sources ──────────────────────────────────────────────
-
-    async def _fetch_yahoo_earnings(self) -> List[Dict]:
-        """Fetch earnings from Yahoo Finance."""
-        earnings = []
-        today = datetime.utcnow()
-
-        async with httpx.AsyncClient(timeout=15) as client:
-            for day_offset in range(7):
-                date = today + timedelta(days=day_offset)
-                date_str = date.strftime("%Y-%m-%d")
-
-                try:
-                    # Yahoo earnings calendar API
-                    resp = await client.get(
-                        "https://finance.yahoo.com/calendar/earnings",
-                        params={"day": date_str},
-                        headers={
-                            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                        },
-                    )
-                    if resp.status_code == 200:
-                        # Parse HTML for earnings data
-                        text = resp.text
-                        import re
-                        # Look for ticker symbols in the earnings table
-                        tickers = re.findall(r'data-symbol="([A-Z]{1,5})"', text)
-                        for ticker in set(tickers):
-                            earnings.append({
-                                "ticker": ticker,
-                                "date": date_str,
-                                "source": "yahoo",
-                                "timing": "unknown",  # BMO/AMC
-                            })
-                except Exception:
-                    continue
-
-                await asyncio.sleep(0.5)  # Rate limit
-
-        return earnings
-
-    async def _fetch_nasdaq_earnings(self) -> List[Dict]:
-        """Fetch earnings from Nasdaq API."""
-        earnings = []
-        today = datetime.utcnow()
-
-        async with httpx.AsyncClient(timeout=15) as client:
-            for day_offset in range(7):
-                date = today + timedelta(days=day_offset)
-                date_str = date.strftime("%Y-%m-%d")
-
-                try:
-                    resp = await client.get(
-                        f"https://api.nasdaq.com/api/calendar/earnings",
-                        params={"date": date_str},
-                        headers={
-                            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                            "Accept": "application/json",
-                        },
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        rows = data.get("data", {}).get("rows", [])
-                        for row in rows:
-                            ticker = row.get("symbol", "")
-                            if ticker and ticker.isalpha() and len(ticker) <= 5:
-                                earnings.append({
-                                    "ticker": ticker,
-                                    "company": row.get("name", ""),
-                                    "date": date_str,
-                                    "timing": row.get("time", "unknown"),  # BMO/AMC
-                                    "eps_estimate": row.get("epsForecast", None),
-                                    "source": "nasdaq",
-                                })
-                except Exception:
-                    continue
-
-                await asyncio.sleep(0.5)
-
-        return earnings
-
     async def scan(self) -> List[Dict]:
-        """
-        Return actionable earnings signals for the scanner.
-        Combines pre-earnings run-up candidates + today's earnings.
-        """
+        """Return actionable earnings signals for the scanner."""
         signals = []
 
-        # Pre-earnings run-up (2-5 days out)
         pre = self.get_pre_earnings_candidates()
         for e in pre:
             signals.append({
@@ -234,14 +183,12 @@ class EarningsScanner:
                 "signal": "pre_earnings",
                 "days_until": e.get("days_until_earnings", 0),
                 "conviction": 0.4,
-                "reason": f"Earnings in {e.get('days_until_earnings', '?')} days — pre-earnings run-up play",
+                "reason": f"Earnings in {e.get('days_until_earnings', '?')} days ({e.get('timing', '?')}) — pre-earnings run-up",
             })
 
-        # Today's earnings (position for the gap)
         today = await self.get_today()
         for e in today:
-            timing = e.get("timing", "unknown")
-            if timing in ("AMC", "amc", "After Market Close"):
+            if e.get("timing") == "AMC":
                 signals.append({
                     "ticker": e["ticker"],
                     "signal": "earnings_today_amc",
