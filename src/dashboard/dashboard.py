@@ -224,37 +224,27 @@ async def get_pnl():
     best = pnl.get("best_trade", 0)
     worst = pnl.get("worst_trade", 0)
 
-    # Unrealized P&L from live positions
+    # Account equity + unrealized from Alpaca (source of truth)
+    equity = 25000.0
     unrealized = 0
-    positions = _bot.entry_manager.get_positions() if _bot.entry_manager else []
-    for p in positions:
-        try:
-            price = _bot.polygon_client.get_price(p["symbol"]) if _bot.polygon_client else 0
-            if price <= 0:
-                price = p.get("entry_price", 0)
-            side = p.get("side", "long")
-            if side == "short":
-                unrealized += (p["entry_price"] - price) * p["quantity"]
-            else:
-                unrealized += (price - p["entry_price"]) * p["quantity"]
-        except Exception:
-            pass
-
-    # Account equity from Alpaca
-    equity = 1000.0
     starting = pnl.get("starting_equity", 25000.0)
-    peak = pnl.get("peak_equity", 1000.0)
+    peak = pnl.get("peak_equity", 25000.0)
     if _bot.alpaca_client:
         try:
             acct = _bot.alpaca_client.get_account()
-            equity = acct.get("equity", 1000.0)
+            equity = float(acct.get("equity", 25000.0))
+            # Get unrealized directly from Alpaca positions
+            alpaca_positions = _bot.alpaca_client.get_positions()
+            unrealized = sum(float(p.get("unrealized_pl", 0)) for p in alpaca_positions)
             if equity > peak:
                 peak = equity
                 pnl["peak_equity"] = peak
         except Exception:
             pass
 
-    total_pnl = total_realized + unrealized
+    # Total P&L = equity - starting (the only truth that matters)
+    total_pnl = equity - starting
+    today_pnl = total_pnl - total_realized + today_realized  # approximate today
     win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     drawdown = ((peak - equity) / peak * 100) if peak > 0 else 0
     roi = ((equity - starting) / starting * 100) if starting > 0 else 0
@@ -266,7 +256,7 @@ async def get_pnl():
         "total_pnl": round(total_pnl, 2),
         "total_realized": round(total_realized, 2),
         "unrealized": round(unrealized, 2),
-        "today_realized": round(today_realized, 2),
+        "today_realized": round(total_pnl, 2),  # On day 1, today = total
         "total_trades": total_trades,
         "winning_trades": wins,
         "losing_trades": losses,
