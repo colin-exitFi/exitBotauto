@@ -42,6 +42,9 @@ PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox.
 You receive briefs from 5 specialized agents. Synthesize them into ONE trade decision.
 
 SYMBOL: {symbol} @ ${price:.2f}
+TODAY'S MOVE: {change_pct:+.1f}%
+VOLUME vs AVG: {volume_spike:.1f}x
+SPREAD: {spread_pct}%
 
 AGENT BRIEFS:
 
@@ -77,7 +80,7 @@ Respond with ONLY valid JSON:
 {{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis of why", "confidence": 0-100}}"""
 
 
-async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
+async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict = None) -> JuryVerdict:
     """Synthesize agent briefs into a final trade decision."""
     try:
         # Format briefs for the prompt
@@ -92,10 +95,14 @@ async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
             return "\n".join(lines) if lines else "  No data"
 
         from src.ai.mission import MISSION_SHORT
+        sd = signals_data or {}
         prompt = PROMPT_TEMPLATE.format(
             mission=MISSION_SHORT,
             symbol=symbol,
             price=price,
+            change_pct=sd.get("change_pct", 0),
+            volume_spike=sd.get("volume_spike", 0),
+            spread_pct=sd.get("spread_pct", "N/A"),
             technical=fmt(briefs.get("technical", {})),
             sentiment=fmt(briefs.get("sentiment", {})),
             catalyst=fmt(briefs.get("catalyst", {})),

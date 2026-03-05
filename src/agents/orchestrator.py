@@ -119,8 +119,8 @@ class Orchestrator:
             "macro": macro_brief,
         }
 
-        # Feed briefs to jury
-        verdict = await deliberate(symbol, price, briefs)
+        # Feed briefs to jury (include raw scanner data so jury can see price/volume)
+        verdict = await deliberate(symbol, price, briefs, signals_data=signals_data)
 
         # Update exit agent with latest briefs for this symbol
         self.exit_agent.update_briefs(symbol, briefs)
