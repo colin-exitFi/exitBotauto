@@ -1,30 +1,30 @@
 {
-  "last_observation": "CRITICAL ALERT: Portfolio value is $0.00 - complete account liquidation has occurred, cannot assess market conditions without capital or positions.",
-  "last_advice": "EMERGENCY HALT - Total system failure requires immediate shutdown and forensic investigation before any resumption",
-  "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.65\u21920.75, POSITION_SIZE_PCT:3.0\u21922.5",
+  "last_observation": "Market just opened (08:23 ET Thursday); no positions, no trades executed yet \u2014 clean slate, awaiting first opportunities.",
+  "last_advice": "Deploy capital immediately with strict discipline \u2014 idle capital is opportunity cost hemorrhaging; prioritize first wins to build psychological momentum and validate system.",
+  "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.75\u21920.65, SCAN_INTERVAL_SECONDS:60\u219260, TAKE_PROFIT_1_PCT:1.25\u21921.0",
   "last_game_film_summary": null,
   "last_position_manager": null,
   "last_consensus": {
     "symbol": "BULL",
     "final_decision": "SKIP",
     "size_modifier": 0.0,
-    "avg_confidence": 67.5,
+    "avg_confidence": 55.25,
     "claude": {
       "model": "claude",
       "decision": "SKIP",
       "confidence": 65,
-      "reasoning": "BULL at $6.08 shows positive sentiment (0.83 StockTwits) and +2.01% daily gain, but critically low volume at 0.1x average indicates weak participation and no real momentum. Without volume, price moves",
+      "reasoning": "BULL up 2% premarket but critically low volume at 0.1x average suggests no real momentum. StockTwits sentiment is bullish at 0.82, but without volume confirmation this is just noise. No news catalyst,",
       "error": null
     },
     "gpt": {
       "model": "gpt",
       "decision": "SKIP",
-      "confidence": 70,
-      "reasoning": "Low volume suggests lack of momentum; insufficient data on technicals and sentiment not strong enough to justify a buy",
-      "error": null
+      "confidence": 0,
+      "reasoning": "",
+      "error": "Client error '429 Too Many Requests' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
     },
     "perplexity": null,
-    "reasoning": "Both models say SKIP",
-    "timestamp": 1772716943.2785401
+    "reasoning": "GPT failed; Claude says SKIP conf=55%",
+    "timestamp": 1772717025.915264
   }
 }

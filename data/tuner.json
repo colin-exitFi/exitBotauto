@@ -735,5 +735,50 @@
       }
     ],
     "timestamp": 1772701243.656954
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.65,
+        "reason": "Day 1, zero trades, scanner silent for hours. Advisor explicitly states 'current threshold may be too restrictive, preventing any entries.' Previous oscillations 0.65\u21940.7\u21940.75 show we're blocking ALL deal flow. With market now open and still zero candidates, quality bar is strangling execution. Drop to 0.65."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 45,
+        "reason": "Advisor recommends 45sec: 'Opening hour moves fast \u2014 scan every 45sec to catch momentum setups before they gap away.' Market is NOW OPEN. We need faster opportunity detection in this critical volatility window. Current 60sec missing rapid setups."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.0,
+        "reason": "Advisor recommends 1.0%: 'TP1 at 1% captures quick moves in first 30-60min of session when volatility peaks.' Zero trades = need ANY win to validate system. Current 1.25% may be too greedy in opening volatility. Lock early base hit, build confidence."
+      }
+    ],
+    "reasoning": "CRITICAL: Scanner producing zero candidates while capital sits idle is unacceptable \u2014 all 3 changes target Day 1 deployment emergency",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.75,
+        "new": 0.65,
+        "reason": "Day 1, zero trades, scanner silent for hours. Advisor explicitly states 'current threshold may be too restrictive, preventing any entries.' Previous oscillations 0.65\u21940.7\u21940.75 show we're blocking ALL deal flow. With market now open and still zero candidates, quality bar is strangling execution. Drop to 0.65.",
+        "timestamp": 1772717028.708222
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor recommends 45sec: 'Opening hour moves fast \u2014 scan every 45sec to catch momentum setups before they gap away.' Market is NOW OPEN. We need faster opportunity detection in this critical volatility window. Current 60sec missing rapid setups.",
+        "timestamp": 1772717028.708391
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 1.25,
+        "new": 1.0,
+        "reason": "Advisor recommends 1.0%: 'TP1 at 1% captures quick moves in first 30-60min of session when volatility peaks.' Zero trades = need ANY win to validate system. Current 1.25% may be too greedy in opening volatility. Lock early base hit, build confidence.",
+        "timestamp": 1772717028.70843
+      }
+    ],
+    "timestamp": 1772717028.710423
   }
 ]

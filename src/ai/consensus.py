@@ -319,8 +319,27 @@ class ConsensusEngine:
                     stop_price=data.get("stop_price"),
                 )
         except Exception as e:
+            # Retry once on 429
+            if "429" in str(e):
+                logger.warning(f"GPT rate limited, retrying in 3s...")
+                await asyncio.sleep(3)
+                try:
+                    async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
+                        resp = await client.post(
+                            "https://api.openai.com/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                            json={"model": model, "messages": [{"role": "user", "content": prompt}],
+                                  "temperature": 0.3, "max_tokens": 500},
+                        )
+                        resp.raise_for_status()
+                        text = resp.json()["choices"][0]["message"]["content"]
+                        data = _parse_json(text)
+                        return ModelVote(model="gpt", decision=data.get("decision", "SKIP").upper(),
+                                        confidence=int(data.get("confidence", 0)), reasoning=data.get("reasoning", ""))
+                except Exception:
+                    pass
             logger.error(f"GPT API error: {e}")
-            return ModelVote(model="gpt", decision="SKIP", confidence=0, error=str(e))
+            return ModelVote(model="gpt", decision="ERR", confidence=0, error=str(e))
 
     async def _call_perplexity(self, symbol: str, signals: Dict) -> ModelVote:
         if not settings.PERPLEXITY_API_KEY:
@@ -363,8 +382,8 @@ class ConsensusEngine:
 
     async def _resolve(self, symbol: str, price: float, signals: Dict,
                        claude: ModelVote, gpt: ModelVote) -> ConsensusResult:
-        claude_ok = claude.error is None
-        gpt_ok = gpt.error is None
+        claude_ok = claude.error is None and claude.decision != "ERR"
+        gpt_ok = gpt.error is None and gpt.decision != "ERR"
 
         # Both failed → NO TRADE
         if not claude_ok and not gpt_ok:
@@ -385,12 +404,12 @@ class ConsensusEngine:
 
         if not gpt_ok:
             conf = claude.confidence * 0.85
-            buy = claude.decision == "BUY" and conf >= 40
+            action = claude.decision if claude.decision in ("BUY", "SHORT") and conf >= 40 else "SKIP"
             return ConsensusResult(
-                symbol=symbol, final_decision="BUY" if buy else "SKIP",
-                size_modifier=0.75 if buy else 0.0, avg_confidence=conf,
+                symbol=symbol, final_decision=action,
+                size_modifier=0.5 if action != "SKIP" else 0.0, avg_confidence=conf,
                 claude_vote=claude, gpt_vote=gpt,
-                reasoning=f"GPT failed; Claude says {'BUY' if buy else 'SKIP'} conf={conf:.0f}%")
+                reasoning=f"GPT failed; Claude says {action} conf={conf:.0f}%")
 
         avg_conf = (claude.confidence + gpt.confidence) / 2
 
