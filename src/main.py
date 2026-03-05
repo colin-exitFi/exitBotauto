@@ -921,7 +921,7 @@ class TradingBot:
                     }
                     trade_history.record_trade(trade_record)
                     self.entry_manager.remove_position(symbol)
-                    self.risk_manager.record_trade_pnl(pnl)
+                    self.risk_manager.record_trade({"pnl": pnl})
 
                     # Update P&L tracking
                     self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
@@ -1000,7 +1000,7 @@ class TradingBot:
         }
         trade_history.record_trade(trade_record)
         self.entry_manager.remove_position(symbol)
-        self.risk_manager.record_trade_pnl(pnl)
+        self.risk_manager.record_trade({"pnl": pnl})
 
         # Update P&L
         self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl

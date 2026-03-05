@@ -1,6 +1,6 @@
 """
 Consensus Engine - Multi-AI Jury System.
-Claude + GPT must both agree on direction (BUY or SHORT). Perplexity breaks ties.
+3-model majority vote: Claude + GPT + Grok. 2-of-3 agreement = trade. Perplexity for research/tie-break.
 """
 
 import asyncio
@@ -37,6 +37,7 @@ class ConsensusResult:
     avg_confidence: float
     claude_vote: Optional[ModelVote] = None
     gpt_vote: Optional[ModelVote] = None
+    grok_vote: Optional[ModelVote] = None
     perplexity_vote: Optional[ModelVote] = None
     reasoning: str = ""
     timestamp: float = field(default_factory=time.time)
@@ -51,6 +52,7 @@ class ConsensusResult:
             "symbol": self.symbol, "final_decision": self.final_decision,
             "size_modifier": self.size_modifier, "avg_confidence": self.avg_confidence,
             "claude": _vote(self.claude_vote), "gpt": _vote(self.gpt_vote),
+            "grok": _vote(self.grok_vote),
             "perplexity": _vote(self.perplexity_vote), "reasoning": self.reasoning,
             "timestamp": self.timestamp,
         }
@@ -121,15 +123,16 @@ Respond with ONLY valid JSON (no markdown):
 # ── Engine ────────────────────────────────────────────────────────
 
 class ConsensusEngine:
-    """Multi-AI jury: Claude + GPT must agree. Perplexity breaks ties."""
+    """Multi-AI jury: Claude + GPT + Grok — 2-of-3 majority wins. Perplexity for research."""
 
-    TIMEOUT = 10  # seconds per model call
+    TIMEOUT = 30  # seconds per model call (gpt-5.2 and grok-4 need more time)
 
     def __init__(self):
         self._cache: Dict[str, ConsensusResult] = {}  # symbol -> result
+        self._skip_cache: Dict[str, float] = {}  # symbol -> timestamp (cooldown for SKIPs)
         self._call_timestamps: List[float] = []
         self._history: List[Dict] = []  # last N decisions for dashboard
-        self._api_calls = {"claude": 0, "gpt": 0, "perplexity": 0}
+        self._api_calls = {"claude": 0, "gpt": 0, "grok": 0, "perplexity": 0}
 
     # ── Public API ────────────────────────────────────────────────
 
@@ -140,13 +143,19 @@ class ConsensusEngine:
                                    size_modifier=1.0, avg_confidence=100,
                                    reasoning="Consensus disabled")
 
+        # Skip cooldown — don't re-evaluate SKIPped tickers for 5 minutes
+        skip_ts = self._skip_cache.get(symbol)
+        if skip_ts and (time.time() - skip_ts) < 300:
+            logger.debug(f"Skip cooldown active for {symbol} ({int(300 - (time.time() - skip_ts))}s left)")
+            return ConsensusResult(symbol=symbol, final_decision="SKIP",
+                                   size_modifier=0.0, avg_confidence=0,
+                                   reasoning="Skip cooldown (5 min)")
+
         # Check cache
         cached = self._cache.get(symbol)
-        # SKIP decisions expire fast (90s) so we re-evaluate with fresh data
-        # BUY/SHORT decisions cache longer (5 min) since they're actionable
         base_ttl = getattr(settings, 'CONSENSUS_CACHE_SECONDS', 300)
         if cached:
-            ttl = 90 if cached.final_decision == "SKIP" else base_ttl
+            ttl = 300 if cached.final_decision == "SKIP" else base_ttl
             if (time.time() - cached.timestamp) < ttl:
                 logger.debug(f"Consensus cache hit for {symbol}")
                 return cached
@@ -175,13 +184,18 @@ class ConsensusEngine:
         # Build prompt with enriched data
         prompt = self._build_prompt(symbol, price, signals_data)
 
-        # Run Claude + GPT in parallel
+        # Run all 3 jury members in parallel
         claude_task = self._call_claude(prompt)
         gpt_task = self._call_gpt(prompt)
-        claude_vote, gpt_vote = await asyncio.gather(claude_task, gpt_task)
+        grok_task = self._call_grok(prompt)
+        claude_vote, gpt_vote, grok_vote = await asyncio.gather(claude_task, gpt_task, grok_task)
 
-        # Consensus logic
-        result = await self._resolve(symbol, price, signals_data, claude_vote, gpt_vote)
+        # 3-model majority vote resolution
+        result = await self._resolve(symbol, price, signals_data, claude_vote, gpt_vote, grok_vote)
+
+        # Track skip cooldown
+        if result.final_decision == "SKIP":
+            self._skip_cache[symbol] = time.time()
 
         # Cache & record
         self._cache[symbol] = result
@@ -191,8 +205,8 @@ class ConsensusEngine:
         logger.info(
             f"🗳️ Consensus for {symbol}: {result.final_decision} "
             f"(Claude={claude_vote.decision if not claude_vote.error else 'ERR'}, "
-            f"GPT={gpt_vote.decision if not gpt_vote.error else 'ERR'}"
-            f"{', Perplexity=' + result.perplexity_vote.decision if result.perplexity_vote else ''}) "
+            f"GPT={gpt_vote.decision if not gpt_vote.error else 'ERR'}, "
+            f"Grok={grok_vote.decision if not grok_vote.error else 'ERR'}) "
             f"conf={result.avg_confidence:.0f}% size={result.size_modifier:.0%}"
         )
         return result
@@ -217,6 +231,7 @@ class ConsensusEngine:
             "estimated_cost": round(
                 self._api_calls["claude"] * 0.003 +
                 self._api_calls["gpt"] * 0.005 +
+                self._api_calls["grok"] * 0.005 +
                 self._api_calls["perplexity"] * 0.005, 2
             ),
         }
@@ -415,6 +430,66 @@ class ConsensusEngine:
             logger.error(f"GPT API error: {e}")
             return ModelVote(model="gpt", decision="ERR", confidence=0, error=str(e))
 
+    async def _call_grok(self, prompt: str) -> ModelVote:
+        if not settings.XAI_API_KEY:
+            return ModelVote(model="grok", decision="SKIP", confidence=0, error="No API key")
+
+        model = getattr(settings, 'XAI_MODEL', 'grok-4-0709')
+        try:
+            async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
+                resp = await client.post(
+                    "https://api.x.ai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.XAI_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "max_tokens": 500,
+                        "temperature": 0.3,
+                        "messages": [{"role": "user", "content": prompt}],
+                    },
+                )
+                resp.raise_for_status()
+                self._api_calls["grok"] += 1
+                text = resp.json()["choices"][0]["message"]["content"]
+                data = _parse_json(text)
+                return ModelVote(
+                    model="grok",
+                    decision=data.get("decision", "SKIP").upper(),
+                    confidence=int(data.get("confidence", 0)),
+                    reasoning=data.get("reasoning", ""),
+                    target_price=data.get("target_price"),
+                    stop_price=data.get("stop_price"),
+                )
+        except Exception as e:
+            # Exponential backoff on 429
+            if "429" in str(e):
+                for attempt, wait in enumerate([5, 15, 30], 1):
+                    logger.warning(f"Grok rate limited, retry {attempt}/3 in {wait}s...")
+                    await asyncio.sleep(wait)
+                    try:
+                        async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
+                            resp = await client.post(
+                                "https://api.x.ai/v1/chat/completions",
+                                headers={"Authorization": f"Bearer {settings.XAI_API_KEY}",
+                                         "Content-Type": "application/json"},
+                                json={"model": model, "messages": [{"role": "user", "content": prompt}],
+                                      "temperature": 0.3, "max_tokens": 500},
+                            )
+                            resp.raise_for_status()
+                            self._api_calls["grok"] += 1
+                            text = resp.json()["choices"][0]["message"]["content"]
+                            data = _parse_json(text)
+                            return ModelVote(model="grok", decision=data.get("decision", "SKIP").upper(),
+                                            confidence=int(data.get("confidence", 0)), reasoning=data.get("reasoning", ""))
+                    except Exception:
+                        if attempt == 3:
+                            break
+                        continue
+            logger.error(f"Grok API error: {e}")
+            return ModelVote(model="grok", decision="ERR", confidence=0, error=str(e))
+
     async def _call_perplexity(self, symbol: str, signals: Dict) -> ModelVote:
         if not settings.PERPLEXITY_API_KEY:
             return ModelVote(model="perplexity", decision="SKIP", confidence=0, error="No API key")
@@ -455,87 +530,76 @@ class ConsensusEngine:
     # ── Consensus Resolution ──────────────────────────────────────
 
     async def _resolve(self, symbol: str, price: float, signals: Dict,
-                       claude: ModelVote, gpt: ModelVote) -> ConsensusResult:
-        claude_ok = claude.error is None and claude.decision != "ERR"
-        gpt_ok = gpt.error is None and gpt.decision != "ERR"
+                       claude: ModelVote, gpt: ModelVote, grok: ModelVote) -> ConsensusResult:
+        """3-model majority vote: 2-of-3 agreeing on BUY or SHORT = trade."""
+        votes = [claude, gpt, grok]
+        working = [(v.model, v) for v in votes if v.error is None and v.decision != "ERR"]
+        failed = [(v.model, v) for v in votes if v.error is not None or v.decision == "ERR"]
 
-        # Both failed → NO TRADE
-        if not claude_ok and not gpt_ok:
+        if len(failed) > 0:
+            logger.warning(f"Model failures for {symbol}: {[f[0] for f in failed]}")
+
+        # All failed → NO TRADE
+        if len(working) == 0:
             return ConsensusResult(
                 symbol=symbol, final_decision="SKIP", size_modifier=0.0,
-                avg_confidence=0, claude_vote=claude, gpt_vote=gpt,
-                reasoning="Both AI models failed — never trade blind")
+                avg_confidence=0, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                reasoning="All 3 AI models failed — never trade blind")
 
-        # One failed → use the other (slight size reduction, but trust the working model)
-        if not claude_ok:
-            conf = gpt.confidence * 0.85  # slight penalty for single-model
-            buy = gpt.decision == "BUY" and conf >= 40
+        # Count votes by direction
+        buy_votes = [v for _, v in working if v.decision == "BUY"]
+        short_votes = [v for _, v in working if v.decision == "SHORT"]
+        skip_votes = [v for _, v in working if v.decision == "SKIP"]
+
+        all_confs = [v.confidence for _, v in working]
+        avg_conf = sum(all_confs) / len(all_confs) if all_confs else 0
+
+        # 3-of-3 agree on direction → full conviction
+        if len(buy_votes) == 3:
             return ConsensusResult(
-                symbol=symbol, final_decision="BUY" if buy else "SKIP",
-                size_modifier=0.75 if buy else 0.0, avg_confidence=conf,
-                claude_vote=claude, gpt_vote=gpt,
-                reasoning=f"Claude failed; GPT says {'BUY' if buy else 'SKIP'} conf={conf:.0f}%")
-
-        if not gpt_ok:
-            conf = claude.confidence * 0.85
-            action = claude.decision if claude.decision in ("BUY", "SHORT") and conf >= 40 else "SKIP"
+                symbol=symbol, final_decision="BUY", size_modifier=1.0,
+                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                reasoning=f"Unanimous BUY (3/3) — full size, conf={avg_conf:.0f}%")
+        if len(short_votes) == 3:
             return ConsensusResult(
-                symbol=symbol, final_decision=action,
-                size_modifier=0.5 if action != "SKIP" else 0.0, avg_confidence=conf,
-                claude_vote=claude, gpt_vote=gpt,
-                reasoning=f"GPT failed; Claude says {action} conf={conf:.0f}%")
+                symbol=symbol, final_decision="SHORT", size_modifier=1.0,
+                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                reasoning=f"Unanimous SHORT (3/3) — full size, conf={avg_conf:.0f}%")
 
-        avg_conf = (claude.confidence + gpt.confidence) / 2
-
-        # Both SKIP
-        if claude.decision == "SKIP" and gpt.decision == "SKIP":
+        # 2-of-3 agree on direction → trade with reduced size
+        if len(buy_votes) >= 2:
+            size = 0.85 if avg_conf >= 60 else 0.65
+            voters = [v.model for v in buy_votes]
             return ConsensusResult(
-                symbol=symbol, final_decision="SKIP", size_modifier=0.0,
-                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                reasoning="Both models say SKIP")
-
-        # Both agree on direction (BUY or SHORT)
-        if claude.decision == gpt.decision and claude.decision in ("BUY", "SHORT"):
-            direction = claude.decision
-            if avg_conf >= 60:
-                return ConsensusResult(
-                    symbol=symbol, final_decision=direction, size_modifier=1.0,
-                    avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both {direction}, strong ({avg_conf:.0f}%) — full size")
-            elif avg_conf >= 40:
-                return ConsensusResult(
-                    symbol=symbol, final_decision=direction, size_modifier=0.75,
-                    avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both {direction}, moderate ({avg_conf:.0f}%) — 75% size")
-            else:
-                return ConsensusResult(
-                    symbol=symbol, final_decision=direction, size_modifier=0.5,
-                    avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both {direction}, low confidence ({avg_conf:.0f}%) — 50% size")
-
-        # Disagreement → Perplexity tie-breaker
-        logger.info(f"🔀 Tie-breaker needed for {symbol} (Claude={claude.decision}, GPT={gpt.decision})")
-        pplx = await self._call_perplexity(symbol, signals)
-
-        if pplx.error:
+                symbol=symbol, final_decision="BUY", size_modifier=size,
+                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                reasoning=f"Majority BUY (2/3: {', '.join(voters)}) — {size:.0%} size, conf={avg_conf:.0f}%")
+        if len(short_votes) >= 2:
+            size = 0.85 if avg_conf >= 60 else 0.65
+            voters = [v.model for v in short_votes]
             return ConsensusResult(
-                symbol=symbol, final_decision="SKIP", size_modifier=0.0,
-                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                perplexity_vote=pplx,
-                reasoning="Tie-breaker failed — conservative SKIP")
+                symbol=symbol, final_decision="SHORT", size_modifier=size,
+                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                reasoning=f"Majority SHORT (2/3: {', '.join(voters)}) — {size:.0%} size, conf={avg_conf:.0f}%")
 
-        if pplx.decision in ("BUY", "SHORT"):
-            return ConsensusResult(
-                symbol=symbol, final_decision=pplx.decision, size_modifier=0.75,
-                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                perplexity_vote=pplx,
-                reasoning=f"Tie-break: Perplexity says {pplx.decision} — reduced size")
-        else:
-            return ConsensusResult(
-                symbol=symbol, final_decision="SKIP", size_modifier=0.0,
-                avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                perplexity_vote=pplx,
-                reasoning=f"Tie-break: Perplexity says SKIP — no trade")
+        # Only 2 models working and they disagree, or all 3 split → Perplexity tie-break
+        if len(working) == 2:
+            w1, w2 = working[0], working[1]
+            if w1[1].decision != w2[1].decision and w1[1].decision != "SKIP" and w2[1].decision != "SKIP":
+                logger.info(f"🔀 2 models split for {symbol} ({w1[0]}={w1[1].decision}, {w2[0]}={w2[1].decision}) → Perplexity tie-break")
+                pplx = await self._call_perplexity(symbol, signals)
+                if not pplx.error and pplx.decision in ("BUY", "SHORT"):
+                    return ConsensusResult(
+                        symbol=symbol, final_decision=pplx.decision, size_modifier=0.6,
+                        avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                        perplexity_vote=pplx,
+                        reasoning=f"Tie-break: Perplexity says {pplx.decision} — 60% size")
+
+        # All SKIP or no majority → SKIP
+        return ConsensusResult(
+            symbol=symbol, final_decision="SKIP", size_modifier=0.0,
+            avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+            reasoning=f"No majority — BUY:{len(buy_votes)} SHORT:{len(short_votes)} SKIP:{len(skip_votes)}")
 
 
 # ── Helpers ───────────────────────────────────────────────────────

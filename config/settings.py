@@ -90,9 +90,11 @@ MAX_SECTOR_PCT = _env_float("MAX_SECTOR_PCT", 40.0)
 CONSENSUS_ENABLED = _env("CONSENSUS_ENABLED", "true").lower() in ("true", "1", "yes")
 CONSENSUS_MIN_CONFIDENCE = _env_int("CONSENSUS_MIN_CONFIDENCE", 70)
 CONSENSUS_CACHE_SECONDS = _env_int("CONSENSUS_CACHE_SECONDS", 300)
-CONSENSUS_MAX_CALLS_PER_HOUR = _env_int("CONSENSUS_MAX_CALLS_PER_HOUR", 20)
-OPENAI_MODEL = _env("OPENAI_MODEL", "gpt-4o")
+CONSENSUS_MAX_CALLS_PER_HOUR = _env_int("CONSENSUS_MAX_CALLS_PER_HOUR", 60)
+OPENAI_MODEL = _env("OPENAI_MODEL", "gpt-5.2")
 CLAUDE_MODEL = _env("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
+XAI_API_KEY = _env("XAI_API_KEY", "")
+XAI_MODEL = _env("XAI_MODEL", "grok-4-0709")
 PERPLEXITY_MODEL = _env("PERPLEXITY_MODEL", "sonar-pro")
 
 # ── Notifications ─────────────────────────────────────────────────
