@@ -876,9 +876,11 @@ class TradingBot:
                     logger.error(f"Orchestrator error for {symbol}: {e}")
                     continue  # Never trade without agent consensus
 
-            can = await self.entry_manager.can_enter(symbol, sentiment_score, positions)
+            direction = sentiment_data.get("consensus_direction", "BUY")
+            # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
+            check_sentiment = -sentiment_score if direction == "SHORT" else sentiment_score
+            can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
             if can:
-                direction = sentiment_data.get("consensus_direction", "BUY")
                 logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
                 if direction == "SHORT":
                     pos = await self.entry_manager.enter_short(symbol, sentiment_data)
