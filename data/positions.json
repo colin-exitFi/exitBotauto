@@ -3,9 +3,20 @@
     "symbol": "AVGO",
     "entry_price": 328.252,
     "quantity": 1.618421212,
-    "entry_time": 1772721395.304642,
+    "entry_time": 1772721491.821216,
     "sentiment_at_entry": 0,
     "peak_price": 328.252,
+    "order_id": "",
+    "partial_exit": false,
+    "from_brokerage": true
+  },
+  "TTD": {
+    "symbol": "TTD",
+    "entry_price": 32.27375,
+    "quantity": 24.0,
+    "entry_time": 1772721491.8214788,
+    "sentiment_at_entry": 0,
+    "peak_price": 32.27375,
     "order_id": "",
     "partial_exit": false,
     "from_brokerage": true

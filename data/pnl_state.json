@@ -1,13 +1,1 @@
-{
-  "total_realized_pnl": 0.0,
-  "today_realized_pnl": 0.0,
-  "today_date": "2026-03-05",
-  "total_trades": 4,
-  "winning_trades": 4,
-  "losing_trades": 0,
-  "best_trade": 0.0,
-  "worst_trade": 0.0,
-  "total_fees": 0.0,
-  "starting_equity": 25000,
-  "peak_equity": 25002.17
-}
+{}
