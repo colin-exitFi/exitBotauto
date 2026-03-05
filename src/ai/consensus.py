@@ -148,8 +148,8 @@ class ConsensusEngine:
         if cached:
             ttl = 90 if cached.final_decision == "SKIP" else base_ttl
             if (time.time() - cached.timestamp) < ttl:
-            logger.debug(f"Consensus cache hit for {symbol}")
-            return cached
+                logger.debug(f"Consensus cache hit for {symbol}")
+                return cached
 
         # Rate limit — higher during market hours (4AM-8PM ET)
         from datetime import datetime as _dt
