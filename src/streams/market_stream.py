@@ -51,6 +51,7 @@ class MarketStream:
         # Breakout detection: symbol -> {volume_1min, price_1min_ago, alert_sent}
         self._volume_window: Dict[str, List[float]] = {}
         self._price_window: Dict[str, List[float]] = {}
+        self._prev_closes: Dict[str, float] = {}  # symbol -> previous day close for daily % calc
 
         # Callbacks
         self._on_breakout: Optional[Callable] = None
@@ -106,6 +107,10 @@ class MarketStream:
                 logger.info(f"📡 Subscribed to {len(new_symbols)} symbols: {', '.join(list(new_symbols)[:5])}...")
             except Exception as e:
                 logger.error(f"Subscribe error: {e}")
+
+    def set_prev_closes(self, prev_closes: Dict[str, float]):
+        """Set previous day close prices for accurate daily % change in breakout alerts."""
+        self._prev_closes.update(prev_closes)
 
     async def unsubscribe(self, symbols: List[str]):
         """Unsubscribe from symbols."""
@@ -301,11 +306,15 @@ class MarketStream:
         if len(prices) < 2:
             return
 
-        # Price change over last 5 minutes
-        oldest_price = prices[0][1]
-        if oldest_price <= 0:
-            return
-        pct_change = ((price - oldest_price) / oldest_price) * 100
+        # Price change: use prev_close for daily change if available, else 5-min window
+        prev_close = self._prev_closes.get(symbol, 0)
+        if prev_close > 0:
+            pct_change = ((price - prev_close) / prev_close) * 100
+        else:
+            oldest_price = prices[0][1]
+            if oldest_price <= 0:
+                return
+            pct_change = ((price - oldest_price) / oldest_price) * 100
 
         # Volume spike: compare bar volume to rolling average
         volumes = self._volume_window.get(symbol, [])

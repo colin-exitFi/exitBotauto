@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "symbol": "BATL",
+    "side": "sell",
+    "entry_price": 25.25,
+    "exit_price": 26.17,
+    "quantity": 9.0,
+    "pnl": 8.280000000000015,
+    "pnl_pct": 3.6435643564356504,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 225.5606951713562,
+    "entry_time": 1772728621.678978,
+    "exit_time": 1772728847.239674,
+    "recorded_at": 1772728847.2397408
+  }
+]

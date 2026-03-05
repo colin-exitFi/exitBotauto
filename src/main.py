@@ -346,6 +346,9 @@ class TradingBot:
                             top_symbols = [c["symbol"] for c in candidates[:10]]
                             # Also keep streaming positions
                             pos_symbols = [p["symbol"] for p in self.entry_manager.get_positions()]
+                            # Feed prev_close data for accurate daily % in breakout alerts
+                            prev_closes = {c["symbol"]: c.get("prev_close", 0) for c in candidates if c.get("prev_close", 0) > 0}
+                            self.market_stream.set_prev_closes(prev_closes)
                             await self.market_stream.subscribe(top_symbols + pos_symbols)
                         await self._process_candidates(candidates)
                     except Exception as e:

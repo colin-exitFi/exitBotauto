@@ -1,4 +1,14 @@
 {
-  "runners": [],
-  "updated_at": "2026-03-05T10:34:51.187249"
+  "runners": [
+    {
+      "symbol": "BATL",
+      "date": "2026-03-05",
+      "change_pct": 43.88,
+      "close_price": 26.6945,
+      "volume": 24727044.0,
+      "volume_spike": 0.8305690500723164,
+      "sentiment_at_peak": 0.6471
+    }
+  ],
+  "updated_at": "2026-03-05T10:40:14.046229"
 }
