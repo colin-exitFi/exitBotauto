@@ -11,6 +11,7 @@ from loguru import logger
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
+from src.ai.consensus import ConsensusEngine
 
 
 class EntryManager:
@@ -31,6 +32,9 @@ class EntryManager:
         self.order_timeout = 30  # seconds
 
         self.max_chase_pct = settings.MAX_PRICE_CHASE_PCT
+
+        # Consensus engine
+        self.consensus = ConsensusEngine()
 
         # Track active positions (symbol -> position dict)
         self.positions: Dict[str, Dict] = {}
@@ -109,6 +113,21 @@ class EntryManager:
             logger.warning(f"Could not get price for {symbol}")
             return None
 
+        # ── Consensus check ────────────────────────────────────────
+        if getattr(settings, 'CONSENSUS_ENABLED', True):
+            consensus_result = await self.consensus.evaluate(symbol, price, sentiment_data)
+            if consensus_result.final_decision == "SKIP":
+                logger.info(f"🗳️ Consensus SKIP for {symbol}: {consensus_result.reasoning}")
+                return None
+            # Store modifier to apply to position size
+            consensus_size_modifier = consensus_result.size_modifier
+            logger.info(
+                f"🗳️ Consensus BUY for {symbol}: conf={consensus_result.avg_confidence:.0f}%, "
+                f"size={consensus_size_modifier:.0%} — {consensus_result.reasoning}"
+            )
+        else:
+            consensus_size_modifier = 1.0
+
         # Get buying power (cash account aware)
         balances = await asyncio.get_event_loop().run_in_executor(
             None, self.broker.get_balances
@@ -134,6 +153,8 @@ class EntryManager:
             conviction = "normal"
 
         notional = self.risk.get_position_size(price, buying_power, conviction) if self.risk else 0
+        # Apply consensus size modifier
+        notional *= consensus_size_modifier
         # Reduce size during extended hours
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT

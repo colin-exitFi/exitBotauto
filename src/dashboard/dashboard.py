@@ -131,6 +131,19 @@ async def get_ai_status():
     }
 
 
+@app.get("/api/consensus")
+async def get_consensus():
+    """Get consensus engine history and stats."""
+    if not _bot or not _bot.entry_manager or not hasattr(_bot.entry_manager, 'consensus'):
+        return {"enabled": False, "history": [], "stats": {}}
+    engine = _bot.entry_manager.consensus
+    return {
+        "enabled": getattr(settings, 'CONSENSUS_ENABLED', True),
+        "history": engine.get_history()[-10:],
+        "stats": engine.get_stats(),
+    }
+
+
 @app.get("/api/candidates")
 async def get_candidates():
     if not _bot or not _bot.scanner:
@@ -260,6 +273,11 @@ td{padding:8px;border-bottom:1px solid #21262d}
     <div id="aiStatus" class="empty">Loading AI status...</div>
   </div>
   <div class="card full">
+    <h2>🗳️ AI Consensus <span id="consensusStats" style="float:right;color:#8b949e"></span></h2>
+    <table><thead><tr><th>Symbol</th><th>Claude</th><th>GPT</th><th>Perplexity</th><th>Decision</th><th>Confidence</th><th>Size</th></tr></thead>
+    <tbody id="consensus"></tbody></table>
+  </div>
+  <div class="card full">
     <h2>💼 Alpaca Portfolio <span id="portfolioValue" style="float:right;color:#58a6ff"></span></h2>
     <table><thead><tr><th>Symbol</th><th>Shares</th><th>Avg Price</th><th>Current</th><th>Value</th><th>P&L</th></tr></thead>
     <tbody id="portfolio"></tbody></table>
@@ -348,6 +366,20 @@ async function refresh() {
         <td>$${val}</td><td class="${cls(pnl)}">${fmt(pnl)} (${fmt(pnlPct)}%)</td>
       </tr>`;
     }).join('') : '<tr><td colspan="6" class="empty">No holdings</td></tr>';
+  }
+  // Consensus
+  const con = await api('/api/consensus');
+  if (con) {
+    const st = con.stats || {};
+    $('consensusStats').textContent = con.enabled ?
+      `Agree: ${((st.agreement_rate||0)*100).toFixed(0)}% | Calls: ${st.total||0} | Cost: $${st.estimated_cost||0}` : '❌ Disabled';
+    $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
+      const cv = h.claude, gv = h.gpt, pv = h.perplexity;
+      const voteStr = v => v ? `<span class="${v.decision==='BUY'?'positive':'negative'}">${v.decision} ${v.confidence}%</span>` : '—';
+      return `<tr><td><strong>${h.symbol}</strong></td><td>${voteStr(cv)}</td><td>${voteStr(gv)}</td><td>${voteStr(pv)}</td>
+        <td class="${h.final_decision==='BUY'?'positive':'negative'}"><strong>${h.final_decision}</strong></td>
+        <td>${(h.avg_confidence||0).toFixed(0)}%</td><td>${((h.size_modifier||0)*100).toFixed(0)}%</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">No consensus decisions yet</td></tr>';
   }
   // Bot Positions
   const pos = await api('/api/positions');
