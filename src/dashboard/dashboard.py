@@ -395,7 +395,8 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .card h2{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;border-bottom:1px solid #21262d;padding-bottom:10px;display:flex;align-items:center;gap:8px}
 .card h2 .icon{font-size:16px}
 .full{grid-column:1/-1}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.metrics.pnl-grid{grid-template-columns:repeat(5,1fr)}
 .metric{text-align:center;padding:14px 10px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s}
 .metric:hover{border-color:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .metric .value{font-size:22px;font-weight:800;color:#58a6ff;transition:all .3s}
@@ -448,19 +449,17 @@ tr:hover td{background:#161b2288}
   <!-- P&L Terminal -->
   <div class="card full">
     <h2><span class="icon">💰</span> P&L Terminal <span id="pnlTimestamp" style="margin-left:auto;color:#484f58;font-size:11px;font-weight:400"></span></h2>
-    <div class="metrics" id="pnlMetrics">
+    <div class="metrics pnl-grid" id="pnlMetrics">
       <div class="metric"><div class="value big-pnl" id="totalPnl">$0.00</div><div class="label">Total P&L</div></div>
       <div class="metric"><div class="value" id="equity">$1,000</div><div class="label">Equity</div></div>
       <div class="metric"><div class="value" id="todayPnl">$0.00</div><div class="label">Today P&L</div></div>
       <div class="metric"><div class="value" id="unrealized">$0.00</div><div class="label">Unrealized</div></div>
+      <div class="metric"><div class="value" id="roi">0%</div><div class="label">ROI</div></div>
       <div class="metric"><div class="value" id="winRate">0%</div><div class="label">Win Rate</div></div>
       <div class="metric"><div class="value" id="totalTrades">0</div><div class="label">Trades</div></div>
-      <div class="metric"><div class="value" id="roi">0%</div><div class="label">ROI</div></div>
       <div class="metric"><div class="value" id="drawdown">0%</div><div class="label">Drawdown</div></div>
       <div class="metric"><div class="value positive" id="bestTrade">$0</div><div class="label">Best Trade</div></div>
       <div class="metric"><div class="value negative" id="worstTrade">$0</div><div class="label">Worst Trade</div></div>
-      <div class="metric"><div class="value" id="openPos">0</div><div class="label">Open Positions</div></div>
-      <div class="metric"><div class="value" id="winsLosses">0W / 0L</div><div class="label">Wins / Losses</div></div>
     </div>
   </div>
 
@@ -576,9 +575,6 @@ async function refresh() {
     $('bestTrade').className = 'value positive';
     $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
     $('worstTrade').className = 'value negative';
-    $('openPos').textContent = pnl.open_positions||0;
-    $('openPos').className = 'value info';
-    $('winsLosses').textContent = (pnl.winning_trades||0) + 'W / ' + (pnl.losing_trades||0) + 'L';
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString();
   }
   // Metrics
@@ -589,20 +585,14 @@ async function refresh() {
     const anim = pnlChanged ? ' animated' : '';
     $('metrics').innerHTML = `
       <div class="metric"><div class="value" style="color:#d2a8ff;font-size:16px">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
-      <div class="metric"><div class="value">$${(m.equity||0).toLocaleString()}</div><div class="label">Equity</div></div>
-      <div class="metric"><div class="value ${cls(m.daily_pnl||0)} big-pnl${anim}">$${(m.daily_pnl||0).toFixed(2)}</div><div class="label">Daily P&L</div></div>
-      <div class="metric"><div class="value ${cls(m.daily_pnl_pct||0)}${anim}">${fmt(m.daily_pnl_pct||0)}%</div><div class="label">Daily %</div></div>
-      <div class="metric"><div class="value info">${m.total_trades||0}</div><div class="label">Trades</div></div>
-      <div class="metric"><div class="value">${((m.win_rate||0)*100).toFixed(0)}%</div><div class="label">Win Rate</div></div>
       <div class="metric"><div class="value">${m.consecutive_wins||0}W/${m.consecutive_losses||0}L</div><div class="label">Streak</div></div>
       <div class="metric"><div class="value">${(m.heat_pct||0).toFixed(0)}%</div><div class="label">Heat</div></div>
       <div class="metric"><div class="value">${(m.tier_size_pct||0)}%</div><div class="label">Pos Size</div></div>
       <div class="metric"><div class="value">${m.tier_max_positions||0}</div><div class="label">Max Pos</div></div>
       <div class="metric"><div class="value">$${(m.ath_equity||0).toLocaleString()}</div><div class="label">ATH</div></div>
-      <div class="metric"><div class="value ${(m.drawdown_pct||0) > 0 ? 'negative' : ''}">${(m.drawdown_pct||0).toFixed(1)}%</div><div class="label">Drawdown</div></div>
-      <div class="metric"><div class="value ${cls(m.total_return_pct||0)}">${(m.total_return_pct||0).toFixed(1)}%</div><div class="label">Total Return</div></div>
       <div class="metric"><div class="value">$${(m.next_milestone||0).toLocaleString()}</div><div class="label">Next Milestone</div></div>
       <div class="metric"><div class="value info">${(m.milestone_progress_pct||0).toFixed(0)}%</div><div class="label">→ Progress</div></div>
+      <div class="metric"><div class="value ${cls(m.total_return_pct||0)}">${(m.total_return_pct||0).toFixed(1)}%</div><div class="label">Total Return</div></div>
       <div class="metric"><div class="value">${(m.days_trading||0).toFixed(0)}d</div><div class="label">Days</div></div>
     `;
   }
