@@ -870,5 +870,50 @@
       }
     ],
     "timestamp": 1772717912.225763
+  },
+  {
+    "changes": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 2.0,
+        "reason": "11/11 trades died via trailing stop in <5min at 1.0% - double to 2.0% (max allowed) to survive opening volatility bid/ask spread"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "Raised to 0.8 last run as 'emergency brake' but Advisor now says HALT ALL - drop to 0.5 (below current 0.8) to effectively pause new entries while preserving ability to resume"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Scanning every 60sec feeding broken entry logic - slow to 5min to reduce bad trade velocity while trailing stop fix is validated"
+      }
+    ],
+    "reasoning": "Emergency triage: widen trailing stop to max (2.0%) to stop instant death pattern, throttle entry flow via slower scans, effectively pause new positions via sentiment floor - let system breathe while trailing stop adjustment proves out",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 1.0,
+        "new": 2.0,
+        "reason": "11/11 trades died via trailing stop in <5min at 1.0% - double to 2.0% (max allowed) to survive opening volatility bid/ask spread",
+        "timestamp": 1772718248.2156959
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.8,
+        "new": 0.5,
+        "reason": "Raised to 0.8 last run as 'emergency brake' but Advisor now says HALT ALL - drop to 0.5 (below current 0.8) to effectively pause new entries while preserving ability to resume",
+        "timestamp": 1772718248.2159429
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 300,
+        "reason": "Scanning every 60sec feeding broken entry logic - slow to 5min to reduce bad trade velocity while trailing stop fix is validated",
+        "timestamp": 1772718248.2160141
+      }
+    ],
+    "timestamp": 1772718248.217152
   }
 ]

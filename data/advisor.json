@@ -1669,5 +1669,44 @@
     ],
     "key_insight": "**CRITICAL FAILURE PATTERN DETECTED**: Zero wins + 100% trailing stop exits + 12-second average hold + $0 net P&L across 11 trades = this is not bad luck, this is broken infrastructure. TTD and PDYN were likely valid setups but the execution layer is sabotaging them instantly. DO NOT TRADE until you audit: (1) Is stop loss = entry price? (2) Does trailing stop activate before profit? (3) Are fills happening at quoted price or with catastrophic slippage? (4) Is there a hidden PDT/margin restriction auto-liquidating positions? The Observer is wrong \u2014 the urgency is MAXIMUM, not low. Every trade right now is a guaranteed loss. Fix the plumbing before deploying another dollar. The family's $25K is not a beta test budget.",
     "timestamp": 1772718115.987896
+  },
+  {
+    "strategy": "HALT ALL TRADING - System is broken and burning daytrades on sub-5-minute trailing stop exits with 0% win rate",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - do not trade until root cause identified"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "11 consecutive losses, all exiting via trailing stop in <5 minutes - this is systematic failure, not bad luck"
+      },
+      {
+        "param": "TRAILING_STOP_ACTIVATION",
+        "current": "unknown",
+        "suggested": "DISABLE or raise to 2%+",
+        "reason": "Trailing stop is killing every trade before it has room to breathe - TTD and PDYN both hit 5 times each, all <5min exits"
+      },
+      {
+        "param": "MIN_HOLD_TIME",
+        "current": "none",
+        "suggested": "5 minutes minimum",
+        "reason": "Average loser hold time is 0.2 minutes (12 seconds) - entries are getting immediately stopped out"
+      },
+      {
+        "param": "ENTRY_TIMING",
+        "current": "unknown",
+        "suggested": "Wait until 9:45 AM ET minimum",
+        "reason": "All 11 trades occurred at 07:xx hour (likely premarket/open volatility) - worst time to enter"
+      }
+    ],
+    "key_insight": "You have a 0% win rate across 11 trades, all exiting via trailing stop in under 5 minutes. This is not a market problem - this is a configuration problem. The trailing stop is too tight for opening volatility, entries are happening in the worst window (market open chaos), and positions have zero time to develop. You're bleeding daytrades (already used 11 exits, likely consuming multiple PDT slots) on a system that needs emergency diagnosis. STOP TRADING until you fix: (1) trailing stop logic, (2) entry timing filters, (3) minimum hold requirements. Dead capital is better than dead-on-arrival trades. Observer is right - wait for 9:45+ and demand scanner validation, but MORE IMPORTANTLY: fix why every single trade is failing in seconds.",
+    "timestamp": 1772718240.419752
   }
 ]

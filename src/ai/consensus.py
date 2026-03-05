@@ -125,7 +125,7 @@ Respond with ONLY valid JSON (no markdown):
 class ConsensusEngine:
     """Multi-AI jury: Claude + GPT + Grok — 2-of-3 majority wins. Perplexity for research."""
 
-    TIMEOUT = 30  # seconds per model call (gpt-5.2 and grok-4 need more time)
+    TIMEOUT = 45  # seconds per model call (grok-4 reasoning can take 20-30s)
 
     def __init__(self):
         self._cache: Dict[str, ConsensusResult] = {}  # symbol -> result
@@ -506,8 +506,9 @@ class ConsensusEngine:
                         if attempt == 3:
                             break
                         continue
-            logger.error(f"Grok API error: {e}")
-            return ModelVote(model="grok", decision="ERR", confidence=0, error=str(e))
+            err_msg = str(e) or repr(e) or type(e).__name__
+            logger.error(f"Grok API error ({type(e).__name__}): {err_msg}")
+            return ModelVote(model="grok", decision="ERR", confidence=0, error=err_msg)
 
     async def _call_perplexity(self, symbol: str, signals: Dict) -> ModelVote:
         if not settings.PERPLEXITY_API_KEY:
