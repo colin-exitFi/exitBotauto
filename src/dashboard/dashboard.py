@@ -286,6 +286,17 @@ async def get_pnl():
     }
 
 
+@app.get("/api/streams")
+async def get_streams():
+    """Get WebSocket stream status."""
+    if not _bot:
+        return {}
+    return {
+        "market": _bot.market_stream.get_stats() if hasattr(_bot, 'market_stream') and _bot.market_stream else {},
+        "trade": _bot.trade_stream.get_stats() if hasattr(_bot, 'trade_stream') and _bot.trade_stream else {},
+    }
+
+
 @app.get("/api/guards")
 async def get_guards():
     """Get extended hours guard status for all positions."""

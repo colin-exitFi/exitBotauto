@@ -30,6 +30,9 @@ from signals.pharma_catalyst import PharmaCatalystScanner
 from signals.fade_runner import FadeRunnerScanner
 from signals.watchlist import DynamicWatchlist
 from signals.edgar import EdgarScanner
+from signals.earnings import EarningsScanner
+from streams.market_stream import MarketStream
+from streams.trade_stream import TradeStream
 from dashboard.dashboard import log_activity
 import persistence
 from entry.entry_manager import EntryManager
@@ -127,6 +130,13 @@ class TradingBot:
         # EDGAR SEC filing scanner (free, no auth)
         self.edgar_scanner = EdgarScanner()
 
+        # Earnings calendar scanner
+        self.earnings_scanner = EarningsScanner()
+
+        # Real-time WebSocket streams
+        self.market_stream = MarketStream()
+        self.trade_stream = TradeStream()
+
         # Dynamic watchlist (built overnight, used during trading)
         self.watchlist = DynamicWatchlist()
 
@@ -204,6 +214,26 @@ class TradingBot:
         # Dashboard
         start_dashboard(bot=self)
 
+        # ── WebSocket streams ─────────────────────────────────────
+        # Market data stream: real-time prices + breakout detection
+        self.market_stream.set_breakout_callback(self._on_breakout_detected)
+        await self.market_stream.start()
+
+        # Trade updates stream: instant order fill detection
+        self.trade_stream.set_stop_callback(self._on_trailing_stop_filled)
+        await self.trade_stream.start()
+
+        # Fetch initial earnings calendar
+        try:
+            earnings = await self.earnings_scanner.refresh()
+            today_earnings = await self.earnings_scanner.get_today()
+            if today_earnings:
+                tickers = [e["ticker"] for e in today_earnings[:10]]
+                logger.info(f"📅 Today's earnings: {', '.join(tickers)}")
+                log_activity("research", f"📅 Earnings today: {', '.join(tickers)}")
+        except Exception as e:
+            logger.debug(f"Earnings calendar fetch failed: {e}")
+
         logger.success("✅ All components initialized")
 
     async def run(self):
@@ -276,6 +306,12 @@ class TradingBot:
                     last_scan = now
                     try:
                         candidates = await self.scanner.scan()
+                        # Subscribe to real-time data for top candidates
+                        if candidates and self.market_stream:
+                            top_symbols = [c["symbol"] for c in candidates[:10]]
+                            # Also keep streaming positions
+                            pos_symbols = [p["symbol"] for p in self.entry_manager.get_positions()]
+                            await self.market_stream.subscribe(top_symbols + pos_symbols)
                         await self._process_candidates(candidates)
                     except Exception as e:
                         logger.error(f"Scan error: {e}")
@@ -413,6 +449,18 @@ class TradingBot:
                 fade_candidates = []
                 if self.fade_scanner:
                     fade_candidates = self.fade_scanner.get_fade_candidates()
+
+                # 5b. Get earnings-driven candidates
+                earnings_signals = []
+                if self.earnings_scanner:
+                    earnings_signals = await self.earnings_scanner.scan()
+                    for es in earnings_signals:
+                        self.watchlist.add(
+                            es["ticker"], side="long", conviction=es.get("conviction", 0.4),
+                            source="earnings", reason=es.get("reason", "earnings catalyst")
+                        )
+                    if earnings_signals:
+                        logger.info(f"📅 Added {len(earnings_signals)} earnings plays to watchlist")
 
                 # 6. REBUILD WATCHLIST from all sources
                 self.watchlist.rebuild_overnight(
@@ -778,6 +826,59 @@ class TradingBot:
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")
 
+    def _on_breakout_detected(self, symbol: str, price: float, volume_spike: float, pct_change: float):
+        """Called by market stream when a breakout is detected."""
+        direction = "🚀" if pct_change > 0 else "💥"
+        logger.info(f"{direction} BREAKOUT: {symbol} {pct_change:+.1f}% @ ${price:.2f} (vol {volume_spike:.1f}x)")
+        log_activity("scan", f"{direction} Breakout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x")
+
+    def _on_trailing_stop_filled(self, symbol: str, fill_price: float, qty: float):
+        """Called by trade stream when a trailing stop order fills."""
+        pos = self.entry_manager.positions.get(symbol)
+        if not pos:
+            logger.warning(f"Trailing stop filled for {symbol} but no tracked position")
+            return
+
+        entry_price = pos.get("entry_price", fill_price)
+        side = pos.get("side", "long")
+        if side == "short":
+            pnl = (entry_price - fill_price) * qty
+        else:
+            pnl = (fill_price - entry_price) * qty
+        pnl_pct = ((fill_price - entry_price) / entry_price * 100) if entry_price else 0
+        if side == "short":
+            pnl_pct = -pnl_pct
+
+        # Record trade
+        trade_record = {
+            "symbol": symbol, "side": "sell" if side == "long" else "buy_to_cover",
+            "entry_price": entry_price, "exit_price": fill_price,
+            "quantity": qty, "pnl": pnl, "pnl_pct": pnl_pct,
+            "reason": "trailing_stop_ws", "hold_seconds": time.time() - pos.get("entry_time", time.time()),
+            "entry_time": pos.get("entry_time", 0), "exit_time": time.time(),
+        }
+        trade_history.record_trade(trade_record)
+        self.entry_manager.remove_position(symbol)
+        self.risk_manager.record_trade_pnl(pnl)
+
+        # Update P&L
+        self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
+        self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
+        self.pnl_state["total_trades"] = self.pnl_state.get("total_trades", 0) + 1
+        if pnl >= 0:
+            self.pnl_state["winning_trades"] = self.pnl_state.get("winning_trades", 0) + 1
+        else:
+            self.pnl_state["losing_trades"] = self.pnl_state.get("losing_trades", 0) + 1
+        self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
+        self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
+        persistence.save_pnl_state(self.pnl_state)
+        persistence.save_positions(self.entry_manager.positions)
+        persistence.save_trades([trade_record])
+
+        emoji = "✅" if pnl >= 0 else "❌"
+        logger.info(f"{emoji} WS TRAILING STOP: {symbol} @ ${fill_price:.2f} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+        log_activity("trade", f"{emoji} {symbol} stopped out (WS): ${pnl:.2f} ({pnl_pct:+.1f}%)")
+
     def _send_trade_alert(self, pos: dict, direction: str):
         """Send Slack webhook alert on trade entry."""
         try:
@@ -819,6 +920,15 @@ class TradingBot:
     async def shutdown(self):
         """Graceful shutdown."""
         logger.info("🛑 Shutting down...")
+        # Stop streams
+        if self.market_stream:
+            await self.market_stream.stop()
+        if self.trade_stream:
+            await self.trade_stream.stop()
+        # Save final state
+        persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
+        persistence.save_pnl_state(getattr(self, 'pnl_state', {}))
+        persistence.save_ai_state(self.ai_layers)
         positions = self.entry_manager.get_positions() if self.entry_manager else []
         if positions and self.exit_manager:
             logger.warning(f"Closing {len(positions)} positions on shutdown")
