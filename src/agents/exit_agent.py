@@ -247,13 +247,15 @@ class ExitAgent:
 
             logger.info(f"🔧 Exit Agent adjusting {symbol} trail: {old_trail}% → {new_trail}%")
             try:
+                # Mark position as adjusting so monitor doesn't panic
+                pos["_trail_adjusting"] = True
                 # Cancel old trailing stop and place new one
                 stop_id = pos.get("trailing_stop_order_id")
                 if stop_id:
                     await asyncio.get_event_loop().run_in_executor(
                         None, self.broker.cancel_order, stop_id
                     )
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.3)
 
                 qty = int(float(pos.get("quantity", 0)))
                 if qty >= 1 and hasattr(self.broker, 'place_trailing_stop'):
@@ -274,6 +276,8 @@ class ExitAgent:
                             pos["trailing_stop_order_id"] = restore.get("id")
             except Exception as e:
                 logger.error(f"Exit agent trail adjust failed for {symbol}: {e}")
+            finally:
+                pos.pop("_trail_adjusting", None)  # Always clear the flag
 
 
 def _brief_summary(brief: Dict) -> str:

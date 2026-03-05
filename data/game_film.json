@@ -1,13 +1,20 @@
 {
-  "generated_at": 1772730849.876833,
-  "total_trades": 6,
-  "total_wins": 1,
-  "total_losses": 5,
-  "overall_win_rate_pct": 16.7,
-  "total_pnl": -5.16,
-  "avg_win": 8.28,
-  "avg_loss": -2.69,
+  "generated_at": 1772731110.754653,
+  "total_trades": 8,
+  "total_wins": 2,
+  "total_losses": 6,
+  "overall_win_rate_pct": 25.0,
+  "total_pnl": -5.73,
+  "avg_win": 16.33,
+  "avg_loss": -6.4,
   "by_symbol": {
+    "AMPX": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 24.39,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 24.39
+    },
     "TTDU": {
       "trades": 2,
       "wins": 0,
@@ -21,15 +28,22 @@
       "pnl": -5.16,
       "win_rate_pct": 25.0,
       "avg_pnl": -1.29
+    },
+    "TNGX": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -24.96,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -24.96
     }
   },
   "by_hour": {
     "11": {
-      "trades": 3,
-      "wins": 0,
-      "pnl": 0.0,
-      "win_rate_pct": 0.0,
-      "avg_pnl": 0.0
+      "trades": 5,
+      "wins": 1,
+      "pnl": -0.57,
+      "win_rate_pct": 20.0,
+      "avg_pnl": -0.11
     },
     "10": {
       "trades": 3,
@@ -41,11 +55,11 @@
   },
   "by_hold_duration": {
     "<5min": {
-      "trades": 6,
-      "wins": 1,
-      "pnl": -5.16,
-      "win_rate_pct": 16.7,
-      "avg_pnl": -0.86
+      "trades": 8,
+      "wins": 2,
+      "pnl": -5.73,
+      "win_rate_pct": 25.0,
+      "avg_pnl": -0.72
     }
   },
   "by_exit_reason": {
@@ -57,11 +71,11 @@
       "avg_pnl": 0.0
     },
     "trailing_stop_ws": {
-      "trades": 2,
-      "wins": 1,
-      "pnl": -5.16,
+      "trades": 4,
+      "wins": 2,
+      "pnl": -5.73,
       "win_rate_pct": 50.0,
-      "avg_pnl": -2.58
+      "avg_pnl": -1.43
     }
   },
   "by_risk_tier": {
@@ -73,11 +87,11 @@
       "avg_pnl": 0.0
     },
     "unknown": {
-      "trades": 2,
-      "wins": 1,
-      "pnl": -5.16,
+      "trades": 4,
+      "wins": 2,
+      "pnl": -5.73,
       "win_rate_pct": 50.0,
-      "avg_pnl": -2.58
+      "avg_pnl": -1.43
     }
   },
   "by_conviction": {
@@ -89,28 +103,28 @@
       "avg_pnl": 0.0
     },
     "normal": {
-      "trades": 5,
-      "wins": 1,
-      "pnl": -5.16,
-      "win_rate_pct": 20.0,
-      "avg_pnl": -1.03
+      "trades": 7,
+      "wins": 2,
+      "pnl": -5.73,
+      "win_rate_pct": 28.6,
+      "avg_pnl": -0.82
     }
   },
   "by_day_of_week": {
     "Thursday": {
-      "trades": 6,
-      "wins": 1,
-      "pnl": -5.16,
-      "win_rate_pct": 16.7,
-      "avg_pnl": -0.86
+      "trades": 8,
+      "wins": 2,
+      "pnl": -5.73,
+      "win_rate_pct": 25.0,
+      "avg_pnl": -0.72
     }
   },
   "max_win_streak": 1,
-  "max_loss_streak": 5,
-  "avg_winner_hold_min": 3.8,
-  "avg_loser_hold_min": 1.8,
-  "recent_20_win_rate_pct": 16.7,
-  "recent_20_pnl": -5.16,
+  "max_loss_streak": 6,
+  "avg_winner_hold_min": 3.6,
+  "avg_loser_hold_min": 1.9,
+  "recent_20_win_rate_pct": 25.0,
+  "recent_20_pnl": -5.73,
   "recommendations": {
     "worst_symbols": [
       "BATL"

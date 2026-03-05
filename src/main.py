@@ -1069,6 +1069,9 @@ class TradingBot:
                     continue
 
                 # ── VERIFY TRAILING STOP EXISTS ──
+                if pos.get("_trail_adjusting"):
+                    logger.debug(f"⏳ {symbol} trail being adjusted by Exit Agent — skipping monitor check")
+                    continue
                 if not pos.get("has_trailing_stop"):
                     # First check if Alpaca already has a trailing stop for this symbol
                     try:
