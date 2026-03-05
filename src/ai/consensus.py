@@ -169,7 +169,10 @@ class ConsensusEngine:
                                    reasoning="Rate limit reached")
         self._call_timestamps.append(now)
 
-        # Build prompt data
+        # Enrich with technicals + news if missing
+        await self._enrich_signals(symbol, price, signals_data)
+
+        # Build prompt with enriched data
         prompt = self._build_prompt(symbol, price, signals_data)
 
         # Run Claude + GPT in parallel
@@ -219,6 +222,71 @@ class ConsensusEngine:
         }
 
     # ── Prompt Builder ────────────────────────────────────────────
+
+    async def _enrich_signals(self, symbol: str, price: float, signals: Dict):
+        """Fetch technicals and news if not already present."""
+        import httpx
+
+        # ── Technicals from Polygon bars ──
+        if signals.get("rsi") in (None, "N/A", 0):
+            try:
+                async with httpx.AsyncClient(timeout=8) as client:
+                    # Get 20 bars for RSI calculation
+                    resp = await client.get(
+                        f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/5/minute/"
+                        f"2026-03-04/2026-03-05?adjusted=true&sort=desc&limit=20"
+                        f"&apiKey={settings.POLYGON_API_KEY}")
+                    if resp.status_code == 200:
+                        bars = resp.json().get("results", [])
+                        if len(bars) >= 14:
+                            # RSI calculation
+                            closes = [b["c"] for b in reversed(bars)]
+                            gains, losses = [], []
+                            for i in range(1, len(closes)):
+                                diff = closes[i] - closes[i-1]
+                                gains.append(max(0, diff))
+                                losses.append(max(0, -diff))
+                            avg_gain = sum(gains[-14:]) / 14
+                            avg_loss = sum(losses[-14:]) / 14
+                            if avg_loss > 0:
+                                rs = avg_gain / avg_loss
+                                signals["rsi"] = round(100 - (100 / (1 + rs)), 1)
+                            else:
+                                signals["rsi"] = 100.0
+
+                            # VWAP approximation
+                            if price and bars:
+                                vwap_sum = sum(b.get("vw", b["c"]) * b.get("v", 1) for b in bars)
+                                vol_sum = sum(b.get("v", 1) for b in bars)
+                                vwap = vwap_sum / vol_sum if vol_sum > 0 else price
+                                diff_pct = ((price - vwap) / vwap) * 100
+                                signals["vwap_relation"] = f"{'Above' if diff_pct > 0 else 'Below'} VWAP by {abs(diff_pct):.1f}%"
+
+                            # ATR
+                            if len(bars) >= 14:
+                                trs = []
+                                for i in range(1, min(15, len(bars))):
+                                    h, l, pc = bars[i-1]["h"], bars[i-1]["l"], bars[i]["c"]
+                                    trs.append(max(h-l, abs(h-pc), abs(l-pc)))
+                                signals["atr"] = f"${sum(trs)/len(trs):.2f}"
+            except Exception as e:
+                logger.debug(f"Technicals fetch failed for {symbol}: {e}")
+
+        # ── News from Polygon ──
+        if not signals.get("news_headlines"):
+            try:
+                async with httpx.AsyncClient(timeout=8) as client:
+                    resp = await client.get(
+                        f"https://api.polygon.io/v2/reference/news?ticker={symbol}&limit=5"
+                        f"&apiKey={settings.POLYGON_API_KEY}")
+                    if resp.status_code == 200:
+                        articles = resp.json().get("results", [])
+                        headlines = [a.get("title", "") for a in articles if a.get("title")]
+                        if headlines:
+                            signals["news_headlines"] = headlines[:5]
+                            logger.debug(f"Polygon news for {symbol}: {len(headlines)} headlines")
+            except Exception as e:
+                logger.debug(f"News fetch failed for {symbol}: {e}")
 
     def _build_prompt(self, symbol: str, price: float, signals: Dict) -> str:
         news_list = signals.get("news_headlines", signals.get("news", []))
