@@ -33,7 +33,11 @@ def load_all() -> List[Dict]:
     if not HISTORY_FILE.exists():
         return []
     try:
-        return json.loads(HISTORY_FILE.read_text())
+        data = json.loads(HISTORY_FILE.read_text())
+        # Support both formats: raw list or {"trades": [...]}
+        if isinstance(data, dict):
+            return data.get("trades", [])
+        return data if isinstance(data, list) else []
     except Exception:
         return []
 
