@@ -224,11 +224,29 @@ class RiskManager:
         """Check if we can open a new position."""
         if not self.can_trade():
             return False
+        # PDT protection: if equity < $25K, limit to 3 day trades per 5 business days
+        if self._equity < 25000:
+            day_trades = self._count_recent_day_trades()
+            if day_trades >= 3:
+                logger.error(f"🚨 PDT GUARD: {day_trades}/3 day trades used, equity ${self._equity:,.0f} < $25K — BLOCKED")
+                return False
+            elif day_trades >= 2:
+                logger.warning(f"⚠️ PDT WARNING: {day_trades}/3 day trades used — 1 remaining")
         tier = self.get_risk_tier()
         if len(current_positions) >= tier["max_positions"]:
             logger.warning(f"Max positions for {tier['name']} tier: {len(current_positions)}/{tier['max_positions']}")
             return False
         return True
+
+    def _count_recent_day_trades(self) -> int:
+        """Count day trades in the last 5 business days (buy+sell same stock same day)."""
+        cutoff = time.time() - (5 * 24 * 3600)  # 5 calendar days (conservative)
+        day_trades = 0
+        for trade in self.trade_history:
+            t = trade.get("exit_time") or trade.get("time", 0)
+            if t > cutoff and trade.get("hold_seconds", 86400) < 86400:
+                day_trades += 1
+        return day_trades
 
     # ── Post-trade Updates ─────────────────────────────────────────
 

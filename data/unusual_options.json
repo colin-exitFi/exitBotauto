@@ -1,0 +1,85 @@
+{
+  "options": [
+    {
+      "ticker": "TSLA",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Large diagonal call spread (Dec 2026 $600 call bought, Dec 2027 $900 call sold) signals trader expectation of major stock breakout amid low IV rank[1].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "UNP",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Heavy call volume (put/call ratio 0.00) from dividend capture buy-write spreads ahead of ex-dividend date[1].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "SPY",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Top-ranked by volume-to-open-interest ratio among all contracts[4].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "SPX",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Top-ranked by volume-to-open-interest ratio among all contracts[4].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "NVDA",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "AAPL",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "GOOG",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "MSFT",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "ZD",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Noteworthy high options volume noted for the recent trading session[5].",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "CORZ",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Notable high options volume noted for the recent trading session[9].",
+      "source": "perplexity",
+      "conviction": 0.5
+    }
+  ],
+  "fetched_at": 1772681220.79439
+}
