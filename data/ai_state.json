@@ -1,16 +1,1 @@
-{
-  "last_observation": null,
-  "last_advice": null,
-  "last_tuner_changes": null,
-  "last_game_film_summary": null,
-  "last_position_manager": null,
-  "last_consensus": {
-    "symbol": "TTD",
-    "decision": "SKIP",
-    "size_pct": 0,
-    "trail_pct": 1.0,
-    "reasoning": "Zero agent support for long entry. Technical signals SELL with decelerating momentum at resistance. Sentiment is NEUTRAL with crowd against position. No catalyst present - the +16.79% move is on weak volume (0.7x avg) suggesting technical bounce without conviction. Macro regime is choppy with risk-o",
-    "confidence": 78.0,
-    "timestamp": 1772727852.306102
-  }
-}
+{}

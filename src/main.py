@@ -1067,25 +1067,45 @@ class TradingBot:
 
                 # ── VERIFY TRAILING STOP EXISTS ──
                 if not pos.get("has_trailing_stop"):
-                    logger.warning(f"⚠️ {symbol} has NO trailing stop — retrying placement")
-                    qty = int(float(pos.get("quantity", 0)))
-                    trail_pct = pos.get("trail_pct", 3.0)
-                    if qty >= 1:
-                        stop_order = await asyncio.get_event_loop().run_in_executor(
-                            None, self.alpaca_client.place_trailing_stop, symbol, qty, trail_pct
+                    # First check if Alpaca already has a trailing stop for this symbol
+                    try:
+                        open_orders = await asyncio.get_event_loop().run_in_executor(
+                            None, self.alpaca_client.get_orders, "open"
                         )
-                        if stop_order:
-                            pos["has_trailing_stop"] = True
-                            pos["trailing_stop_order_id"] = stop_order.get("id")
-                            logger.success(f"📈 Trailing stop recovered: {symbol} trail={trail_pct}%")
-                        else:
-                            # Last resort: market sell to protect capital
-                            logger.error(f"🚨 TRAILING STOP FAILED 3x for {symbol} — MARKET SELLING for protection")
-                            await asyncio.get_event_loop().run_in_executor(
-                                None, self.alpaca_client.place_market_sell, symbol, qty
+                        for order in open_orders:
+                            if order.get("symbol") == symbol and order.get("type") == "trailing_stop":
+                                pos["has_trailing_stop"] = True
+                                pos["trailing_stop_order_id"] = order.get("id", "")
+                                logger.info(f"🔗 Found existing trailing stop for {symbol}: {order.get('id', '')[:8]}")
+                                break
+                    except Exception:
+                        pass
+
+                    if not pos.get("has_trailing_stop"):
+                        retry_count = pos.get("_trail_retry_count", 0) + 1
+                        pos["_trail_retry_count"] = retry_count
+                        logger.warning(f"⚠️ {symbol} has NO trailing stop — attempt {retry_count}/5")
+                        qty = int(float(pos.get("quantity", 0)))
+                        trail_pct = pos.get("trail_pct", 3.0)
+                        if qty >= 1:
+                            stop_order = await asyncio.get_event_loop().run_in_executor(
+                                None, self.alpaca_client.place_trailing_stop, symbol, qty, trail_pct
                             )
-                            self.entry_manager.remove_position(symbol)
-                            log_activity("alert", f"🚨 Emergency market sell: {symbol} — trailing stop could not be placed")
+                            if stop_order:
+                                pos["has_trailing_stop"] = True
+                                pos["trailing_stop_order_id"] = stop_order.get("id")
+                                pos["_trail_retry_count"] = 0
+                                logger.success(f"📈 Trailing stop placed: {symbol} trail={trail_pct}%")
+                            elif retry_count >= 5:
+                                # Only emergency sell after 5 failed attempts across 5 scan cycles
+                                logger.error(f"🚨 TRAILING STOP FAILED 5x for {symbol} — MARKET SELLING for protection")
+                                await asyncio.get_event_loop().run_in_executor(
+                                    None, self.alpaca_client.place_market_sell, symbol, qty
+                                )
+                                self.entry_manager.remove_position(symbol)
+                                log_activity("alert", f"🚨 Emergency market sell: {symbol} — trailing stop failed 5x")
+                            else:
+                                logger.warning(f"⚠️ Trailing stop failed for {symbol} — will retry next cycle ({retry_count}/5)")
 
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")
