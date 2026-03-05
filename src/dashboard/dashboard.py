@@ -329,7 +329,7 @@ tr:hover td{background:#161b2288}
 .summary-item .val{font-size:20px;font-weight:800}
 .summary-item .lbl{font-size:10px;color:#6e7681;text-transform:uppercase;margin-top:2px}
 .ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.ai-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;font-size:12px;line-height:1.5}
+.ai-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;font-size:12px;line-height:1.5;max-height:200px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word}
 .ai-card strong{color:#58a6ff;display:block;margin-bottom:4px}
 .ai-card.tuner{border-color:#d2a8ff33}.ai-card.pm{border-color:#3fb95033}
 .watermark{text-align:center;padding:20px;color:#21262d;font-size:11px;letter-spacing:2px}
@@ -387,7 +387,7 @@ tr:hover td{background:#161b2288}
   <!-- Activity Feed + Watchlist side by side -->
   <div class="card">
     <h2><span class="icon">🧠</span> Bot Activity Feed</h2>
-    <div id="activityFeed" style="max-height:300px;overflow-y:auto;font-size:12px;line-height:1.8"></div>
+    <div id="activityFeed" style="max-height:400px;overflow-y:auto;font-size:12px;line-height:1.8;word-wrap:break-word;overflow-wrap:break-word"></div>
   </div>
   <div class="card">
     <h2><span class="icon">📋</span> Watchlist <span id="watchlistCount" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
@@ -466,8 +466,8 @@ async function refresh() {
     $('aiEnabled').textContent = ai.enabled ? '✅ Active' : '❌ Disabled';
     if (ai.enabled) {
       let html = '<div class="ai-grid">';
-      html += '<div class="ai-card"><strong>🔭 Observer</strong>' + (ai.last_observation ? ai.last_observation.substring(0,200)+'…' : '<em>Pending…</em>') + '</div>';
-      html += '<div class="ai-card"><strong>💡 Advisor</strong>' + (ai.last_advice ? ai.last_advice.substring(0,200)+'…' : '<em>Pending…</em>') + '</div>';
+      html += '<div class="ai-card"><strong>🔭 Observer</strong>' + (ai.last_observation || '<em>Pending…</em>') + '</div>';
+      html += '<div class="ai-card"><strong>💡 Advisor</strong>' + (ai.last_advice || '<em>Pending…</em>') + '</div>';
       html += '<div class="ai-card tuner"><strong>🎛️ Tuner</strong>' + (ai.last_tuner_changes || '<em>No changes yet</em>') + '</div>';
       html += '<div class="ai-card pm"><strong>🛡️ Position Manager</strong>' + (ai.last_position_manager || '<em>Pending…</em>') + '</div>';
       html += '</div>';
