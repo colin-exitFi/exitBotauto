@@ -1,8 +1,9 @@
 """
 Grok X Trending - Use Grok's real-time X/Twitter access to find trending tickers.
-Grok has native access to X data — no Twitter API needed.
+Two scans: (1) Big-cap movers (2) Under-the-radar small/mid-cap plays.
 """
 
+import asyncio
 import json
 import time
 from datetime import datetime, timezone
@@ -16,11 +17,55 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
-class GrokXTrending:
-    """Ask Grok for trending stock tickers on X with real-time context."""
+BIGCAP_PROMPT = """Current time: {now}
 
-    CACHE_TTL = 600  # 10 min cache — don't spam Grok
-    TIMEOUT = 60  # Grok-4 reasoning can take time
+What are the top 15 most-discussed LARGE-CAP stock tickers (market cap > $10B) on X/Twitter RIGHT NOW today, and why is each one trending?
+
+Focus on:
+- Stocks with unusual volume of mentions in the last few hours
+- Earnings reactions, analyst upgrades/downgrades, macro moves, sector rotation
+- Include the approximate sentiment (bullish/bearish/mixed) for each
+
+Return ONLY valid JSON array (no markdown, no explanation):
+[
+  {{"ticker": "AAPL", "reason": "brief reason for trending", "sentiment": "bullish", "buzz_level": "high", "cap": "large"}},
+  ...
+]
+
+buzz_level: "extreme", "high", "medium"
+sentiment: "bullish", "bearish", "mixed"
+Only real US stock tickers (no crypto, no ETFs unless actually trending)."""
+
+SMALLCAP_PROMPT = """Current time: {now}
+
+What are the top 15 UNDER-THE-RADAR small-cap and mid-cap stocks (market cap < $10B) getting unusual buzz on X/Twitter RIGHT NOW today?
+
+I'm looking for stocks that retail traders are discovering — the ones that haven't hit mainstream yet but are picking up momentum on X. Think:
+- Biotech/pharma with FDA catalysts or trial results
+- Small caps with short squeeze potential (high short interest + rising mentions)
+- Penny stocks or micro-caps suddenly getting unusual mention volume
+- SPACs, de-SPACs, or recent IPOs with growing chatter
+- Stocks where retail is piling in before institutions notice
+- Any ticker where X mention volume spiked 3x+ in the last few hours vs normal
+
+DO NOT include obvious mega-caps (TSLA, NVDA, AAPL, MSFT, GOOGL, AMZN, META, etc.)
+
+Return ONLY valid JSON array (no markdown, no explanation):
+[
+  {{"ticker": "PDYN", "reason": "why this small cap is buzzing on X right now", "sentiment": "bullish", "buzz_level": "high", "cap": "small"}},
+  ...
+]
+
+buzz_level: "extreme", "high", "medium"
+sentiment: "bullish", "bearish", "mixed"
+Only real US stock tickers. Quality over quantity — if you can only find 8 legit ones, return 8."""
+
+
+class GrokXTrending:
+    """Ask Grok for trending stock tickers on X — big caps + under-the-radar small caps."""
+
+    CACHE_TTL = 600  # 10 min cache
+    TIMEOUT = 60
 
     def __init__(self):
         self._cache: Optional[List[Dict]] = None
@@ -36,27 +81,26 @@ class GrokXTrending:
             logger.debug(f"Grok X trending: cache hit ({len(self._cache)} tickers)")
             return self._cache
 
-        now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC (%A)")
 
-        prompt = f"""Current time: {now_utc}
+        # Run both prompts in parallel
+        bigcap_task = self._query_grok(BIGCAP_PROMPT.format(now=now_utc), "big-cap")
+        smallcap_task = self._query_grok(SMALLCAP_PROMPT.format(now=now_utc), "small-cap")
+        bigcap_results, smallcap_results = await asyncio.gather(bigcap_task, smallcap_task)
 
-What are the top 25 most-discussed stock tickers on X/Twitter RIGHT NOW today, and why is each one trending?
+        results = bigcap_results + smallcap_results
 
-Focus on:
-- Stocks with unusual volume of mentions in the last few hours
-- Earnings reactions, FDA decisions, M&A rumors, short squeezes, meme momentum
-- Include the approximate sentiment (bullish/bearish/mixed) for each
+        self._cache = results
+        self._cache_ts = time.time()
 
-Return ONLY valid JSON array (no markdown, no explanation):
-[
-  {{"ticker": "AAPL", "reason": "brief reason for trending", "sentiment": "bullish", "buzz_level": "high"}},
-  ...
-]
+        big_tickers = [r['ticker'] for r in bigcap_results[:8]]
+        small_tickers = [r['ticker'] for r in smallcap_results[:8]]
+        logger.info(f"🐦 Grok X trending: {len(bigcap_results)} big-cap ({', '.join(big_tickers)}...) "
+                     f"+ {len(smallcap_results)} small-cap ({', '.join(small_tickers)}...)")
+        return results
 
-buzz_level should be: "extreme", "high", "medium"
-sentiment should be: "bullish", "bearish", "mixed"
-Only include real US stock tickers (no crypto, no ETFs unless they're actually trending)."""
-
+    async def _query_grok(self, prompt: str, label: str) -> List[Dict]:
+        """Send a single query to Grok and parse the response."""
         try:
             async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
                 resp = await client.post(
@@ -98,13 +142,12 @@ Only include real US stock tickers (no crypto, no ETFs unless they're actually t
                         "reason": t.get("reason", ""),
                         "sentiment": t.get("sentiment", "mixed"),
                         "buzz_level": t.get("buzz_level", "medium"),
+                        "cap": t.get("cap", "unknown"),
                     })
 
-                self._cache = results
-                self._cache_ts = time.time()
-                logger.info(f"🐦 Grok X trending: {len(results)} tickers — {', '.join(r['ticker'] for r in results[:10])}...")
+                logger.debug(f"Grok X {label}: {len(results)} tickers")
                 return results
 
         except Exception as e:
-            logger.warning(f"Grok X trending scan failed ({type(e).__name__}): {e}")
-            return self._cache or []
+            logger.warning(f"Grok X {label} scan failed ({type(e).__name__}): {e}")
+            return []

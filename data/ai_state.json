@@ -1,6 +1,6 @@
 {
-  "last_observation": "Market just opened (09:14 ET Thursday), no positions deployed yet, clean slate with full capital available.",
-  "last_advice": "HALT ALL TRADING IMMEDIATELY - System is fundamentally broken and bleeding capital in seconds",
+  "last_observation": "Market just opened (09:20 ET) - too early to assess trend; awaiting first 30 minutes to establish directional bias and volatility profile.",
+  "last_advice": "HALT ALL TRADING \u2014 System shows catastrophic scanner failure and contradictory data suggesting potential reset/corruption; diagnose before deploying any capital.",
   "last_tuner_changes": "SCAN_INTERVAL_SECONDS:60\u2192300, TRAILING_STOP_PCT:2.0\u21921.0, MIN_ENTRY_SENTIMENT:0.0\u21920.3",
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
@@ -8,30 +8,30 @@
     "symbol": "LWLG",
     "final_decision": "SKIP",
     "size_modifier": 0.0,
-    "avg_confidence": 72.0,
+    "avg_confidence": 67.0,
     "claude": {
       "model": "claude",
       "decision": "SKIP",
-      "confidence": 75,
-      "reasoning": "RSI at 87.5 indicates extreme overbought conditions with price 25.9% above VWAP. Already up 6.68% today. Perfect StockTwits sentiment (1.00) suggests euphoria. Volume data is missing (0.0x) which is c",
+      "confidence": 72,
+      "reasoning": "RSI at 87.5 indicates extreme overbought conditions with price 25.9% above VWAP. Already up 6.68% today with parabolic extension. Volume data missing (0.0x) prevents confirmation of sustainable moment",
       "error": null
     },
     "gpt": {
       "model": "gpt",
       "decision": "SKIP",
-      "confidence": 66,
-      "reasoning": "Price is extremely extended (RSI 87.5, +25.9% vs VWAP) with no clear volume confirmation (0.0x avg shown). This looks like late-stage spike risk where a normal mean-reversion pullback could easily tri",
+      "confidence": 62,
+      "reasoning": "Price is extremely extended (RSI 87.5, +25.9% above VWAP) on no real volume confirmation (0.0x avg). That combo usually means late-stage pop/air-pocket risk and unreliable continuation; not a clean lo",
       "error": null
     },
     "grok": {
       "model": "grok",
-      "decision": "BUY",
-      "confidence": 75,
-      "reasoning": "Positive news from corporate update and small-cap explosion mention, bullish StockTwits sentiment, price up 6.68% showing momentum; low pre-market volume expected, RSI high but momentum can continue.",
-      "error": null
+      "decision": "ERR",
+      "confidence": 0,
+      "reasoning": "",
+      "error": "Server error '504 Gateway Time-out' for url 'https://api.x.ai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504"
     },
     "perplexity": null,
-    "reasoning": "No majority \u2014 BUY:1 SHORT:0 SKIP:2",
-    "timestamp": 1772720285.3939211
+    "reasoning": "No majority \u2014 BUY:0 SHORT:0 SKIP:2",
+    "timestamp": 1772720539.860079
   }
 }

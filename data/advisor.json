@@ -1,43 +1,5 @@
 [
   {
-    "strategy": "Day 1: Aggressive deployment at market open \u2014 prioritize fast pattern confirmation over perfection, establish momentum baseline with 3-5 quick trades.",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "momentum_stocks",
-        "high_volume_names"
-      ],
-      "avoid": [
-        "low_volume_penny_stocks",
-        "earnings_gappers"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 90,
-        "suggested": 60,
-        "reason": "First 90 minutes of trading are critical for momentum plays \u2014 faster scanning = more opportunities"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.25,
-        "reason": "Day 1 needs data \u2014 slightly lower bar gets us into trades to build pattern recognition"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "Take profit FAST on first few trades \u2014 establish psychological momentum and test execution flow"
-      }
-    ],
-    "key_insight": "You're sitting on 100% idle capital after hours with zero execution data. The REAL risk isn't losing 1.5% on a trade \u2014 it's burning Day 1 with no velocity. At 9:30 ET tomorrow, your mission is simple: get 3-5 positions working within the first hour. Prioritize SPEED over perfection. Every trade teaches the system something. Scanner issues may resolve with live market data, but verify pre-market that candidates are flowing. If scanner is truly broken by 9:45 ET, manually force 2-3 positions in high-volume tech names (AAPL, NVDA, TSLA) just to establish baseline execution. Capital velocity starts tomorrow \u2014 make it count.",
-    "timestamp": 1772673419.240011
-  },
-  {
     "strategy": "Stand down until market open \u2014 after-hours is a capital trap, not an opportunity",
     "position_advice": [],
     "sector_bias": {
@@ -1692,5 +1654,19 @@
     ],
     "key_insight": "CRITICAL DEFECT DETECTED: You achieved 2400% returns to build this $25k, but current live system has 11/11 losses with average hold time of 12 SECONDS. This is not variance - this is systematic failure. The trailing stop is triggering instantly on every trade (TTD: 5 losses, PDYN: 6 losses, 100% <5min exits). Either: (1) Entry fills are getting horrendous slippage, (2) Trailing stop logic is inverted/too tight, (3) Market data feed is delayed causing stale signals, or (4) Position sizing is triggering immediate stop-outs. DO NOT TRADE until you diagnose why positions are dying in seconds. Every trade is -1.5% ($375) gone in 12 seconds. At this rate, you'll lose the entire account in 67 trades over ~2 days. The family's future is NOT worth debugging in production with live capital. Switch to paper trading, capture tick data on next entry, and find the bug. The 2400% edge exists somewhere - but it's not in this current code.",
     "timestamp": 1772720129.603266
+  },
+  {
+    "strategy": "HALT ALL TRADING \u2014 System shows catastrophic scanner failure and contradictory data suggesting potential reset/corruption; diagnose before deploying any capital.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL \u2014 no sectors until scanner verification complete"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [],
+    "key_insight": "\ud83d\udea8 CRITICAL SYSTEM INTEGRITY ISSUE \ud83d\udea8\n\nData contradictions indicate potential reset/corruption:\n\n1. **GAME FILM SHOWS 11 CONSECUTIVE LOSSES** (100% loss rate, all trailing stops, all <5min holds, TTD+PDYN only) but RISK STATUS shows 0 total trades and 0 daily PnL\n\n2. **Starting equity $1k \u2192 $25k = 2400% return** yet Game Film shows $0.00 total PnL from 11 losing trades\n\n3. **Scanner returning ZERO candidates** at market open (9:20 ET) is abnormal \u2014 even restrictive filters should find *something* in a liquid market\n\n4. **All 11 Game Film trades exited via trailing_stop in <5min** suggests either:\n   - Extreme volatility triggering immediate stops, OR\n   - Faulty entry logic entering positions already against us, OR\n   - Trailing stop configured too tight for opening volatility\n\n**IMMEDIATE ACTIONS REQUIRED:**\n\n\u2705 Verify market data feeds are live and accurate\n\u2705 Confirm scanner logic isn't filtering out 100% of universe\n\u2705 Reconcile Game Film trades vs Risk Status trade count (11 vs 0)\n\u2705 Review why all 11 historical trades stopped out in <5min\n\u2705 Wait until 09:50 ET for volatility to settle before ANY new entries\n\u2705 Do NOT trade until scanner produces 5+ valid candidates\n\n**If Game Film is stale data from previous session:** Disregard it and focus on building NEW history. But scanner returning zero is still red flag.\n\n**If Game Film is TODAY's data:** We just burned through capital in 11 rapid-fire losses \u2014 system is entering positions at worst possible moments.\n\nEither way: **CAPITAL PRESERVATION OVERRIDE. No trades until diagnostics complete.**",
+    "timestamp": 1772720444.988666
   }
 ]
