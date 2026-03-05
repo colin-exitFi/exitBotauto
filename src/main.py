@@ -206,8 +206,9 @@ class TradingBot:
                     et = dt.now(pytz.timezone('US/Eastern'))
                     extended_hours = (4 <= et.hour < 9) or (et.hour == 9 and et.minute < 30) or (16 <= et.hour < 21)
                     if not extended_hours:
-                        logger.debug("⏰ Market closed (dead hours). Sleeping 60s...")
-                        await asyncio.sleep(60)
+                        # OVERNIGHT STRATEGY SESSION — formulate next day's plan
+                        await self._overnight_session(et)
+                        await asyncio.sleep(300)  # 5 min between overnight cycles
                         continue
                     # Extended hours: scan but don't trade (unless pharma catalyst)
                     logger.debug(f"📡 Extended hours scanning ({et.strftime('%H:%M')} ET)")
@@ -239,6 +240,181 @@ class TradingBot:
         finally:
             ai_task.cancel()
             await self.shutdown()
+
+    async def _overnight_session(self, et):
+        """
+        Overnight strategy session (8PM - 4AM ET).
+        Instead of sleeping, the bot thinks and prepares:
+          1. Review today's performance (game film)
+          2. Analyze overnight futures/crypto for market direction
+          3. Scan global news for tomorrow's catalysts
+          4. Refresh pharma PDUFA calendar
+          5. Build tomorrow's watchlist and thesis
+          6. Update fade runner candidates
+        Runs every 5 min during overnight, but each task has its own throttle.
+        """
+        import json
+        from pathlib import Path
+
+        state_file = Path(__file__).parent.parent / "data" / "overnight_state.json"
+        
+        # Load state
+        state = {}
+        try:
+            if state_file.exists():
+                with open(state_file) as f:
+                    state = json.load(f)
+        except Exception:
+            pass
+
+        last_review = state.get("last_game_film", 0)
+        last_thesis = state.get("last_thesis", 0)
+        last_pharma = state.get("last_pharma_refresh", 0)
+        last_news = state.get("last_news_scan", 0)
+        now = time.time()
+        hour = et.hour
+
+        tasks_run = []
+
+        # ── GAME FILM: Review today's trades (once per night, after 9PM ET) ──
+        if hour >= 21 and (now - last_review > 6 * 3600):
+            try:
+                if hasattr(self, 'game_film') and self.game_film:
+                    logger.info("🎬 Overnight: Running game film review...")
+                    await asyncio.get_event_loop().run_in_executor(None, self.game_film.analyze)
+                    state["last_game_film"] = now
+                    tasks_run.append("game_film")
+            except Exception as e:
+                logger.debug(f"Game film review failed: {e}")
+
+        # ── PHARMA: Refresh PDUFA calendar (every 6 hours) ──
+        if now - last_pharma > 6 * 3600:
+            try:
+                if self.pharma_scanner:
+                    await self.pharma_scanner._refresh_pdufa_calendar()
+                    state["last_pharma_refresh"] = now
+                    tasks_run.append("pharma_calendar")
+            except Exception as e:
+                logger.debug(f"Pharma refresh failed: {e}")
+
+        # ── THESIS: Build tomorrow's strategy (once per night, after 10PM ET) ──
+        if hour >= 22 and (now - last_thesis > 8 * 3600):
+            try:
+                thesis = await self._build_overnight_thesis()
+                if thesis:
+                    thesis_file = Path(__file__).parent.parent / "data" / "tomorrow_thesis.json"
+                    with open(thesis_file, "w") as f:
+                        json.dump(thesis, f, indent=2)
+                    state["last_thesis"] = now
+                    tasks_run.append("thesis")
+                    logger.success(f"📋 Tomorrow's thesis: {len(thesis.get('watchlist', []))} tickers, bias={thesis.get('market_bias', '?')}")
+            except Exception as e:
+                logger.debug(f"Thesis build failed: {e}")
+
+        # ── NEWS: Scan overnight news for market-moving events (every 2 hours) ──
+        if now - last_news > 2 * 3600:
+            try:
+                news = await self._scan_overnight_news()
+                if news:
+                    state["last_news_scan"] = now
+                    state["overnight_news"] = news[:5]  # Keep top 5
+                    tasks_run.append("news")
+            except Exception as e:
+                logger.debug(f"News scan failed: {e}")
+
+        # Save state
+        if tasks_run:
+            try:
+                Path(state_file).parent.mkdir(parents=True, exist_ok=True)
+                with open(state_file, "w") as f:
+                    json.dump(state, f, indent=2)
+                logger.info(f"🌙 Overnight tasks: {', '.join(tasks_run)}")
+            except Exception:
+                pass
+        else:
+            logger.debug(f"🌙 Overnight idle ({et.strftime('%H:%M')} ET) — next thesis at 10PM, news in {max(0, int(2*3600 - (now - last_news)))//60}min")
+
+    async def _build_overnight_thesis(self) -> dict:
+        """Use AI to build tomorrow's trading thesis based on today's data."""
+        import httpx
+        
+        pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
+        if not pplx_key:
+            return {}
+
+        try:
+            # Get real-time market context from Perplexity
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(
+                    "https://api.perplexity.ai/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {pplx_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro'),
+                        "max_tokens": 1500,
+                        "messages": [{"role": "user", "content":
+                            "Give me a brief overnight market analysis for tomorrow's US stock trading session. Include: "
+                            "1. S&P 500 futures direction and key levels "
+                            "2. Any major overnight news (earnings, geopolitics, Fed) "
+                            "3. Sectors likely to move tomorrow "
+                            "4. Top 5 specific stock tickers to watch tomorrow and why "
+                            "5. Overall market bias (bullish/bearish/neutral) "
+                            "Format as JSON with keys: sp500_futures, overnight_news, hot_sectors, watchlist (array of {ticker, reason}), market_bias"}],
+                    },
+                )
+                resp.raise_for_status()
+                text = resp.json()["choices"][0]["message"]["content"]
+                
+                # Try to parse as JSON
+                import re
+                json_match = re.search(r'\{.*\}', text, re.DOTALL)
+                if json_match:
+                    import json
+                    return json.loads(json_match.group())
+                else:
+                    return {"raw_thesis": text, "market_bias": "unknown", "watchlist": []}
+        except Exception as e:
+            logger.debug(f"Thesis build failed: {e}")
+            return {}
+
+    async def _scan_overnight_news(self) -> list:
+        """Scan for market-moving overnight news via Perplexity."""
+        import httpx
+        
+        pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
+        if not pplx_key:
+            return []
+
+        try:
+            async with httpx.AsyncClient(timeout=20) as client:
+                resp = await client.post(
+                    "https://api.perplexity.ai/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {pplx_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro'),
+                        "max_tokens": 500,
+                        "messages": [{"role": "user", "content":
+                            "What are the most important market-moving news events in the last 4 hours that could "
+                            "affect US stock prices tomorrow? List the top 5 with affected tickers if applicable. "
+                            "One per line, brief."}],
+                    },
+                )
+                resp.raise_for_status()
+                text = resp.json()["choices"][0]["message"]["content"]
+                headlines = [line.strip().lstrip("•-123456789. ") for line in text.strip().split("\n") if line.strip() and len(line.strip()) > 10]
+                if headlines:
+                    logger.info(f"📰 Overnight news: {len(headlines)} market-moving headlines")
+                    for h in headlines[:3]:
+                        logger.info(f"  📰 {h[:100]}")
+                return headlines[:10]
+        except Exception as e:
+            logger.debug(f"News scan failed: {e}")
+            return []
 
     async def _ai_loop(self):
         """Run AI layers on their own intervals, concurrently with trading."""
