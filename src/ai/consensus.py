@@ -87,6 +87,7 @@ TECHNICALS:
 - RSI: {rsi}
 - vs VWAP: {vwap_relation}
 - ATR: {atr}
+- Bid/Ask spread: {spread_pct}%
 
 NEWS: {news}
 
@@ -345,6 +346,7 @@ class ConsensusEngine:
             rsi=signals.get("rsi", "N/A"),
             vwap_relation=signals.get("vwap_relation", "N/A"),
             atr=signals.get("atr", "N/A"),
+            spread_pct=signals.get("spread_pct", "N/A"),
             news=news_str,
             pharma_info=signals.get("pharma_drug", "None") if signals.get("pharma_signal") else "None",
             fade_info=f"Ran +{signals.get('fade_run_pct',0):.0f}% yesterday — watching for weakness" if signals.get("fade_signal") else "None",

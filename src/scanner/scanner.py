@@ -314,13 +314,15 @@ class Scanner:
             if stock.get("price", 0) <= 0:
                 return None
 
-            # Volume spike vs 20-day avg
-            avg_vol = 0
-            if self.polygon:
-                avg_vol = await asyncio.get_event_loop().run_in_executor(
+            # Volume spike vs previous day volume (Alpaca) or 20-day avg (Polygon fallback)
+            prev_vol = stock.get("prev_volume", 0)
+            if prev_vol <= 0 and self.polygon:
+                prev_vol = await asyncio.get_event_loop().run_in_executor(
                     None, self.polygon.get_avg_volume, symbol, 20
                 )
-            vol_spike = stock.get("volume", 0) / avg_vol if avg_vol > 0 else 0
+            avg_vol = prev_vol if prev_vol > 0 else 1
+            cur_vol = stock.get("volume", 0)
+            vol_spike = cur_vol / avg_vol if avg_vol > 0 else 0
             stock["avg_volume"] = avg_vol
             stock["volume_spike"] = vol_spike
 
@@ -362,16 +364,31 @@ class Scanner:
             if r.status_code == 200:
                 data = r.json().get(symbol, {})
                 lt = data.get('latestTrade', {})
+                lq = data.get('latestQuote', {})
+                mb = data.get('minuteBar', {})
                 db = data.get('dailyBar', {})
                 pb = data.get('prevDailyBar', {})
                 prev_close = pb.get('c', 0)
                 cur_price = lt.get('p', 0)
                 chg = ((cur_price - prev_close) / prev_close * 100) if prev_close > 0 else 0
+
+                # Use today's daily bar volume if available, otherwise previous day
+                # During pre-market, dailyBar is yesterday — use prevDailyBar for avg comparison
+                today_vol = db.get('v', 0)
+                prev_vol = pb.get('v', 0)
+                avg_vol = prev_vol if prev_vol > 0 else 1
+
                 return {
                     "price": cur_price,
                     "change_pct": round(chg, 2),
-                    "volume": db.get('v', 0),
+                    "volume": today_vol,
                     "prev_close": prev_close,
+                    "prev_volume": prev_vol,
+                    "bid": lq.get('bp', 0),
+                    "ask": lq.get('ap', 0),
+                    "spread_pct": round((lq.get('ap', 0) - lq.get('bp', 0)) / cur_price * 100, 2) if cur_price > 0 else 0,
+                    "minute_vol": mb.get('v', 0),
+                    "minute_vwap": mb.get('vw', 0),
                 }
         except Exception:
             pass
