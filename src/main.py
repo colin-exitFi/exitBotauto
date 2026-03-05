@@ -850,7 +850,7 @@ class TradingBot:
                     self.ai_layers["last_consensus"] = verdict.to_dict()
                     if verdict.decision not in ("BUY", "SHORT"):
                         logger.info(f"🗳️ Jury SKIP for {symbol}: {verdict.reasoning}")
-                        log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning[:100]}")
+                        log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning}")
                         continue
                     direction = verdict.decision
                     # Map jury sizing to consensus_size_modifier (0-1 range)

@@ -1,1 +1,22 @@
-{}
+{
+  "SOC": {
+    "symbol": "SOC",
+    "entry_price": 12.73,
+    "quantity": 58.915947,
+    "entry_time": 1772727805.551171,
+    "sentiment_at_entry": 1.0,
+    "peak_price": 12.73,
+    "side": "long",
+    "order_id": "62d1d2ad-e172-41f9-b54f-9b2913f9c18e",
+    "partial_exit": false,
+    "atr_at_entry": null,
+    "extended_hours_entry": false,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "notional": 750.0,
+    "trail_pct": 4.0,
+    "trailing_stop_order_id": "2bdca79d-7982-4cb7-8eba-52cf1a6769a8",
+    "has_trailing_stop": true,
+    "order_status": "filled"
+  }
+}
