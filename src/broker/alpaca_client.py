@@ -4,6 +4,7 @@ Supports paper/live trading, fractional shares, extended hours.
 """
 
 import uuid
+import requests
 from typing import Dict, List, Optional, Union
 from loguru import logger
 
@@ -326,6 +327,169 @@ class AlpacaClient:
         except Exception as e:
             logger.error(f"Smart sell failed ({symbol}), falling back to market: {e}")
             return self.place_market_sell(symbol, qty)
+
+    # ── Bracket & Trailing Stop Orders ───────────────────────────
+
+    def place_bracket_buy(self, symbol: str, qty: int, limit_price: float,
+                          stop_loss_pct: float = 3.0, take_profit_pct: float = None,
+                          extended_hours: bool = False) -> Optional[Dict]:
+        """
+        Place a bracket order: BUY + stop loss + optional take profit.
+        Broker-side protection — executes even if bot crashes.
+        
+        Args:
+            symbol: Stock ticker
+            qty: Number of shares (whole only for bracket)
+            limit_price: Limit price for the buy
+            stop_loss_pct: Stop loss percentage below entry (default 3%)
+            take_profit_pct: Take profit percentage above entry (optional)
+            extended_hours: Whether to allow extended hours
+        """
+        self._ensure_init()
+        if qty < 1:
+            logger.warning(f"Bracket orders require whole shares, got {qty}. Using market buy instead.")
+            return self.place_limit_buy(symbol, max(1, int(qty)), limit_price, extended_hours)
+
+        try:
+            stop_price = round(limit_price * (1 - stop_loss_pct / 100), 2)
+            
+            order_data = {
+                'symbol': symbol,
+                'qty': str(int(qty)),
+                'side': 'buy',
+                'type': 'limit',
+                'limit_price': str(round(limit_price, 2)),
+                'time_in_force': 'gtc',
+                'order_class': 'bracket' if take_profit_pct else 'oto',
+                'stop_loss': {
+                    'stop_price': str(stop_price),
+                },
+            }
+            
+            if take_profit_pct:
+                tp_price = round(limit_price * (1 + take_profit_pct / 100), 2)
+                order_data['take_profit'] = {'limit_price': str(tp_price)}
+
+            resp = requests.post(
+                f'{self._base_url}/v2/orders',
+                headers=self._rest_headers(),
+                json=order_data,
+            )
+            
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                legs = data.get('legs', [])
+                logger.success(
+                    f"🛡️ Bracket order: BUY {qty} {symbol} @ ${limit_price:.2f} "
+                    f"stop=${stop_price:.2f} ({stop_loss_pct}%)"
+                    f"{f' tp=${tp_price:.2f}' if take_profit_pct else ''} "
+                    f"[{len(legs)} legs]"
+                )
+                return {
+                    'id': data['id'],
+                    'symbol': symbol,
+                    'side': 'buy',
+                    'type': 'bracket',
+                    'qty': str(qty),
+                    'limit_price': str(limit_price),
+                    'stop_price': str(stop_price),
+                    'status': data['status'],
+                    'order_class': data.get('order_class', ''),
+                    'legs': legs,
+                }
+            else:
+                logger.error(f"Bracket order failed: {resp.status_code} {resp.text[:200]}")
+                # Fallback to simple limit buy
+                return self.place_limit_buy(symbol, int(qty), limit_price, extended_hours)
+
+        except Exception as e:
+            logger.error(f"Bracket order error for {symbol}: {e}")
+            return self.place_limit_buy(symbol, int(qty), limit_price, extended_hours)
+
+    def place_trailing_stop(self, symbol: str, qty: int, trail_percent: float = 3.0) -> Optional[Dict]:
+        """
+        Place a trailing stop sell order on an existing position.
+        The stop price follows the stock up and triggers on a pullback.
+        
+        Args:
+            symbol: Stock ticker
+            qty: Number of shares to sell
+            trail_percent: Percentage below high-water mark to trigger (default 3%)
+        """
+        self._ensure_init()
+        try:
+            order_data = {
+                'symbol': symbol,
+                'qty': str(int(qty)),
+                'side': 'sell',
+                'type': 'trailing_stop',
+                'trail_percent': str(trail_percent),
+                'time_in_force': 'gtc',
+            }
+
+            resp = requests.post(
+                f'{self._base_url}/v2/orders',
+                headers=self._rest_headers(),
+                json=order_data,
+            )
+            
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                logger.success(
+                    f"📈 Trailing stop: {symbol} {qty}sh trail={trail_percent}% "
+                    f"hwm={data.get('hwm', '?')} stop={data.get('stop_price', 'tracking')}"
+                )
+                return {
+                    'id': data['id'],
+                    'symbol': symbol,
+                    'side': 'sell',
+                    'type': 'trailing_stop',
+                    'qty': str(qty),
+                    'trail_percent': str(trail_percent),
+                    'stop_price': data.get('stop_price'),
+                    'hwm': data.get('hwm'),
+                    'status': data['status'],
+                }
+            else:
+                logger.error(f"Trailing stop failed: {resp.status_code} {resp.text[:200]}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Trailing stop error for {symbol}: {e}")
+            return None
+
+    def upgrade_to_trailing_stop(self, symbol: str, qty: int, 
+                                  old_stop_order_id: str = None,
+                                  trail_percent: float = 3.0) -> Optional[Dict]:
+        """
+        Upgrade a fixed stop to a trailing stop.
+        Cancels the old stop order and places a trailing stop.
+        """
+        self._ensure_init()
+        # Cancel old stop if provided
+        if old_stop_order_id:
+            try:
+                self.cancel_order(old_stop_order_id)
+                logger.info(f"Cancelled fixed stop {old_stop_order_id} for {symbol}")
+            except Exception:
+                pass
+        
+        return self.place_trailing_stop(symbol, qty, trail_percent)
+
+    def _rest_headers(self) -> Dict:
+        """REST API headers for direct requests."""
+        return {
+            'APCA-API-KEY-ID': self.api_key,
+            'APCA-API-SECRET-KEY': self.secret_key,
+            'Content-Type': 'application/json',
+        }
+
+    @property
+    def _base_url(self) -> str:
+        """Base URL for REST API."""
+        if getattr(settings, 'ALPACA_PAPER', True):
+            return 'https://paper-api.alpaca.markets'
+        return 'https://api.alpaca.markets'
 
     # ── Market Data ────────────────────────────────────────────────
 

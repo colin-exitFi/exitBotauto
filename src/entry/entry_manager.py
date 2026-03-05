@@ -200,12 +200,34 @@ class EntryManager:
             except Exception:
                 pass
 
-        # Place order with retries using smart execution
+        # Calculate stop loss percentage (ATR-based or default 3%)
+        stop_loss_pct = 3.0  # default
+        if atr_value and atr_value > 0:
+            # ATR-based stop: 1.5x ATR as percentage of price
+            stop_loss_pct = round((atr_value * 1.5 / price) * 100, 2)
+            stop_loss_pct = max(1.5, min(stop_loss_pct, 5.0))  # clamp 1.5-5%
+
+        # Trail percent for trailing stop (slightly tighter than initial stop)
+        trail_pct = round(stop_loss_pct * 0.8, 2)  # 80% of initial stop = tighter trail
+        trail_pct = max(1.5, min(trail_pct, 4.0))  # clamp 1.5-4%
+
+        # Place order with broker-side protection
         order = None
+        whole_shares = int(shares) if shares >= 1 else 0
+
         for attempt in range(1, self.max_retries + 1):
-            if extended:
-                # Extended hours: MUST use limit orders with extended_hours=True
-                limit_price = round(price * 1.001, 2)
+            limit_price = round(price * 1.002, 2)  # 0.2% slippage buffer
+
+            if whole_shares >= 1 and hasattr(self.broker, 'place_bracket_buy') and not extended:
+                # BRACKET ORDER: Buy + broker-side stop loss (bulletproof)
+                order = await asyncio.get_event_loop().run_in_executor(
+                    None, self.broker.place_bracket_buy, symbol, whole_shares,
+                    limit_price, stop_loss_pct, None  # no take profit — trailing stop handles upside
+                )
+                if order and order.get('type') == 'bracket':
+                    logger.info(f"🛡️ Bracket order placed: {symbol} stop={stop_loss_pct}% trail={trail_pct}%")
+            elif extended:
+                # Extended hours: limit order only (no brackets)
                 if hasattr(self.broker, 'place_limit_buy_extended'):
                     order = await asyncio.get_event_loop().run_in_executor(
                         None, self.broker.place_limit_buy_extended, symbol, int(shares) if shares >= 1 else shares, limit_price
@@ -219,7 +241,6 @@ class EntryManager:
                     None, self.broker.smart_buy, symbol, notional
                 )
             else:
-                limit_price = round(price * 1.001, 2)
                 order = await asyncio.get_event_loop().run_in_executor(
                     None, self.broker.place_limit_buy, symbol, int(shares), limit_price
                 )
@@ -252,9 +273,14 @@ class EntryManager:
             "conviction_level": conviction,
             "risk_tier": self.risk.get_risk_tier().get("name", "?") if self.risk else "?",
             "notional": notional,
+            "stop_loss_pct": stop_loss_pct,
+            "trail_pct": trail_pct,
+            "has_bracket_stop": order.get("type") == "bracket",
+            "bracket_legs": order.get("legs", []),
         }
         self.positions[symbol] = position
-        logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total)")
+        stop_info = f" 🛡️ stop={stop_loss_pct}%" if position["has_bracket_stop"] else ""
+        logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total){stop_info}")
         return position
 
     def _load_brokerage_positions(self):
