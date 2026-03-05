@@ -95,7 +95,14 @@ class RiskManager:
         # Heat tracking (total open risk in dollars)
         self._open_risk = 0.0  # sum of (entry_price * qty * stop_pct/100) for all positions
 
-        # Load persisted milestone state
+        # Wash sale tracking: {symbol: {"loss": float, "exit_time": float}}
+        # If sold at a loss, can't rebuy within 30 days or loss is disallowed for taxes
+        self._wash_sale_list: Dict[str, Dict] = {}
+
+        # Round trip (day trade) tracking: [{symbol, entry_time, exit_time}]
+        self._round_trips: List[Dict] = []
+
+        # Load persisted state (including wash sales)
         self._load_state()
 
         tier = self.get_risk_tier(self._equity)
@@ -220,9 +227,30 @@ class RiskManager:
             return False
         return True
 
-    def can_open_position(self, current_positions: List[Dict]) -> bool:
+    def is_wash_sale(self, symbol: str) -> bool:
+        """Check if buying this symbol would trigger a wash sale (sold at loss within 30 days)."""
+        self._clean_expired_wash_sales()
+        if symbol in self._wash_sale_list:
+            entry = self._wash_sale_list[symbol]
+            days_ago = (time.time() - entry["exit_time"]) / 86400
+            logger.warning(f"🧼 WASH SALE BLOCKED: {symbol} — lost ${entry['loss']:.2f}, exited {days_ago:.0f} days ago (need 31)")
+            return True
+        return False
+
+    def _clean_expired_wash_sales(self):
+        """Remove wash sale entries older than 31 days."""
+        cutoff = time.time() - (31 * 86400)
+        expired = [s for s, v in self._wash_sale_list.items() if v["exit_time"] < cutoff]
+        for s in expired:
+            logger.info(f"🧼 Wash sale cleared: {s} (31 days passed)")
+            del self._wash_sale_list[s]
+
+    def can_open_position(self, current_positions: List[Dict], symbol: str = None) -> bool:
         """Check if we can open a new position."""
         if not self.can_trade():
+            return False
+        # Wash sale check
+        if symbol and self.is_wash_sale(symbol):
             return False
         # PDT protection: if equity < $25K, limit to 3 day trades per 5 business days
         if self._equity < 25000:
@@ -239,14 +267,19 @@ class RiskManager:
         return True
 
     def _count_recent_day_trades(self) -> int:
-        """Count day trades in the last 5 business days (buy+sell same stock same day)."""
+        """Count round trips (day trades) in the last 5 business days."""
         cutoff = time.time() - (5 * 24 * 3600)  # 5 calendar days (conservative)
-        day_trades = 0
+        count = sum(1 for rt in self._round_trips if rt.get("exit_time", 0) > cutoff)
+        # Also check trade_history for any not yet in round_trips
         for trade in self.trade_history:
             t = trade.get("exit_time") or trade.get("time", 0)
             if t > cutoff and trade.get("hold_seconds", 86400) < 86400:
-                day_trades += 1
-        return day_trades
+                # Check not already counted in round_trips
+                sym = trade.get("symbol")
+                already = any(rt["symbol"] == sym and abs(rt["exit_time"] - t) < 60 for rt in self._round_trips)
+                if not already:
+                    count += 1
+        return count
 
     # ── Post-trade Updates ─────────────────────────────────────────
 
@@ -288,6 +321,27 @@ class RiskManager:
         if daily_pct <= -tier["daily_loss_pct"]:
             logger.error(f"🚨 CIRCUIT BREAKER: Daily loss {daily_pct:.2f}% → HALTING")
             self.trading_halted = True
+
+        # ── Wash sale tracking ──
+        symbol = trade.get("symbol", "")
+        if pnl < 0 and symbol:
+            self._wash_sale_list[symbol] = {
+                "loss": pnl,
+                "exit_time": trade.get("exit_time", time.time()),
+            }
+            logger.warning(f"🧼 WASH SALE: {symbol} sold at ${pnl:.2f} loss — blocked for 30 days")
+
+        # ── Round trip tracking ──
+        if symbol:
+            entry_t = trade.get("entry_time", 0)
+            exit_t = trade.get("exit_time", time.time())
+            hold = exit_t - entry_t if entry_t else 86400
+            if hold < 86400:  # Same-day = round trip / day trade
+                self._round_trips.append({
+                    "symbol": symbol, "entry_time": entry_t, "exit_time": exit_t, "pnl": pnl
+                })
+                rt_count = self._count_recent_day_trades()
+                logger.info(f"🔄 Round trip #{rt_count}: {symbol} (held {hold/3600:.1f}h, ${pnl:+.2f})")
 
     # ── Status & Milestones ────────────────────────────────────────
 
@@ -448,6 +502,8 @@ class RiskManager:
             "starting_equity": self._starting_equity,
             "ath_equity": self._ath_equity,
             "start_date": self._start_date,
+            "wash_sale_list": self._wash_sale_list,
+            "round_trips": self._round_trips[-100:],  # Keep last 100
         }
         try:
             (DATA_DIR / "risk_state.json").write_text(json.dumps(state, indent=2))
@@ -463,6 +519,8 @@ class RiskManager:
                 self._starting_equity = state.get("starting_equity", self._starting_equity)
                 self._ath_equity = state.get("ath_equity", self._ath_equity)
                 self._start_date = state.get("start_date", self._start_date)
-                logger.info(f"Loaded risk state: ATH=${self._ath_equity:,.2f}, start=${self._starting_equity:,.2f}")
+                self._wash_sale_list = state.get("wash_sale_list", {})
+                self._round_trips = state.get("round_trips", [])
+                logger.info(f"Loaded risk state: ATH=${self._ath_equity:,.2f}, start=${self._starting_equity:,.2f}, wash_sales={len(self._wash_sale_list)}, round_trips={len(self._round_trips)}")
             except Exception:
                 pass

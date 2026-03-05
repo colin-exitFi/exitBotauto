@@ -84,7 +84,7 @@ class EntryManager:
             logger.debug(f"{symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")
             return False
 
-        if self.risk and not self.risk.can_open_position(current_positions):
+        if self.risk and not self.risk.can_open_position(current_positions, symbol=symbol):
             return False
 
         if self.risk and not self.risk.can_enter_sector(symbol, current_positions):

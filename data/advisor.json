@@ -800,5 +800,49 @@
     ],
     "key_insight": "You're in the most dangerous phase: zero-to-first-trade. The market opens in ~11.5 hours. First 3 trades will set the pattern - a loss spiral early kills confidence and triggers defensive behavior. Strategy: Wait for 9:35-9:45 ET when initial volatility settles, then take HIGH CONVICTION setups only. One clean 1.5% win is worth more than three scratches. Your $1,000 is locked and loaded - the edge comes from patience in the first 30 minutes, then aggressive deployment when clear momentum emerges. Favor liquid large-caps (AAPL, MSFT, NVDA, TSLA, META) for first trades - tighter spreads, cleaner exits. Get to $1,015 today, then compound from there.",
     "timestamp": 1772683069.041097
+  },
+  {
+    "strategy": "Aggressive pre-market planning mode: identify 3-5 gap-up candidates for 9:30 ET open, bias toward momentum continuation on the $1K\u2192$25K winner",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "whatever delivered the 2400% gain",
+        "high-beta tech",
+        "small-cap momentum"
+      ],
+      "avoid": [
+        "low-volume names",
+        "defensive sectors that won't move fast"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 7.0,
+        "suggested": 2.5,
+        "reason": "Using tier override (7%) instead of COMPOUND tier sizing (2.5%) - this is reckless. Current config would risk $1,750/position instead of tier-appropriate $625. Fix immediately."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "COMPOUND tier mandates 1.0% stops, not 1.5%. You're violating your own risk framework - tighten stops to tier spec."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "With 10 position capacity and zero open, you need faster candidate flow. 30-second scans during market hours to catch breakouts early."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.3,
+        "suggested": 0.4,
+        "reason": "At $25K you can afford to be selective. Raise bar to 0.4 to filter out mediocre setups - quality over quantity."
+      }
+    ],
+    "key_insight": "CRITICAL CONFIG MISMATCH: You earned COMPOUND tier (2.5% sizing, 1.0% stops) but your live config uses 7.0% sizing and 1.5% stops - you're trading like you're still at GRIND tier. This is exactly how you blow up a winning streak. Fix position sizing to 2.5% and stops to 1.0% BEFORE market open. The 2400% gain suggests you caught lightning in a bottle - now protect it with proper risk management. Once fixed, use the after-hours to build a watchlist: scan for stocks that gapped on news today, hold overnight, and might continue at open. Zero trades today means either the system wasn't running or scanner is broken - diagnose which. You have 11 hours until market open to prepare, not sit idle.",
+    "timestamp": 1772684402.270764
   }
 ]

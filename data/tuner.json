@@ -321,5 +321,50 @@
       }
     ],
     "timestamp": 1772677360.604851
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "CRITICAL SAFETY VIOLATION: You're in COMPOUND tier which mandates 2.5% sizing, but config shows 7.0% - that's $1,750/position vs tier-appropriate $625. This is how you blow up a 2400% gain. Fixing to tier spec immediately."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.0,
+        "reason": "COMPOUND tier mandates 1.0% stops, config shows 1.5%. You earned this tier by hitting $25K - now follow its risk rules. Tightening to 1.0% per tier framework before market open."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "COMPOUND tier allows 10 positions, config shows 8. With 0 trades deployed and tier capacity for 10, increase to tier maximum for better capital deployment and diversification."
+      }
+    ],
+    "reasoning": "Emergency alignment to COMPOUND tier specs - current config is dangerously oversized for risk framework",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 7.0,
+        "new": 2.5,
+        "reason": "CRITICAL SAFETY VIOLATION: You're in COMPOUND tier which mandates 2.5% sizing, but config shows 7.0% - that's $1,750/position vs tier-appropriate $625. This is how you blow up a 2400% gain. Fixing to tier spec immediately.",
+        "timestamp": 1772684409.189548
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "old": 1.5,
+        "new": 1.0,
+        "reason": "COMPOUND tier mandates 1.0% stops, config shows 1.5%. You earned this tier by hitting $25K - now follow its risk rules. Tightening to 1.0% per tier framework before market open.",
+        "timestamp": 1772684409.189885
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "old": 8,
+        "new": 10,
+        "reason": "COMPOUND tier allows 10 positions, config shows 8. With 0 trades deployed and tier capacity for 10, increase to tier maximum for better capital deployment and diversification.",
+        "timestamp": 1772684409.189933
+      }
+    ],
+    "timestamp": 1772684409.19104
   }
 ]
