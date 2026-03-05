@@ -77,5 +77,22 @@
     "conviction_level": "high",
     "risk_tier": "COMPOUND",
     "recorded_at": 1772730634.9790459
+  },
+  {
+    "symbol": "BATL",
+    "side": "sell",
+    "entry_price": 24.97,
+    "exit_price": 24.97,
+    "quantity": 15.0,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "reason": "trailing_stop",
+    "hold_seconds": 102.876305103302,
+    "entry_time": 1772730674.864764,
+    "exit_time": 1772730777.741069,
+    "sentiment_at_entry": 0,
+    "conviction_level": "normal",
+    "risk_tier": "COMPOUND",
+    "recorded_at": 1772730777.741195
   }
 ]

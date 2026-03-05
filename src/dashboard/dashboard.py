@@ -183,12 +183,36 @@ async def get_candidates():
 
 @app.get("/api/history")
 async def get_history(limit: int = 20):
-    if not _bot or not _bot.exit_manager:
-        return []
-    history = _bot.exit_manager.get_history(limit)
-    for h in history:
-        h["hold_time"] = f"{int(h.get('hold_seconds', 0) / 60)}m"
-    return history
+    # Pull from persistent trade history (includes trailing stop exits)
+    try:
+        from ai.trade_history import TradeHistory
+        th = TradeHistory()
+        trades = th.load_all()
+        if isinstance(trades, dict):
+            trades = trades.get("trades", [])
+        # Format for dashboard
+        result = []
+        for t in trades[-limit:]:
+            result.append({
+                "symbol": t.get("symbol", "?"),
+                "entry_price": t.get("entry_price", 0),
+                "exit_price": t.get("exit_price", 0),
+                "quantity": t.get("quantity", 0),
+                "pnl": t.get("pnl", 0),
+                "pnl_pct": t.get("pnl_pct", 0),
+                "reason": t.get("exit_reason", t.get("reason", "trailing_stop")),
+                "hold_time": f"{int(t.get('hold_seconds', 0) / 60)}m",
+                "hold_seconds": t.get("hold_seconds", 0),
+            })
+        return result
+    except Exception:
+        # Fallback to exit manager
+        if not _bot or not _bot.exit_manager:
+            return []
+        history = _bot.exit_manager.get_history(limit)
+        for h in history:
+            h["hold_time"] = f"{int(h.get('hold_seconds', 0) / 60)}m"
+        return history
 
 
 @app.get("/api/trade-history")
