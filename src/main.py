@@ -31,6 +31,7 @@ from signals.fade_runner import FadeRunnerScanner
 from signals.watchlist import DynamicWatchlist
 from signals.edgar import EdgarScanner
 from dashboard.dashboard import log_activity
+import persistence
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
 from risk.risk_manager import RiskManager
@@ -171,6 +172,28 @@ class TradingBot:
             "last_consensus": None,
         }
 
+        # ── Restore persisted state ─────────────────────────────────
+        # Positions: merge disk state with Alpaca reality
+        saved_positions = persistence.load_positions()
+        if saved_positions:
+            for sym, pos in saved_positions.items():
+                if sym not in self.entry_manager.positions:
+                    self.entry_manager.positions[sym] = pos
+            logger.info(f"📦 Merged {len(saved_positions)} persisted positions")
+
+        # P&L state
+        self.pnl_state = persistence.load_pnl_state()
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        if self.pnl_state.get("today_date") != today:
+            self.pnl_state["today_realized_pnl"] = 0.0
+            self.pnl_state["today_date"] = today
+
+        # AI layer state
+        saved_ai = persistence.load_ai_state()
+        if saved_ai:
+            self.ai_layers.update(saved_ai)
+
         # Dashboard
         start_dashboard(bot=self)
 
@@ -189,6 +212,7 @@ class TradingBot:
         monitor_interval = 5
         last_scan = 0
         last_equity_sync = 0
+        last_state_save = 0
 
         try:
             while self.running:
@@ -225,6 +249,13 @@ class TradingBot:
                 if self.paused:
                     await asyncio.sleep(5)
                     continue
+
+                # ── PERSIST STATE (every 30s) ──────────────────────
+                if now - last_state_save >= 30:
+                    last_state_save = now
+                    persistence.save_positions(self.entry_manager.positions)
+                    persistence.save_ai_state(self.ai_layers)
+                    persistence.save_pnl_state(self.pnl_state)
 
                 # ── SCAN ───────────────────────────────────────────
                 if now - last_scan >= scan_interval:
@@ -603,7 +634,6 @@ class TradingBot:
                 else:
                     pos = await self.entry_manager.enter_position(symbol, sentiment_data)
                 if pos:
-                    self._send_trade_alert(pos, direction)
                     positions = self.entry_manager.get_positions()
 
     async def _monitor_positions(self):
@@ -679,10 +709,23 @@ class TradingBot:
                     self.entry_manager.remove_position(symbol)
                     self.risk_manager.record_trade_pnl(pnl)
 
+                    # Update P&L tracking
+                    self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
+                    self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
+                    self.pnl_state["total_trades"] = self.pnl_state.get("total_trades", 0) + 1
+                    if pnl >= 0:
+                        self.pnl_state["winning_trades"] = self.pnl_state.get("winning_trades", 0) + 1
+                    else:
+                        self.pnl_state["losing_trades"] = self.pnl_state.get("losing_trades", 0) + 1
+                    self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
+                    self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
+                    persistence.save_pnl_state(self.pnl_state)
+                    persistence.save_positions(self.entry_manager.positions)
+                    persistence.save_trades([trade_record])
+
                     emoji = "✅" if pnl >= 0 else "❌"
                     logger.info(f"{emoji} TRAILING STOP EXIT: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
                     log_activity("trade", f"{emoji} {symbol} stopped out: ${pnl:.2f} ({pnl_pct:+.1f}%)")
-                    self._send_exit_alert(symbol, pnl, pnl_pct, pos.get("trail_pct", 3.0))
                     continue
 
                 # ── VERIFY TRAILING STOP EXISTS ──

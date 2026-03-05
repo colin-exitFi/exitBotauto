@@ -203,6 +203,77 @@ async def get_trade_history(limit: int = 20):
     }
 
 
+@app.get("/api/pnl")
+async def get_pnl():
+    """Comprehensive P&L tracking — the Bloomberg terminal view."""
+    if not _bot:
+        return {}
+
+    # Realized P&L from persistence
+    pnl = getattr(_bot, 'pnl_state', {})
+    total_realized = pnl.get("total_realized_pnl", 0)
+    today_realized = pnl.get("today_realized_pnl", 0)
+    total_trades = pnl.get("total_trades", 0)
+    wins = pnl.get("winning_trades", 0)
+    losses = pnl.get("losing_trades", 0)
+    best = pnl.get("best_trade", 0)
+    worst = pnl.get("worst_trade", 0)
+
+    # Unrealized P&L from live positions
+    unrealized = 0
+    positions = _bot.entry_manager.get_positions() if _bot.entry_manager else []
+    for p in positions:
+        try:
+            price = _bot.polygon_client.get_price(p["symbol"]) if _bot.polygon_client else 0
+            if price <= 0:
+                price = p.get("entry_price", 0)
+            side = p.get("side", "long")
+            if side == "short":
+                unrealized += (p["entry_price"] - price) * p["quantity"]
+            else:
+                unrealized += (price - p["entry_price"]) * p["quantity"]
+        except Exception:
+            pass
+
+    # Account equity from Alpaca
+    equity = 1000.0
+    starting = pnl.get("starting_equity", 1000.0)
+    peak = pnl.get("peak_equity", 1000.0)
+    if _bot.alpaca_client:
+        try:
+            acct = _bot.alpaca_client.get_account()
+            equity = acct.get("equity", 1000.0)
+            if equity > peak:
+                peak = equity
+                pnl["peak_equity"] = peak
+        except Exception:
+            pass
+
+    total_pnl = total_realized + unrealized
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    drawdown = ((peak - equity) / peak * 100) if peak > 0 else 0
+    roi = ((equity - starting) / starting * 100) if starting > 0 else 0
+
+    return {
+        "equity": round(equity, 2),
+        "starting_equity": round(starting, 2),
+        "peak_equity": round(peak, 2),
+        "total_pnl": round(total_pnl, 2),
+        "total_realized": round(total_realized, 2),
+        "unrealized": round(unrealized, 2),
+        "today_realized": round(today_realized, 2),
+        "total_trades": total_trades,
+        "winning_trades": wins,
+        "losing_trades": losses,
+        "win_rate": round(win_rate, 1),
+        "best_trade": round(best, 2),
+        "worst_trade": round(worst, 2),
+        "drawdown_pct": round(drawdown, 2),
+        "roi_pct": round(roi, 2),
+        "open_positions": len(positions),
+    }
+
+
 @app.get("/api/metrics")
 async def get_metrics():
     if not _bot or not _bot.risk_manager:
@@ -349,9 +420,28 @@ tr:hover td{background:#161b2288}
 </div>
 <div class="container">
 
+  <!-- P&L Terminal -->
+  <div class="card full">
+    <h2><span class="icon">💰</span> P&L Terminal <span id="pnlTimestamp" style="margin-left:auto;color:#484f58;font-size:11px;font-weight:400"></span></h2>
+    <div class="metrics" id="pnlMetrics">
+      <div class="metric"><div class="value big-pnl" id="totalPnl">$0.00</div><div class="label">Total P&L</div></div>
+      <div class="metric"><div class="value" id="equity">$1,000</div><div class="label">Equity</div></div>
+      <div class="metric"><div class="value" id="todayPnl">$0.00</div><div class="label">Today P&L</div></div>
+      <div class="metric"><div class="value" id="unrealized">$0.00</div><div class="label">Unrealized</div></div>
+      <div class="metric"><div class="value" id="winRate">0%</div><div class="label">Win Rate</div></div>
+      <div class="metric"><div class="value" id="totalTrades">0</div><div class="label">Trades</div></div>
+      <div class="metric"><div class="value" id="roi">0%</div><div class="label">ROI</div></div>
+      <div class="metric"><div class="value" id="drawdown">0%</div><div class="label">Drawdown</div></div>
+      <div class="metric"><div class="value positive" id="bestTrade">$0</div><div class="label">Best Trade</div></div>
+      <div class="metric"><div class="value negative" id="worstTrade">$0</div><div class="label">Worst Trade</div></div>
+      <div class="metric"><div class="value" id="openPos">0</div><div class="label">Open Positions</div></div>
+      <div class="metric"><div class="value" id="winsLosses">0W / 0L</div><div class="label">Wins / Losses</div></div>
+    </div>
+  </div>
+
   <!-- Performance Metrics -->
   <div class="card full">
-    <h2><span class="icon">📊</span> Performance</h2>
+    <h2><span class="icon">📊</span> Risk Metrics</h2>
     <div class="metrics" id="metrics"></div>
   </div>
 
@@ -434,6 +524,37 @@ async function refresh() {
     if (!s.running) { b.textContent='STOPPED'; b.className='badge stopped'; dot.className='scan-dot idle'; }
     else if (s.paused) { b.textContent='PAUSED'; b.className='badge paused'; dot.className='scan-dot idle'; }
     else { b.textContent='RUNNING'; b.className='badge running'; dot.className='scan-dot'; }
+  }
+  // P&L Terminal
+  const pnl = await api('/api/pnl');
+  if (pnl) {
+    const setPnl = (id, val, prefix='$') => {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = prefix + (typeof val === 'number' ? val.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : val);
+      el.className = 'value' + (typeof val === 'number' && val < 0 ? ' negative' : typeof val === 'number' && val > 0 ? ' positive' : '');
+    };
+    $('totalPnl').textContent = '$' + (pnl.total_pnl||0).toFixed(2);
+    $('totalPnl').className = 'value big-pnl ' + cls(pnl.total_pnl||0);
+    setPnl('equity', pnl.equity||0);
+    setPnl('todayPnl', pnl.today_realized||0);
+    setPnl('unrealized', pnl.unrealized||0);
+    $('winRate').textContent = (pnl.win_rate||0).toFixed(0) + '%';
+    $('winRate').className = 'value' + ((pnl.win_rate||0) >= 50 ? ' positive' : (pnl.total_trades > 0 ? ' negative' : ''));
+    $('totalTrades').textContent = pnl.total_trades||0;
+    $('totalTrades').className = 'value info';
+    $('roi').textContent = (pnl.roi_pct||0).toFixed(1) + '%';
+    $('roi').className = 'value ' + cls(pnl.roi_pct||0);
+    $('drawdown').textContent = (pnl.drawdown_pct||0).toFixed(1) + '%';
+    $('drawdown').className = 'value' + ((pnl.drawdown_pct||0) > 2 ? ' negative' : '');
+    $('bestTrade').textContent = '$' + (pnl.best_trade||0).toFixed(2);
+    $('bestTrade').className = 'value positive';
+    $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
+    $('worstTrade').className = 'value negative';
+    $('openPos').textContent = pnl.open_positions||0;
+    $('openPos').className = 'value info';
+    $('winsLosses').textContent = (pnl.winning_trades||0) + 'W / ' + (pnl.losing_trades||0) + 'L';
+    $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString();
   }
   // Metrics
   const m = await api('/api/metrics');
