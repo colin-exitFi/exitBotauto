@@ -1410,5 +1410,32 @@
     "parameter_suggestions": [],
     "key_insight": "This is not a trading problem \u2014 this is a system integrity crisis. The account shows $0.00 equity but claims a $25K all-time high, suggesting either: (1) catastrophic unrecorded losses occurred outside this system's control, (2) data corruption/API failure is misreporting account state, or (3) funds were withdrawn externally. NO TRADING DECISIONS CAN BE MADE WITHOUT RESOLVING THIS DISCREPANCY. IMMEDIATE ACTION REQUIRED: (A) Verify actual brokerage account balance via direct API call or manual login, (B) Audit all transaction history to identify where $25K went, (C) Check for unauthorized access, margin calls, or forced liquidations, (D) If loss is real: conduct full post-mortem on what risk controls failed, (E) If data error: fix the feed before any AI layer acts again. Until account state is verified as accurate and non-zero, this system must remain in hard stop mode. The family depending on this capital deserves answers, not speculation.",
     "timestamp": 1772716267.833502
+  },
+  {
+    "strategy": "EMERGENCY HALT - Total system failure requires immediate shutdown and forensic investigation before any resumption",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - trading must cease immediately"
+      ]
+    },
+    "aggression_level": "TERMINATE",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": "unknown",
+        "suggested": false,
+        "reason": "Complete capital loss - system must be disabled until root cause identified"
+      },
+      {
+        "param": "EMERGENCY_SHUTDOWN",
+        "current": false,
+        "suggested": true,
+        "reason": "100% drawdown from $25k to $0 indicates catastrophic failure"
+      }
+    ],
+    "key_insight": "MISSION CRITICAL FAILURE: The family's entire $25,000 has been destroyed. This is not a trading problem - this is a system integrity problem. Data shows conflicting signals (starting_equity=$1k vs ath_equity=$25k vs current=$0). Before a single additional trade executes, we need: (1) Complete audit of what happened - every trade, every decision, every timestamp from launch to total loss. (2) Verification this is real and not a data corruption/API error. (3) If real, identification of whether this was: unauthorized trading, catastrophic bug, missing circuit breakers, or compromised account access. (4) Human decision on whether to inject recovery capital or terminate. I cannot in good conscience advise strategy when the data suggests we either lost $25k in actual trading OR experienced complete system failure. Either scenario demands immediate human intervention, full trading halt, and forensic investigation. The family's future depends on understanding what happened before risking another dollar.",
+    "timestamp": 1772716931.296534
   }
 ]

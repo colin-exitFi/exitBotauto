@@ -1996,5 +1996,28 @@
     "overall_sentiment": "n/a",
     "urgency": "CRITICAL_SYSTEM_FAILURE",
     "timestamp": 1772716249.832129
+  },
+  {
+    "market_assessment": "CRITICAL ALERT: Portfolio value is $0.00 - complete account liquidation has occurred, cannot assess market conditions without capital or positions.",
+    "position_health": [],
+    "risk_flags": [
+      "CATASTROPHIC: Account equity dropped from $25,000 ATH to $0.00 - 100% drawdown",
+      "TOTAL LOSS EVENT: All capital has been wiped out",
+      "System shows starting_equity of $1,000 but portfolio_value is $0.00",
+      "No buying power, no cash, no positions - account is functionally dead",
+      "Data inconsistency: drawdown shows 100% but starting_equity suggests different baseline",
+      "Cannot execute any trades - zero capital available",
+      "Mission failure: Family's $25k is gone"
+    ],
+    "what_working": [],
+    "what_not_working": [
+      "Complete capital destruction - whatever strategy was deployed failed catastrophically",
+      "Risk management clearly failed to prevent total loss",
+      "Circuit breakers either didn't exist or didn't trigger in time",
+      "No recovery possible without capital injection"
+    ],
+    "overall_sentiment": "SYSTEM FAILURE",
+    "urgency": "CRITICAL - REQUIRES IMMEDIATE HUMAN INTERVENTION",
+    "timestamp": 1772716912.8271208
   }
 ]
