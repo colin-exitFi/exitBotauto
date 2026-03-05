@@ -19,7 +19,7 @@ from config import settings
 
 BIGCAP_PROMPT = """Current time: {now}
 
-What are the top 15 most-discussed LARGE-CAP stock tickers (market cap > $10B) on X/Twitter RIGHT NOW today, and why is each one trending?
+What are the top 50 most-discussed LARGE-CAP stock tickers (market cap > $10B) on X/Twitter RIGHT NOW today, and why is each one trending?
 
 Focus on:
 - Stocks with unusual volume of mentions in the last few hours
@@ -38,7 +38,7 @@ Only real US stock tickers (no crypto, no ETFs unless actually trending)."""
 
 SMALLCAP_PROMPT = """Current time: {now}
 
-What are the top 15 UNDER-THE-RADAR small-cap and mid-cap stocks (market cap < $10B) getting unusual buzz on X/Twitter RIGHT NOW today?
+What are the top 50 UNDER-THE-RADAR small-cap and mid-cap stocks (market cap < $10B) getting unusual buzz on X/Twitter RIGHT NOW today?
 
 I'm looking for stocks that retail traders are discovering — the ones that haven't hit mainstream yet but are picking up momentum on X. Think:
 - Biotech/pharma with FDA catalysts or trial results
@@ -111,7 +111,7 @@ class GrokXTrending:
                     },
                     json={
                         "model": getattr(settings, 'XAI_MODEL', 'grok-4-0709'),
-                        "max_tokens": 2000,
+                        "max_tokens": 4000,
                         "temperature": 0.3,
                         "messages": [{"role": "user", "content": prompt}],
                     },
@@ -158,7 +158,7 @@ class GrokXTrending:
                         resp = await client.post(
                             "https://api.x.ai/v1/chat/completions",
                             headers={"Authorization": f"Bearer {settings.XAI_API_KEY}", "Content-Type": "application/json"},
-                            json={"model": getattr(settings, 'XAI_MODEL', 'grok-4-0709'), "max_tokens": 2000, "temperature": 0.3,
+                            json={"model": getattr(settings, 'XAI_MODEL', 'grok-4-0709'), "max_tokens": 4000, "temperature": 0.3,
                                   "messages": [{"role": "user", "content": prompt}]},
                         )
                         resp.raise_for_status()
