@@ -1,16 +1,16 @@
 {
-  "last_observation": "Market is bleeding red (SPY -1.18%, QQQ -1.07%, DIA -2.11%) but that's creating volatility plays\u2014rotation into small-cap AI/tech runners while institutions dump.",
+  "last_observation": "Day 1, market open, multiple momentum runners active with BATL leading at +36.69% on massive volume spike, strong bullish sentiment across board",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": null,
   "last_position_manager": null,
   "last_consensus": {
-    "symbol": "AVGO",
+    "symbol": "PR",
     "decision": "SKIP",
     "size_pct": 0,
     "trail_pct": 3.0,
-    "reasoning": "Jury AI call failed",
+    "reasoning": "Skip cooldown (2 min)",
     "confidence": 0.0,
-    "timestamp": 1772738129.845852
+    "timestamp": 1772739137.212995
   }
 }

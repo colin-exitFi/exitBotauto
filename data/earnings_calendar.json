@@ -6,7 +6,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$4.55",
-      "market_cap": "$447,318,276,323",
+      "market_cap": "$446,861,090,830",
       "source": "nasdaq"
     },
     {
@@ -15,7 +15,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "$1.73",
-      "market_cap": "$313,115,202,524",
+      "market_cap": "$307,757,674,167",
       "source": "nasdaq"
     },
     {
@@ -24,7 +24,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.57",
-      "market_cap": "$109,296,453,822",
+      "market_cap": "$108,072,024,209",
       "source": "nasdaq"
     },
     {
@@ -33,7 +33,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.53",
-      "market_cap": "$91,950,167,073",
+      "market_cap": "$91,966,096,318",
       "source": "nasdaq"
     },
     {
@@ -42,7 +42,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.62",
-      "market_cap": "$67,525,683,210",
+      "market_cap": "$68,030,971,511",
       "source": "nasdaq"
     },
     {
@@ -51,7 +51,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.89",
-      "market_cap": "$47,117,233,290",
+      "market_cap": "$48,599,770,309",
       "source": "nasdaq"
     },
     {
@@ -60,7 +60,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$1.20",
-      "market_cap": "$43,438,766,342",
+      "market_cap": "$43,027,414,388",
       "source": "nasdaq"
     },
     {
@@ -69,7 +69,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($0.03)",
-      "market_cap": "$37,262,470,288",
+      "market_cap": "$36,913,679,614",
       "source": "nasdaq"
     },
     {
@@ -78,7 +78,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$4.70",
-      "market_cap": "$18,902,014,062",
+      "market_cap": "$18,925,297,055",
       "source": "nasdaq"
     },
     {
@@ -87,7 +87,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.01)",
-      "market_cap": "$16,698,497,410",
+      "market_cap": "$16,554,246,395",
       "source": "nasdaq"
     },
     {
@@ -96,7 +96,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$1.03",
-      "market_cap": "$16,266,671,021",
+      "market_cap": "$15,995,462,280",
       "source": "nasdaq"
     },
     {
@@ -105,7 +105,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$14,379,442,514",
+      "market_cap": "$14,346,259,992",
       "source": "nasdaq"
     },
     {
@@ -114,7 +114,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.93",
-      "market_cap": "$13,117,483,429",
+      "market_cap": "$13,082,154,546",
       "source": "nasdaq"
     },
     {
@@ -123,7 +123,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.33",
-      "market_cap": "$12,916,963,410",
+      "market_cap": "$13,075,099,077",
       "source": "nasdaq"
     },
     {
@@ -132,7 +132,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.17",
-      "market_cap": "$11,110,081,197",
+      "market_cap": "$11,494,628,778",
       "source": "nasdaq"
     },
     {
@@ -141,7 +141,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.45",
-      "market_cap": "$10,134,867,415",
+      "market_cap": "$10,317,109,068",
       "source": "nasdaq"
     },
     {
@@ -150,7 +150,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.65",
-      "market_cap": "$9,708,228,961",
+      "market_cap": "$9,861,939,323",
       "source": "nasdaq"
     },
     {
@@ -159,7 +159,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.42",
-      "market_cap": "$6,879,040,743",
+      "market_cap": "$6,935,146,049",
       "source": "nasdaq"
     },
     {
@@ -168,7 +168,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$5,790,400,000",
+      "market_cap": "$5,693,600,000",
       "source": "nasdaq"
     },
     {
@@ -177,7 +177,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$2.48",
-      "market_cap": "$4,986,305,559",
+      "market_cap": "$4,816,938,129",
       "source": "nasdaq"
     },
     {
@@ -186,16 +186,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "$0.51",
-      "market_cap": "$4,335,903,706",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "USAR",
-      "company": "USA Rare Earth, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.12)",
-      "market_cap": "$4,232,407,190",
+      "market_cap": "$4,381,069,369",
       "source": "nasdaq"
     },
     {
@@ -204,7 +195,16 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.84",
-      "market_cap": "$3,955,658,706",
+      "market_cap": "$4,128,598,214",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "USAR",
+      "company": "USA Rare Earth, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "($0.12)",
+      "market_cap": "$4,121,257,465",
       "source": "nasdaq"
     },
     {
@@ -213,7 +213,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$3,504,649,578",
+      "market_cap": "$3,487,795,800",
       "source": "nasdaq"
     },
     {
@@ -222,7 +222,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$1.06",
-      "market_cap": "$3,195,477,689",
+      "market_cap": "$3,295,287,197",
       "source": "nasdaq"
     },
     {
@@ -231,16 +231,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.08",
-      "market_cap": "$2,764,716,450",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "HCM",
-      "company": "HUTCHMED (China) Limited",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$2,352,241,600",
+      "market_cap": "$2,990,904,706",
       "source": "nasdaq"
     },
     {
@@ -249,7 +240,16 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.11)",
-      "market_cap": "$2,348,257,084",
+      "market_cap": "$2,413,486,448",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "HCM",
+      "company": "HUTCHMED (China) Limited",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "",
+      "market_cap": "$2,380,151,029",
       "source": "nasdaq"
     },
     {
@@ -258,7 +258,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.27",
-      "market_cap": "$2,173,442,537",
+      "market_cap": "$2,127,249,481",
       "source": "nasdaq"
     },
     {
@@ -267,7 +267,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.11",
-      "market_cap": "$1,993,103,879",
+      "market_cap": "$2,023,062,116",
       "source": "nasdaq"
     },
     {
@@ -276,25 +276,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.98)",
-      "market_cap": "$1,671,174,012",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "WLY",
-      "company": "John Wiley & Sons, Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "$0.86",
-      "market_cap": "$1,611,440,360",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "WLYB",
-      "company": "John Wiley & Sons, Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$1,611,440,360",
+      "market_cap": "$1,915,075,084",
       "source": "nasdaq"
     },
     {
@@ -303,7 +285,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.61)",
-      "market_cap": "$1,589,759,179",
+      "market_cap": "$1,693,839,028",
       "source": "nasdaq"
     },
     {
@@ -312,7 +294,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.31)",
-      "market_cap": "$1,548,786,581",
+      "market_cap": "$1,663,262,111",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "WLY",
+      "company": "John Wiley & Sons, Inc.",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "$0.86",
+      "market_cap": "$1,600,403,097",
       "source": "nasdaq"
     },
     {
@@ -321,7 +312,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "$0.26",
-      "market_cap": "$1,517,996,498",
+      "market_cap": "$1,517,267,743",
       "source": "nasdaq"
     },
     {
@@ -330,7 +321,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$2.31",
-      "market_cap": "$1,434,805,338",
+      "market_cap": "$1,437,306,867",
       "source": "nasdaq"
     },
     {
@@ -339,7 +330,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.32",
-      "market_cap": "$1,379,899,352",
+      "market_cap": "$1,373,427,463",
       "source": "nasdaq"
     },
     {
@@ -348,34 +339,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.39",
-      "market_cap": "$1,355,078,149",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "LOMA",
-      "company": "Loma Negra Compania Industrial Argentina Sociedad Anonima",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$1,155,296,637",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "ALNT",
-      "company": "Allient Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "$0.46",
-      "market_cap": "$1,052,360,599",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "SBR",
-      "company": "Sabine Royalty Trust",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$1,045,922,210",
+      "market_cap": "$1,365,177,527",
       "source": "nasdaq"
     },
     {
@@ -384,7 +348,34 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0",
-      "market_cap": "$1,001,267,858",
+      "market_cap": "$1,188,171,191",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "LOMA",
+      "company": "Loma Negra Compania Industrial Argentina Sociedad Anonima",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$1,177,468,997",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "SBR",
+      "company": "Sabine Royalty Trust",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$1,077,850,976",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ALNT",
+      "company": "Allient Inc.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "$0.46",
+      "market_cap": "$1,076,759,234",
       "source": "nasdaq"
     },
     {
@@ -393,7 +384,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.10)",
-      "market_cap": "$983,577,424",
+      "market_cap": "$1,012,035,360",
       "source": "nasdaq"
     },
     {
@@ -402,7 +393,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.29)",
-      "market_cap": "$949,030,619",
+      "market_cap": "$991,830,039",
       "source": "nasdaq"
     },
     {
@@ -411,25 +402,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.80)",
-      "market_cap": "$929,269,554",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "ITRN",
-      "company": "Ituran Location and Control Ltd.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$905,356,826",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "NX",
-      "company": "Quanex Building Products Corporation",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "($0.05)",
-      "market_cap": "$896,717,568",
+      "market_cap": "$962,943,022",
       "source": "nasdaq"
     },
     {
@@ -438,16 +411,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.07)",
-      "market_cap": "$853,543,477",
+      "market_cap": "$931,020,948",
       "source": "nasdaq"
     },
     {
-      "ticker": "MYE",
-      "company": "Myers Industries, Inc.",
+      "ticker": "NX",
+      "company": "Quanex Building Products Corporation",
       "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "$0.23",
-      "market_cap": "$804,644,252",
+      "timing": "AMC",
+      "eps_estimate": "($0.05)",
+      "market_cap": "$903,608,328",
       "source": "nasdaq"
     },
     {
@@ -456,16 +429,16 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($0.04)",
-      "market_cap": "$803,170,502",
+      "market_cap": "$833,799,886",
       "source": "nasdaq"
     },
     {
-      "ticker": "NUTX",
-      "company": "Nutex Health Inc.",
+      "ticker": "MYE",
+      "company": "Myers Industries, Inc.",
       "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$791,347,400",
+      "timing": "BMO",
+      "eps_estimate": "$0.23",
+      "market_cap": "$814,370,310",
       "source": "nasdaq"
     },
     {
@@ -474,25 +447,16 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.04)",
-      "market_cap": "$752,804,611",
+      "market_cap": "$782,916,795",
       "source": "nasdaq"
     },
     {
-      "ticker": "KURA",
-      "company": "Kura Oncology, Inc.",
+      "ticker": "NUTX",
+      "company": "Nutex Health Inc.",
       "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "($0.72)",
-      "market_cap": "$739,648,903",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "BVS",
-      "company": "Bioventus Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "$0.22",
-      "market_cap": "$723,350,490",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$766,878,571",
       "source": "nasdaq"
     },
     {
@@ -501,7 +465,25 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$702,260,780",
+      "market_cap": "$749,078,165",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "KURA",
+      "company": "Kura Oncology, Inc.",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "($0.72)",
+      "market_cap": "$743,999,779",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BVS",
+      "company": "Bioventus Inc.",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "$0.22",
+      "market_cap": "$701,004,423",
       "source": "nasdaq"
     },
     {
@@ -510,7 +492,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($0.07)",
-      "market_cap": "$687,606,153",
+      "market_cap": "$696,147,844",
       "source": "nasdaq"
     },
     {
@@ -519,7 +501,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.10",
-      "market_cap": "$675,944,082",
+      "market_cap": "$690,381,722",
       "source": "nasdaq"
     },
     {
@@ -528,34 +510,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.41)",
-      "market_cap": "$667,318,456",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "AMBQ",
-      "company": "Ambiq Micro, Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "($0.61)",
-      "market_cap": "$611,640,811",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "LBRX",
-      "company": "LB Pharmaceuticals Inc",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.45)",
-      "market_cap": "$604,901,529",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "GDYN",
-      "company": "Grid Dynamics Holdings, Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "$0",
-      "market_cap": "$602,708,002",
+      "market_cap": "$676,920,160",
       "source": "nasdaq"
     },
     {
@@ -564,7 +519,25 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.14)",
-      "market_cap": "$598,003,628",
+      "market_cap": "$648,124,214",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "LBRX",
+      "company": "LB Pharmaceuticals Inc",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "($0.45)",
+      "market_cap": "$617,298,089",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "GDYN",
+      "company": "Grid Dynamics Holdings, Inc.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "$0",
+      "market_cap": "$610,337,218",
       "source": "nasdaq"
     },
     {
@@ -573,7 +546,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.01)",
-      "market_cap": "$551,411,581",
+      "market_cap": "$566,801,102",
       "source": "nasdaq"
     },
     {
@@ -582,16 +555,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.86",
-      "market_cap": "$544,432,301",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "SWBI",
-      "company": "Smith & Wesson Brands, Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$527,695,816",
+      "market_cap": "$560,978,000",
       "source": "nasdaq"
     },
     {
@@ -600,16 +564,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.50)",
-      "market_cap": "$515,065,231",
+      "market_cap": "$542,827,612",
       "source": "nasdaq"
     },
     {
-      "ticker": "GOTU",
-      "company": "Gaotu Techedu Inc.",
+      "ticker": "SWBI",
+      "company": "Smith & Wesson Brands, Inc.",
       "date": "2026-03-05",
-      "timing": "BMO",
+      "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$505,888,615",
+      "market_cap": "$534,369,877",
       "source": "nasdaq"
     },
     {
@@ -618,7 +582,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "$0.05",
-      "market_cap": "$476,560,883",
+      "market_cap": "$486,242,706",
       "source": "nasdaq"
     },
     {
@@ -627,16 +591,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($0.25)",
-      "market_cap": "$469,387,764",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "ULH",
-      "company": "Universal Logistics Holdings, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.05)",
-      "market_cap": "$468,675,032",
+      "market_cap": "$481,799,459",
       "source": "nasdaq"
     },
     {
@@ -645,16 +600,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.48)",
-      "market_cap": "$464,345,024",
+      "market_cap": "$478,368,867",
       "source": "nasdaq"
     },
     {
-      "ticker": "WTI",
-      "company": "W&T Offshore, Inc.",
+      "ticker": "ULH",
+      "company": "Universal Logistics Holdings, Inc.",
       "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "($0.09)",
-      "market_cap": "$461,209,394",
+      "timing": "unknown",
+      "eps_estimate": "($0.05)",
+      "market_cap": "$472,361,241",
       "source": "nasdaq"
     },
     {
@@ -663,7 +618,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.03)",
-      "market_cap": "$450,694,379",
+      "market_cap": "$462,809,819",
       "source": "nasdaq"
     },
     {
@@ -672,7 +627,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($1.01)",
-      "market_cap": "$439,914,617",
+      "market_cap": "$462,695,006",
       "source": "nasdaq"
     },
     {
@@ -681,16 +636,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.07)",
-      "market_cap": "$435,319,045",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "EB",
-      "company": "Eventbrite, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "$0",
-      "market_cap": "$432,700,941",
+      "market_cap": "$449,138,697",
       "source": "nasdaq"
     },
     {
@@ -699,7 +645,25 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$425,254,385",
+      "market_cap": "$446,348,352",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "WTI",
+      "company": "W&T Offshore, Inc.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "($0.09)",
+      "market_cap": "$435,917,266",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "EB",
+      "company": "Eventbrite, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "$0",
+      "market_cap": "$433,677,693",
       "source": "nasdaq"
     },
     {
@@ -708,7 +672,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$409,881,133",
+      "market_cap": "$421,275,653",
       "source": "nasdaq"
     },
     {
@@ -717,7 +681,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "$0.20",
-      "market_cap": "$403,651,936",
+      "market_cap": "$412,130,040",
       "source": "nasdaq"
     },
     {
@@ -726,7 +690,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($0.06)",
-      "market_cap": "$377,658,991",
+      "market_cap": "$398,640,046",
       "source": "nasdaq"
     },
     {
@@ -735,7 +699,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.48)",
-      "market_cap": "$376,571,157",
+      "market_cap": "$389,071,444",
       "source": "nasdaq"
     },
     {
@@ -744,7 +708,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$362,163,099",
+      "market_cap": "$368,934,846",
       "source": "nasdaq"
     },
     {
@@ -753,7 +717,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.13",
-      "market_cap": "$358,134,233",
+      "market_cap": "$357,190,533",
       "source": "nasdaq"
     },
     {
@@ -771,16 +735,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.23)",
-      "market_cap": "$326,554,387",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "PDYN",
-      "company": "Palladyne AI Corp.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$322,802,034",
+      "market_cap": "$327,657,611",
       "source": "nasdaq"
     },
     {
@@ -789,7 +744,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.28)",
-      "market_cap": "$312,163,115",
+      "market_cap": "$320,645,809",
       "source": "nasdaq"
     },
     {
@@ -798,7 +753,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$276,567,916",
+      "market_cap": "$282,026,493",
       "source": "nasdaq"
     },
     {
@@ -807,16 +762,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.31)",
-      "market_cap": "$265,122,000",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "CV",
-      "company": "CapsoVision, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.17)",
-      "market_cap": "$249,674,389",
+      "market_cap": "$270,504,000",
       "source": "nasdaq"
     },
     {
@@ -825,16 +771,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.13)",
-      "market_cap": "$247,274,121",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "FLYX",
-      "company": "flyExclusive, Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$240,895,573",
+      "market_cap": "$250,277,450",
       "source": "nasdaq"
     },
     {
@@ -843,7 +780,16 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$235,975,063",
+      "market_cap": "$244,475,022",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "CV",
+      "company": "CapsoVision, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "($0.17)",
+      "market_cap": "$243,116,338",
       "source": "nasdaq"
     },
     {
@@ -852,25 +798,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.18)",
-      "market_cap": "$229,103,696",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "III",
-      "company": "Information Services Group, Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "$0.05",
-      "market_cap": "$228,407,176",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "VTIX",
-      "company": "Virtuix Holdings Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$225,222,936",
+      "market_cap": "$240,523,195",
       "source": "nasdaq"
     },
     {
@@ -879,34 +807,25 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$221,845,249",
+      "market_cap": "$239,477,458",
       "source": "nasdaq"
     },
     {
-      "ticker": "PROF",
-      "company": "Profound Medical Corp.",
+      "ticker": "III",
+      "company": "Information Services Group, Inc.",
       "date": "2026-03-05",
       "timing": "AMC",
-      "eps_estimate": "($0.27)",
-      "market_cap": "$220,338,208",
+      "eps_estimate": "$0.05",
+      "market_cap": "$232,237,904",
       "source": "nasdaq"
     },
     {
-      "ticker": "MDWD",
-      "company": "MediWound Ltd.",
+      "ticker": "FLYX",
+      "company": "flyExclusive, Inc.",
       "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "($0.65)",
-      "market_cap": "$193,530,375",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "ELME",
-      "company": "Elme Communities",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "$0.23",
-      "market_cap": "$191,044,448",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$228,757,424",
       "source": "nasdaq"
     },
     {
@@ -915,7 +834,34 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.32)",
-      "market_cap": "$188,334,845",
+      "market_cap": "$223,562,945",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "PROF",
+      "company": "Profound Medical Corp.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "($0.27)",
+      "market_cap": "$223,237,080",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "MDWD",
+      "company": "MediWound Ltd.",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "($0.65)",
+      "market_cap": "$198,031,082",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ELME",
+      "company": "Elme Communities",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "$0.23",
+      "market_cap": "$194,598,764",
       "source": "nasdaq"
     },
     {
@@ -924,7 +870,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "$0.23",
-      "market_cap": "$188,104,884",
+      "market_cap": "$189,695,882",
       "source": "nasdaq"
     },
     {
@@ -933,43 +879,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$181,820,713",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "CRMT",
-      "company": "America's Car-Mart, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$168,384,582",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "BRLT",
-      "company": "Brilliant Earth Group, Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "$0",
-      "market_cap": "$152,171,047",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "BCIC",
-      "company": "BCP Investment Corporation",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "$0.52",
-      "market_cap": "$149,518,699",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "DLNG",
-      "company": "Dynagas LNG Partners LP",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$144,877,239",
+      "market_cap": "$184,886,432",
       "source": "nasdaq"
     },
     {
@@ -978,43 +888,43 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.01",
-      "market_cap": "$144,202,687",
+      "market_cap": "$172,506,537",
       "source": "nasdaq"
     },
     {
-      "ticker": "LNSR",
-      "company": "LENSAR, Inc.",
+      "ticker": "CRMT",
+      "company": "America's Car-Mart, Inc.",
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$143,931,779",
+      "market_cap": "$169,877,647",
       "source": "nasdaq"
     },
     {
-      "ticker": "PMTS",
-      "company": "CPI Card Group Inc.",
+      "ticker": "BRLT",
+      "company": "Brilliant Earth Group, Inc.",
       "date": "2026-03-05",
       "timing": "BMO",
-      "eps_estimate": "$0.50",
-      "market_cap": "$142,344,225",
+      "eps_estimate": "$0",
+      "market_cap": "$165,185,676",
       "source": "nasdaq"
     },
     {
-      "ticker": "ONL",
-      "company": "Orion Properties Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$138,534,000",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "NOEM",
-      "company": "CO2 Energy Transition Corp.",
+      "ticker": "DLNG",
+      "company": "Dynagas LNG Partners LP",
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$137,794,085",
+      "market_cap": "$152,946,351",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BCIC",
+      "company": "BCP Investment Corporation",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "$0.52",
+      "market_cap": "$150,041,949",
       "source": "nasdaq"
     },
     {
@@ -1023,25 +933,34 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.11",
-      "market_cap": "$136,449,573",
+      "market_cap": "$146,701,931",
       "source": "nasdaq"
     },
     {
-      "ticker": "FGBI",
-      "company": "First Guaranty Bancshares, Inc.",
+      "ticker": "LNSR",
+      "company": "LENSAR, Inc.",
       "date": "2026-03-05",
       "timing": "unknown",
-      "eps_estimate": "($0.29)",
-      "market_cap": "$135,259,463",
+      "eps_estimate": "",
+      "market_cap": "$145,604,016",
       "source": "nasdaq"
     },
     {
-      "ticker": "BAER",
-      "company": "Bridger Aerospace Group Holdings, Inc.",
+      "ticker": "PMTS",
+      "company": "CPI Card Group Inc.",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "$0.50",
+      "market_cap": "$141,888,723",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ONL",
+      "company": "Orion Properties Inc.",
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$132,748,019",
+      "market_cap": "$140,786,585",
       "source": "nasdaq"
     },
     {
@@ -1050,7 +969,34 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.18)",
-      "market_cap": "$131,042,300",
+      "market_cap": "$140,158,286",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "NOEM",
+      "company": "CO2 Energy Transition Corp.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$139,132,995",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BAER",
+      "company": "Bridger Aerospace Group Holdings, Inc.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$138,302,329",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "FGBI",
+      "company": "First Guaranty Bancshares, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "($0.29)",
+      "market_cap": "$136,180,640",
       "source": "nasdaq"
     },
     {
@@ -1059,7 +1005,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.02",
-      "market_cap": "$119,429,673",
+      "market_cap": "$121,733,782",
       "source": "nasdaq"
     },
     {
@@ -1068,7 +1014,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0",
-      "market_cap": "$117,211,931",
+      "market_cap": "$116,859,943",
       "source": "nasdaq"
     },
     {
@@ -1077,16 +1023,7 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.01)",
-      "market_cap": "$114,942,548",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "AKA",
-      "company": "a.k.a. Brands Holding Corp.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "($0.85)",
-      "market_cap": "$108,578,124",
+      "market_cap": "$113,858,831",
       "source": "nasdaq"
     },
     {
@@ -1095,7 +1032,16 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "($0.29)",
-      "market_cap": "$101,594,768",
+      "market_cap": "$110,783,118",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "AKA",
+      "company": "a.k.a. Brands Holding Corp.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "($0.85)",
+      "market_cap": "$110,618,663",
       "source": "nasdaq"
     },
     {
@@ -1104,16 +1050,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$100,996,978",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "PROP",
-      "company": "Prairie Operating Co.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "$0.31",
-      "market_cap": "$98,416,907",
+      "market_cap": "$100,555,300",
       "source": "nasdaq"
     },
     {
@@ -1122,25 +1059,16 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "$0.09",
-      "market_cap": "$91,276,835",
+      "market_cap": "$95,250,792",
       "source": "nasdaq"
     },
     {
-      "ticker": "FLL",
-      "company": "Full House Resorts, Inc.",
+      "ticker": "PROP",
+      "company": "Prairie Operating Co.",
       "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$83,079,445",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "TEAD",
-      "company": "Teads Holding Co.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "($0.19)",
-      "market_cap": "$82,906,864",
+      "timing": "unknown",
+      "eps_estimate": "$0.31",
+      "market_cap": "$91,259,313",
       "source": "nasdaq"
     },
     {
@@ -1149,25 +1077,25 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$82,546,500",
+      "market_cap": "$88,762,688",
       "source": "nasdaq"
     },
     {
-      "ticker": "TOUR",
-      "company": "Tuniu Corporation",
+      "ticker": "TEAD",
+      "company": "Teads Holding Co.",
       "date": "2026-03-05",
       "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$76,577,414",
+      "eps_estimate": "($0.19)",
+      "market_cap": "$83,842,479",
       "source": "nasdaq"
     },
     {
-      "ticker": "IMA",
-      "company": "ImageneBio, Inc.",
+      "ticker": "FLL",
+      "company": "Full House Resorts, Inc.",
       "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($1.45)",
-      "market_cap": "$68,320,016",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$82,357,015",
       "source": "nasdaq"
     },
     {
@@ -1176,7 +1104,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($3.22)",
-      "market_cap": "$67,240,887",
+      "market_cap": "$72,509,048",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "IMA",
+      "company": "ImageneBio, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "($1.45)",
+      "market_cap": "$68,767,283",
       "source": "nasdaq"
     },
     {
@@ -1185,25 +1122,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$64,829,035",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "GENK",
-      "company": "GEN Restaurant Group, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.06)",
-      "market_cap": "$64,237,456",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "MCHX",
-      "company": "Marchex, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.02)",
-      "market_cap": "$63,664,078",
+      "market_cap": "$65,724,111",
       "source": "nasdaq"
     },
     {
@@ -1212,43 +1131,25 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($2.26)",
-      "market_cap": "$62,699,753",
+      "market_cap": "$65,561,567",
       "source": "nasdaq"
     },
     {
-      "ticker": "HMR",
-      "company": "Heidmar Maritime Holdings Corp.",
+      "ticker": "MCHX",
+      "company": "Marchex, Inc.",
       "date": "2026-03-05",
       "timing": "unknown",
-      "eps_estimate": "$0.05",
-      "market_cap": "$57,000,074",
+      "eps_estimate": "($0.02)",
+      "market_cap": "$64,103,141",
       "source": "nasdaq"
     },
     {
-      "ticker": "ACFN",
-      "company": "Acorn Energy, Inc.",
+      "ticker": "GENK",
+      "company": "GEN Restaurant Group, Inc.",
       "date": "2026-03-05",
       "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$56,354,085",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "GROV",
-      "company": "Grove Collaborative Holdings, Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$55,873,334",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "LONA",
-      "company": "LeonaBio, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$52,001,035",
+      "eps_estimate": "($0.06)",
+      "market_cap": "$62,590,342",
       "source": "nasdaq"
     },
     {
@@ -1257,7 +1158,34 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$51,317,246",
+      "market_cap": "$57,491,222",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "LONA",
+      "company": "LeonaBio, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$55,828,760",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "GROV",
+      "company": "Grove Collaborative Holdings, Inc.",
+      "date": "2026-03-05",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$54,631,705",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "HMR",
+      "company": "Heidmar Maritime Holdings Corp.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "$0.05",
+      "market_cap": "$53,818,539",
       "source": "nasdaq"
     },
     {
@@ -1266,25 +1194,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$50,256,559",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "GWH",
-      "company": "ESS Tech, Inc.",
-      "date": "2026-03-05",
-      "timing": "AMC",
-      "eps_estimate": "($0.76)",
-      "market_cap": "$48,242,131",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "PXS",
-      "company": "Pyxis Tankers Inc.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$45,298,937",
+      "market_cap": "$52,127,813",
       "source": "nasdaq"
     },
     {
@@ -1293,16 +1203,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($2.69)",
-      "market_cap": "$44,219,560",
+      "market_cap": "$48,239,520",
       "source": "nasdaq"
     },
     {
-      "ticker": "ALGS",
-      "company": "Aligos Therapeutics, Inc.",
+      "ticker": "GWH",
+      "company": "ESS Tech, Inc.",
       "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "($2.09)",
-      "market_cap": "$42,152,037",
+      "timing": "AMC",
+      "eps_estimate": "($0.76)",
+      "market_cap": "$46,005,741",
       "source": "nasdaq"
     },
     {
@@ -1311,7 +1221,25 @@
       "date": "2026-03-05",
       "timing": "AMC",
       "eps_estimate": "($0.49)",
-      "market_cap": "$41,492,705",
+      "market_cap": "$43,699,763",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ALGS",
+      "company": "Aligos Therapeutics, Inc.",
+      "date": "2026-03-05",
+      "timing": "BMO",
+      "eps_estimate": "($2.09)",
+      "market_cap": "$42,213,573",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "JSPR",
+      "company": "Jasper Therapeutics, Inc.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "($0.79)",
+      "market_cap": "$39,737,335",
       "source": "nasdaq"
     },
     {
@@ -1321,24 +1249,6 @@
       "timing": "unknown",
       "eps_estimate": "",
       "market_cap": "$38,017,359",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "JSPR",
-      "company": "Jasper Therapeutics, Inc.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "($0.79)",
-      "market_cap": "$37,218,772",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "RAND",
-      "company": "Rand Capital Corporation",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$34,806,220",
       "source": "nasdaq"
     },
     {
@@ -1356,7 +1266,7 @@
       "date": "2026-03-05",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$25,904,471",
+      "market_cap": "$25,821,444",
       "source": "nasdaq"
     },
     {
@@ -1365,7 +1275,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$24,557,297",
+      "market_cap": "$23,991,761",
       "source": "nasdaq"
     },
     {
@@ -1374,7 +1284,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$21,618,519",
+      "market_cap": "$23,010,621",
       "source": "nasdaq"
     },
     {
@@ -1383,7 +1293,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.09)",
-      "market_cap": "$20,504,998",
+      "market_cap": "$21,309,115",
       "source": "nasdaq"
     },
     {
@@ -1392,7 +1302,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$19,748,746",
+      "market_cap": "$21,012,666",
       "source": "nasdaq"
     },
     {
@@ -1401,7 +1311,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.20)",
-      "market_cap": "$19,570,698",
+      "market_cap": "$19,757,308",
       "source": "nasdaq"
     },
     {
@@ -1410,7 +1320,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.10)",
-      "market_cap": "$15,400,462",
+      "market_cap": "$16,279,094",
       "source": "nasdaq"
     },
     {
@@ -1419,7 +1329,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($0.02)",
-      "market_cap": "$10,642,642",
+      "market_cap": "$13,065,327",
       "source": "nasdaq"
     },
     {
@@ -1428,16 +1338,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "($1.43)",
-      "market_cap": "$10,519,117",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "RBNE",
-      "company": "Robin Energy Ltd.",
-      "date": "2026-03-05",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$7,547,457",
+      "market_cap": "$11,164,462",
       "source": "nasdaq"
     },
     {
@@ -1446,7 +1347,16 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$7,151,079",
+      "market_cap": "$7,672,964",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "RBNE",
+      "company": "Robin Energy Ltd.",
+      "date": "2026-03-05",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$7,266,882",
       "source": "nasdaq"
     },
     {
@@ -1455,7 +1365,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$7,028,096",
+      "market_cap": "$7,070,711",
       "source": "nasdaq"
     },
     {
@@ -1464,16 +1374,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$6,766,511",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "EVGN",
-      "company": "Evogene Ltd.",
-      "date": "2026-03-05",
-      "timing": "BMO",
-      "eps_estimate": "",
-      "market_cap": "$5,520,463",
+      "market_cap": "$6,673,721",
       "source": "nasdaq"
     },
     {
@@ -1482,7 +1383,7 @@
       "date": "2026-03-05",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$2,292,706",
+      "market_cap": "$2,693,542",
       "source": "nasdaq"
     },
     {
@@ -1500,7 +1401,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "$0.17",
-      "market_cap": "$12,668,687,238",
+      "market_cap": "$12,967,615,440",
       "source": "nasdaq"
     },
     {
@@ -1509,7 +1410,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "$0.04",
-      "market_cap": "$5,337,226,742",
+      "market_cap": "$5,360,045,720",
       "source": "nasdaq"
     },
     {
@@ -1518,7 +1419,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "$0.15",
-      "market_cap": "$4,695,039,862",
+      "market_cap": "$4,931,945,543",
       "source": "nasdaq"
     },
     {
@@ -1527,7 +1428,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$4,025,595,836",
+      "market_cap": "$4,357,805,201",
       "source": "nasdaq"
     },
     {
@@ -1536,7 +1437,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$1,094,234,541",
+      "market_cap": "$1,083,689,880",
       "source": "nasdaq"
     },
     {
@@ -1545,7 +1446,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.53)",
-      "market_cap": "$483,362,735",
+      "market_cap": "$510,216,220",
       "source": "nasdaq"
     },
     {
@@ -1554,7 +1455,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.01)",
-      "market_cap": "$429,290,290",
+      "market_cap": "$430,893,238",
       "source": "nasdaq"
     },
     {
@@ -1563,7 +1464,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$323,869,176",
+      "market_cap": "$328,949,477",
       "source": "nasdaq"
     },
     {
@@ -1572,7 +1473,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$314,916,570",
+      "market_cap": "$315,542,647",
       "source": "nasdaq"
     },
     {
@@ -1581,7 +1482,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "($0.26)",
-      "market_cap": "$292,472,137",
+      "market_cap": "$296,721,127",
       "source": "nasdaq"
     },
     {
@@ -1590,7 +1491,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "$3.73",
-      "market_cap": "$280,611,136",
+      "market_cap": "$284,712,376",
       "source": "nasdaq"
     },
     {
@@ -1599,7 +1500,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$273,850,378",
+      "market_cap": "$272,614,033",
       "source": "nasdaq"
     },
     {
@@ -1608,7 +1509,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "$1.05",
-      "market_cap": "$231,451,922",
+      "market_cap": "$233,432,562",
       "source": "nasdaq"
     },
     {
@@ -1617,7 +1518,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.37)",
-      "market_cap": "$221,856,805",
+      "market_cap": "$232,732,139",
       "source": "nasdaq"
     },
     {
@@ -1626,16 +1527,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$187,569,822",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "KLRS",
-      "company": "Kalaris Therapeutics, Inc. ",
-      "date": "2026-03-06",
-      "timing": "unknown",
-      "eps_estimate": "($0.56)",
-      "market_cap": "$176,176,778",
+      "market_cap": "$189,399,771",
       "source": "nasdaq"
     },
     {
@@ -1648,12 +1540,21 @@
       "source": "nasdaq"
     },
     {
+      "ticker": "KLRS",
+      "company": "Kalaris Therapeutics, Inc. ",
+      "date": "2026-03-06",
+      "timing": "unknown",
+      "eps_estimate": "($0.56)",
+      "market_cap": "$169,817,955",
+      "source": "nasdaq"
+    },
+    {
       "ticker": "USBC",
       "company": "USBC, Inc.",
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$147,921,556",
+      "market_cap": "$150,638,562",
       "source": "nasdaq"
     },
     {
@@ -1662,7 +1563,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$134,911,211",
+      "market_cap": "$136,290,562",
       "source": "nasdaq"
     },
     {
@@ -1671,7 +1572,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$118,557,326",
+      "market_cap": "$126,268,372",
       "source": "nasdaq"
     },
     {
@@ -1680,7 +1581,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$114,520,343",
+      "market_cap": "$115,182,310",
       "source": "nasdaq"
     },
     {
@@ -1689,7 +1590,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.06)",
-      "market_cap": "$111,910,631",
+      "market_cap": "$114,062,759",
       "source": "nasdaq"
     },
     {
@@ -1698,7 +1599,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$99,110,229",
+      "market_cap": "$103,740,323",
       "source": "nasdaq"
     },
     {
@@ -1707,7 +1608,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$76,166,665",
+      "market_cap": "$74,128,761",
       "source": "nasdaq"
     },
     {
@@ -1716,7 +1617,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$65,489,343",
+      "market_cap": "$65,625,495",
       "source": "nasdaq"
     },
     {
@@ -1725,7 +1626,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.01)",
-      "market_cap": "$64,735,930",
+      "market_cap": "$64,630,284",
       "source": "nasdaq"
     },
     {
@@ -1734,7 +1635,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$61,683,817",
+      "market_cap": "$63,027,585",
       "source": "nasdaq"
     },
     {
@@ -1743,7 +1644,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$59,045,326",
+      "market_cap": "$60,024,751",
       "source": "nasdaq"
     },
     {
@@ -1752,7 +1653,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "$1",
-      "market_cap": "$43,789,023",
+      "market_cap": "$47,918,826",
       "source": "nasdaq"
     },
     {
@@ -1761,7 +1662,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$42,532,724",
+      "market_cap": "$46,581,244",
       "source": "nasdaq"
     },
     {
@@ -1770,7 +1671,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.39)",
-      "market_cap": "$39,079,474",
+      "market_cap": "$38,863,167",
       "source": "nasdaq"
     },
     {
@@ -1779,7 +1680,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$36,287,072",
+      "market_cap": "$35,944,741",
       "source": "nasdaq"
     },
     {
@@ -1788,7 +1689,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$33,544,902",
+      "market_cap": "$34,001,295",
       "source": "nasdaq"
     },
     {
@@ -1797,7 +1698,7 @@
       "date": "2026-03-06",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$31,528,059",
+      "market_cap": "$31,230,625",
       "source": "nasdaq"
     },
     {
@@ -1806,7 +1707,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.02)",
-      "market_cap": "$27,691,409",
+      "market_cap": "$27,768,063",
       "source": "nasdaq"
     },
     {
@@ -1815,7 +1716,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$23,450,393",
+      "market_cap": "$25,013,753",
       "source": "nasdaq"
     },
     {
@@ -1824,7 +1725,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$18,225,943",
+      "market_cap": "$18,384,013",
       "source": "nasdaq"
     },
     {
@@ -1833,7 +1734,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$14,756,043",
+      "market_cap": "$16,418,432",
       "source": "nasdaq"
     },
     {
@@ -1842,7 +1743,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.41)",
-      "market_cap": "$11,908,014",
+      "market_cap": "$11,191,229",
       "source": "nasdaq"
     },
     {
@@ -1851,16 +1752,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$10,753,320",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "LFWD",
-      "company": "Lifeward Ltd.",
-      "date": "2026-03-06",
-      "timing": "unknown",
-      "eps_estimate": "($0.84)",
-      "market_cap": "$9,756,678",
+      "market_cap": "$10,543,839",
       "source": "nasdaq"
     },
     {
@@ -1869,7 +1761,25 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($0.23)",
-      "market_cap": "$9,039,906",
+      "market_cap": "$9,177,570",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "LFWD",
+      "company": "Lifeward Ltd.",
+      "date": "2026-03-06",
+      "timing": "unknown",
+      "eps_estimate": "($0.84)",
+      "market_cap": "$9,131,641",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ITRM",
+      "company": "Iterum Therapeutics plc",
+      "date": "2026-03-06",
+      "timing": "unknown",
+      "eps_estimate": "($0.20)",
+      "market_cap": "$8,902,732",
       "source": "nasdaq"
     },
     {
@@ -1882,12 +1792,12 @@
       "source": "nasdaq"
     },
     {
-      "ticker": "ITRM",
-      "company": "Iterum Therapeutics plc",
+      "ticker": "ALBT",
+      "company": "Avalon GloboCare Corp.",
       "date": "2026-03-06",
       "timing": "unknown",
-      "eps_estimate": "($0.20)",
-      "market_cap": "$7,935,847",
+      "eps_estimate": "",
+      "market_cap": "$6,121,904",
       "source": "nasdaq"
     },
     {
@@ -1896,16 +1806,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$5,691,187",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "ALBT",
-      "company": "Avalon GloboCare Corp.",
-      "date": "2026-03-06",
-      "timing": "unknown",
-      "eps_estimate": "",
-      "market_cap": "$5,609,448",
+      "market_cap": "$5,737,878",
       "source": "nasdaq"
     },
     {
@@ -1914,7 +1815,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$5,462,360",
+      "market_cap": "$5,184,613",
       "source": "nasdaq"
     },
     {
@@ -1923,7 +1824,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "($8.09)",
-      "market_cap": "$5,109,312",
+      "market_cap": "$5,163,014",
       "source": "nasdaq"
     },
     {
@@ -1932,7 +1833,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$4,685,989",
+      "market_cap": "$4,784,641",
       "source": "nasdaq"
     },
     {
@@ -1941,7 +1842,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$3,669,057",
+      "market_cap": "$3,567,139",
       "source": "nasdaq"
     },
     {
@@ -1950,7 +1851,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$2,301,283",
+      "market_cap": "$2,291,813",
       "source": "nasdaq"
     },
     {
@@ -1959,7 +1860,7 @@
       "date": "2026-03-06",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$766,950",
+      "market_cap": "$908,783",
       "source": "nasdaq"
     },
     {
@@ -2679,7 +2580,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$1.34",
-      "market_cap": "$428,268,299,910",
+      "market_cap": "$437,925,245,670",
       "source": "nasdaq"
     },
     {
@@ -2688,7 +2589,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$1.68",
-      "market_cap": "$50,509,109,857",
+      "market_cap": "$50,526,659,871",
       "source": "nasdaq"
     },
     {
@@ -2697,7 +2598,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "$3.22",
-      "market_cap": "$49,938,910,174",
+      "market_cap": "$49,771,748,956",
       "source": "nasdaq"
     },
     {
@@ -2706,7 +2607,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "($0.52)",
-      "market_cap": "$24,179,458,211",
+      "market_cap": "$24,908,969,455",
       "source": "nasdaq"
     },
     {
@@ -2715,7 +2616,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$22,751,206,889",
+      "market_cap": "$22,096,403,530",
       "source": "nasdaq"
     },
     {
@@ -2724,7 +2625,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$0.68",
-      "market_cap": "$11,398,077,947",
+      "market_cap": "$11,307,212,849",
       "source": "nasdaq"
     },
     {
@@ -2733,7 +2634,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "($0.05)",
-      "market_cap": "$10,309,096,845",
+      "market_cap": "$10,870,594,494",
       "source": "nasdaq"
     },
     {
@@ -2742,7 +2643,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "($0.06)",
-      "market_cap": "$7,037,974,973",
+      "market_cap": "$7,269,996,126",
       "source": "nasdaq"
     },
     {
@@ -2751,7 +2652,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$6,916,645,035",
+      "market_cap": "$6,899,255,607",
       "source": "nasdaq"
     },
     {
@@ -2760,7 +2661,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "($0.17)",
-      "market_cap": "$3,279,973,962",
+      "market_cap": "$3,278,137,470",
       "source": "nasdaq"
     },
     {
@@ -2769,16 +2670,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$1.33",
-      "market_cap": "$3,049,011,428",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "ABM",
-      "company": "ABM Industries Incorporated",
-      "date": "2026-03-10",
-      "timing": "BMO",
-      "eps_estimate": "$0.87",
-      "market_cap": "$2,592,391,977",
+      "market_cap": "$3,093,492,342",
       "source": "nasdaq"
     },
     {
@@ -2787,7 +2679,16 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.98)",
-      "market_cap": "$2,394,126,955",
+      "market_cap": "$2,681,128,273",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ABM",
+      "company": "ABM Industries Incorporated",
+      "date": "2026-03-10",
+      "timing": "BMO",
+      "eps_estimate": "$0.87",
+      "market_cap": "$2,581,258,287",
       "source": "nasdaq"
     },
     {
@@ -2796,7 +2697,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.51",
-      "market_cap": "$2,311,753,137",
+      "market_cap": "$2,337,344,500",
       "source": "nasdaq"
     },
     {
@@ -2805,7 +2706,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$2,225,612,722",
+      "market_cap": "$2,269,519,368",
       "source": "nasdaq"
     },
     {
@@ -2814,7 +2715,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$0.41",
-      "market_cap": "$1,826,213,234",
+      "market_cap": "$1,848,171,710",
       "source": "nasdaq"
     },
     {
@@ -2823,7 +2724,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.85",
-      "market_cap": "$1,725,469,758",
+      "market_cap": "$1,715,372,730",
       "source": "nasdaq"
     },
     {
@@ -2832,7 +2733,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$1,646,010,592",
+      "market_cap": "$1,624,730,239",
       "source": "nasdaq"
     },
     {
@@ -2841,7 +2742,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.09",
-      "market_cap": "$1,585,917,102",
+      "market_cap": "$1,599,510,677",
       "source": "nasdaq"
     },
     {
@@ -2850,7 +2751,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "($0.16)",
-      "market_cap": "$1,462,343,653",
+      "market_cap": "$1,531,202,462",
       "source": "nasdaq"
     },
     {
@@ -2859,7 +2760,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.65)",
-      "market_cap": "$1,327,058,516",
+      "market_cap": "$1,398,057,337",
       "source": "nasdaq"
     },
     {
@@ -2868,7 +2769,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "$0.06",
-      "market_cap": "$1,313,340,559",
+      "market_cap": "$1,358,716,483",
       "source": "nasdaq"
     },
     {
@@ -2877,7 +2778,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$1,306,614,030",
+      "market_cap": "$1,328,964,455",
       "source": "nasdaq"
     },
     {
@@ -2886,7 +2787,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$1,300,303,775",
+      "market_cap": "$1,316,350,718",
       "source": "nasdaq"
     },
     {
@@ -2895,7 +2796,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.25",
-      "market_cap": "$1,247,985,313",
+      "market_cap": "$1,305,972,509",
       "source": "nasdaq"
     },
     {
@@ -2904,7 +2805,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$1,187,002,953",
+      "market_cap": "$1,191,535,229",
       "source": "nasdaq"
     },
     {
@@ -2913,7 +2814,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.14)",
-      "market_cap": "$1,051,879,844",
+      "market_cap": "$1,072,778,119",
       "source": "nasdaq"
     },
     {
@@ -2922,7 +2823,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$0.65",
-      "market_cap": "$1,049,530,289",
+      "market_cap": "$1,043,442,527",
       "source": "nasdaq"
     },
     {
@@ -2931,7 +2832,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$987,088,229",
+      "market_cap": "$948,015,986",
       "source": "nasdaq"
     },
     {
@@ -2940,7 +2841,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "($0.08)",
-      "market_cap": "$923,727,046",
+      "market_cap": "$921,980,870",
       "source": "nasdaq"
     },
     {
@@ -2949,7 +2850,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$708,488,194",
+      "market_cap": "$710,044,171",
       "source": "nasdaq"
     },
     {
@@ -2976,7 +2877,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "($0.32)",
-      "market_cap": "$501,702,300",
+      "market_cap": "$525,238,951",
       "source": "nasdaq"
     },
     {
@@ -2985,7 +2886,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "$0.17",
-      "market_cap": "$500,061,433",
+      "market_cap": "$509,027,489",
       "source": "nasdaq"
     },
     {
@@ -2994,7 +2895,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($2.14)",
-      "market_cap": "$495,021,003",
+      "market_cap": "$504,993,565",
       "source": "nasdaq"
     },
     {
@@ -3003,7 +2904,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$472,030,290",
+      "market_cap": "$474,129,757",
       "source": "nasdaq"
     },
     {
@@ -3012,16 +2913,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.29",
-      "market_cap": "$463,393,075",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "BLND",
-      "company": "Blend Labs, Inc.",
-      "date": "2026-03-10",
-      "timing": "AMC",
-      "eps_estimate": "($0.02)",
-      "market_cap": "$446,764,702",
+      "market_cap": "$469,124,085",
       "source": "nasdaq"
     },
     {
@@ -3030,7 +2922,16 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$445,422,298",
+      "market_cap": "$456,163,994",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BLND",
+      "company": "Blend Labs, Inc.",
+      "date": "2026-03-10",
+      "timing": "AMC",
+      "eps_estimate": "($0.02)",
+      "market_cap": "$444,167,233",
       "source": "nasdaq"
     },
     {
@@ -3043,39 +2944,21 @@
       "source": "nasdaq"
     },
     {
-      "ticker": "WEST",
-      "company": "Westrock Coffee Company",
-      "date": "2026-03-10",
-      "timing": "AMC",
-      "eps_estimate": "($0.10)",
-      "market_cap": "$398,918,629",
-      "source": "nasdaq"
-    },
-    {
       "ticker": "VHI",
       "company": "Valhi, Inc.",
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$395,383,033",
+      "market_cap": "$400,477,446",
       "source": "nasdaq"
     },
     {
-      "ticker": "BCYC",
-      "company": "Bicycle Therapeutics plc",
-      "date": "2026-03-10",
-      "timing": "unknown",
-      "eps_estimate": "$1",
-      "market_cap": "$381,523,428",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "AUNA",
-      "company": "Auna SA",
+      "ticker": "WEST",
+      "company": "Westrock Coffee Company",
       "date": "2026-03-10",
       "timing": "AMC",
-      "eps_estimate": "$0.13",
-      "market_cap": "$371,545,084",
+      "eps_estimate": "($0.10)",
+      "market_cap": "$393,109,135",
       "source": "nasdaq"
     },
     {
@@ -3084,7 +2967,25 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$361,929,144",
+      "market_cap": "$392,297,911",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BCYC",
+      "company": "Bicycle Therapeutics plc",
+      "date": "2026-03-10",
+      "timing": "unknown",
+      "eps_estimate": "$1",
+      "market_cap": "$390,541,254",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "AUNA",
+      "company": "Auna SA",
+      "date": "2026-03-10",
+      "timing": "AMC",
+      "eps_estimate": "$0.13",
+      "market_cap": "$374,505,603",
       "source": "nasdaq"
     },
     {
@@ -3093,7 +2994,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "($0.09)",
-      "market_cap": "$343,803,702",
+      "market_cap": "$354,926,763",
       "source": "nasdaq"
     },
     {
@@ -3102,7 +3003,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.54)",
-      "market_cap": "$322,030,297",
+      "market_cap": "$326,777,672",
       "source": "nasdaq"
     },
     {
@@ -3111,7 +3012,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.11)",
-      "market_cap": "$296,862,370",
+      "market_cap": "$295,564,138",
       "source": "nasdaq"
     },
     {
@@ -3120,7 +3021,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "($0.42)",
-      "market_cap": "$269,057,993",
+      "market_cap": "$270,088,077",
       "source": "nasdaq"
     },
     {
@@ -3129,16 +3030,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$249,334,114",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "SSSS",
-      "company": "SuRo Capital Corp.",
-      "date": "2026-03-10",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$231,598,019",
+      "market_cap": "$260,759,971",
       "source": "nasdaq"
     },
     {
@@ -3147,7 +3039,16 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.27)",
-      "market_cap": "$230,503,168",
+      "market_cap": "$243,811,665",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "SSSS",
+      "company": "SuRo Capital Corp.",
+      "date": "2026-03-10",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$236,873,028",
       "source": "nasdaq"
     },
     {
@@ -3156,7 +3057,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.25",
-      "market_cap": "$223,493,004",
+      "market_cap": "$226,724,229",
       "source": "nasdaq"
     },
     {
@@ -3165,7 +3066,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.10)",
-      "market_cap": "$221,313,400",
+      "market_cap": "$218,709,713",
       "source": "nasdaq"
     },
     {
@@ -3174,16 +3075,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$202,507,252",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "FOA",
-      "company": "Finance of America Companies Inc.",
-      "date": "2026-03-10",
-      "timing": "AMC",
-      "eps_estimate": "",
-      "market_cap": "$191,291,440",
+      "market_cap": "$200,730,872",
       "source": "nasdaq"
     },
     {
@@ -3192,7 +3084,16 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "$0.23",
-      "market_cap": "$182,306,840",
+      "market_cap": "$185,617,497",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "FOA",
+      "company": "Finance of America Companies Inc.",
+      "date": "2026-03-10",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$185,304,069",
       "source": "nasdaq"
     },
     {
@@ -3201,7 +3102,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "($0.38)",
-      "market_cap": "$175,135,681",
+      "market_cap": "$176,807,621",
       "source": "nasdaq"
     },
     {
@@ -3210,7 +3111,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "$0.23",
-      "market_cap": "$171,134,763",
+      "market_cap": "$171,046,184",
       "source": "nasdaq"
     },
     {
@@ -3219,16 +3120,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($1.78)",
-      "market_cap": "$144,110,434",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "APYX",
-      "company": "Apyx Medical Corporation",
-      "date": "2026-03-10",
-      "timing": "BMO",
-      "eps_estimate": "($0.06)",
-      "market_cap": "$130,063,902",
+      "market_cap": "$147,796,572",
       "source": "nasdaq"
     },
     {
@@ -3237,7 +3129,16 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$129,018,570",
+      "market_cap": "$139,136,514",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "APYX",
+      "company": "Apyx Medical Corporation",
+      "date": "2026-03-10",
+      "timing": "BMO",
+      "eps_estimate": "($0.06)",
+      "market_cap": "$135,397,753",
       "source": "nasdaq"
     },
     {
@@ -3246,7 +3147,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$117,830,971",
+      "market_cap": "$118,613,901",
       "source": "nasdaq"
     },
     {
@@ -3255,7 +3156,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($1.26)",
-      "market_cap": "$108,146,550",
+      "market_cap": "$108,826,717",
       "source": "nasdaq"
     },
     {
@@ -3264,7 +3165,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.09)",
-      "market_cap": "$94,463,999",
+      "market_cap": "$97,134,360",
       "source": "nasdaq"
     },
     {
@@ -3273,7 +3174,16 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$90,222,718",
+      "market_cap": "$89,957,803",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "VRCA",
+      "company": "Verrica Pharmaceuticals Inc.",
+      "date": "2026-03-10",
+      "timing": "unknown",
+      "eps_estimate": "($0.44)",
+      "market_cap": "$85,225,959",
       "source": "nasdaq"
     },
     {
@@ -3286,12 +3196,12 @@
       "source": "nasdaq"
     },
     {
-      "ticker": "VRCA",
-      "company": "Verrica Pharmaceuticals Inc.",
+      "ticker": "XGN",
+      "company": "Exagen Inc.",
       "date": "2026-03-10",
-      "timing": "unknown",
-      "eps_estimate": "($0.44)",
-      "market_cap": "$81,868,088",
+      "timing": "BMO",
+      "eps_estimate": "($0.20)",
+      "market_cap": "$81,360,525",
       "source": "nasdaq"
     },
     {
@@ -3300,16 +3210,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$77,954,398",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "XGN",
-      "company": "Exagen Inc.",
-      "date": "2026-03-10",
-      "timing": "BMO",
-      "eps_estimate": "($0.20)",
-      "market_cap": "$77,734,430",
+      "market_cap": "$75,693,948",
       "source": "nasdaq"
     },
     {
@@ -3318,7 +3219,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.01)",
-      "market_cap": "$69,121,367",
+      "market_cap": "$71,721,145",
       "source": "nasdaq"
     },
     {
@@ -3327,7 +3228,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$67,057,026",
+      "market_cap": "$70,603,311",
       "source": "nasdaq"
     },
     {
@@ -3336,16 +3237,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$63,643,349",
-      "source": "nasdaq"
-    },
-    {
-      "ticker": "BODI",
-      "company": "The Beachbody Company, Inc.",
-      "date": "2026-03-10",
-      "timing": "AMC",
-      "eps_estimate": "$0.01",
-      "market_cap": "$61,524,161",
+      "market_cap": "$66,919,109",
       "source": "nasdaq"
     },
     {
@@ -3354,7 +3246,16 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "($0.15)",
-      "market_cap": "$60,606,779",
+      "market_cap": "$64,279,917",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BODI",
+      "company": "The Beachbody Company, Inc.",
+      "date": "2026-03-10",
+      "timing": "AMC",
+      "eps_estimate": "$0.01",
+      "market_cap": "$59,078,788",
       "source": "nasdaq"
     },
     {
@@ -3363,7 +3264,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.84)",
-      "market_cap": "$60,168,281",
+      "market_cap": "$58,199,585",
       "source": "nasdaq"
     },
     {
@@ -3372,7 +3273,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.07)",
-      "market_cap": "$44,867,167",
+      "market_cap": "$46,070,501",
       "source": "nasdaq"
     },
     {
@@ -3381,7 +3282,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.12)",
-      "market_cap": "$38,770,711",
+      "market_cap": "$40,004,792",
       "source": "nasdaq"
     },
     {
@@ -3390,7 +3291,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.55)",
-      "market_cap": "$36,962,495",
+      "market_cap": "$37,713,003",
       "source": "nasdaq"
     },
     {
@@ -3399,7 +3300,7 @@
       "date": "2026-03-10",
       "timing": "AMC",
       "eps_estimate": "",
-      "market_cap": "$34,585,041",
+      "market_cap": "$35,191,796",
       "source": "nasdaq"
     },
     {
@@ -3408,7 +3309,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "$0.07",
-      "market_cap": "$32,878,684",
+      "market_cap": "$34,143,249",
       "source": "nasdaq"
     },
     {
@@ -3417,7 +3318,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($0.34)",
-      "market_cap": "$28,400,871",
+      "market_cap": "$29,730,873",
       "source": "nasdaq"
     },
     {
@@ -3426,7 +3327,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$27,681,897",
+      "market_cap": "$28,325,662",
       "source": "nasdaq"
     },
     {
@@ -3435,7 +3336,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "($2.25)",
-      "market_cap": "$22,668,134",
+      "market_cap": "$22,914,527",
       "source": "nasdaq"
     },
     {
@@ -3444,7 +3345,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$20,538,427",
+      "market_cap": "$21,018,858",
       "source": "nasdaq"
     },
     {
@@ -3453,7 +3354,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$9,858,341",
+      "market_cap": "$9,530,354",
       "source": "nasdaq"
     },
     {
@@ -3462,7 +3363,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$5,296,412",
+      "market_cap": "$5,380,021",
       "source": "nasdaq"
     },
     {
@@ -3471,7 +3372,7 @@
       "date": "2026-03-10",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$3,901,559",
+      "market_cap": "$4,012,504",
       "source": "nasdaq"
     },
     {
@@ -3480,7 +3381,7 @@
       "date": "2026-03-10",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$2,679,666",
+      "market_cap": "$2,923,272",
       "source": "nasdaq"
     },
     {
@@ -5631,7 +5532,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$31,949,396,492",
+      "market_cap": "$33,422,241,011",
       "source": "nasdaq"
     },
     {
@@ -5640,7 +5541,7 @@
       "date": "2026-03-13",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$3,924,722,289",
+      "market_cap": "$4,048,248,226",
       "source": "nasdaq"
     },
     {
@@ -5649,7 +5550,7 @@
       "date": "2026-03-13",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$3,581,402,500",
+      "market_cap": "$3,675,649,934",
       "source": "nasdaq"
     },
     {
@@ -5658,7 +5559,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$2,689,815,395",
+      "market_cap": "$2,711,301,178",
       "source": "nasdaq"
     },
     {
@@ -5667,7 +5568,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "$0.25",
-      "market_cap": "$1,398,562,835",
+      "market_cap": "$1,412,783,654",
       "source": "nasdaq"
     },
     {
@@ -5676,7 +5577,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$979,100,586",
+      "market_cap": "$1,013,787,495",
       "source": "nasdaq"
     },
     {
@@ -5685,7 +5586,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$934,506,360",
+      "market_cap": "$969,929,045",
       "source": "nasdaq"
     },
     {
@@ -5694,7 +5595,7 @@
       "date": "2026-03-13",
       "timing": "BMO",
       "eps_estimate": "",
-      "market_cap": "$856,505,847",
+      "market_cap": "$866,396,215",
       "source": "nasdaq"
     },
     {
@@ -5703,7 +5604,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "($0.02)",
-      "market_cap": "$540,536,968",
+      "market_cap": "$602,035,186",
       "source": "nasdaq"
     },
     {
@@ -5712,7 +5613,7 @@
       "date": "2026-03-13",
       "timing": "BMO",
       "eps_estimate": "($2.16)",
-      "market_cap": "$516,576,357",
+      "market_cap": "$493,188,366",
       "source": "nasdaq"
     },
     {
@@ -5721,7 +5622,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$340,288,998",
+      "market_cap": "$347,049,706",
       "source": "nasdaq"
     },
     {
@@ -5730,7 +5631,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$331,225,595",
+      "market_cap": "$330,311,869",
       "source": "nasdaq"
     },
     {
@@ -5739,7 +5640,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$181,269,785",
+      "market_cap": "$177,360,044",
       "source": "nasdaq"
     },
     {
@@ -5757,7 +5658,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$161,155,107",
+      "market_cap": "$155,421,124",
       "source": "nasdaq"
     },
     {
@@ -5766,7 +5667,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "($0.03)",
-      "market_cap": "$108,327,622",
+      "market_cap": "$114,571,289",
       "source": "nasdaq"
     },
     {
@@ -5775,7 +5676,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "($0.09)",
-      "market_cap": "$57,370,212",
+      "market_cap": "$59,601,276",
       "source": "nasdaq"
     },
     {
@@ -5784,7 +5685,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$40,135,487",
+      "market_cap": "$40,958,779",
       "source": "nasdaq"
     },
     {
@@ -5793,7 +5694,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "($0.07)",
-      "market_cap": "$39,340,806",
+      "market_cap": "$39,656,374",
       "source": "nasdaq"
     },
     {
@@ -5802,7 +5703,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "$0.13",
-      "market_cap": "$34,015,440",
+      "market_cap": "$34,118,517",
       "source": "nasdaq"
     },
     {
@@ -5811,7 +5712,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$23,986,466",
+      "market_cap": "$15,674,380",
       "source": "nasdaq"
     },
     {
@@ -5820,7 +5721,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$8,692,389",
+      "market_cap": "$9,297,806",
       "source": "nasdaq"
     },
     {
@@ -5829,7 +5730,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$8,320,630",
+      "market_cap": "$8,234,831",
       "source": "nasdaq"
     },
     {
@@ -5838,7 +5739,7 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "($0.37)",
-      "market_cap": "$6,220,509",
+      "market_cap": "$6,500,082",
       "source": "nasdaq"
     },
     {
@@ -5847,7 +5748,7 @@
       "date": "2026-03-13",
       "timing": "BMO",
       "eps_estimate": "($1.01)",
-      "market_cap": "$3,769,141",
+      "market_cap": "$3,871,010",
       "source": "nasdaq"
     },
     {
@@ -5856,9 +5757,9 @@
       "date": "2026-03-13",
       "timing": "unknown",
       "eps_estimate": "",
-      "market_cap": "$3,537,973",
+      "market_cap": "$3,673,179",
       "source": "nasdaq"
     }
   ],
-  "fetched_at": 1772716234.3022661
+  "fetched_at": 1772738176.0248299
 }
