@@ -89,8 +89,17 @@ async def get_positions():
         pnl = (price - p["entry_price"]) * p["quantity"] if p["entry_price"] else 0
         pnl_pct = ((price - p["entry_price"]) / p["entry_price"] * 100) if p["entry_price"] else 0
         hold_min = (time.time() - p.get("entry_time", time.time())) / 60
+        # Protection status
+        has_trailing = p.get("has_trailing_stop", False)
+        guard_info = {}
+        if hasattr(_bot, 'extended_guard'):
+            guard_info = _bot.extended_guard.get_guard_status().get(p["symbol"], {})
+        has_guard = bool(guard_info.get("has_limit_order"))
+        protection = "🟢 Trail" if has_trailing else ("🟡 Limit" if has_guard else "🔴 NONE")
+
         enriched.append({
             "symbol": p["symbol"],
+            "side": p.get("side", "long"),
             "quantity": p["quantity"],
             "entry_price": round(p["entry_price"], 2),
             "current_price": round(price, 2),
@@ -98,6 +107,9 @@ async def get_positions():
             "pnl_pct": round(pnl_pct, 2),
             "hold_time": f"{int(hold_min)}m",
             "peak_price": round(p.get("peak_price", price), 2),
+            "protection": protection,
+            "trail_pct": p.get("trail_pct", 3.0),
+            "guard_limit": guard_info.get("limit_price", 0),
         })
     return enriched
 
@@ -271,6 +283,19 @@ async def get_pnl():
         "drawdown_pct": round(drawdown, 2),
         "roi_pct": round(roi, 2),
         "open_positions": len(positions),
+    }
+
+
+@app.get("/api/guards")
+async def get_guards():
+    """Get extended hours guard status for all positions."""
+    if not _bot or not hasattr(_bot, 'extended_guard'):
+        return {"active": False, "guards": {}}
+    guard = _bot.extended_guard
+    return {
+        "active": guard.is_extended_hours(),
+        "regular_hours": guard.is_regular_hours(),
+        "guards": guard.get_guard_status(),
     }
 
 
@@ -488,7 +513,7 @@ tr:hover td{background:#161b2288}
   <!-- Positions + Candidates side by side -->
   <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
-    <table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Hold</th></tr></thead>
+    <table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Trail%</th><th>Protection</th><th>Hold</th></tr></thead>
     <tbody id="positions"></tbody></table>
   </div>
   <div class="card">
@@ -653,8 +678,8 @@ async function refresh() {
   // Bot Positions
   const pos = await api('/api/positions');
   $('positions').innerHTML = pos && pos.length ? pos.map(p => `<tr>
-    <td><strong>${p.symbol}</strong></td><td>${p.quantity}</td><td>$${p.entry_price}</td>
-    <td>$${p.current_price}</td><td class="${cls(p.pnl)}">${fmt(p.pnl)} (${fmt(p.pnl_pct)}%)</td><td>${p.hold_time}</td>
+    <td><strong>${p.symbol}</strong></td><td>${(p.side||'long').toUpperCase()}</td><td>${p.quantity}</td><td>$${p.entry_price}</td>
+    <td>$${p.current_price}</td><td class="${cls(p.pnl)}">${fmt(p.pnl)} (${fmt(p.pnl_pct)}%)</td><td>${p.trail_pct||3}%</td><td>${p.protection||'?'}</td><td>${p.hold_time}</td>
   </tr>`).join('') : '<tr><td colspan="6" class="empty">No open positions</td></tr>';
   // Candidates
   const cand = await api('/api/candidates');

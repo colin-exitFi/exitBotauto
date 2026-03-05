@@ -288,5 +288,38 @@
       }
     ],
     "timestamp": 1772674552.503741
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "Advisor EXPLICITLY recommends 0.3 ('Lower threshold slightly to catch more initial opportunities'). We oscillated 0.3\u21920.4\u21920.35\u21920.25\u21920.35, but latest guidance is clear: 0.3 for Day 1 deployment."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 45,
+        "reason": "Advisor EXPLICITLY recommends 45s ('Scan more frequently in first hour of trading to catch momentum early'). We've debated 30s/60s/90s for 10+ cycles\u2014follow the actual recommendation."
+      }
+    ],
+    "reasoning": "Zero trades = zero learning. Stop oscillating, execute Advisor's explicit recommendations to break deployment deadlock at market open.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.35,
+        "new": 0.3,
+        "reason": "Advisor EXPLICITLY recommends 0.3 ('Lower threshold slightly to catch more initial opportunities'). We oscillated 0.3\u21920.4\u21920.35\u21920.25\u21920.35, but latest guidance is clear: 0.3 for Day 1 deployment.",
+        "timestamp": 1772677360.603137
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor EXPLICITLY recommends 45s ('Scan more frequently in first hour of trading to catch momentum early'). We've debated 30s/60s/90s for 10+ cycles\u2014follow the actual recommendation.",
+        "timestamp": 1772677360.6037939
+      }
+    ],
+    "timestamp": 1772677360.604851
   }
 ]

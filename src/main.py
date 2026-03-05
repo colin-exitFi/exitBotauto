@@ -34,6 +34,7 @@ from dashboard.dashboard import log_activity
 import persistence
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
+from exit.extended_hours_guard import ExtendedHoursGuard
 from risk.risk_manager import RiskManager
 from ai.observer import Observer
 from ai.advisor import Advisor
@@ -154,6 +155,12 @@ class TradingBot:
             entry_manager=self.entry_manager,
         )
 
+        # Extended hours guard (dynamic limit sells when trailing stops don't work)
+        self.extended_guard = ExtendedHoursGuard(
+            alpaca_client=self.alpaca_client,
+            polygon_client=self.polygon_client,
+        )
+
         # Consensus engine
         self.consensus_engine = ConsensusEngine()
 
@@ -240,6 +247,13 @@ class TradingBot:
                     extended_hours = (4 <= et.hour < 9) or (et.hour == 9 and et.minute < 30) or (16 <= et.hour < 21)
                     if not extended_hours:
                         # OVERNIGHT STRATEGY SESSION — formulate next day's plan
+                        # But STILL monitor positions for protection
+                        positions = self.entry_manager.get_positions()
+                        if positions:
+                            try:
+                                await self._monitor_positions()
+                            except Exception as e:
+                                logger.debug(f"Overnight monitor error: {e}")
                         await self._overnight_session(et)
                         await asyncio.sleep(300)  # 5 min between overnight cycles
                         continue
@@ -271,6 +285,17 @@ class TradingBot:
                     await self._monitor_positions()
                 except Exception as e:
                     logger.error(f"Monitor error: {e}")
+
+                # ── EXTENDED HOURS GUARD ──────────────────────────
+                # Ensure every position has protection (trailing stop OR dynamic limit)
+                try:
+                    positions = self.entry_manager.get_positions()
+                    if positions:
+                        guard_actions = await self.extended_guard.protect_positions(positions)
+                        for sym, action in guard_actions.items():
+                            log_activity("trade", f"🛡️ {sym}: {action}")
+                except Exception as e:
+                    logger.error(f"Extended guard error: {e}")
 
                 await asyncio.sleep(monitor_interval)
 
