@@ -164,20 +164,13 @@ async def get_ai_status():
 
 @app.get("/api/consensus")
 async def get_consensus():
-    """Get consensus engine history and stats."""
-    engine = None
-    if _bot:
-        # Try multiple locations where consensus engine might be stored
-        if hasattr(_bot, 'consensus_engine') and _bot.consensus_engine:
-            engine = _bot.consensus_engine
-        elif _bot.entry_manager and hasattr(_bot.entry_manager, 'consensus') and _bot.entry_manager.consensus:
-            engine = _bot.entry_manager.consensus
-    if not engine:
+    """Get agent orchestrator history and stats."""
+    if not _bot or not hasattr(_bot, 'orchestrator') or not _bot.orchestrator:
         return {"enabled": False, "history": [], "stats": {}}
     return {
-        "enabled": getattr(settings, 'CONSENSUS_ENABLED', True),
-        "history": engine.get_history()[-10:],
-        "stats": engine.get_stats(),
+        "enabled": True,
+        "history": _bot.orchestrator.get_history()[-10:],
+        "stats": _bot.orchestrator.get_stats(),
     }
 
 
@@ -538,9 +531,9 @@ tr:hover td{background:#161b2288}
 
   <!-- Consensus Panel -->
   <div class="card full">
-    <h2><span class="icon">🗳️</span> AI Consensus Jury <span style="font-size:11px;color:#6e7681;font-weight:400;margin-left:8px">3-Model Majority Vote</span> <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <h2><span class="icon">🗳️</span> AI Agent Jury <span style="font-size:11px;color:#6e7681;font-weight:400;margin-left:8px">6-Agent Specialized Architecture</span> <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="consensusSummary"></div>
-    <table><thead><tr><th>Symbol</th><th>🟣 Claude</th><th>🟢 GPT-5.2</th><th>🔵 Grok-4</th><th>Decision</th><th>Confidence</th><th>Size Mod</th></tr></thead>
+    <table><thead><tr><th>Symbol</th><th>Decision</th><th>Confidence</th><th>Size %</th><th>Trail %</th><th>Reasoning</th></tr></thead>
     <tbody id="consensus"></tbody></table>
   </div>
 
@@ -676,27 +669,26 @@ async function refresh() {
   const con = await api('/api/consensus');
   if (con) {
     const st = con.stats || {};
-    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations | Est. cost: $${(st.estimated_cost||0).toFixed(2)}` : '❌ Disabled';
+    const ac = st.api_calls || {};
+    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations` : '❌ Disabled';
     $('consensusSummary').innerHTML = con.enabled ? `
-      <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Total Calls</div></div>
+      <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Total Evals</div></div>
       <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY Signals</div></div>
+      <div class="summary-item"><div class="val" style="color:#d2a8ff">${st.shorts||0}</div><div class="lbl">SHORT Signals</div></div>
       <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP Signals</div></div>
-      <div class="summary-item"><div class="val" style="color:#d2a8ff">${((st.agreement_rate||0)*100).toFixed(0)}%</div><div class="lbl">Agreement Rate</div></div>
-      <div class="summary-item"><div class="val" style="color:#e3b341">$${(st.estimated_cost||0).toFixed(2)}</div><div class="lbl">API Cost</div></div>
-      <div class="summary-item"><div class="val" style="color:#8b949e;font-size:11px">🟣${(st.api_calls||{}).claude||0} 🟢${(st.api_calls||{}).gpt||0} 🔵${(st.api_calls||{}).grok||0}</div><div class="lbl">Model Calls</div></div>
+      <div class="summary-item"><div class="val" style="color:#e3b341">${st.avg_confidence?(st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Avg Confidence</div></div>
+      <div class="summary-item"><div class="val" style="color:#8b949e;font-size:11px">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
     ` : '';
     $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
-      const voteStr = v => {
-        if (!v) return '<span style="color:#484f58">—</span>';
-        if (v.error) return `<span class="tag" style="background:#da363333;color:#f85149">ERR</span>`;
-        const cls = v.decision==='BUY'?'tag-buy':v.decision==='SHORT'?'tag-short':'tag-skip';
-        return `<span class="tag ${cls}">${v.decision}</span> ${v.confidence}%`;
-      };
-      const decCls = h.final_decision==='BUY'?'tag-buy':h.final_decision==='SHORT'?'tag-short':'tag-skip';
-      return `<tr><td><strong>${h.symbol}</strong></td><td>${voteStr(h.claude)}</td><td>${voteStr(h.gpt)}</td><td>${voteStr(h.grok)}</td>
-        <td><span class="tag ${decCls}">${h.final_decision}</span></td>
-        <td>${(h.avg_confidence||0).toFixed(0)}%</td><td>${((h.size_modifier||1)*100).toFixed(0)}%</td></tr>`;
-    }).join('') : '<tr><td colspan="7" class="empty">No consensus decisions yet</td></tr>';
+      const decCls = h.decision==='BUY'?'tag-buy':h.decision==='SHORT'?'tag-short':'tag-skip';
+      const reason = (h.reasoning||'').substring(0, 120) + ((h.reasoning||'').length > 120 ? '...' : '');
+      return `<tr><td><strong>${h.symbol}</strong></td>
+        <td><span class="tag ${decCls}">${h.decision}</span></td>
+        <td>${(h.confidence||0).toFixed(0)}%</td>
+        <td>${(h.size_pct||0).toFixed(1)}%</td>
+        <td>${(h.trail_pct||0).toFixed(1)}%</td>
+        <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reason}</td></tr>`;
+    }).join('') : '<tr><td colspan="6" class="empty">No agent decisions yet</td></tr>';
   }
   // Trade History
   const th = await api('/api/trade-history?limit=20');

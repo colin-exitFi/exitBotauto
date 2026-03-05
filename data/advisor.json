@@ -1,36 +1,5 @@
 [
   {
-    "strategy": "Prepare for pre-market assault: queue high-conviction setups for 4:00 AM ET open, prioritize liquidity and momentum over quantity",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "energy",
-        "healthcare"
-      ],
-      "avoid": [
-        "low_volume_extended_hours"
-      ]
-    },
-    "aggression_level": "maintain",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "When pre-market opens at 4 AM, we need faster response to momentum spikes - 60s is leaving edge on table"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.4,
-        "reason": "Starting from zero, first trades set the tone - better to wait for stronger conviction than grab marginal setups"
-      }
-    ],
-    "key_insight": "Dead capital is the enemy, but forced trades in illiquid after-hours are worse. Focus: the moment pre-market opens at 4:00 AM ET, scanner must be HOT and ready to deploy $70 positions (7% sizing) into high-volume movers with clear momentum. First 3 trades are critical - they establish pattern recognition and psychological baseline. Prioritize: SPY/QQQ correlation plays, earnings gapper follow-through, and anything with >500K pre-market volume. Do NOT deploy into random low-float garbage just to 'get skin in game'. Quality > speed on day 1.",
-    "timestamp": 1772678249.1396532
-  },
-  {
     "strategy": "Prepare for aggressive deployment at market open \u2014 prioritize momentum scanners in first 30 minutes to catch gap-and-go setups with immediate 1-2% targets.",
     "position_advice": [],
     "sector_bias": {
@@ -1875,5 +1844,67 @@
     ],
     "key_insight": "You have $22,108 (87%) sitting idle while SOC is already up 3.5% UNPROTECTED and OKTA has $102 exposed with NO STOP. This is not conservative \u2014 it's negligent. Fix the protection gaps in the next 60 seconds, then hunt aggressively. PDYN delivered $442 at 100% win rate \u2014 find more like that. Capital velocity isn't optional when you're building generational wealth from $25k. Every hour of idle cash is a compounding opportunity lost forever.",
     "timestamp": 1772725193.3176682
+  },
+  {
+    "strategy": "Immediate portfolio cleanup required \u2014 exit dead capital, redeploy into proper-sized positions, and diagnose scanner failure before deploying more capital.",
+    "position_advice": [
+      {
+        "symbol": "AMPX",
+        "action": "exit",
+        "reason": "$0.85 position is noise \u2014 below $10 is dead capital, wasting heat allocation and mental bandwidth"
+      },
+      {
+        "symbol": "AVGO",
+        "action": "hold",
+        "reason": "Only healthy position \u2014 $1,820 properly sized, trailing stop active, +0.4% with relative strength, let it run"
+      },
+      {
+        "symbol": "CRMD",
+        "action": "hold",
+        "reason": "$1,377 position flat at entry but properly sized \u2014 give it until 11:00 AM to show momentum, then reassess"
+      },
+      {
+        "symbol": "OKTA",
+        "action": "exit",
+        "reason": "$22.52 position is dead capital \u2014 96% below minimum viable size ($635), serves no purpose"
+      },
+      {
+        "symbol": "SOC",
+        "action": "exit",
+        "reason": "$5.64 position peaked at +2.7% but retreating with no stop protection \u2014 undersized and unprotected equals pure risk"
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "semiconductors"
+      ],
+      "avoid": [
+        "avoid new biotech micro-caps until AMPX/CRMD prove viability"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_POSITION_VALUE",
+        "current": "not enforced",
+        "suggested": 635,
+        "reason": "Hard floor at 25% of tier max ($6,355 * 0.10 = $635) \u2014 positions below this are statistically irrelevant noise"
+      },
+      {
+        "param": "SCANNER_DIAGNOSTIC",
+        "current": "unknown",
+        "suggested": "investigate",
+        "reason": "Zero trades in 51 minutes of market open suggests scanner failure or overly restrictive filters \u2014 market is moving, bot is not"
+      },
+      {
+        "param": "CAPITAL_DEPLOYMENT_TARGET",
+        "current": "12.7%",
+        "suggested": "40-60%",
+        "reason": "87% idle capital is unacceptable \u2014 should be deploying $10,000-$15,000 across 4-6 positions to maximize velocity"
+      }
+    ],
+    "key_insight": "Portfolio discipline has completely broken down \u2014 3 of 5 positions are sub-$25 dead capital wasting heat allocation while $22,000 sits idle. PDYN (75% win rate, $425 profit) proves the scanner works when it fires, but today's zero-trigger count suggests a data/configuration problem. FIX: (1) Exit AMPX/OKTA/SOC immediately, (2) verify scanner is receiving live data, (3) if scanner functional, lower sentiment threshold temporarily to 0.3 to find setups, (4) redeploy freed capital into 2-3 properly-sized positions by 11:00 AM. Capital velocity dies when 87% sits on the sidelines \u2014 we compound wins, not cash.",
+    "timestamp": 1772725927.2315772
   }
 ]

@@ -1,16 +1,16 @@
 {
-  "last_observation": "Market open 9 minutes, no price data yet \u2014 positions inherited from brokerage sync, all showing entry_price = peak_price indicating zero movement tracking so far.",
-  "last_advice": "Protect profits on SOC immediately, liquidate dead weight, then deploy idle capital aggressively into proven setups",
+  "last_observation": "Market open 51 minutes, no trades executed today yet \u2014 positions inherited from prior session, currently in observation mode.",
+  "last_advice": "Immediate portfolio cleanup required \u2014 exit dead capital, redeploy into proper-sized positions, and diagnose scanner failure before deploying more capital.",
   "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.15\u21920.5, MAX_CONCURRENT_POSITIONS:12\u21928, POSITION_SIZE_PCT:2.5\u21922.0",
   "last_game_film_summary": "9 trades, 44.4% WR, $378.68",
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "TTD",
+    "symbol": "HELP",
     "decision": "SKIP",
     "size_pct": 0,
     "trail_pct": 3.0,
     "reasoning": "Jury AI call failed",
     "confidence": 0.0,
-    "timestamp": 1772725584.086834
+    "timestamp": 1772726331.587574
   }
 }
