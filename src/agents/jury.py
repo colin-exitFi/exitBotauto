@@ -34,7 +34,9 @@ class JuryVerdict:
         }
 
 
-PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox, an autonomous momentum trading engine.
+PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox.
+{mission}
+
 You receive briefs from 5 specialized agents. Synthesize them into ONE trade decision.
 
 SYMBOL: {symbol} @ ${price:.2f}
@@ -90,7 +92,9 @@ async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
                 lines.append(f"  {k}: {v}")
             return "\n".join(lines) if lines else "  No data"
 
+        from ai.mission import MISSION_SHORT
         prompt = PROMPT_TEMPLATE.format(
+            mission=MISSION_SHORT,
             symbol=symbol,
             price=price,
             technical=fmt(briefs.get("technical", {})),
