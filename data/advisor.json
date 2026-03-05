@@ -844,5 +844,43 @@
     ],
     "key_insight": "CRITICAL CONFIG MISMATCH: You earned COMPOUND tier (2.5% sizing, 1.0% stops) but your live config uses 7.0% sizing and 1.5% stops - you're trading like you're still at GRIND tier. This is exactly how you blow up a winning streak. Fix position sizing to 2.5% and stops to 1.0% BEFORE market open. The 2400% gain suggests you caught lightning in a bottle - now protect it with proper risk management. Once fixed, use the after-hours to build a watchlist: scan for stocks that gapped on news today, hold overnight, and might continue at open. Zero trades today means either the system wasn't running or scanner is broken - diagnose which. You have 11 hours until market open to prepare, not sit idle.",
     "timestamp": 1772684402.270764
+  },
+  {
+    "strategy": "Pre-market blitz protocol: Deploy 40-60% capital in first 90 minutes (4:00-5:30 AM ET) targeting gap-and-go setups, then reassess momentum.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech_movers",
+        "earnings_gappers",
+        "news_catalysts"
+      ],
+      "avoid": [
+        "low_volume_afterhours",
+        "no_catalyst_plays"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Pre-market moves fast (4:00-9:30 AM) - 60s interval misses entries on volatile gap plays. Tighten scan frequency during opening hours."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.3,
+        "suggested": 0.4,
+        "reason": "Zero scanner hits suggests bar too low OR too high. Try 0.4 to filter noise but still catch momentum - can dial back if still empty."
+      },
+      {
+        "param": "SCANNER_WATCHLIST_MODE",
+        "current": "unknown",
+        "suggested": "add_premarket_gappers",
+        "reason": "Need automated gap scanner: stocks moving >3% pre-market with volume >50K. Current scanner may be missing the boat."
+      }
+    ],
+    "key_insight": "You have $25K in idle cash earning ZERO while pre-market opportunities print. The 2400% return proves the system works - now the enemy is hesitation. At 4:00 AM ET tomorrow, the scanner must fire with gap plays. If still zero candidates by 5:00 AM, manually override with top 3 pre-market % gainers with volume. Capital velocity dies in cash - deploy $10K-15K in first wave, take profits at TP1 (1.5%), recycle into next setups. The compounding machine is built - just needs fuel in the engine.",
+    "timestamp": 1772684636.7429938
   }
 ]

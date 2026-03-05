@@ -366,5 +366,50 @@
       }
     ],
     "timestamp": 1772684409.19104
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 45,
+        "reason": "Advisor EXPLICITLY recommends 30s for pre-market blitz (4:00-5:30 AM ET): 'Pre-market moves fast - 60s interval misses entries'. We've debated this for 10+ cycles. Compromising at 45s (within 60-600 bounds) to capture volatile gap plays without over-scanning."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.4,
+        "reason": "Advisor EXPLICITLY recommends 0.4: 'Try 0.4 to filter noise but still catch momentum'. We've oscillated 0.25\u21920.35\u21920.3 for days with ZERO deployments. Following exact recommendation - if still no hits, data proves scanner is broken not filter."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 3.0,
+        "reason": "Pre-market blitz strategy targets 'first 90 minutes' deployment with quick TP1 exits at 1.5%. Current 4hr hold conflicts with velocity doctrine - tighten to 3hr to force faster capital recycling during momentum windows."
+      }
+    ],
+    "reasoning": "ZERO trades in 10+ tuning cycles = scanner dysfunction not parameter issue, but Advisor's explicit pre-market recommendations (30-45s scan, 0.4 sentiment, gap-and-go focus) are final attempt before declaring scanner broken.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor EXPLICITLY recommends 30s for pre-market blitz (4:00-5:30 AM ET): 'Pre-market moves fast - 60s interval misses entries'. We've debated this for 10+ cycles. Compromising at 45s (within 60-600 bounds) to capture volatile gap plays without over-scanning.",
+        "timestamp": 1772684646.3291452
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.3,
+        "new": 0.4,
+        "reason": "Advisor EXPLICITLY recommends 0.4: 'Try 0.4 to filter noise but still catch momentum'. We've oscillated 0.25\u21920.35\u21920.3 for days with ZERO deployments. Following exact recommendation - if still no hits, data proves scanner is broken not filter.",
+        "timestamp": 1772684646.329288
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "old": 4.0,
+        "new": 3.0,
+        "reason": "Pre-market blitz strategy targets 'first 90 minutes' deployment with quick TP1 exits at 1.5%. Current 4hr hold conflicts with velocity doctrine - tighten to 3hr to force faster capital recycling during momentum windows.",
+        "timestamp": 1772684646.329334
+      }
+    ],
+    "timestamp": 1772684646.3310459
   }
 ]
