@@ -401,7 +401,7 @@ class TradingBot:
             try:
                 if hasattr(self, 'game_film') and self.game_film:
                     logger.info("🎬 Overnight: Running game film review...")
-                    await asyncio.get_event_loop().run_in_executor(None, self.game_film.analyze)
+                    await self.game_film.run(bot=self)
                     state["last_game_film"] = now
                     tasks_run.append("game_film")
             except Exception as e:
