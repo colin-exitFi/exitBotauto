@@ -394,7 +394,7 @@ class ConsensusEngine:
                     },
                     json={
                         "model": model,
-                        "max_tokens": 500,
+                        "max_completion_tokens": 500,
                         "messages": [{"role": "user", "content": prompt}],
                     },
                 )
@@ -430,7 +430,7 @@ class ConsensusEngine:
                                 headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}",
                                          "Content-Type": "application/json"},
                                 json={"model": model, "messages": [{"role": "user", "content": prompt}],
-                                      "temperature": 0.3, "max_tokens": 500},
+                                      "temperature": 0.3, "max_completion_tokens": 500},
                             )
                             resp.raise_for_status()
                             self._api_calls["gpt"] += 1
