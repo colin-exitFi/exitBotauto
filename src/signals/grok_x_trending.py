@@ -65,7 +65,7 @@ class GrokXTrending:
     """Ask Grok for trending stock tickers on X — big caps + under-the-radar small caps."""
 
     CACHE_TTL = 600  # 10 min cache
-    TIMEOUT = 60
+    TIMEOUT = 90  # grok-4 reasoning + X search can take time
 
     def __init__(self):
         self._cache: Optional[List[Dict]] = None
@@ -149,5 +149,29 @@ class GrokXTrending:
                 return results
 
         except Exception as e:
+            # Retry once on 504/timeout
+            if "504" in str(e) or "timeout" in str(e).lower():
+                logger.warning(f"Grok X {label}: timeout, retrying in 10s...")
+                await asyncio.sleep(10)
+                try:
+                    async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
+                        resp = await client.post(
+                            "https://api.x.ai/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {settings.XAI_API_KEY}", "Content-Type": "application/json"},
+                            json={"model": getattr(settings, 'XAI_MODEL', 'grok-4-0709'), "max_tokens": 2000, "temperature": 0.3,
+                                  "messages": [{"role": "user", "content": prompt}]},
+                        )
+                        resp.raise_for_status()
+                        text = resp.json()["choices"][0]["message"]["content"].strip()
+                        if "```" in text:
+                            text = text.split("```json")[-1].split("```")[0] if "```json" in text else text.split("```")[1].split("```")[0]
+                        start, end = text.find("["), text.rfind("]") + 1
+                        tickers = json.loads(text[start:end]) if start >= 0 and end > start else json.loads(text)
+                        return [{"ticker": t.get("ticker","").upper().strip(), "reason": t.get("reason",""),
+                                 "sentiment": t.get("sentiment","mixed"), "buzz_level": t.get("buzz_level","medium"),
+                                 "cap": t.get("cap","unknown")} for t in tickers
+                                if t.get("ticker","").strip().isalpha() and len(t.get("ticker","").strip()) <= 5]
+                except Exception:
+                    pass
             logger.warning(f"Grok X {label} scan failed ({type(e).__name__}): {e}")
             return []

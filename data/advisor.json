@@ -1,44 +1,5 @@
 [
   {
-    "strategy": "Stand down until market open \u2014 after-hours is a capital trap, not an opportunity",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "momentum",
-        "breakouts"
-      ],
-      "avoid": [
-        "low-volume",
-        "pre-revenue",
-        "after-hours-only movers"
-      ]
-    },
-    "aggression_level": "maintain",
-    "parameter_suggestions": [
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.2,
-        "suggested": 1.5,
-        "reason": "1.2% is too tight for $1K account \u2014 slippage and fees eat into edge. 1.5% gives breathing room while maintaining velocity"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.25,
-        "suggested": 0.35,
-        "reason": "Starting cold with zero game film \u2014 need higher conviction plays until we build pattern recognition. Tighten after 20+ trades"
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 300,
-        "reason": "After-hours: save compute costs, run every 5min. Switch to 60s at 9:30 AM ET market open"
-      }
-    ],
-    "key_insight": "Zero deployment isn't a failure right now \u2014 it's correct risk management. After-hours with $1K starting capital is pure gamble territory (wide spreads, no liquidity, news-driven chaos). Real game starts at 9:30 AM ET tomorrow. Use this time to validate scanner is working and will fire at open. First 30 minutes of regular session is where we hunt \u2014 that's when volume and volatility create our edge. Stay patient, stay ready, pounce at the bell.",
-    "timestamp": 1772674005.1975281
-  },
-  {
     "strategy": "Prepare aggressive market-open deployment \u2014 scanner verification critical, target 3-4 positions in first 30 minutes of trading to minimize cash drag.",
     "position_advice": [],
     "sector_bias": {
@@ -1668,5 +1629,21 @@
     "parameter_suggestions": [],
     "key_insight": "\ud83d\udea8 CRITICAL SYSTEM INTEGRITY ISSUE \ud83d\udea8\n\nData contradictions indicate potential reset/corruption:\n\n1. **GAME FILM SHOWS 11 CONSECUTIVE LOSSES** (100% loss rate, all trailing stops, all <5min holds, TTD+PDYN only) but RISK STATUS shows 0 total trades and 0 daily PnL\n\n2. **Starting equity $1k \u2192 $25k = 2400% return** yet Game Film shows $0.00 total PnL from 11 losing trades\n\n3. **Scanner returning ZERO candidates** at market open (9:20 ET) is abnormal \u2014 even restrictive filters should find *something* in a liquid market\n\n4. **All 11 Game Film trades exited via trailing_stop in <5min** suggests either:\n   - Extreme volatility triggering immediate stops, OR\n   - Faulty entry logic entering positions already against us, OR\n   - Trailing stop configured too tight for opening volatility\n\n**IMMEDIATE ACTIONS REQUIRED:**\n\n\u2705 Verify market data feeds are live and accurate\n\u2705 Confirm scanner logic isn't filtering out 100% of universe\n\u2705 Reconcile Game Film trades vs Risk Status trade count (11 vs 0)\n\u2705 Review why all 11 historical trades stopped out in <5min\n\u2705 Wait until 09:50 ET for volatility to settle before ANY new entries\n\u2705 Do NOT trade until scanner produces 5+ valid candidates\n\n**If Game Film is stale data from previous session:** Disregard it and focus on building NEW history. But scanner returning zero is still red flag.\n\n**If Game Film is TODAY's data:** We just burned through capital in 11 rapid-fire losses \u2014 system is entering positions at worst possible moments.\n\nEither way: **CAPITAL PRESERVATION OVERRIDE. No trades until diagnostics complete.**",
     "timestamp": 1772720444.988666
+  },
+  {
+    "strategy": "Hold fire until market shows its hand \u2014 deploy only when setup quality and edge are crystal clear, not out of impatience.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "wait_for_data"
+      ],
+      "avoid": [
+        "all_sectors_until_market_direction_clear"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [],
+    "key_insight": "CRITICAL CONTEXT CHECK: Game film shows 11 losing trades with 0% win rate, all exited via trailing stop in <5min, all at 07:00 hour. This is either (1) simulation test data being misread as 'history', or (2) a catastrophic pattern that must be understood before deploying a single dollar. The Observer correctly notes this is 'first day of live trading after massive 2400% simulation run' \u2014 that game film is NOT real money performance. Do NOT let ghost losses from sim runs influence live decisions. You are starting fresh with a clean slate and $25k in real capital. The 2400% return is sim performance, not live track record. Until we see LIVE trade data with actual P&L, we have ZERO empirical edge to validate. Right now at 9:26 ET: (1) Market just opened, no directional confirmation yet. (2) Scanner showing zero candidates \u2014 either too early or filters too tight. (3) You have 3 daytrades max this week under PDT rules. (4) Every trade must count. WAIT for: (A) 30-60 min of price action to confirm trend/volatility, (B) Scanner to populate with actual opportunities that meet quality bars, (C) Multi-AI consensus on first trade \u2014 cannot afford to burn a daytrade on a coin flip. Capital velocity matters, but reckless deployment is not velocity \u2014 it's gambling. The right move right now is patience. Let the market prove its direction. Let the scanner prove it can find real edge in live conditions. Then strike with conviction. You don't get paid for trading \u2014 you get paid for trading well.",
+    "timestamp": 1772720849.658203
   }
 ]
