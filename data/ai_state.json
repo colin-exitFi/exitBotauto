@@ -5,12 +5,12 @@
   "last_game_film_summary": null,
   "last_position_manager": null,
   "last_consensus": {
-    "symbol": "TTDU",
+    "symbol": "BATL",
     "decision": "SKIP",
     "size_pct": 0,
-    "trail_pct": 3.0,
-    "reasoning": "Jury AI call failed",
-    "confidence": 0.0,
-    "timestamp": 1772727376.5702631
+    "trail_pct": 1.0,
+    "reasoning": "Strong agent conflict with no clear edge: Technical SELL (72% conf, decelerating momentum, at resistance), Catalyst shows post-event exhaustion (tripled in 2 days, RSI>90, front-loaded surge complete), Macro risk-off with DIA -1.66% creates headwinds for cyclicals, Sentiment flat/neutral. This is a ",
+    "confidence": 78.0,
+    "timestamp": 1772727676.557235
   }
 }

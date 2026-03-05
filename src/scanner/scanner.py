@@ -297,6 +297,8 @@ class Scanner:
                     stock["change_pct"] = alpaca_snap.get("change_pct", 0)
                 if stock.get("volume", 0) == 0:
                     stock["volume"] = alpaca_snap.get("volume", 0)
+                if stock.get("prev_volume", 0) == 0:
+                    stock["prev_volume"] = alpaca_snap.get("prev_volume", 0)
                 stock["prev_close"] = alpaca_snap.get("prev_close", 0)
 
             # Fallback to Polygon if Alpaca didn't fill
