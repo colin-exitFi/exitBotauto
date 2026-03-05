@@ -1,0 +1,505 @@
+{
+  "trades": [
+    {
+      "ticker": "ITW",
+      "member": "Shelley Moore Capito",
+      "party": "R",
+      "transaction": "sale (partial)",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-24",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "PAYX",
+      "member": "Shelley Moore Capito",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-20",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "BLK",
+      "member": "Shelley Moore Capito",
+      "party": "R",
+      "transaction": "sale (partial)",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-10",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "ADI",
+      "member": "Shelley Moore Capito",
+      "party": "R",
+      "transaction": "sale (partial)",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-10",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "AVGO",
+      "member": "Shelley Moore Capito",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-09",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "CRDO",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "C",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "DELL",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "MPWR",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "MTZ",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "GS",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "IRM",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "COHR",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "ADBE",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "AMKR",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "APG",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "AIT",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "MCK",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "LRN",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "FCFS",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "CRS",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "VSEC",
+      "member": "Markwayne Mullin",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-04",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "ARLP",
+      "member": "Virginia Foxx",
+      "party": "R",
+      "transaction": "purchase",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-13",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "NOW",
+      "member": "Josh Gottheimer",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-30",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "UBER",
+      "member": "Josh Gottheimer",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-30",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "GILD",
+      "member": "Josh Gottheimer",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-27",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "ICE",
+      "member": "Josh Gottheimer",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-26",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "SNDR",
+      "member": "Josh Gottheimer",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-26",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "NSRGY",
+      "member": "Josh Gottheimer",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-26",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "AAPL",
+      "member": "Cleo Fields",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-12",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "GOOGL",
+      "member": "Cleo Fields",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$100,001 - $250,000",
+      "date": "2026-02-03",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "LRCX",
+      "member": "Cleo Fields",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-02-03",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "AMD",
+      "member": "Cleo Fields",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$50,001 - $100,000",
+      "date": "2026-02-03",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "MU",
+      "member": "Cleo Fields",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$100,001 - $250,000",
+      "date": "2026-02-03",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "META",
+      "member": "Cleo Fields",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$100,001 - $250,000",
+      "date": "2026-02-03",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "HSY",
+      "member": "Scott Scott Franklin",
+      "party": "R",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-10",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "WAT",
+      "member": "Debbie Dingell",
+      "party": "D",
+      "transaction": "exchange",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-10",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "HSY",
+      "member": "Scott Scott Franklin",
+      "party": "R",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-02-10",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "HSY",
+      "member": "Scott Scott Franklin",
+      "party": "R",
+      "transaction": "sale",
+      "amount": "$50,001 - $100,000",
+      "date": "2026-02-10",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "SHOP",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$50,001 - $100,000",
+      "date": "2026-01-30",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "GEV",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-01-30",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "C",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-01-30",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "CPNG",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-01-22",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "VSAT",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$50,001 - $100,000",
+      "date": "2026-01-22",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "HOOD",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-20",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "JPM",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$1,001 - $15,000",
+      "date": "2026-01-20",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "PLTR",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$15,001 - $50,000",
+      "date": "2026-01-16",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "TMUS",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "sale",
+      "amount": "$50,001 - $100,000",
+      "date": "2026-01-13",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "WMT",
+      "member": "Jonathan Jackson",
+      "party": "D",
+      "transaction": "purchase",
+      "amount": "$50,001 - $100,000",
+      "date": "2026-01-13",
+      "disclosure_date": "",
+      "source": "quiver"
+    },
+    {
+      "ticker": "GS",
+      "member": "David H. McCormick",
+      "party": "R",
+      "transaction": "sale (full)",
+      "amount": "$1,000,001 - $5,000,000",
+      "date": "2026-01-23",
+      "disclosure_date": "",
+      "source": "quiver"
+    }
+  ],
+  "fetched_at": 1772679842.523542
+}

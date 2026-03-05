@@ -1,0 +1,28 @@
+{
+  "sp500_futures": "Slightly bullish; March 2026 E-mini S&P 500 futures (ESH6) at 6888.25, up from recent levels around 6886 on Mar 4. Key levels: support at 6462, 6453, 6429, 6390; resistance at 6472, 6522, 6540, 6562, 6588.[1][4]",
+  "overnight_news": "Stock index futures higher after U.S. ADP Jobs Report; Treasury Secretary Scott Bessent comments on proposals noted. Recent cash session: S&P 500 up +0.78%, Nasdaq up +1.51%. No major earnings, geopolitics, or Fed news highlighted overnight.[2]",
+  "hot_sectors": "Semiconductors (AMAT, KLAC, AVGO, MU, ADI active); Crypto-related (MSTR +10.37%, MARA +7.27%); Metals/mining (HL, CDE, GLXY).[2]",
+  "watchlist": [
+    {
+      "ticker": "MSTR",
+      "reason": "Top gainer at +10.37%, crypto exposure driving momentum.[2]"
+    },
+    {
+      "ticker": "MARA",
+      "reason": "Strong +7.27% move, tied to crypto sector surge.[2]"
+    },
+    {
+      "ticker": "AMAT",
+      "reason": "Semiconductor leader up +1.83%, sector rotation interest.[2]"
+    },
+    {
+      "ticker": "MU",
+      "reason": "Micron up +5.55%, memory chip demand signals.[2]"
+    },
+    {
+      "ticker": "GTLB",
+      "reason": "Notable decliner at -6.18%, potential volatility in software.[2]"
+    }
+  ],
+  "market_bias": "Bullish"
+}
