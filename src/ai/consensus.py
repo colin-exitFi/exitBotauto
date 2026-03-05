@@ -58,38 +58,49 @@ class ConsensusResult:
 
 # ── Prompt ────────────────────────────────────────────────────────
 
-ANALYSIS_PROMPT = """You are a professional stock trader analyzing a potential entry.
+ANALYSIS_PROMPT = """You are a SHORT-TERM MOMENTUM TRADER. Your job is to find stocks likely to move up 2-5% in the next few hours.
+
+CRITICAL CONTEXT: We have a TRAILING STOP at 3% protecting every position. If we're wrong, we lose 3% max. If we're right and it runs 20%, the trailing stop locks in the profit. Our ONLY job is to pick stocks more likely to go UP than DOWN in the near term. We are NOT evaluating this as a long-term investment.
 
 SYMBOL: {symbol}
 CURRENT PRICE: ${price:.2f}
-CHANGE: {change_pct:+.2f}%
+TODAY'S CHANGE: {change_pct:+.2f}%
 
-VOLUME:
-- Current volume spike ratio: {volume_spike:.1f}x average
+VOLUME: {volume_spike:.1f}x average (higher = more momentum)
 
 SOCIAL SENTIMENT:
-- StockTwits sentiment score: {sentiment_score:.2f}
-- StockTwits trending: {trending}
-- Twitter/X cashtag volume: {twitter_volume}
+- StockTwits: {sentiment_score:.2f} (range -1 to +1, positive = bullish crowd)
+- Trending on StockTwits: {trending}
+- Twitter/X buzz: {twitter_volume}
 
-TECHNICAL INDICATORS:
+TECHNICALS:
 - RSI: {rsi}
-- Price vs VWAP: {vwap_relation}
+- vs VWAP: {vwap_relation}
 - ATR: {atr}
 
-NEWS HEADLINES:
-{news}
+NEWS: {news}
 
-Based on ALL of this data, should we BUY this stock for a short-term momentum trade (1-4 hour hold)?
+DECISION FRAMEWORK:
+- BUY if: momentum is strong, sentiment is positive, volume is elevated, stock has room to run
+- BUY if: social buzz is high and price is still moving up (momentum intact)
+- BUY if: news catalyst + volume spike (early stage of a move)
+- SKIP ONLY if: momentum is clearly exhausted, sentiment is turning bearish, stock is extended and dumping, or no volume
+- DO NOT skip just because a stock already moved today — momentum stocks keep running
+- DO NOT evaluate as a long-term hold — we're in and out within hours
+- Remember: 3% trailing stop protects us. The question is NOT "is this safe?" but "is this likely to go higher?"
 
 Respond with ONLY valid JSON (no markdown):
 {{"decision": "BUY" or "SKIP", "confidence": 0-100, "reasoning": "brief explanation", "target_price": number or null, "stop_price": number or null}}"""
 
-PERPLEXITY_PROMPT = """Search for the latest news about {symbol} ({company}) in the last 2 hours.
+PERPLEXITY_PROMPT = """Search for the latest news about {symbol} ({company}) in the last 4 hours.
 
-Based on CURRENT real-time news sentiment, should a momentum trader BUY or SKIP this stock right now?
+We're a SHORT-TERM MOMENTUM TRADER deciding whether to buy this stock for a few hours, with a 3% trailing stop protecting us.
 
-Consider: Is there breaking news that supports the move? Or is this a pump about to dump?
+The question is simple: Based on current news, is this stock more likely to go UP or DOWN in the next few hours?
+
+- If news is positive, neutral, or there's a catalyst driving the move → BUY
+- If news reveals fraud, SEC investigation, or the move is clearly over → SKIP
+- If no news found, default to BUY if the stock has momentum (we have a trailing stop)
 
 Respond with ONLY valid JSON (no markdown):
 {{"decision": "BUY" or "SKIP", "confidence": 0-100, "reasoning": "what the latest news says"}}"""
@@ -331,24 +342,24 @@ class ConsensusEngine:
                 avg_confidence=0, claude_vote=claude, gpt_vote=gpt,
                 reasoning="Both AI models failed — never trade blind")
 
-        # One failed → use the other with reduced confidence
+        # One failed → use the other (slight size reduction, but trust the working model)
         if not claude_ok:
-            conf = gpt.confidence * 0.7  # penalize single-model
-            buy = gpt.decision == "BUY" and conf >= getattr(settings, 'CONSENSUS_MIN_CONFIDENCE', 70)
+            conf = gpt.confidence * 0.85  # slight penalty for single-model
+            buy = gpt.decision == "BUY" and conf >= 40
             return ConsensusResult(
                 symbol=symbol, final_decision="BUY" if buy else "SKIP",
-                size_modifier=0.5 if buy else 0.0, avg_confidence=conf,
+                size_modifier=0.75 if buy else 0.0, avg_confidence=conf,
                 claude_vote=claude, gpt_vote=gpt,
-                reasoning=f"Claude failed; GPT-only (reduced) conf={conf:.0f}%")
+                reasoning=f"Claude failed; GPT says {'BUY' if buy else 'SKIP'} conf={conf:.0f}%")
 
         if not gpt_ok:
-            conf = claude.confidence * 0.7
-            buy = claude.decision == "BUY" and conf >= getattr(settings, 'CONSENSUS_MIN_CONFIDENCE', 70)
+            conf = claude.confidence * 0.85
+            buy = claude.decision == "BUY" and conf >= 40
             return ConsensusResult(
                 symbol=symbol, final_decision="BUY" if buy else "SKIP",
-                size_modifier=0.5 if buy else 0.0, avg_confidence=conf,
+                size_modifier=0.75 if buy else 0.0, avg_confidence=conf,
                 claude_vote=claude, gpt_vote=gpt,
-                reasoning=f"GPT failed; Claude-only (reduced) conf={conf:.0f}%")
+                reasoning=f"GPT failed; Claude says {'BUY' if buy else 'SKIP'} conf={conf:.0f}%")
 
         avg_conf = (claude.confidence + gpt.confidence) / 2
 
@@ -359,24 +370,23 @@ class ConsensusEngine:
                 avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
                 reasoning="Both models say SKIP")
 
-        # Both BUY
+        # Both BUY — when both models agree, trust them
         if claude.decision == "BUY" and gpt.decision == "BUY":
-            min_conf = getattr(settings, 'CONSENSUS_MIN_CONFIDENCE', 70)
-            if avg_conf >= min_conf:
+            if avg_conf >= 60:
                 return ConsensusResult(
                     symbol=symbol, final_decision="BUY", size_modifier=1.0,
                     avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both BUY, high confidence ({avg_conf:.0f}%)")
-            elif avg_conf >= 50:
+                    reasoning=f"Both BUY, strong ({avg_conf:.0f}%) — full size")
+            elif avg_conf >= 40:
                 return ConsensusResult(
                     symbol=symbol, final_decision="BUY", size_modifier=0.75,
                     avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both BUY, moderate confidence ({avg_conf:.0f}%) — reduced size")
+                    reasoning=f"Both BUY, moderate ({avg_conf:.0f}%) — 75% size")
             else:
                 return ConsensusResult(
-                    symbol=symbol, final_decision="SKIP", size_modifier=0.0,
+                    symbol=symbol, final_decision="BUY", size_modifier=0.5,
                     avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt,
-                    reasoning=f"Both BUY but confidence too low ({avg_conf:.0f}%)")
+                    reasoning=f"Both BUY, low confidence ({avg_conf:.0f}%) — 50% size")
 
         # Disagreement → Perplexity tie-breaker
         logger.info(f"🔀 Tie-breaker needed for {symbol} (Claude={claude.decision}, GPT={gpt.decision})")
