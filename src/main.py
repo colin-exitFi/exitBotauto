@@ -156,7 +156,11 @@ class TradingBot:
         # Dynamic watchlist (built overnight, used during trading)
         self.watchlist = DynamicWatchlist()
 
-        # Scanner (with StockTwits + Pharma + Fade)
+        # Grok X/Twitter trending scanner
+        from src.signals.grok_x_trending import GrokXTrending
+        self.grok_x_trending = GrokXTrending()
+
+        # Scanner (with StockTwits + Pharma + Fade + Grok X)
         self.scanner = Scanner(
             polygon_client=self.polygon_client,
             sentiment_analyzer=self.sentiment_analyzer,
@@ -164,6 +168,7 @@ class TradingBot:
             alpaca_client=self.alpaca_client,
             pharma_scanner=self.pharma_scanner,
             fade_scanner=self.fade_scanner,
+            grok_x_trending=self.grok_x_trending,
         )
 
         # Entry manager

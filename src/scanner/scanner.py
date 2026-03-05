@@ -25,13 +25,14 @@ class Scanner:
       5. Score & rank
     """
 
-    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None):
+    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None, grok_x_trending=None):
         self.polygon = polygon_client
         self.sentiment = sentiment_analyzer
         self.stocktwits = stocktwits_client
         self.alpaca = alpaca_client
         self.pharma = pharma_scanner
         self.fade = fade_scanner
+        self.grok_x = grok_x_trending
 
         self.min_price = settings.MIN_PRICE
         self.max_price = settings.MAX_PRICE
@@ -132,6 +133,33 @@ class Scanner:
             except Exception as e:
                 logger.warning(f"Fade runner scan failed: {e}")
 
+        # ── SOURCE 5: Grok X/Twitter trending (real-time social) ───
+        grok_x_candidates = []
+        if self.grok_x:
+            try:
+                grok_tickers = await self.grok_x.scan()
+                for t in grok_tickers:
+                    ticker = t.get("ticker", "")
+                    if ticker and ticker.isalpha() and len(ticker) <= 5:
+                        buzz_score = {"extreme": 1.0, "high": 0.8, "medium": 0.5}.get(t.get("buzz_level", "medium"), 0.5)
+                        sent_map = {"bullish": 0.7, "bearish": -0.5, "mixed": 0.1}
+                        grok_x_candidates.append({
+                            "symbol": ticker,
+                            "price": 0,
+                            "change_pct": 0,
+                            "volume": 0,
+                            "source": "grok_x",
+                            "grok_x_reason": t.get("reason", ""),
+                            "grok_x_sentiment": t.get("sentiment", "mixed"),
+                            "grok_x_buzz": buzz_score,
+                            "sentiment_score": sent_map.get(t.get("sentiment", "mixed"), 0.1),
+                            "side": "short" if t.get("sentiment") == "bearish" else "long",
+                        })
+                if grok_x_candidates:
+                    logger.info(f"🐦 Grok X trending: {len(grok_x_candidates)} tickers")
+            except Exception as e:
+                logger.warning(f"Grok X trending scan failed: {e}")
+
         # ── MERGE: deduplicate by symbol ───────────────────────────
         seen = {}
         for s in polygon_candidates:
@@ -142,9 +170,19 @@ class Scanner:
         for s in stocktwits_candidates:
             sym = s["symbol"]
             if sym in seen:
-                # Merge trending score into polygon data
                 seen[sym]["stocktwits_trending_score"] = s.get("stocktwits_trending_score", 0)
                 seen[sym]["source"] = "both"
+            else:
+                seen[sym] = s
+
+        for s in grok_x_candidates:
+            sym = s["symbol"]
+            if sym in seen:
+                seen[sym]["grok_x_reason"] = s.get("grok_x_reason", "")
+                seen[sym]["grok_x_sentiment"] = s.get("grok_x_sentiment", "mixed")
+                seen[sym]["grok_x_buzz"] = s.get("grok_x_buzz", 0.5)
+                if seen[sym]["source"] not in ("both",):
+                    seen[sym]["source"] = seen[sym]["source"] + "+grok_x"
             else:
                 seen[sym] = s
 

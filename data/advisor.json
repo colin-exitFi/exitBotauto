@@ -1,43 +1,5 @@
 [
   {
-    "strategy": "Pre-market prep mode: tighten scanner criteria, bias toward high-volume gappers at open, then execute aggressively to break the zero-velocity deadlock",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "momentum",
-        "earnings_movers"
-      ],
-      "avoid": [
-        "low_volume",
-        "after_hours_only"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.4,
-        "suggested": 0.35,
-        "reason": "Lower barrier for first trades - we need DATA to optimize from, can't tune a silent system"
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "Market open will be fast - need higher scan frequency to catch momentum before it's priced in"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.2,
-        "suggested": 1.0,
-        "reason": "Start tighter to GUARANTEE early wins and build confidence data - can expand once we have proof of execution"
-      }
-    ],
-    "key_insight": "You're in analysis paralysis limbo. The biggest risk isn't losing 1.5% on a bad trade - it's burning entire trading days at 0% velocity. At market open (9:30 ET), prioritize EXECUTION over perfection: take the first 2-3 qualified setups even if sentiment is borderline. We need game film to learn from. A small loss teaches more than perfect idle cash. Target: 3+ trades in first 90 minutes tomorrow to kickstart the feedback loop.",
-    "timestamp": 1772672092.9187741
-  },
-  {
     "strategy": "Wait for 9:30 ET open, then deploy capital aggressively into 2-3 high-liquidity momentum plays within first hour to eliminate dead capital drag.",
     "position_advice": [],
     "sector_bias": {
@@ -1692,5 +1654,44 @@
     ],
     "key_insight": "THIS IS NOT A STRATEGY PROBLEM \u2014 THIS IS A TECHNICAL FAILURE. The data shows 11 trades executed at 07:XX (pre-market or timestamp issue?), all exiting via trailing stop in under 5 minutes with ZERO net PnL. This pattern indicates: (1) orders being filled at terrible prices then immediately stopped out, (2) data feed latency causing stale signals, or (3) stop losses set too tight for actual market spread. The scanner showing zero candidates at market open compounds concerns about data integrity. DO NOT DEPLOY CAPITAL until you verify: real-time data feed is working, order fills are at expected prices, stops are triggering on actual price movement not spread noise, and scanner is seeing live opportunities. The PDT limit (3 trades/week) makes this 100x more critical \u2014 you cannot afford to burn day trades on broken execution. Current win rate of 0% with instant exits is a technical malfunction, not a market condition. FIX THE PLUMBING BEFORE TRADING ANOTHER DOLLAR.",
     "timestamp": 1772718493.483296
+  },
+  {
+    "strategy": "HALT ALL TRADING IMMEDIATELY - 11 consecutive losses with 100% trailing stop exits in <5min indicates catastrophic execution failure, not market conditions",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - do not enter any new positions until execution analysis complete"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "11/11 trades stopped out in <5min = systematic execution problem, likely slippage/spread destroying edge before position can breathe"
+      },
+      {
+        "param": "TRAILING_STOP_ACTIVATION",
+        "current": "unknown",
+        "suggested": "investigate",
+        "reason": "100% trailing stop exits in under 5 minutes suggests stops are triggering on normal volatility/bid-ask bounce, not actual adverse moves"
+      },
+      {
+        "param": "MIN_VOLUME_FILTER",
+        "current": "unknown",
+        "suggested": "add_if_missing",
+        "reason": "TTD and PDYN may have inadequate liquidity at market open causing wide spreads that gap through stops immediately"
+      },
+      {
+        "param": "ENTRY_TIMING",
+        "current": "market_open",
+        "suggested": "wait_30min",
+        "reason": "All trades at 07:xx hour (market open) when spreads are widest and volatility highest - worst possible entry window"
+      }
+    ],
+    "key_insight": "This is NOT a strategy problem - this is an EXECUTION problem. Zero trades survived 5 minutes. Zero P&L recorded despite 11 exits. Pattern screams: (1) entering at market open when spreads destroy you, (2) stops so tight they trigger on bid-ask bounce, or (3) slippage eating the entire edge. DO NOT DEPLOY CAPITAL until you diagnose why every single trade is getting stopped out instantly. The scanner showing zero candidates right now is actually PROTECTING you. Fix execution before burning through PDT trades.",
+    "timestamp": 1772718747.3559349
   }
 ]
