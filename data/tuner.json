@@ -825,5 +825,50 @@
       }
     ],
     "timestamp": 1772717345.558038
+  },
+  {
+    "changes": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.0,
+        "reason": "CRITICAL: 11/11 trades hit trailing stop in <5min with 0.5% trail = system is stopping out on normal bid/ask noise. Double to 1.0% to allow breathing room."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.9,
+        "reason": "EMERGENCY BRAKE: 0% win rate = entry logic is broken. Advisor explicitly recommends 0.9 to halt deployment until system proves it can select winning setups."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.0,
+        "reason": "DEFENSIVE: Reduce from 3.0% to 2.0% while debugging 11-loss pattern. Smaller positions = less damage if bug persists when trading resumes."
+      }
+    ],
+    "reasoning": "EMERGENCY TUNING: 11 consecutive losses in <5min each = trailing stop triggering on noise, not real reversals. Widen trail, raise quality bar, shrink size until root cause found.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 0.5,
+        "new": 1.0,
+        "reason": "CRITICAL: 11/11 trades hit trailing stop in <5min with 0.5% trail = system is stopping out on normal bid/ask noise. Double to 1.0% to allow breathing room.",
+        "timestamp": 1772717912.2224572
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.7,
+        "new": 0.8,
+        "reason": "EMERGENCY BRAKE: 0% win rate = entry logic is broken. Advisor explicitly recommends 0.9 to halt deployment until system proves it can select winning setups.",
+        "timestamp": 1772717912.224279
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 3.0,
+        "new": 2.0,
+        "reason": "DEFENSIVE: Reduce from 3.0% to 2.0% while debugging 11-loss pattern. Smaller positions = less damage if bug persists when trading resumes.",
+        "timestamp": 1772717912.224426
+      }
+    ],
+    "timestamp": 1772717912.225763
   }
 ]

@@ -1,0 +1,87 @@
+{
+  "generated_at": 1772717912.232599,
+  "total_trades": 11,
+  "total_wins": 0,
+  "total_losses": 11,
+  "overall_win_rate_pct": 0.0,
+  "total_pnl": 0.0,
+  "avg_win": 0.0,
+  "avg_loss": 0.0,
+  "by_symbol": {
+    "TTD": {
+      "trades": 5,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "PDYN": {
+      "trades": 6,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_hour": {
+    "07": {
+      "trades": 11,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_hold_duration": {
+    "<5min": {
+      "trades": 11,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_exit_reason": {
+    "trailing_stop": {
+      "trades": 11,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_risk_tier": {
+    "COMPOUND": {
+      "trades": 11,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_conviction": {
+    "high": {
+      "trades": 11,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_day_of_week": {
+    "Thursday": {
+      "trades": 11,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "max_win_streak": 0,
+  "max_loss_streak": 11,
+  "avg_winner_hold_min": 0,
+  "avg_loser_hold_min": 0.2,
+  "recent_20_win_rate_pct": 0.0,
+  "recent_20_pnl": 0.0,
+  "recommendations": {}
+}
