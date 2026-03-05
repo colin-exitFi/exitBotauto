@@ -49,5 +49,22 @@
     "conviction_level": "high",
     "risk_tier": "COMPOUND",
     "recorded_at": 1772719939.8964028
+  },
+  {
+    "symbol": "AVGO",
+    "side": "sell",
+    "entry_price": 333.87,
+    "exit_price": 333.87,
+    "quantity": 1.40399,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "reason": "trailing_stop",
+    "hold_seconds": 36.39030599594116,
+    "entry_time": 1772720249.1571789,
+    "exit_time": 1772720285.5474849,
+    "sentiment_at_entry": 0.8462,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "recorded_at": 1772720285.547578
   }
 ]

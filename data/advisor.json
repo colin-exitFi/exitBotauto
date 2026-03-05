@@ -1,47 +1,5 @@
 [
   {
-    "strategy": "Pre-market prep mode: Build watchlist for 9:30 ET open, target high-momentum gappers with volume confirmation for immediate capital deployment",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "healthcare",
-        "consumer_discretionary"
-      ],
-      "avoid": []
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "First trading day needs faster reaction time to capture opening momentum - can relax after establishing patterns"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.4,
-        "reason": "Zero trade history means zero margin for error - slightly higher quality bar until we prove execution"
-      }
-    ],
-    "key_insight": "Day 1 is about DEPLOYMENT SPEED not perfection. The second market opens at 9:30 ET, your #1 job is getting capital working. Target: 3 positions deployed within first 60 minutes of open. Look for gap-ups with pre-market volume >200k that hold 50% of gap into open. First trade establishes data baseline for all future decisions. Dead capital on Day 1 = mission failure. Be ready to POUNCE at the bell.",
-    "premarket_checklist": [
-      "Identify 10-15 gap candidates (>3% pre-market move)",
-      "Filter for volume leaders (>500k pre-market shares)",
-      "Check news catalysts - earnings, FDA, upgrades create sustainable momentum",
-      "Mark key resistance levels from pre-market highs",
-      "Set alerts for volume spikes in first 15 minutes"
-    ],
-    "first_trade_criteria": {
-      "ideal_setup": "Stock gapping 4-8% on news, holding 60%+ of gap at 9:35 ET, volume >2x average, clear breakout level",
-      "position_size": "Start with 5% ($50) on first trade to test execution, then scale to 7% if fill quality is good",
-      "exit_plan": "Lock TP1 at 1.5% religiously - prove the system works before getting greedy"
-    },
-    "meta_note": "You have 14 hours until game time. Observer can't help you now. When 9:30 hits, you need to be a HUNTER not a spectator. The $1M goal starts with trade #1. Make it count.",
-    "timestamp": 1772672943.641624
-  },
-  {
     "strategy": "Day 1: Aggressive deployment at market open \u2014 prioritize fast pattern confirmation over perfection, establish momentum baseline with 3-5 quick trades.",
     "position_advice": [],
     "sector_bias": {
@@ -1701,5 +1659,38 @@
     ],
     "key_insight": "DATA INTEGRITY CRISIS: $1K\u2192$25K (2400% return) with zero recorded trades = account reset or funding event. Game film shows 11 losses (100% loss rate), all <5min holds, all trailing stops, all same hour \u2014 this is a scanner/execution bug, not bad luck. DO NOT TRADE until: (1) pending orders resolved, (2) extended hours disabled, (3) ATR requirement added, (4) liquidity filters implemented. 97.9% cash is CORRECT right now \u2014 this is not under-deployment, this is the system protecting you from repeating whatever caused 11 straight losses. Mission is $25K\u2192$5M, not $25K\u2192$0 in pre-market chaos.",
     "timestamp": 1772719779.798683
+  },
+  {
+    "strategy": "HALT ALL TRADING IMMEDIATELY - System is fundamentally broken and bleeding capital in seconds",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - do not deploy until root cause identified"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "11 consecutive losses, ALL exiting <5min via trailing stop, 0% win rate - this is not edge, this is a bug"
+      },
+      {
+        "param": "TRAILING_STOP_TRIGGER",
+        "current": "unknown",
+        "suggested": "INVESTIGATE",
+        "reason": "100% of trades exiting via trailing_stop within seconds suggests hair-trigger or inverted logic"
+      },
+      {
+        "param": "ENTRY_LOGIC",
+        "current": "unknown",
+        "suggested": "AUDIT",
+        "reason": "Entering positions that immediately reverse - possible stale data, bad fills, or momentum miscalculation"
+      }
+    ],
+    "key_insight": "CRITICAL DEFECT DETECTED: You achieved 2400% returns to build this $25k, but current live system has 11/11 losses with average hold time of 12 SECONDS. This is not variance - this is systematic failure. The trailing stop is triggering instantly on every trade (TTD: 5 losses, PDYN: 6 losses, 100% <5min exits). Either: (1) Entry fills are getting horrendous slippage, (2) Trailing stop logic is inverted/too tight, (3) Market data feed is delayed causing stale signals, or (4) Position sizing is triggering immediate stop-outs. DO NOT TRADE until you diagnose why positions are dying in seconds. Every trade is -1.5% ($375) gone in 12 seconds. At this rate, you'll lose the entire account in 67 trades over ~2 days. The family's future is NOT worth debugging in production with live capital. Switch to paper trading, capture tick data on next entry, and find the bug. The 2400% edge exists somewhere - but it's not in this current code.",
+    "timestamp": 1772720129.603266
   }
 ]
