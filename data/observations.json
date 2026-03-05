@@ -19,5 +19,308 @@
     "overall_sentiment": "neutral",
     "urgency": "high",
     "timestamp": 1772751299.784174
+  },
+  {
+    "market_assessment": "After-hours Thursday, market closed at 4pm ET - we're in extended hours with 9 pending positions that haven't filled yet, sitting 94% in cash.",
+    "position_health": [
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Carryover position with trailing stop active, protective"
+      },
+      {
+        "symbol": "NPT",
+        "status": "at_risk",
+        "note": "Carryover position with NO trailing stop - naked exposure"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Carryover position with trailing stop active"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Carryover position with trailing stop, showing +0.57% gain already"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "dying",
+        "note": "Extended hours order PENDING - may not fill, no trailing stop set"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "dying",
+        "note": "Extended hours order PENDING - may not fill, no trailing stop"
+      },
+      {
+        "symbol": "IOT",
+        "status": "dying",
+        "note": "Extended hours order PENDING - may not fill, no trailing stop"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "dying",
+        "note": "Extended hours order PENDING - may not fill, no trailing stop"
+      },
+      {
+        "symbol": "BW",
+        "status": "dying",
+        "note": "Extended hours order PENDING - may not fill, no trailing stop"
+      }
+    ],
+    "risk_flags": [
+      "5 extended hours positions stuck in PENDING status - uncertain if fills will execute",
+      "NPT has no trailing stop protection - needs immediate coverage",
+      "None of the 5 pending positions have trailing stops configured",
+      "94% cash deployment ($23.5K idle) while market is closed - capital velocity ZERO",
+      "At 9 positions but only 4 are confirmed filled - position count unclear",
+      "Heat at 3.6% but open risk only $35 - huge disconnect, suggests pending orders not counted",
+      "Zero trades executed today - no momentum captured"
+    ],
+    "what_working": [
+      "VG showing small gain (+0.57%) - trailing stop protecting it",
+      "Trailing stops on carryover positions (KR, SOC, VG) providing downside protection"
+    ],
+    "what_not_working": [
+      "Extended hours order execution - 5 positions pending for hours, may never fill",
+      "Capital deployment - sitting on $23K cash doing nothing overnight",
+      "Position entry timing - entered after-hours when liquidity is terrible",
+      "Risk management on new positions - no trailing stops on any pending orders"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772751892.1023018
+  },
+  {
+    "market_assessment": "Market closed (6:15 PM ET Thursday) - extended hours active, mixed regime with indices down -0.85%, but several momentum runners showing 30-40% gains on volume spikes",
+    "position_health": [
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Has trailing stop, carryover position from prior session"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "+37% runner today, already in position - excellent catch, has trailing stop"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Small gain from 12.28\u219212.35, has trailing stop"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "NO TRAILING STOP - order_status 'pending', extended hours entry, needs protection NOW"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "+7.85% runner, NO TRAILING STOP despite order_status 'pending', unprotected"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "+3.15% runner, NO TRAILING STOP, order_status 'pending', unprotected"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "NO TRAILING STOP, order_status 'pending', dead capital if not protected"
+      },
+      {
+        "symbol": "BW",
+        "status": "at_risk",
+        "note": "NO TRAILING STOP, order_status 'pending', needs immediate protection"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "+37% momentum beast, HAS trailing stop at 4%, this is a winner"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Oil play with trailing stop, protected"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 5 positions (PMTS, MRVL, IOT, TNGX, BW) have NO trailing stops despite being filled",
+      "10/10 max positions deployed - at capacity, cannot add new runners without selling",
+      "Only 9% capital deployed ($2,262 of $25K) - massive opportunity cost",
+      "PDT constraint: 6 day trades used, need to be mindful of round trips",
+      "Extended hours positions may have execution risk on stop orders"
+    ],
+    "what_working": [
+      "Momentum chasing: SOC +37%, TTDU +37% - exactly the runners we want",
+      "Social sentiment + volume spikes = winning combo",
+      "4% trailing stops on winners giving room to run"
+    ],
+    "what_not_working": [
+      "Position sizing too small - only $2,261 deployed from $25K portfolio",
+      "Trailing stop implementation failing - 5 positions unprotected",
+      "Too cautious - sitting on $22,744 cash while runners are popping"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772752533.893617
+  },
+  {
+    "market_assessment": "After-hours, Thursday evening - market closed, all positions entered in extended hours without confirmed fills yet, effectively dead capital until market open tomorrow.",
+    "position_health": [
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Carryover position with trailing stop active, defensive grocery play"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "+37% runner today, carryover with trailing stop, strong momentum"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Small gain (+0.57%), carryover with trailing stop active"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, order_status='pending' - NOT FILLED YET, dead capital"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "+7.85% move but order_status='pending' - NOT FILLED, missed the move"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "+3.15% but order_status='pending' - NOT FILLED, dead capital"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "+36.56% monster move but order_status='pending' - NOT FILLED, MASSIVE miss"
+      },
+      {
+        "symbol": "BW",
+        "status": "at_risk",
+        "note": "High conviction but order_status='pending' - NOT FILLED"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Order_status='pending' - NOT FILLED, trailing stop won't activate until filled"
+      },
+      {
+        "symbol": "UCO",
+        "status": "at_risk",
+        "note": "Oil play but order_status='pending' - NOT FILLED"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 7 of 10 positions show order_status='pending' - these are NOT filled positions, just pending orders",
+      "CAPITAL PARALYSIS: $2,242 supposedly deployed but actually $0 working if pending orders aren't filled",
+      "Extended hours liquidity trap - after-hours orders may not fill, capital stuck until 9:30am tomorrow",
+      "We're at MAX positions (10/10) but only 3 are real (KR, SOC, VG) - the rest are ghosts",
+      "TNGX missed: +36.56% move and we have a 'pending' order - this is the $3,000 miss scenario you warned about",
+      "91% of capital ($22,744) sitting in cash doing NOTHING overnight",
+      "Pattern Day Trade count at 6 - one more intraday round trip triggers PDT restriction"
+    ],
+    "what_working": [
+      "SOC momentum play: +37% move, caught it as carryover",
+      "Trailing stops on carryover positions protecting gains",
+      "Scanner identifying big movers (TNGX +36%, SOC +37%, HELP volume spike 65x)"
+    ],
+    "what_not_working": [
+      "Extended hours order execution - 7 'positions' are actually just pending orders",
+      "Capital deployment - 91% cash, only 3 real positions working",
+      "Timing - entering after-hours means missing the actual move (TNGX, MRVL)",
+      "Position verification - system treating pending orders as filled positions"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1772753140.676548
+  },
+  {
+    "market_assessment": "After-hours Thursday, market closed - all 10 positions entered in extended hours with 'pending' order status, meaning they haven't actually filled yet and are awaiting market open Friday.",
+    "position_health": [
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Carryover position with trailing stop active, stable grocery play"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Strong +37% runner today, already in portfolio, trending on scanner - this is THE momentum play"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Carryover with slight gain (+0.57%), trailing stop active"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, order pending, no trailing stop set yet"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "healthy",
+        "note": "+7.85% runner, strong volume, high sentiment (0.89), still trending - pending fill"
+      },
+      {
+        "symbol": "IOT",
+        "status": "healthy",
+        "note": "+3.15% with perfect 1.0 sentiment, 3.7x volume spike - pending fill"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Low sentiment (0.25), normal conviction, no trailing stop yet"
+      },
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "High conviction, 1.0 sentiment, trailing stop active"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "5% trailing stop, high sentiment (0.85), momentum play"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Oil leveraged ETF, 4% trail, high sentiment (0.78)"
+      }
+    ],
+    "risk_flags": [
+      "ALL 7 NEW POSITIONS ARE PENDING - won't actually fill until market open Friday",
+      "Several positions missing trailing stops (PMTS, MRVL, IOT, TNGX) - critical gap",
+      "89% cash deployment ($22K sitting idle while 'pending' orders wait)",
+      "Heat at 4.1% is minimal - we're barely exposed despite 10 'positions'",
+      "Only $2,696 actually deployed in real fills (KR, SOC, VG carryovers)",
+      "Pattern day trader risk building (7 day trades used, close to 4-trade limit)"
+    ],
+    "what_working": [
+      "SOC momentum capture (+37% today, already held)",
+      "Extended hours positioning for gap-up plays (smart pre-market strategy)",
+      "High sentiment filter working (IOT 1.0, BW 1.0, MRVL 0.89)",
+      "Volume spike detection (SOC 3.6x, IOT 3.7x, HELP 65x)"
+    ],
+    "what_not_working": [
+      "Execution timing - all new entries stuck in 'pending' limbo",
+      "Trailing stop deployment incomplete on 4 positions",
+      "Capital velocity DEAD - $22K cash doing nothing overnight",
+      "Risk management gaps between entry and stop placement"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1772753798.650207
   }
 ]

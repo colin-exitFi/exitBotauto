@@ -1,23 +1,4 @@
 {
-  "runners": [
-    {
-      "symbol": "PMTS",
-      "date": "2026-03-05",
-      "change_pct": 40.54,
-      "close_price": 17.6,
-      "volume": 533508,
-      "volume_spike": 20.26326234719443,
-      "sentiment_at_peak": 1.0
-    },
-    {
-      "symbol": "NPT",
-      "date": "2026-03-05",
-      "change_pct": 45.63,
-      "close_price": 19.15,
-      "volume": 1065391.0,
-      "volume_spike": 1.0020304996129574,
-      "sentiment_at_peak": 0.4
-    }
-  ],
-  "updated_at": "2026-03-05T17:03:23.062388"
+  "runners": [],
+  "updated_at": "2026-03-05T17:37:07.476125"
 }
