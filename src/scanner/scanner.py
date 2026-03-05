@@ -25,11 +25,12 @@ class Scanner:
       5. Score & rank
     """
 
-    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None):
+    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None):
         self.polygon = polygon_client
         self.sentiment = sentiment_analyzer
         self.stocktwits = stocktwits_client
         self.alpaca = alpaca_client
+        self.pharma = pharma_scanner
 
         self.min_price = settings.MIN_PRICE
         self.max_price = settings.MAX_PRICE
@@ -78,6 +79,33 @@ class Scanner:
                 logger.info(f"StockTwits trending: {len(stocktwits_candidates)} valid tickers")
             except Exception as e:
                 logger.warning(f"StockTwits trending failed: {e}")
+
+        # ── SOURCE 3: Pharma catalysts (FDA PDUFA dates) ───────────
+        pharma_signals = []
+        pharma_tickers = set()
+        if self.pharma:
+            try:
+                pharma_signals = await self.pharma.scan()
+                for sig in pharma_signals:
+                    ticker = sig.get("ticker", "")
+                    if ticker and ticker.isalpha() and len(ticker) <= 5:
+                        pharma_tickers.add(ticker)
+                        stocktwits_candidates.append({
+                            "symbol": ticker,
+                            "price": 0,
+                            "change_pct": 0,
+                            "volume": 0,
+                            "source": "pharma",
+                            "pharma_signal": sig.get("signal_type", ""),
+                            "pharma_score": sig.get("score", 0),
+                            "pharma_drug": sig.get("drug", ""),
+                            "pharma_days_until": sig.get("days_until", 99),
+                            "pharma_catalyst_type": sig.get("catalyst_type", ""),
+                        })
+                if pharma_tickers:
+                    logger.info(f"💊 Pharma catalysts: {len(pharma_tickers)} tickers ({', '.join(sorted(pharma_tickers))})")
+            except Exception as e:
+                logger.warning(f"Pharma catalyst scan failed: {e}")
 
         # ── MERGE: deduplicate by symbol ───────────────────────────
         seen = {}
@@ -314,11 +342,12 @@ class Scanner:
     def _calculate_score(self, c: Dict) -> float:
         """
         Composite score from multiple signals:
-          volume_spike (0.20): capped at 5x → 0-1
-          momentum     (0.20): change_pct / 10, capped 0-1
+          volume_spike (0.15): capped at 5x → 0-1
+          momentum     (0.15): change_pct / 10, capped 0-1
           sentiment    (0.25): (-1 to 1) → 0-1
-          trending     (0.20): StockTwits score / 30, capped 0-1
-          news         (0.15): has headlines = 1.0, none = 0.3
+          trending     (0.15): StockTwits score / 30, capped 0-1
+          pharma       (0.20): catalyst proximity and type
+          news         (0.10): has headlines = 1.0, none = 0.3
         """
         vol_score = min(c.get("volume_spike", 0) / 5.0, 1.0)
         mom_score = min(abs(c.get("change_pct", 0)) / 10.0, 1.0)
@@ -327,5 +356,8 @@ class Scanner:
         twits_score = min(c.get("stocktwits_trending_score", 0) / 30.0, 1.0)
         news_score = 1.0 if c.get("news_headlines") else 0.3
 
-        return (vol_score * 0.20 + mom_score * 0.20 + sent_score * 0.25 +
-                twits_score * 0.20 + news_score * 0.15)
+        # Pharma catalyst bonus — upcoming FDA decisions are HUGE signals
+        pharma_score = c.get("pharma_score", 0)
+
+        return (vol_score * 0.15 + mom_score * 0.15 + sent_score * 0.25 +
+                twits_score * 0.15 + pharma_score * 0.20 + news_score * 0.10)

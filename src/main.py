@@ -26,6 +26,7 @@ from scanner.scanner import Scanner
 from sentiment.sentiment_analyzer import SentimentAnalyzer
 from signals.stocktwits import StockTwitsClient
 from signals.twitter import TwitterSentimentClient
+from signals.pharma_catalyst import PharmaCatalystScanner
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
 from risk.risk_manager import RiskManager
@@ -111,12 +112,16 @@ class TradingBot:
         # Sentiment analyzer
         self.sentiment_analyzer = SentimentAnalyzer()
 
-        # Scanner (with StockTwits)
+        # Pharma catalyst scanner (FDA PDUFA dates)
+        self.pharma_scanner = PharmaCatalystScanner()
+
+        # Scanner (with StockTwits + Pharma)
         self.scanner = Scanner(
             polygon_client=self.polygon_client,
             sentiment_analyzer=self.sentiment_analyzer,
             stocktwits_client=self.stocktwits_client,
             alpaca_client=self.alpaca_client,
+            pharma_scanner=self.pharma_scanner,
         )
 
         # Entry manager
@@ -187,10 +192,20 @@ class TradingBot:
                     except Exception as e:
                         logger.debug(f"Equity sync error: {e}")
 
-                if not self.entry_manager.is_market_open():
-                    logger.debug("⏰ Market closed. Sleeping 60s...")
-                    await asyncio.sleep(60)
-                    continue
+                market_open = self.entry_manager.is_market_open()
+                if not market_open:
+                    # Still scan during extended hours (pre-market 4AM-9:30AM, after-hours 4PM-8PM ET)
+                    # but at a slower cadence. Skip scanning only during dead hours (8PM-4AM ET).
+                    from datetime import datetime as dt
+                    import pytz
+                    et = dt.now(pytz.timezone('US/Eastern'))
+                    extended_hours = (4 <= et.hour < 9) or (et.hour == 9 and et.minute < 30) or (16 <= et.hour < 21)
+                    if not extended_hours:
+                        logger.debug("⏰ Market closed (dead hours). Sleeping 60s...")
+                        await asyncio.sleep(60)
+                        continue
+                    # Extended hours: scan but don't trade (unless pharma catalyst)
+                    logger.debug(f"📡 Extended hours scanning ({et.strftime('%H:%M')} ET)")
 
                 if self.paused:
                     await asyncio.sleep(5)
