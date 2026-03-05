@@ -60,7 +60,8 @@ Output JSON:
 class Advisor:
     """Layer 2 AI: strategic recommendations based on accumulated intelligence."""
 
-    INTERVAL = 1800  # 30 minutes
+    INTERVAL = 1800  # 30 minutes during market hours
+    INTERVAL_AFTER_HOURS = 3600  # 60 minutes after hours
 
     def __init__(self):
         self._client = None
@@ -73,7 +74,14 @@ class Advisor:
     async def run(self, bot, observer_output: Optional[Dict] = None) -> Optional[Dict]:
         """Run advisory cycle."""
         now = time.time()
-        if now - self._last_run < self.INTERVAL:
+        from datetime import datetime
+        try:
+            import zoneinfo
+            et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
+        except Exception:
+            et_hour = 12
+        interval = self.INTERVAL if 4 <= et_hour < 20 else self.INTERVAL_AFTER_HOURS
+        if now - self._last_run < interval:
             return None
         self._last_run = now
 

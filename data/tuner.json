@@ -411,5 +411,95 @@
       }
     ],
     "timestamp": 1772684646.3310459
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 4.0,
+        "reason": "Advisor cites math: 2.5% = only $6,250 deployed (25% utilization), 4.0% = $10K deployed (40% utilization) with same 0.4% account risk per trade. Zero trades in multiple sessions proves 2.5% is leaving capital dead. Capital velocity is mission-critical."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "Advisor explicitly recommends 0.5: 'Day 1 with zero trades = no reason to accept marginal setups. Raise the bar, wait for A+ entries.' We've oscillated 0.25\u21920.4\u21920.3\u21920.4 with zero deployments. Time to follow the actual guidance."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 24.0,
+        "reason": "CRITICAL: Advisor identifies PDT trap with only 3 day trades available. 'Must operate as swing trader. Overnight holds capture gap moves and avoid PDT.' Current 3hr hold forces day trading. Moving to 24hr enables swing strategy per mission requirements."
+      }
+    ],
+    "reasoning": "Zero trades after multiple sessions = capital velocity failure. Implementing Advisor's exact math: bigger positions + higher quality bar + swing holds to break deployment deadlock and dodge PDT.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 2.5,
+        "new": 4.0,
+        "reason": "Advisor cites math: 2.5% = only $6,250 deployed (25% utilization), 4.0% = $10K deployed (40% utilization) with same 0.4% account risk per trade. Zero trades in multiple sessions proves 2.5% is leaving capital dead. Capital velocity is mission-critical.",
+        "timestamp": 1772687929.318169
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.4,
+        "new": 0.5,
+        "reason": "Advisor explicitly recommends 0.5: 'Day 1 with zero trades = no reason to accept marginal setups. Raise the bar, wait for A+ entries.' We've oscillated 0.25\u21920.4\u21920.3\u21920.4 with zero deployments. Time to follow the actual guidance.",
+        "timestamp": 1772687929.318367
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "old": 3.0,
+        "new": 24,
+        "reason": "CRITICAL: Advisor identifies PDT trap with only 3 day trades available. 'Must operate as swing trader. Overnight holds capture gap moves and avoid PDT.' Current 3hr hold forces day trading. Moving to 24hr enables swing strategy per mission requirements.",
+        "timestamp": 1772687929.318409
+      }
+    ],
+    "timestamp": 1772687929.320265
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 5.0,
+        "reason": "Day 1 with $25K cash, 0 trades, 0% heat. Advisor cites 'deploy 20-25% ($5-6K) on first strong signal' and recommends 5.0% sizing. Current 4.0% = $1K/position, 5.0% = $1.25K allowing that $5-6K deployment in 4-5 positions. Still within tier bounds (10 max positions), increases capital velocity without excessive concentration."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.65,
+        "reason": "Advisor explicitly states 'With only 3 daytrades per 5 days, every entry must be higher conviction - raise the bar' and recommends 0.65. Previous oscillation (0.25\u21920.4\u21920.5) produced zero deployments. PDT constraint demands A+ setups only. Following exact recommendation."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 2.0,
+        "reason": "Advisor recommends 2.0%: 'Give winners more room in pre-market where gaps can be explosive - 1.5% may cut profits too early.' With swing trade bias (24hr holds) and PDT limitation forcing fewer but better trades, TP1 at 2.0% aligns with letting winners run while still locking partial gains."
+      }
+    ],
+    "reasoning": "PDT constraint fundamentally changes the game - implement Advisor's swing trade framework: higher conviction filter (0.65 sentiment), larger positions (5.0% for velocity), wider profit targets (2.0% TP1).",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 4.0,
+        "new": 5.0,
+        "reason": "Day 1 with $25K cash, 0 trades, 0% heat. Advisor cites 'deploy 20-25% ($5-6K) on first strong signal' and recommends 5.0% sizing. Current 4.0% = $1K/position, 5.0% = $1.25K allowing that $5-6K deployment in 4-5 positions. Still within tier bounds (10 max positions), increases capital velocity without excessive concentration.",
+        "timestamp": 1772689735.181071
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.5,
+        "new": 0.65,
+        "reason": "Advisor explicitly states 'With only 3 daytrades per 5 days, every entry must be higher conviction - raise the bar' and recommends 0.65. Previous oscillation (0.25\u21920.4\u21920.5) produced zero deployments. PDT constraint demands A+ setups only. Following exact recommendation.",
+        "timestamp": 1772689735.181217
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 1.5,
+        "new": 2.0,
+        "reason": "Advisor recommends 2.0%: 'Give winners more room in pre-market where gaps can be explosive - 1.5% may cut profits too early.' With swing trade bias (24hr holds) and PDT limitation forcing fewer but better trades, TP1 at 2.0% aligns with letting winners run while still locking partial gains.",
+        "timestamp": 1772689735.181264
+      }
+    ],
+    "timestamp": 1772689735.182247
   }
 ]

@@ -52,7 +52,8 @@ Output JSON:
 class Observer:
     """Layer 1 AI: observes everything, flags issues, logs findings."""
 
-    INTERVAL = 600  # 10 minutes
+    INTERVAL = 600  # 10 minutes during market hours
+    INTERVAL_AFTER_HOURS = 1800  # 30 minutes after hours
 
     def __init__(self):
         self._client = None
@@ -65,7 +66,15 @@ class Observer:
     async def run(self, bot) -> Optional[Dict]:
         """Run observation cycle. Returns findings dict or None."""
         now = time.time()
-        if now - self._last_run < self.INTERVAL:
+        # Throttle: 10 min during market hours, 30 min after hours
+        from datetime import datetime
+        try:
+            import zoneinfo
+            et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
+        except Exception:
+            et_hour = 12
+        interval = self.INTERVAL if 4 <= et_hour < 20 else self.INTERVAL_AFTER_HOURS
+        if now - self._last_run < interval:
             return None
         self._last_run = now
 

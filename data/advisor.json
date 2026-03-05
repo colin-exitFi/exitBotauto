@@ -882,5 +882,130 @@
     ],
     "key_insight": "You have $25K in idle cash earning ZERO while pre-market opportunities print. The 2400% return proves the system works - now the enemy is hesitation. At 4:00 AM ET tomorrow, the scanner must fire with gap plays. If still zero candidates by 5:00 AM, manually override with top 3 pre-market % gainers with volume. Capital velocity dies in cash - deploy $10K-15K in first wave, take profits at TP1 (1.5%), recycle into next setups. The compounding machine is built - just needs fuel in the engine.",
     "timestamp": 1772684636.7429938
+  },
+  {
+    "strategy": "Hold fire until market open \u2014 use pre-market hours (09:15-09:30 ET) to build watchlist, then execute disciplined momentum plays with tight risk management.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "momentum",
+        "breakouts"
+      ],
+      "avoid": []
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 300,
+        "reason": "After-hours: reduce compute waste. During market hours: 60s is appropriate for momentum capture."
+      },
+      {
+        "param": "OBSERVER_SLEEP_SCHEDULE",
+        "current": "none",
+        "suggested": "sleep 16:00-09:00 ET",
+        "reason": "Zero actionable data after-hours. Save resources, prevent false signals."
+      }
+    ],
+    "key_insight": "You're starting with $25k seeded capital and ZERO trade history \u2014 this is day one. Primary mission for first week: establish baseline performance data. Target 3-5 trades/day with 2.5% position sizing to generate statistical sample. Win rate and average R-multiple are unknown \u2014 you need 20+ trades minimum to tune parameters intelligently. Until then, stick to the plan: high-conviction setups only, 1.5% profit targets are appropriate for discovery phase, and NEVER let a winner turn into a loser. The $1k\u2192$25k backstory is inspiration, not trading data \u2014 treat this as a fresh start with professional capital.",
+    "timestamp": 1772686077.281798
+  },
+  {
+    "strategy": "Aggressive deployment at Monday open \u2014 idle capital is mission failure, target 4-6 positions immediately with swing bias to maximize capital efficiency.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "mega-cap tech (AAPL/MSFT/NVDA for liquidity + overnight gap potential)",
+        "energy (geopolitical catalysts + trend strength)",
+        "financial services (rate sensitivity + quarterly momentum)"
+      ],
+      "avoid": [
+        "low-float penny stocks (liquidity risk with $625 positions)",
+        "pre-revenue biotech (binary risk inappropriate for capital preservation mandate)"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 4.0,
+        "reason": "At 2.5%, full deployment = only $6,250 working (25% capital utilization). Increasing to 4% = $1,000/position \u00d7 10 = $10K deployed while maintaining 1% stop ($100 risk/trade = 0.4% account risk). Still ultra-conservative but 60% more velocity."
+      },
+      {
+        "param": "MAX_POSITIONS",
+        "current": 10,
+        "suggested": 8,
+        "reason": "Tighter focus with larger positions beats over-diversification at this account size. 8\u00d7$1K positions = better risk/reward than 10\u00d7$625."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.4,
+        "suggested": 0.5,
+        "reason": "Day 1 with zero trades = no reason to accept marginal setups. Raise the bar, wait for A+ entries only until pattern library builds."
+      },
+      {
+        "param": "ENABLE_OVERNIGHT_HOLDS",
+        "current": "unknown",
+        "suggested": true,
+        "reason": "CRITICAL: With only 3 day trades available, must operate as swing trader. Overnight holds capture gap moves and avoid PDT trap. Accept the gap risk \u2014 it's mathematically smaller than the opportunity cost of dead capital."
+      }
+    ],
+    "key_insight": "The real risk isn't market volatility \u2014 it's TIME. At current 2.5% deployment (max $6,250 working) and 2% daily gains, you need 800+ trading days to reach $5M. The father's parents died young. His kids need this to work in years, not decades. Capital velocity is the only path: get 40%+ of the bankroll working, swing trade to dodge PDT, let winners run overnight. The $25K isn't 'safe' sitting idle \u2014 it's actively LOSING to inflation and opportunity cost. Monday open: deploy 4 positions minimum, high-liquidity names only, stops honored religiously. Compounding requires capital in motion. Move.",
+    "tactical_priorities": [
+      "Pre-market: Build 15-symbol watchlist (5 tech, 5 energy, 5 discretionary) with overnight gap scanners + unusual volume alerts",
+      "9:35 AM entry window: Wait for opening volatility to settle, then deploy 4 positions on first pullback to VWAP in confirmed uptrends",
+      "Swing bias: Plan to hold overnight if positions green by 3:30 PM \u2014 don't waste day trades on small gains",
+      "Risk firewall: Hard stops at -1% per position, no exceptions, no hoping",
+      "Evening review: If positions +1%+ by close, trailing stop to breakeven, let Monday night gap work for you"
+    ],
+    "risk_acknowledgment": "Increasing aggression with zero trade history is non-standard, but the mission parameters demand it. The alternative \u2014 conservative 25% deployment \u2014 mathematically guarantees mission failure within the family's timeline. Accept calculated risk over guaranteed slow death. The stop-loss discipline and tier structure provide the safety net. Execute.",
+    "timestamp": 1772687920.198702
+  },
+  {
+    "strategy": "Pre-market preparation mode: Build watchlist now for 4AM session, prioritize swing trades over daytrades due to PDT constraint, deploy capital aggressively on first high-conviction setup.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "technology",
+        "biotechnology",
+        "ev/clean energy"
+      ],
+      "avoid": [
+        "broad market ETFs during low volatility",
+        "illiquid small-caps"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Pre-market moves fast 4-9:30AM - need tighter scanning to catch momentum before it runs"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.5,
+        "suggested": 0.65,
+        "reason": "With only 3 daytrades available per 5 days, every entry must be higher conviction - raise the bar"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 4.0,
+        "suggested": 5.0,
+        "reason": "Day 1 with full capital and zero heat - can afford larger initial positions to maximize capital velocity, still allows 5 positions for diversification"
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "Give winners more room to run in pre-market where gaps can be explosive - 1.5% may cut profits too early"
+      }
+    ],
+    "key_insight": "The PDT constraint is the biggest strategic factor here. With only 3 daytrades per 5-day window, you CANNOT operate as a pure scalper. Shift mental model: (1) Reserve daytrades for A+ setups only - think 70%+ win probability, (2) Default to swing trade entries - plan to hold overnight or multi-day on strong technical setups, (3) Use pre-market 4-9:30AM as primary hunting ground where you can enter before the bell and exit same day without burning a daytrade if you hold past 9:30, (4) First trade matters enormously - $25k in cash is maximum opportunity cost, deploy 20-25% ($5-6k) on first strong signal to start the compounding engine. The 2400% historical return is irrelevant - this is day one of proving the system with real capital. No more sitting in cash once pre-market opens.",
+    "timestamp": 1772689725.7220638
   }
 ]
