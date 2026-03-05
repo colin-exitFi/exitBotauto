@@ -14,9 +14,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
-# ── Shared rate limiter across all agents ─────────────────────────
-_call_timestamps: list = []
+# ── Per-provider rate limiters ─────────────────────────────────────
+_provider_timestamps: Dict[str, list] = {
+    "claude": [],
+    "gpt": [],
+    "grok": [],
+    "perplexity": [],
+}
 _api_calls: Dict[str, int] = {"claude": 0, "gpt": 0, "grok": 0, "perplexity": 0}
+
+# Per-provider limits per hour (conservative defaults under actual API limits)
+_PROVIDER_LIMITS: Dict[str, int] = {
+    "claude": 200,   # Anthropic: ~1000 RPM on paid tier
+    "gpt": 200,      # OpenAI: 500 RPM on paid tier
+    "grok": 60,      # xAI: lower tier, reasoning model is slow anyway
+    "perplexity": 60, # Perplexity: moderate tier
+}
 
 TIMEOUT = 45
 
@@ -25,21 +38,27 @@ def get_api_stats() -> Dict:
     return dict(_api_calls)
 
 
-def _check_rate_limit() -> bool:
-    """Returns True if we're under the rate limit."""
+def _check_rate_limit(provider: str) -> bool:
+    """Returns True if the given provider is under its rate limit."""
     from datetime import datetime
     try:
         import zoneinfo
         _et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
     except Exception:
         _et_hour = 12
-    default_limit = 200 if 4 <= _et_hour < 20 else 30
-    max_per_hour = getattr(settings, 'CONSENSUS_MAX_CALLS_PER_HOUR', default_limit)
+
+    # After hours: reduce all limits to save cost
+    if not (4 <= _et_hour < 20):
+        limit = 30
+    else:
+        limit = _PROVIDER_LIMITS.get(provider, 60)
+
+    timestamps = _provider_timestamps.setdefault(provider, [])
     now = time.time()
-    _call_timestamps[:] = [t for t in _call_timestamps if now - t < 3600]
-    if len(_call_timestamps) >= max_per_hour:
+    timestamps[:] = [t for t in timestamps if now - t < 3600]
+    if len(timestamps) >= limit:
         return False
-    _call_timestamps.append(now)
+    timestamps.append(now)
     return True
 
 
@@ -66,7 +85,7 @@ async def call_claude(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Claude Sonnet and return parsed JSON."""
     if not settings.ANTHROPIC_API_KEY:
         return None
-    if not _check_rate_limit():
+    if not _check_rate_limit("claude"):
         logger.warning("Rate limit reached — skipping Claude call")
         return None
     model = getattr(settings, 'CLAUDE_MODEL', 'claude-sonnet-4-5-20250929')
@@ -98,7 +117,7 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call GPT-5.2 and return parsed JSON."""
     if not settings.OPENAI_API_KEY:
         return None
-    if not _check_rate_limit():
+    if not _check_rate_limit("gpt"):
         logger.warning("Rate limit reached — skipping GPT call")
         return None
     model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.2')
@@ -129,7 +148,7 @@ async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Grok-4 via xAI and return parsed JSON."""
     if not settings.XAI_API_KEY:
         return None
-    if not _check_rate_limit():
+    if not _check_rate_limit("grok"):
         logger.warning("Rate limit reached — skipping Grok call")
         return None
     model = getattr(settings, 'XAI_MODEL', 'grok-4-0709')
@@ -161,7 +180,7 @@ async def call_perplexity(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Perplexity sonar-pro and return parsed JSON."""
     if not settings.PERPLEXITY_API_KEY:
         return None
-    if not _check_rate_limit():
+    if not _check_rate_limit("perplexity"):
         logger.warning("Rate limit reached — skipping Perplexity call")
         return None
     model = getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro')
