@@ -1,16 +1,16 @@
 {
-  "last_observation": "Market open 51 minutes, no trades executed today yet \u2014 positions inherited from prior session, currently in observation mode.",
-  "last_advice": "Immediate portfolio cleanup required \u2014 exit dead capital, redeploy into proper-sized positions, and diagnose scanner failure before deploying more capital.",
-  "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.15\u21920.5, MAX_CONCURRENT_POSITIONS:12\u21928, POSITION_SIZE_PCT:2.5\u21922.0",
-  "last_game_film_summary": "9 trades, 44.4% WR, $378.68",
-  "last_position_manager": "healthy | 0 exits | 0 vetoes",
+  "last_observation": null,
+  "last_advice": null,
+  "last_tuner_changes": null,
+  "last_game_film_summary": null,
+  "last_position_manager": null,
   "last_consensus": {
-    "symbol": "HELP",
+    "symbol": "TTDU",
     "decision": "SKIP",
     "size_pct": 0,
     "trail_pct": 3.0,
     "reasoning": "Jury AI call failed",
     "confidence": 0.0,
-    "timestamp": 1772726331.587574
+    "timestamp": 1772727376.5702631
   }
 }

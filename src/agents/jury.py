@@ -57,10 +57,12 @@ AGENT BRIEFS:
 {macro}
 
 DECISION FRAMEWORK:
-- BUY if: Technical + at least one of (sentiment, catalyst, macro) align bullish AND risk approves
+- BUY if: 3+ agents are bullish/positive AND risk approves. Technical HOLD does NOT veto if momentum exists (high change%, high volume).
+- BUY aggressively: If change >10% with volume >5x and sentiment bullish — this is our bread and butter. Don't overthink it.
 - SHORT if: Clear bearish catalyst + technical breakdown + risk approves
-- SKIP if: Risk denies, or agents contradict each other with low confidence, or no clear edge
-- We have 3% trailing stops — bias toward action when edge exists
+- SKIP ONLY if: Risk explicitly denies, OR fewer than 2 agents support the trade, OR genuinely no edge
+- We have trailing stops — bias HEAVILY toward action. Dead capital is the enemy. A stopped-out trade costs 2-3%, a missed runner costs 20-50%.
+- When in doubt, BUY with smaller size rather than SKIP entirely.
 
 SIZING:
 - size_pct: 0.5% (speculative) to 3% (high conviction) of equity
