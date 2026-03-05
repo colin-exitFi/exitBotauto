@@ -200,34 +200,19 @@ class EntryManager:
             except Exception:
                 pass
 
-        # Calculate stop loss percentage (ATR-based or default 3%)
-        stop_loss_pct = 3.0  # default
+        # Calculate trail percent (ATR-based or default 3%)
+        trail_pct = 3.0  # default
         if atr_value and atr_value > 0:
-            # ATR-based stop: 1.5x ATR as percentage of price
-            stop_loss_pct = round((atr_value * 1.5 / price) * 100, 2)
-            stop_loss_pct = max(1.5, min(stop_loss_pct, 5.0))  # clamp 1.5-5%
+            # ATR-based trail: 1.5x ATR as percentage of price
+            trail_pct = round((atr_value * 1.5 / price) * 100, 2)
+            trail_pct = max(1.5, min(trail_pct, 5.0))  # clamp 1.5-5%
 
-        # Trail percent for trailing stop (slightly tighter than initial stop)
-        trail_pct = round(stop_loss_pct * 0.8, 2)  # 80% of initial stop = tighter trail
-        trail_pct = max(1.5, min(trail_pct, 4.0))  # clamp 1.5-4%
-
-        # Place order with broker-side protection
+        # ── STEP 1: BUY the stock ─────────────────────────────────
         order = None
-        whole_shares = int(shares) if shares >= 1 else 0
-
         for attempt in range(1, self.max_retries + 1):
             limit_price = round(price * 1.002, 2)  # 0.2% slippage buffer
 
-            if whole_shares >= 1 and hasattr(self.broker, 'place_bracket_buy') and not extended:
-                # BRACKET ORDER: Buy + broker-side stop loss (bulletproof)
-                order = await asyncio.get_event_loop().run_in_executor(
-                    None, self.broker.place_bracket_buy, symbol, whole_shares,
-                    limit_price, stop_loss_pct, None  # no take profit — trailing stop handles upside
-                )
-                if order and order.get('type') == 'bracket':
-                    logger.info(f"🛡️ Bracket order placed: {symbol} stop={stop_loss_pct}% trail={trail_pct}%")
-            elif extended:
-                # Extended hours: limit order only (no brackets)
+            if extended:
                 if hasattr(self.broker, 'place_limit_buy_extended'):
                     order = await asyncio.get_event_loop().run_in_executor(
                         None, self.broker.place_limit_buy_extended, symbol, int(shares) if shares >= 1 else shares, limit_price
@@ -254,6 +239,22 @@ class EntryManager:
                 break
             await asyncio.sleep(2)
 
+        # ── STEP 2: Immediately place trailing stop % ─────────────
+        # This is the ONLY exit strategy. Up or down, if it gives back trail_pct%, we're out.
+        trailing_stop_order = None
+        if order and hasattr(self.broker, 'place_trailing_stop'):
+            filled_qty = int(float(order.get("filled_qty", order.get("qty", shares))))
+            if filled_qty >= 1:
+                # Small delay to let the fill register
+                await asyncio.sleep(1)
+                trailing_stop_order = await asyncio.get_event_loop().run_in_executor(
+                    None, self.broker.place_trailing_stop, symbol, filled_qty, trail_pct
+                )
+                if trailing_stop_order:
+                    logger.success(f"📈 Trailing stop set: {symbol} {filled_qty}sh trail={trail_pct}%")
+                else:
+                    logger.warning(f"⚠️ Trailing stop FAILED for {symbol} — will retry next monitor cycle")
+
         if not order:
             logger.error(f"Failed to enter {symbol} after {self.max_retries} attempts")
             return None
@@ -273,14 +274,13 @@ class EntryManager:
             "conviction_level": conviction,
             "risk_tier": self.risk.get_risk_tier().get("name", "?") if self.risk else "?",
             "notional": notional,
-            "stop_loss_pct": stop_loss_pct,
             "trail_pct": trail_pct,
-            "has_bracket_stop": order.get("type") == "bracket",
-            "bracket_legs": order.get("legs", []),
+            "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
+            "has_trailing_stop": trailing_stop_order is not None,
         }
         self.positions[symbol] = position
-        stop_info = f" 🛡️ stop={stop_loss_pct}%" if position["has_bracket_stop"] else ""
-        logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total){stop_info}")
+        trail_info = f" 📈 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
+        logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total){trail_info}")
         return position
 
     def _load_brokerage_positions(self):

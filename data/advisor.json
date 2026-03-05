@@ -272,5 +272,44 @@
     ],
     "key_insight": "You're sitting on 100% idle capital after hours with zero execution data. The REAL risk isn't losing 1.5% on a trade \u2014 it's burning Day 1 with no velocity. At 9:30 ET tomorrow, your mission is simple: get 3-5 positions working within the first hour. Prioritize SPEED over perfection. Every trade teaches the system something. Scanner issues may resolve with live market data, but verify pre-market that candidates are flowing. If scanner is truly broken by 9:45 ET, manually force 2-3 positions in high-volume tech names (AAPL, NVDA, TSLA) just to establish baseline execution. Capital velocity starts tomorrow \u2014 make it count.",
     "timestamp": 1772673419.240011
+  },
+  {
+    "strategy": "Stand down until market open \u2014 after-hours is a capital trap, not an opportunity",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "momentum",
+        "breakouts"
+      ],
+      "avoid": [
+        "low-volume",
+        "pre-revenue",
+        "after-hours-only movers"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.2,
+        "suggested": 1.5,
+        "reason": "1.2% is too tight for $1K account \u2014 slippage and fees eat into edge. 1.5% gives breathing room while maintaining velocity"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.25,
+        "suggested": 0.35,
+        "reason": "Starting cold with zero game film \u2014 need higher conviction plays until we build pattern recognition. Tighten after 20+ trades"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 300,
+        "reason": "After-hours: save compute costs, run every 5min. Switch to 60s at 9:30 AM ET market open"
+      }
+    ],
+    "key_insight": "Zero deployment isn't a failure right now \u2014 it's correct risk management. After-hours with $1K starting capital is pure gamble territory (wide spreads, no liquidity, news-driven chaos). Real game starts at 9:30 AM ET tomorrow. Use this time to validate scanner is working and will fire at open. First 30 minutes of regular session is where we hunt \u2014 that's when volume and volatility create our edge. Stay patient, stay ready, pounce at the bell.",
+    "timestamp": 1772674005.1975281
   }
 ]
