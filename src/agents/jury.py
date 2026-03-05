@@ -59,12 +59,13 @@ AGENT BRIEFS:
 {macro}
 
 DECISION FRAMEWORK:
-- BUY if: Technical says BUY AND risk approves AND at least one other agent supports
-- The key question: "Is this move still happening, or did we miss it?" If momentum is fresh → BUY. If it's fading → SKIP.
-- SHORT if: Technical says SELL AND catalyst or macro supports bearish AND risk approves
-- SKIP if: Risk denies, Technical says HOLD/SELL, or momentum has clearly faded
-- We trade momentum. Trailing stops (3%) manage our risk. Bias toward action when the setup is clean.
-- Dead capital costs opportunity. But chasing a faded move costs money. Be smart, not reckless.
+- BIAS TOWARD ACTION. Dead capital is the enemy. Trailing stops manage risk — your job is to find trades, not avoid them.
+- BUY if: Stock is up significantly (+10%+) with volume (1.5x+) and risk approves. Technical BUY is ideal but Technical HOLD with decent confidence (50%+) is also fine if other signals support.
+- SHORT if: Stock is crashing hard (-5%+ down) with volume, Technical says SELL, and macro/catalyst supports bearish case.
+- SKIP ONLY if: Risk explicitly denies, OR the stock has tiny volume (<1x avg), OR the move is clearly over (price reversing against the trend).
+- If some agents are unavailable, MAKE THE CALL with what you have. 3 agents is enough. Don't skip just because sentiment or catalyst is offline.
+- "Decelerating momentum" alone is NOT a reason to skip. Stocks don't go straight up — they consolidate and continue. If price is still up big on volume, the trend is intact.
+- We have trailing stops at 3%. Maximum downside per trade is 3%. The cost of a wrong entry is small. The cost of missing a runner is infinite.
 
 SIZING:
 - size_pct: 0.5% (speculative) to 3% (high conviction) of equity

@@ -1,1 +1,39 @@
-{}
+{
+  "AAL": {
+    "symbol": "AAL",
+    "side": "short",
+    "entry_price": 11.64,
+    "quantity": 64,
+    "entry_time": 1772739514.372905,
+    "sentiment_at_entry": -0.4545,
+    "peak_price": 11.64,
+    "order_id": "d95e3c94-5fe4-49bb-ab63-5d2a53c6bb2b",
+    "partial_exit": false,
+    "extended_hours_entry": false,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "notional": 744.96,
+    "trail_pct": 3.0,
+    "trailing_stop_order_id": "d6b96bfd-f835-4d53-8ab7-abd9567e2e3a",
+    "has_trailing_stop": true
+  },
+  "ACHR": {
+    "symbol": "ACHR",
+    "side": "short",
+    "entry_price": 6.345,
+    "quantity": 88,
+    "entry_time": 1772739596.24723,
+    "sentiment_at_entry": -0.4286,
+    "peak_price": 6.345,
+    "order_id": "fe6de7e1-4c92-45cd-8ebd-30ab09666f1a",
+    "partial_exit": false,
+    "extended_hours_entry": false,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "notional": 558.36,
+    "trail_pct": 1.0,
+    "trailing_stop_order_id": "40788208-c5f6-477a-999c-d304a44b63db",
+    "has_trailing_stop": true,
+    "_trail_retry_count": 0
+  }
+}

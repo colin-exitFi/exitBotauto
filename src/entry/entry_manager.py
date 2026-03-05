@@ -87,14 +87,14 @@ class EntryManager:
                     logger.info(f"📈 {symbol} already held at ${entry_price:.2f}, peak ${peak_price:.2f} (+{pnl_pct:.1f}%) — allowing average-up evaluation")
                     # Don't block — let Risk Agent decide
                 else:
-                    logger.debug(f"Already in position: {symbol} (only +{pnl_pct:.1f}%, need +3% to average up)")
+                    logger.info(f"⛔ Already in position: {symbol} (only +{pnl_pct:.1f}%, need +3% to average up)")
                     return False
             else:
-                logger.debug(f"Already in position: {symbol} (underwater — blocking)")
+                logger.info(f"⛔ Already in position: {symbol} (underwater — blocking)")
                 return False
 
         if sentiment_score < self.min_sentiment:
-            logger.debug(f"{symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")
+            logger.info(f"⛔ {symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")
             return False
 
         if self.risk and not self.risk.can_open_position(current_positions, symbol=symbol):
