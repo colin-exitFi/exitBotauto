@@ -1,37 +1,37 @@
 {
-  "last_observation": "Market just opened (09:20 ET) - too early to assess trend; awaiting first 30 minutes to establish directional bias and volatility profile.",
-  "last_advice": "HALT ALL TRADING \u2014 System shows catastrophic scanner failure and contradictory data suggesting potential reset/corruption; diagnose before deploying any capital.",
+  "last_observation": "Market just opened (9:28 ET), no positions deployed yet, clean slate with full buying power available.",
+  "last_advice": "HOLD FIRE - Do not deploy capital until market data returns and we understand the 11-trade loss streak context",
   "last_tuner_changes": "SCAN_INTERVAL_SECONDS:60\u2192300, TRAILING_STOP_PCT:2.0\u21921.0, MIN_ENTRY_SENTIMENT:0.0\u21920.3",
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "LWLG",
+    "symbol": "HELP",
     "final_decision": "SKIP",
     "size_modifier": 0.0,
-    "avg_confidence": 67.0,
+    "avg_confidence": 79.0,
     "claude": {
       "model": "claude",
       "decision": "SKIP",
-      "confidence": 72,
-      "reasoning": "RSI at 87.5 indicates extreme overbought conditions with price 25.9% above VWAP. Already up 6.68% today with parabolic extension. Volume data missing (0.0x) prevents confirmation of sustainable moment",
+      "confidence": 75,
+      "reasoning": "Down 24% intraday with no volume data, no news catalyst, and neutral RSI at 54. Below VWAP by 8.6% suggests selling pressure, but without clear directional momentum or volume confirmation, this is dea",
       "error": null
     },
     "gpt": {
       "model": "gpt",
       "decision": "SKIP",
-      "confidence": 62,
-      "reasoning": "Price is extremely extended (RSI 87.5, +25.9% above VWAP) on no real volume confirmation (0.0x avg). That combo usually means late-stage pop/air-pocket risk and unreliable continuation; not a clean lo",
+      "confidence": 72,
+      "reasoning": "Down -24% but no confirming momentum: volume reads 0.0x avg, no news/catalyst, not trending, and RSI is neutral (~54). Price is far below VWAP (-8.6%) suggesting weakness, but without volume/flow this",
       "error": null
     },
     "grok": {
       "model": "grok",
-      "decision": "ERR",
-      "confidence": 0,
-      "reasoning": "",
-      "error": "Server error '504 Gateway Time-out' for url 'https://api.x.ai/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504"
+      "decision": "SKIP",
+      "confidence": 90,
+      "reasoning": "Huge price drop on zero volume indicates no momentum or clear direction; slightly positive sentiment but no news, trending, or catalysts to support a trade.",
+      "error": null
     },
     "perplexity": null,
-    "reasoning": "No majority \u2014 BUY:0 SHORT:0 SKIP:2",
-    "timestamp": 1772720539.860079
+    "reasoning": "No majority \u2014 BUY:0 SHORT:0 SKIP:3",
+    "timestamp": 1772721241.254084
   }
 }

@@ -1,1 +1,22 @@
-{}
+{
+  "AVGO": {
+    "symbol": "AVGO",
+    "entry_price": 328.08,
+    "quantity": 1.61927,
+    "entry_time": 1772721112.370434,
+    "sentiment_at_entry": 0.6,
+    "peak_price": 328.08,
+    "side": "long",
+    "order_id": "b6ee43c6-417f-406a-94d0-f7a32a2e58ba",
+    "partial_exit": false,
+    "atr_at_entry": null,
+    "extended_hours_entry": false,
+    "conviction_level": "normal",
+    "risk_tier": "COMPOUND",
+    "notional": 531.25,
+    "trail_pct": 3.0,
+    "trailing_stop_order_id": "1ad81083-7f4f-4836-b47e-e6f98335d94d",
+    "has_trailing_stop": true,
+    "order_status": "filled"
+  }
+}

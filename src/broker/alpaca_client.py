@@ -373,7 +373,7 @@ class AlpacaClient:
             
             order_data = {
                 'symbol': symbol,
-                'qty': str(int(qty)),
+                'qty': str(qty),
                 'side': 'buy',
                 'type': 'limit',
                 'limit_price': str(round(limit_price, 2)),
@@ -446,7 +446,7 @@ class AlpacaClient:
 
             order_data = {
                 'symbol': symbol,
-                'qty': str(int(qty)),
+                'qty': str(qty),
                 'side': 'sell',
                 'type': 'limit',
                 'limit_price': str(round(limit_price, 2)),
@@ -495,7 +495,7 @@ class AlpacaClient:
             logger.error(f"Bracket short error for {symbol}: {e}")
             return None
 
-    def place_trailing_stop(self, symbol: str, qty: int, trail_percent: float = 3.0) -> Optional[Dict]:
+    def place_trailing_stop(self, symbol: str, qty, trail_percent: float = 3.0) -> Optional[Dict]:
         """
         Place a trailing stop sell order on an existing position.
         The stop price follows the stock up and triggers on a pullback.
@@ -509,7 +509,7 @@ class AlpacaClient:
         try:
             order_data = {
                 'symbol': symbol,
-                'qty': str(int(qty)),
+                'qty': str(qty),
                 'side': 'sell',
                 'type': 'trailing_stop',
                 'trail_percent': str(trail_percent),
