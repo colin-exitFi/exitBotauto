@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-exitBotauto - Autonomous Stock Trading Bot
+Velox - Autonomous Velocity Trading Engine
 Main loop: scan → filter → enter → monitor → exit
 AI layers: observe → advise → tune → manage positions
 """
@@ -79,7 +79,7 @@ class TradingBot:
 
     async def initialize(self):
         """Initialize all components."""
-        logger.info("🤖 Initializing exitBotauto...")
+        logger.info("⚡ Initializing Velox...")
 
         # Alpaca broker
         self.alpaca_client = AlpacaClient()
@@ -176,7 +176,7 @@ class TradingBot:
         """Main trading loop with AI layers running as concurrent tasks."""
         self.running = True
         self.start_time = time.time()
-        logger.info("🚀 exitBotauto LIVE")
+        logger.info("🚀 Velox LIVE")
 
         # Launch AI layers as background tasks
         ai_task = asyncio.create_task(self._ai_loop())

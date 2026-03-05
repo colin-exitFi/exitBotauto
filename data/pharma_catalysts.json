@@ -2,7 +2,7 @@
   "catalysts": [
     {
       "ticker": "OTSKF",
-      "company": "OTSKF",
+      "company": "Onsi",
       "drug": "INQOVI + Venetoclax",
       "indication": "Acute Myeloid Leukemia",
       "date": "2026-02-25",
@@ -42,22 +42,14 @@
     },
     {
       "ticker": "LNTH",
-      "company": "LNTH",
+      "company": "Lantheus",
       "drug": "Ga68-edotreotide",
       "indication": "GEP-NETs Imaging",
       "date": "2026-03-29",
       "type": "NDA[1]"
-    },
-    {
-      "ticker": "DNLI",
-      "company": "Denali Therapeutics",
-      "drug": "Tividenofusp alfa",
-      "indication": "MPS-IIIA (Sanfilippo)",
-      "date": "2026-04-05",
-      "type": "NDA[1]"
     }
   ],
   "known_approvals": [],
-  "last_pplx_refresh": 1772672916.0207849,
-  "updated_at": "2026-03-04T19:08:36.025516"
+  "last_pplx_refresh": 1772676004.093792,
+  "updated_at": "2026-03-04T20:00:04.094828"
 }

@@ -1,5 +1,5 @@
 """
-exitBotauto - Autonomous Stock Trading Bot
+Velox - Autonomous Stock Trading Bot
 """
 
 __version__ = "0.1.0"

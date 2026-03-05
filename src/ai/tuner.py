@@ -24,7 +24,7 @@ MODEL = "claude-sonnet-4-5-20250929"
 CONFIG_STATE_FILE = DATA_DIR / "config_state.json"
 
 MISSION = (
-    "You are an AI trading advisor for exitBotauto. Mission: grow $1,000 to $1,000,000 "
+    "You are an AI trading advisor for Velox. Mission: grow $1,000 to $1,000,000 "
     "through capital velocity — stacking consistent 1-2% wins, taking profit aggressively, "
     "cutting losers fast. You have full autonomy within hard safety bounds. "
     "Every dollar of dead capital is a missed opportunity."

@@ -1,5 +1,5 @@
 """
-exitBotauto - Configuration & Settings
+Velox - Configuration & Settings
 All settings loaded from .env with sensible defaults.
 """
 

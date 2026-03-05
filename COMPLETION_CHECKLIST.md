@@ -1,4 +1,4 @@
-# exitBotauto — Completion Checklist
+# Velox — Completion Checklist
 
 ## ✅ DONE — Core Trading Engine (4,791 lines)
 - [x] Alpaca client (paper + live, smart orders, fractional shares, extended hours)

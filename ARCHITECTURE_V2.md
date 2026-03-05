@@ -1,4 +1,4 @@
-# exitBotauto v2 Architecture — The Wealth Engine
+# Velox v2 Architecture — The Wealth Engine
 
 ## Philosophy
 "I want to feel comfortable putting ALL my capital into this."

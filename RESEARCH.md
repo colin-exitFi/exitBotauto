@@ -1,4 +1,4 @@
-# exitBotauto Research Notes
+# Velox Research Notes
 
 ## Proven Algorithmic Trading Strategies (for our momentum/velocity approach)
 

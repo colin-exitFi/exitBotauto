@@ -1,4 +1,4 @@
-# exitBotauto Mission
+# Velox Mission
 
 ## Goal: $191 → $1,000,000
 

@@ -25,7 +25,7 @@ class TwitterSentimentClient:
         self._session = requests.Session()
         self._session.headers.update({
             "Authorization": f"Bearer {self._bearer}",
-            "User-Agent": "exitBotauto/1.0",
+            "User-Agent": "Velox/1.0",
         })
         self._vader = SentimentIntensityAnalyzer()
         self._cache: Dict[str, Dict] = {}

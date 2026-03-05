@@ -1,4 +1,4 @@
-# 🤖 exitBotauto - Autonomous Stock Trading Bot
+# 🤖 Velox - Autonomous Stock Trading Bot
 
 > **Apply proven Kalshi strategies to stocks: Zero fees, instant liquidity, real momentum.**
 
@@ -64,7 +64,7 @@ Stack 1-2% wins with **capital velocity**, **sentiment-driven entries**, and **t
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd exitBotauto
+cd Velox
 
 # Create virtual environment
 python3 -m venv venv
@@ -112,7 +112,7 @@ python src/main.py
 ## 📁 Project Structure
 
 ```
-exitBotauto/
+Velox/
 ├── src/
 │   ├── main.py                    # Bot entry point
 │   ├── config/

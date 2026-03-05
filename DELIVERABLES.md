@@ -1,4 +1,4 @@
-# 📦 exitBotauto - Deliverables Summary
+# 📦 Velox - Deliverables Summary
 
 **Date:** March 4, 2024  
 **Phase:** Architecture & Scaffolding ✅
@@ -31,7 +31,7 @@
 
 ### 2. ARCHITECTURE.md (18KB)
 
-**Location:** `/Users/colintracy/.openclaw/workspace/exitBotauto/ARCHITECTURE.md`
+**Location:** `/Users/colintracy/.openclaw/workspace/Velox/ARCHITECTURE.md`
 
 **Contents:**
 - Executive summary of strategy
@@ -66,10 +66,10 @@
 
 ### 3. Python Project Structure
 
-**Location:** `/Users/colintracy/.openclaw/workspace/exitBotauto/`
+**Location:** `/Users/colintracy/.openclaw/workspace/Velox/`
 
 ```
-exitBotauto/
+Velox/
 ├── ARCHITECTURE.md          # Comprehensive architecture doc (18KB)
 ├── README.md                # Project guide (12KB)
 ├── DELIVERABLES.md          # This file

@@ -1,4 +1,4 @@
-# exitBotauto - Autonomous Stock Trading Bot Architecture
+# Velox - Autonomous Stock Trading Bot Architecture
 
 ## Executive Summary
 
@@ -333,7 +333,7 @@ POST /resume          # Resume trading
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         exitBotauto                              │
+│                         Velox                              │
 │                                                                   │
 │  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐  │
 │  │   Scanner    │─────→│  Sentiment   │─────→│Entry Manager │  │
@@ -480,14 +480,14 @@ python src/main.py
 ### systemd Service
 ```ini
 [Unit]
-Description=exitBotauto Trading Bot
+Description=Velox Trading Bot
 After=network.target
 
 [Service]
 Type=simple
 User=trader
-WorkingDirectory=/home/trader/exitBotauto
-ExecStart=/usr/bin/python3 /home/trader/exitBotauto/src/main.py
+WorkingDirectory=/home/trader/Velox
+ExecStart=/usr/bin/python3 /home/trader/Velox/src/main.py
 Restart=always
 RestartSec=10
 

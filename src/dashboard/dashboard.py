@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
-app = FastAPI(title="exitBotauto", version="1.0.0")
+app = FastAPI(title="Velox", version="2.0.0")
 
 # Global reference to bot instance (set by main.py)
 _bot = None
@@ -273,7 +273,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>exitBotauto Dashboard</title>
+<title>Velox Dashboard</title>
 <style>
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes glow{0%,100%{box-shadow:0 0 5px rgba(88,166,255,.3)}50%{box-shadow:0 0 20px rgba(88,166,255,.6)}}
@@ -337,7 +337,7 @@ tr:hover td{background:#161b2288}
 </head>
 <body>
 <div class="header">
-  <h1><span class="logo">⚡</span>exitBotauto <span class="scan-dot idle" id="scanDot"></span></h1>
+  <h1><span class="logo"><svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="vg" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#58a6ff"/><stop offset="100%" stop-color="#a371f7"/></linearGradient></defs><path d="M15 75L45 15L55 45L85 15L55 75L45 50Z" fill="url(#vg)"/></svg></span>VELOX <span class="scan-dot idle" id="scanDot"></span></h1>
   <div class="status">
     <span id="statusBadge" class="badge stopped">LOADING</span>
     <div class="controls">
@@ -414,7 +414,7 @@ tr:hover td{background:#161b2288}
     <tbody id="history"></tbody></table>
   </div>
 </div>
-<div class="watermark">exitBotauto v1.0 — autonomous momentum trading</div>
+<div class="watermark">VELOX v2.0 — autonomous velocity trading</div>
 
 <script>
 const $ = s => document.getElementById(s);
