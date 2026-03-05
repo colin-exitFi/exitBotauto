@@ -94,5 +94,47 @@
     "entry_time": 1772721706.7780328,
     "exit_time": 1772722194.28861,
     "recorded_at": 1772722194.2886772
+  },
+  {
+    "symbol": "PDYN",
+    "side": "sell",
+    "entry_price": 9.112886,
+    "exit_price": 9.362651,
+    "quantity": 1735.0,
+    "pnl": 433.34227500000003,
+    "pnl_pct": 2.740789251615789,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 240.00621390342712,
+    "entry_time": 1772722459.185175,
+    "exit_time": 1772722699.1913888,
+    "recorded_at": 1772722699.191469
+  },
+  {
+    "symbol": "CRMD",
+    "side": "sell",
+    "entry_price": 6.31,
+    "exit_price": 6.247317,
+    "quantity": 82.0,
+    "pnl": -5.140005999999985,
+    "pnl_pct": -0.9933914421553064,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 905.2633209228516,
+    "entry_time": 1772722570.960596,
+    "exit_time": 1772723476.223918,
+    "recorded_at": 1772723476.2239602
+  },
+  {
+    "symbol": "PDYN",
+    "side": "sell",
+    "entry_price": 9.39,
+    "exit_price": 9.41,
+    "quantity": 86.0,
+    "pnl": 1.7199999999999633,
+    "pnl_pct": 0.21299254526091133,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 767.425586938858,
+    "entry_time": 1772722739.780947,
+    "exit_time": 1772723507.2065349,
+    "recorded_at": 1772723507.20669
   }
 ]

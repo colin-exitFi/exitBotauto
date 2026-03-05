@@ -1,54 +1,5 @@
 [
   {
-    "market_assessment": "Market closed (18:36 ET after-hours) - no live trading opportunities, scanner empty, awaiting next session",
-    "position_health": [],
-    "risk_flags": [
-      "No positions open - 100% capital idle",
-      "Zero trades executed - bot hasn't engaged yet",
-      "Scanner showing no candidates - may need different scan criteria or awaiting market open",
-      "After-hours timing - limited actionable opportunities"
-    ],
-    "what_working": [
-      "Clean slate - no losses to recover from",
-      "Full buying power available ($1,000)",
-      "Risk management framework active and properly configured",
-      "PDT-safe status allows flexibility"
-    ],
-    "what_not_working": [
-      "Capital velocity at zero - no stacking happening",
-      "No trade history to learn from yet",
-      "Scanner producing no candidates - criteria may be too restrictive or market is quiet"
-    ],
-    "overall_sentiment": "neutral",
-    "urgency": "low",
-    "timestamp": 1772671018.039567
-  },
-  {
-    "market_assessment": "After hours (18:43 ET) - market closed, no active trading opportunities until 9:30 ET open tomorrow.",
-    "position_health": [],
-    "risk_flags": [
-      "Market closed - no positions can be entered or exited",
-      "100% cash position - zero capital deployed",
-      "No scanner candidates visible - need live market data",
-      "Starting from absolute zero - first trade critical for psychological momentum"
-    ],
-    "what_working": [
-      "Clean slate - no baggage from bad positions",
-      "Full buying power available",
-      "GROWTH tier allows 5 positions at 7% each = 35% max deployment",
-      "No pattern day trader restrictions"
-    ],
-    "what_not_working": [
-      "Dead capital - $1000 earning 0% sitting idle",
-      "After hours = missed opportunity to start compounding today",
-      "No trade history to analyze patterns or validate strategy",
-      "No scanner data to identify tomorrow's targets"
-    ],
-    "overall_sentiment": "neutral",
-    "urgency": "low",
-    "timestamp": 1772671401.273706
-  },
-  {
     "market_assessment": "After-hours session (18:54 ET) - markets closed, zero activity, clean slate with full capital available for tomorrow's session",
     "position_health": [],
     "risk_flags": [
@@ -2768,5 +2719,109 @@
       "PDYN showing massive volume and +25% move but NO position - scanner caught it but AI layers haven't validated entry yet. This is proper caution OR missed opportunity - needs investigation."
     ],
     "timestamp": 1772722171.327279
+  },
+  {
+    "market_assessment": "Market opening in 6 minutes \u2014 pre-market assessment critical, positions carried overnight with significant concentration risk and no fresh signals yet.",
+    "position_health": [
+      {
+        "symbol": "AMPX",
+        "status": "healthy",
+        "note": "Up 0.72% ($1,604 position), peaked above entry, biotech holding pre-market momentum"
+      },
+      {
+        "symbol": "AVGO",
+        "status": "at_risk",
+        "note": "Up 0.25% ($531 position), minimal movement, large-cap tech lagging, reassess at open"
+      },
+      {
+        "symbol": "CRMD",
+        "status": "at_risk",
+        "note": "Flat at entry ($531 position), biotech showing no momentum, dead capital risk"
+      },
+      {
+        "symbol": "OKTA",
+        "status": "at_risk",
+        "note": "Flat at entry ($627 position), SaaS showing zero reaction, dead capital concern"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "dying",
+        "note": "Down 4.2% from peak ($15,808 position), MASSIVE 61.5% concentration risk, gave back gains, urgent reassessment needed"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 61.5% portfolio in single position (PDYN) \u2014 violates diversification, catastrophic loss potential",
+      "77% capital deployed (19.8K of 25.7K equity) \u2014 high heat, limited flexibility",
+      "Three positions (CRMD, OKTA, AVGO) dead flat \u2014 $1,689 earning nothing",
+      "PDYN gave back 42% of move (peak 9.515 \u2192 entry 9.11) \u2014 momentum dying",
+      "No scanner candidates flagged \u2014 no new opportunities identified",
+      "6 day trades used already \u2014 PDT risk approaching (3 remaining)",
+      "Zero trades today but 5 overnight holds \u2014 gap risk not assessed"
+    ],
+    "what_working": [
+      "AMPX showing follow-through above entry \u2014 biotech momentum viable",
+      "PDYN WAS working (peaked +4.4%) but gave back most gains \u2014 pattern broken"
+    ],
+    "what_not_working": [
+      "Large-cap tech (AVGO) \u2014 dead money, no volatility",
+      "Small-cap biotech (CRMD) \u2014 flat, no reaction",
+      "SaaS growth (OKTA) \u2014 zero movement, capital locked",
+      "Concentration strategy \u2014 PDYN rollback proving dangerous"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "HIGH \u2014 Market opens in 6 minutes. PDYN concentration is existential risk. Three dead positions draining opportunity. Need immediate plan: protect PDYN downside, evaluate exits on flat positions, reassess at 9:30 open with live data. If PDYN breaks below 9.00, portfolio faces -6% hit ($1,580 loss). Cannot let concentration risk compound.",
+    "timestamp": 1772722482.2221508
+  },
+  {
+    "market_assessment": "Strong momentum market with risk-on sentiment \u2014 multiple positions up significantly intraday, scanner showing high-volume breakouts, volatility favoring bulls.",
+    "position_health": [
+      {
+        "symbol": "AMPX",
+        "status": "healthy",
+        "note": "Up ~16.7%, strong bullish sentiment (0.8947), holding near highs, trailing stop protecting gains"
+      },
+      {
+        "symbol": "CRMD",
+        "status": "at_risk",
+        "note": "Down -11.17% from prior close, low volume (24k vs 4.2M avg), sentiment weakening (0.5), at breakeven but deteriorating"
+      },
+      {
+        "symbol": "OKTA",
+        "status": "healthy",
+        "note": "Stable entry, no clear adverse movement yet, needs price data to confirm but no red flags"
+      },
+      {
+        "symbol": "AVGO",
+        "status": "healthy",
+        "note": "Up ~5.8%, strong sentiment (0.8667), merger rumor catalyst, blue-chip momentum play"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "at_risk",
+        "note": "Down -1.8% from entry (9.39\u21929.22), but up +25.6% on day \u2014 classic peak-entry risk, massive volume spike (16.5x), potential profit-taking zone"
+      }
+    ],
+    "risk_flags": [
+      "Two positions entered near intraday peaks (PDYN at 9.39, now 9.22; potential whipsaw risk)",
+      "CRMD showing clear weakness: down 11%, very low volume, sentiment collapse from 0.6667 to 0.5",
+      "Portfolio heat at 4.2% \u2014 at thermal limit, no room for new entries without exits",
+      "All 5 positions opened within ~3 minutes \u2014 concentrated entry timing risk if market reverses",
+      "PDYN volume spike (16.5x) suggests exhaustion possible \u2014 late-stage parabolic move",
+      "Drawdown from ATH at 2.17% \u2014 still healthy but watching"
+    ],
+    "what_working": [
+      "Momentum breakout entries with trailing stops (AMPX +16.7%, AVGO +5.8%)",
+      "High-sentiment plays (all entries had 0.67-1.0 sentiment scores)",
+      "Large-cap stability mixed with small-cap explosiveness (AVGO/OKTA balance AMPX/PDYN)",
+      "3% trailing stops allowing winners to run while protecting capital"
+    ],
+    "what_not_working": [
+      "Chasing peak entries on parabolic moves (PDYN entered at peak)",
+      "CRMD entry timing \u2014 caught on reversal, no catalyst holding it",
+      "Lack of price confirmation before entry (volume spikes don't guarantee continuation)"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1772723135.899942
   }
 ]

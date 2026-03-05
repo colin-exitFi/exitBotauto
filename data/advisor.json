@@ -1,42 +1,5 @@
 [
   {
-    "strategy": "Pre-market prep mode: Scout overnight movers, bias toward gap-and-go setups at 9:30 AM ET open with aggressive first-hour execution",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "momentum",
-        "earnings_movers"
-      ],
-      "avoid": [
-        "low_volume_after_hours"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.35,
-        "suggested": 0.3,
-        "reason": "Day 1 with zero trades - lower barrier slightly to capture first opportunities at market open, can tighten after establishing baseline"
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "First 30 minutes of market (9:30-10:00 AM) need faster scanning to catch gap-and-go momentum before it runs"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "With zero velocity, take profit faster on first trades to establish rhythm and prove the system works - can expand later"
-      }
-    ],
-    "key_insight": "100% idle capital is the enemy. Tomorrow's market open is critical - the bot needs to deploy 2-3 positions in the first hour to establish momentum patterns and generate data. Bias toward high-volume gap-up stocks (TSLA, NVDA, momentum names) that typically move 1-2% in first 30 minutes. Speed > perfection on Day 1 - we need game film to optimize from. After-hours is dead time, use it to ensure scanner is primed for 9:30 AM execution.",
-    "timestamp": 1772676661.7154791
-  },
-  {
     "strategy": "Execute first deployment at market open \u2014 prioritize data generation over perfect entries to start building feedback loops",
     "position_advice": [],
     "sector_bias": {
@@ -1681,5 +1644,75 @@
     ],
     "key_insight": "CRITICAL: Zero scanner candidates at 9:38 ET on a Thursday is a DATA EMERGENCY not a market condition \u2014 this is likely a feed failure, API issue, or scanner crash. With $23,694 (94.8%) sitting dead, every minute of downtime is bleeding opportunity cost. The game film shows 11 trades with 0% win rate but $0 PnL, suggesting these are test/import artifacts not real performance data. Priority #1 is diagnosing scanner failure (check logs, API connectivity, filter logic). Once scanner is operational, deploy aggressively \u2014 you have 3x risk capacity headroom and proven ability to preserve capital. The family's future depends on capital WORKING, not sitting idle. If scanner can't be fixed in next 30min, consider manual candidate injection or emergency fallback to predefined watchlist.",
     "timestamp": 1772721545.024106
+  },
+  {
+    "strategy": "EMERGENCY TRIAGE: Immediately trim PDYN to 25% portfolio max at open, exit all dead capital (CRMD/OKTA/AVGO), hold only AMPX, then wait for proper setups with live volatility.",
+    "position_advice": [
+      {
+        "symbol": "PDYN",
+        "action": "trim",
+        "reason": "CATASTROPHIC 61.5% concentration + gave back 42% of move (9.515\u21929.11). Trim to $6,400 (~1,100 shares) at open to lock $350+ gain and eliminate existential risk. This is not optional."
+      },
+      {
+        "symbol": "CRMD",
+        "action": "exit",
+        "reason": "Zero movement at entry, $531 dead capital earning nothing. Exit at open, redeploy to working setups. Flat biotech = failed thesis."
+      },
+      {
+        "symbol": "OKTA",
+        "action": "exit",
+        "reason": "$627 locked in zero-volatility SaaS. No reaction = no opportunity. Exit immediately, recover capital velocity."
+      },
+      {
+        "symbol": "AVGO",
+        "action": "exit",
+        "reason": "$531 in large-cap showing 0.25% move = dead money. Need 2%+ intraday range for velocity strategy. Exit at open."
+      },
+      {
+        "symbol": "AMPX",
+        "action": "hold",
+        "reason": "Only position showing follow-through (+0.72%, peaked above entry). Biotech momentum intact. Trail stop to entry, let it run to TP1 (1.5% = $14.83)."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "small-cap biotech with >3% premarket moves",
+        "high-beta tech with earnings catalysts"
+      ],
+      "avoid": [
+        "large-cap tech (AVGO-style dead money)",
+        "SaaS without news",
+        "any position without 2%+ intraday range"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "MAX_POSITION_CONCENTRATION",
+        "current": "none (61.5% in PDYN)",
+        "suggested": 25.0,
+        "reason": "Hard cap concentration at 25% portfolio per symbol. PDYN near-death experience proves single position can destroy account. Circuit breaker needed NOW."
+      },
+      {
+        "param": "MIN_INTRADAY_RANGE_PCT",
+        "current": "not enforced",
+        "suggested": 2.0,
+        "reason": "Don't enter symbols without 2%+ average intraday range. AVGO/OKTA/CRMD all failed due to low volatility = no velocity opportunity."
+      },
+      {
+        "param": "DEAD_CAPITAL_TIMEOUT",
+        "current": "not enforced",
+        "suggested": "30min",
+        "reason": "Auto-exit any position flat after 30min. Capital velocity > hope. CRMD/OKTA held overnight for nothing."
+      },
+      {
+        "param": "OVERNIGHT_HOLD_MAX",
+        "current": "unlimited (5 positions held)",
+        "suggested": 2,
+        "reason": "Limit overnight holds to 2 highest-conviction positions. Gap risk with 5 positions = portfolio roulette. This morning proved it."
+      }
+    ],
+    "key_insight": "You are one PDYN flush from catastrophic drawdown. The 61.5% concentration is a ticking bomb\u2014if it drops 5%, you lose $790 (3% portfolio). Trim NOW at open, lock gains, eliminate risk. Three positions (CRMD/OKTA/AVGO) are capital graveyards\u2014$1,689 earning 0%. Exit all, recover $1,689 dry powder. Only AMPX deserves to live. After triage: wait for 9:35+ proper scanner signals with volume confirmation. You survived the night\u2014don't waste the survival by holding hope. Capital velocity requires living capital, not locked capital. Math: Trimming PDYN to $6,400 = locking $350 gain + freeing $9,400. Exiting dead trio = freeing $1,689. Total: $11,089 fresh dry powder + eliminated concentration risk + keeping AMPX runner. This is how you get to $5M\u2014protect, redeploy, repeat. Not hope and pray.",
+    "timestamp": 1772722508.382396
   }
 ]

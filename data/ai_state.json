@@ -1,37 +1,37 @@
 {
-  "last_observation": "Early market open showing mixed action - some momentum plays working (AMPX, OKTA up), but early volatility causing whipsaws (TTD stopped out at -3.76%, CRMD now red at -1.72%).",
-  "last_advice": "DIAGNOSE AND REACTIVATE \u2014 scanner malfunction is killing capital velocity, validate data feeds immediately then deploy aggressively into proven winners",
-  "last_tuner_changes": "POSITION_SIZE_PCT:2.5\u21923.0, MIN_ENTRY_SENTIMENT:0.2\u21920.15, MAX_CONCURRENT_POSITIONS:10\u219212",
+  "last_observation": "Strong momentum market with risk-on sentiment \u2014 multiple positions up significantly intraday, scanner showing high-volume breakouts, volatility favoring bulls.",
+  "last_advice": "EMERGENCY TRIAGE: Immediately trim PDYN to 25% portfolio max at open, exit all dead capital (CRMD/OKTA/AVGO), hold only AMPX, then wait for proper setups with live volatility.",
+  "last_tuner_changes": "POSITION_SIZE_PCT:3.0\u21922.5, MAX_HOLD_HOURS:24\u21924.0, TRAILING_STOP_PCT:1.5\u21921.0",
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "HELP",
-    "final_decision": "SKIP",
-    "size_modifier": 0.0,
-    "avg_confidence": 74.0,
+    "symbol": "AVGO",
+    "final_decision": "BUY",
+    "size_modifier": 1.0,
+    "avg_confidence": 75.0,
     "claude": {
       "model": "claude",
-      "decision": "SKIP",
-      "confidence": 75,
-      "reasoning": "Down 31% today with extremely low volume (0.1x avg), no news catalyst to explain the drop, price 16% below VWAP. RSI at 49 suggests no oversold bounce setup. No clear direction - could be a gap fill f",
+      "decision": "BUY",
+      "confidence": 78,
+      "reasoning": "AVGO showing strong momentum: +5.19% today, above VWAP by 2%, RSI at healthy 51.8, positive StockTwits sentiment 0.88, and bullish catalyst with AI chip outlook pointing to $100B revenue by 2027 plus ",
       "error": null
     },
     "gpt": {
       "model": "gpt",
-      "decision": "SKIP",
+      "decision": "BUY",
       "confidence": 62,
-      "reasoning": "HELP is down -31% and trading ~16% below VWAP with only 0.1x average volume\u2014this looks like a liquidity/air-pocket drop rather than actionable momentum. Sentiment is mildly positive but there\u2019s no new",
+      "reasoning": "AVGO has strong intraday momentum (+5.19%) and is holding above VWAP (+2%), with neutral RSI (51.8) leaving room to trend. News flow is supportive (AI revenue path narrative) and social sentiment is n",
       "error": null
     },
     "grok": {
       "model": "grok",
-      "decision": "SKIP",
+      "decision": "BUY",
       "confidence": 85,
-      "reasoning": "Massive -31% drop today on very low volume (0.1x avg) with no news or catalyst; neutral RSI but below VWAP; positive sentiment but no trending buzz indicates lack of momentum either way for near-term ",
+      "reasoning": "Stock up 5.19% today with positive AI chip revenue news catalyst, above VWAP, RSI in healthy range, and bullish StockTwits sentiment; momentum favors upside despite mixed Twitter.",
       "error": null
     },
     "perplexity": null,
-    "reasoning": "All models SKIP \u2014 BUY:0 SHORT:0 SKIP:3",
-    "timestamp": 1772722330.121957
+    "reasoning": "Unanimous BUY (3/3) \u2014 full size, conf=75%",
+    "timestamp": 1772723677.8935978
   }
 }

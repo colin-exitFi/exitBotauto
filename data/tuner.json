@@ -1050,5 +1050,50 @@
       }
     ],
     "timestamp": 1772721558.232574
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "REVERT previous increase \u2014 61.5% PDYN concentration proves 3.0% creates existential risk. Drop to 2.5% to hard-cap any single position at ~$640 max deployment, preventing another near-death concentration event."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 4,
+        "reason": "Currently 24h allowing overnight bombs (5 positions held into gap risk). Advisor data shows dead capital timeout needed \u2014 cut to 4h to force exits on non-performers by EOD, reduce overnight exposure to 1-2 best setups only."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.0,
+        "reason": "PDYN gave back 42% of move (9.515\u21929.11) with 1.5% trail = stop too loose. Analytics show both closed trades hit trailing stops (50% win rate) \u2014 tighten to 1.0% to lock gains faster when momentum fades."
+      }
+    ],
+    "reasoning": "Emergency concentration risk mitigation \u2014 shrink position size, force faster exits on dead capital, tighten profit protection after PDYN near-miss",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 3.0,
+        "new": 2.5,
+        "reason": "REVERT previous increase \u2014 61.5% PDYN concentration proves 3.0% creates existential risk. Drop to 2.5% to hard-cap any single position at ~$640 max deployment, preventing another near-death concentration event.",
+        "timestamp": 1772722518.10551
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "old": 24,
+        "new": 4.0,
+        "reason": "Currently 24h allowing overnight bombs (5 positions held into gap risk). Advisor data shows dead capital timeout needed \u2014 cut to 4h to force exits on non-performers by EOD, reduce overnight exposure to 1-2 best setups only.",
+        "timestamp": 1772722518.1056929
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 1.5,
+        "new": 1.0,
+        "reason": "PDYN gave back 42% of move (9.515\u21929.11) with 1.5% trail = stop too loose. Analytics show both closed trades hit trailing stops (50% win rate) \u2014 tighten to 1.0% to lock gains faster when momentum fades.",
+        "timestamp": 1772722518.1057348
+      }
+    ],
+    "timestamp": 1772722518.106734
   }
 ]
