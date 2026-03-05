@@ -59,16 +59,12 @@ AGENT BRIEFS:
 {macro}
 
 DECISION FRAMEWORK:
-- BUY if: Technical says BUY AND risk approves. That's it. Other agents add conviction for sizing.
-- If Technical says BUY with >60% confidence — DEFAULT IS BUY unless Risk explicitly denies.
-- "Overbought" is NOT a reason to skip. RSI 90+ means strong buying, which is what we want.
-- "Post-move" is NOT a reason to skip. We trade momentum — the move IS the signal.
-- "Resistance" is NOT a reason to skip. Breakouts through resistance = strongest momentum.
-- SHORT if: Technical says SELL with >60% confidence AND catalyst or macro supports bearish
-- SKIP ONLY if: Risk explicitly denies, OR Technical says HOLD/SELL on an upside play
-- NEVER mention "overbought", "extended", "chasing", or "post-move" as reasons to skip a BUY signal
-- Dead capital = missed opportunity. A 3% trailing stop loss is NOTHING vs a 20-50% missed runner.
-- When in doubt, BUY at minimum size (0.5%) rather than SKIP.
+- BUY if: Technical says BUY AND risk approves AND at least one other agent supports
+- The key question: "Is this move still happening, or did we miss it?" If momentum is fresh → BUY. If it's fading → SKIP.
+- SHORT if: Technical says SELL AND catalyst or macro supports bearish AND risk approves
+- SKIP if: Risk denies, Technical says HOLD/SELL, or momentum has clearly faded
+- We trade momentum. Trailing stops (3%) manage our risk. Bias toward action when the setup is clean.
+- Dead capital costs opportunity. But chasing a faded move costs money. Be smart, not reckless.
 
 SIZING:
 - size_pct: 0.5% (speculative) to 3% (high conviction) of equity

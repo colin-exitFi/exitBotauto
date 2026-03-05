@@ -1,11 +1,12 @@
 """
-Technical Agent 📊 - Rule-based momentum scoring.
-No AI call — deterministic, fast, and consistent.
-A momentum bot should BUY momentum, not fight it.
+Technical Agent 📊 - AI-powered momentum analysis.
+Uses Claude Sonnet for nuanced technical reads.
 """
 
 from typing import Dict
 from loguru import logger
+
+from agents.base_agent import call_claude
 
 
 DEFAULT_BRIEF = {
@@ -16,63 +17,73 @@ DEFAULT_BRIEF = {
     "timeframe": "hours",
 }
 
+PROMPT_TEMPLATE = """You are a TECHNICAL specialist inside Velox, a momentum trading engine ($25K → $5M goal).
+
+SYMBOL: {symbol} @ ${price:.2f}
+TODAY'S CHANGE: {change_pct:+.1f}%
+VOLUME vs AVG: {volume_spike:.1f}x
+SPREAD: {spread_pct}%
+
+{price_action}
+
+You are a MOMENTUM analyst, not a value analyst. Key principles:
+- A stock up 30% with volume is a momentum BUY if the move is FRESH and ACCELERATING
+- A stock up 30% that's been fading for an hour is a HOLD — the move already happened
+- High RSI is fine for momentum. "Overbought" is not a reason to skip.
+- Volume confirms conviction. Low volume moves are suspect.
+- The question is: "Is this move still happening, or did we miss it?"
+
+BUY = momentum is fresh/accelerating, still room to run
+SELL = breaking down, fading hard, no bid support  
+HOLD = move already happened, momentum fading, or no clear direction
+
+Respond with ONLY valid JSON:
+{{"signal": "BUY" or "SELL" or "HOLD", "confidence": 0-100, "key_levels": {{"support": number, "resistance": number}}, "momentum": "accelerating" or "decelerating", "timeframe": "minutes" or "hours" or "days"}}"""
+
 
 async def analyze(symbol: str, price: float, signals: Dict) -> Dict:
-    """Rule-based technical momentum scoring. No AI call needed."""
+    """AI-powered technical momentum analysis."""
     try:
-        change_pct = signals.get("change_pct", 0)
-        volume_spike = signals.get("volume_spike", 0)
-        spread_pct = signals.get("spread_pct", 0)
-        prev_close = signals.get("prev_close", 0)
+        price_action_lines = []
+        if signals.get("change_pct"):
+            price_action_lines.append(f"Today: {signals['change_pct']:+.1f}%")
+        if signals.get("prev_close"):
+            price_action_lines.append(f"Prev close: ${signals['prev_close']:.2f}")
+        if signals.get("high"):
+            price_action_lines.append(f"Day high: ${signals['high']:.2f}")
+        if signals.get("low"):
+            price_action_lines.append(f"Day low: ${signals['low']:.2f}")
+        if signals.get("rsi"):
+            price_action_lines.append(f"RSI: {signals['rsi']}")
+        if signals.get("vwap_relation"):
+            price_action_lines.append(f"vs VWAP: {signals['vwap_relation']}")
+        price_action = "\n".join(price_action_lines) or "Limited data"
 
-        # ── MOMENTUM SCORE (0-100) ──
-        # Change component: +5% = 25pts, +10% = 50pts, +20% = 75pts, +30%+ = 90pts
-        abs_change = abs(change_pct)
-        if abs_change >= 30:
-            change_score = 90
-        elif abs_change >= 20:
-            change_score = 75
-        elif abs_change >= 10:
-            change_score = 50
-        elif abs_change >= 5:
-            change_score = 25
-        else:
-            change_score = abs_change * 5  # 0-25 for 0-5%
+        prompt = PROMPT_TEMPLATE.format(
+            symbol=symbol,
+            price=price,
+            change_pct=signals.get("change_pct", 0),
+            volume_spike=signals.get("volume_spike", 1.0),
+            spread_pct=signals.get("spread_pct", "N/A"),
+            price_action=price_action,
+        )
 
-        # Volume component: 1x = 0pts, 3x = 30pts, 5x+ = 50pts
-        vol_score = min(volume_spike * 10, 50) if volume_spike > 0 else 0
-
-        # Spread penalty: >2% spread = illiquid, reduce confidence
-        spread_penalty = max(0, (spread_pct - 1.0) * 10) if spread_pct > 1.0 else 0
-
-        confidence = min(100, max(0, int(change_score + vol_score - spread_penalty)))
-
-        # ── SIGNAL DIRECTION ──
-        if change_pct > 5 and confidence >= 40:
-            signal = "BUY"
-            momentum = "accelerating" if change_pct > 15 else "decelerating"
-        elif change_pct < -5 and confidence >= 40:
-            signal = "SELL"
-            momentum = "accelerating" if change_pct < -15 else "decelerating"
-        else:
-            signal = "HOLD"
-            momentum = "decelerating"
-
-        # Key levels (simple)
-        support = round(prev_close, 2) if prev_close > 0 else round(price * 0.95, 2)
-        resistance = round(price * 1.05, 2)
-
-        # Timeframe based on magnitude
-        timeframe = "days" if abs_change > 20 else "hours" if abs_change > 10 else "minutes"
+        result = await call_claude(prompt, max_tokens=300)
+        if not result or "signal" not in result:
+            logger.warning(f"Technical agent failed for {symbol} — using default")
+            return {**DEFAULT_BRIEF, "symbol": symbol}
 
         brief = {
-            "signal": signal,
-            "confidence": confidence,
-            "key_levels": {"support": support, "resistance": resistance},
-            "momentum": momentum,
-            "timeframe": timeframe,
+            "signal": result.get("signal", "HOLD").upper(),
+            "confidence": max(0, min(100, int(result.get("confidence", 0)))),
+            "key_levels": {
+                "support": float(result.get("key_levels", {}).get("support", 0)),
+                "resistance": float(result.get("key_levels", {}).get("resistance", 0)),
+            },
+            "momentum": result.get("momentum", "decelerating"),
+            "timeframe": result.get("timeframe", "hours"),
         }
-        logger.debug(f"📊 Technical {symbol}: {signal} conf={confidence}% chg={change_pct:+.1f}% vol={volume_spike:.1f}x")
+        logger.debug(f"📊 Technical {symbol}: {brief['signal']} conf={brief['confidence']}% mom={brief['momentum']}")
         return brief
 
     except Exception as e:

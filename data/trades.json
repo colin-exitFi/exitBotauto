@@ -94,5 +94,33 @@
     "conviction_level": "normal",
     "risk_tier": "COMPOUND",
     "recorded_at": 1772730777.741195
+  },
+  {
+    "symbol": "TNGX",
+    "side": "sell",
+    "entry_price": 15.5,
+    "exit_price": 14.98,
+    "quantity": 48.0,
+    "pnl": -24.95999999999998,
+    "pnl_pct": -3.3548387096774164,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 137.75816798210144,
+    "entry_time": 1772730807.7164109,
+    "exit_time": 1772730945.47458,
+    "recorded_at": 1772730945.474714
+  },
+  {
+    "symbol": "AMPX",
+    "side": "sell",
+    "entry_price": 14.069926,
+    "exit_price": 14.3,
+    "quantity": 106.0,
+    "pnl": 24.387844000000012,
+    "pnl_pct": 1.6352182662510102,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 211.6597969532013,
+    "entry_time": 1772730807.716237,
+    "exit_time": 1772731019.376034,
+    "recorded_at": 1772731019.376097
   }
 ]
