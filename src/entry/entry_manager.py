@@ -80,6 +80,19 @@ class EntryManager:
             logger.debug(f"Already in position: {symbol}")
             return False
 
+        # Also check Alpaca directly — prevent buying more if we already hold shares
+        try:
+            alpaca_positions = self.broker.get_positions() if self.broker else []
+            for p in alpaca_positions:
+                if p.get("symbol") == symbol and float(p.get("qty", 0)) > 0:
+                    logger.debug(f"Already holding {symbol} on Alpaca ({p.get('qty')} shares) — syncing")
+                    # Sync: add to our tracked positions so we don't keep checking
+                    self.positions[symbol] = {"symbol": symbol, "entry_price": float(p.get("avg_entry_price", 0)),
+                                              "quantity": float(p.get("qty", 0)), "side": "long"}
+                    return False
+        except Exception:
+            pass
+
         if sentiment_score < self.min_sentiment:
             logger.debug(f"{symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")
             return False
@@ -189,7 +202,7 @@ class EntryManager:
         if atr_value and atr_value > 0:
             # ATR-based trail: 1.5x ATR as percentage of price
             trail_pct = round((atr_value * 1.5 / price) * 100, 2)
-            trail_pct = max(1.5, min(trail_pct, 5.0))  # clamp 1.5-5%
+            trail_pct = max(1.0, min(trail_pct, 4.0))  # clamp 1.5-5%
 
         # ── STEP 1: BUY the stock ─────────────────────────────────
         order = None
@@ -238,6 +251,23 @@ class EntryManager:
                     logger.success(f"📈 Trailing stop set: {symbol} {filled_qty}sh trail={trail_pct}%")
                 else:
                     logger.warning(f"⚠️ Trailing stop FAILED for {symbol} — will retry next monitor cycle")
+
+        if not order:
+            # Check if we accidentally got filled on a limit before smart_buy cancelled it
+            try:
+                alpaca_positions = self.broker.get_positions()
+                for p in alpaca_positions:
+                    if p.get("symbol") == symbol:
+                        actual_qty = float(p.get("qty", 0))
+                        actual_price = float(p.get("avg_entry_price", price))
+                        if actual_qty > 0:
+                            logger.warning(f"⚠️ {symbol}: order failed but found {actual_qty} shares on Alpaca — recording position")
+                            shares = actual_qty
+                            price = actual_price
+                            order = {"id": "recovered", "filled_qty": str(actual_qty)}
+                            break
+            except Exception:
+                pass
 
         if not order:
             logger.error(f"Failed to enter {symbol} after {self.max_retries} attempts")
@@ -325,7 +355,7 @@ class EntryManager:
             atr_value = _tmp.calculate_atr(symbol)
             if atr_value and atr_value > 0:
                 trail_pct = round((atr_value * 1.5 / price) * 100, 2)
-                trail_pct = max(1.5, min(trail_pct, 5.0))
+                trail_pct = max(1.0, min(trail_pct, 4.0))
         except Exception:
             pass
 

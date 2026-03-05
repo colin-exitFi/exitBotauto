@@ -150,6 +150,22 @@ class AlpacaClient:
             logger.success(f"Market BUY: {qty_or_notional} {symbol} → order {order.id}")
             return self._order_to_dict(order)
         except Exception as e:
+            # Retry with integer qty if "not fractionable"
+            if "not fractionable" in str(e).lower() and is_notional:
+                try:
+                    # Estimate qty from notional / approximate price
+                    # Get latest price to calculate shares
+                    price = self.get_latest_price(symbol)
+                    if price > 0:
+                        int_qty = max(1, int(qty_or_notional / price))
+                        req = MarketOrderRequest(
+                            symbol=symbol, qty=int_qty, side=OrderSide.BUY,
+                            time_in_force=TimeInForce.DAY, client_order_id=str(uuid.uuid4()))
+                        order = self._trading_client.submit_order(req)
+                        logger.success(f"Market BUY (int qty fallback): {int_qty} {symbol} → order {order.id}")
+                        return self._order_to_dict(order)
+                except Exception as e2:
+                    logger.error(f"Market buy int-qty fallback failed ({symbol}): {e2}")
             logger.error(f"Market buy failed ({symbol}): {e}")
             return None
 

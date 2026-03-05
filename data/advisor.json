@@ -1,40 +1,5 @@
 [
   {
-    "strategy": "Prepare aggressive market-open deployment \u2014 verify scanner feeds now, target first-hour momentum with 3-position blitz strategy.",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "healthcare",
-        "energy"
-      ],
-      "avoid": []
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "First-hour volatility requires faster scanning to catch momentum breaks \u2014 60s is too slow for velocity trading"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.35,
-        "suggested": 0.3,
-        "reason": "Starting with zero history \u2014 need to generate data quickly, slightly lower threshold allows quality setups without being reckless"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "Lock profit FAST on first trades \u2014 build psychological momentum and establish win rate baseline, can widen later"
-      }
-    ],
-    "key_insight": "Empty scanner after-hours is expected, but VERIFY data feeds before 9:30 AM open \u2014 a broken scanner on day one kills the entire mission. Pre-market (4:00-9:30 AM ET) should show candidates if feeds are live. First 3 trades define the bot's psychological trajectory \u2014 prioritize quick wins over home runs. Deploy 3 positions immediately at open targeting different sectors for diversification. The $1K\u2192$1M journey starts with proving the system works, not being cute with perfect entries.",
-    "timestamp": 1772676029.875672
-  },
-  {
     "strategy": "Pre-market prep mode: Scout overnight movers, bias toward gap-and-go setups at 9:30 AM ET open with aggressive first-hour execution",
     "position_advice": [],
     "sector_bias": {
@@ -1668,5 +1633,53 @@
     ],
     "key_insight": "\ud83d\udea8 CRITICAL SYSTEM FAILURE \ud83d\udea8\n\nThe data tells a horror story:\n\n1. **Phantom trades**: 11 trades recorded, all losses, all $0.00 PnL, all <5min holds, all 'high conviction' \u2014 this is logging garbage, not real executions\n\n2. **Contradictory state**: Risk status says 0 trades today, but AVGO position exists. Game film shows 11 historical trades, but Recent Trades is empty. Observer sees $25k portfolio with '2,399% total return' but starting equity was $1,000 \u2014 that math implies this account turned $1k into $25k, yet it's treating $25k as the starting point.\n\n3. **Capital paralysis**: 97.9% cash idle while claiming 'capital velocity' as core strategy. Scanner finding zero candidates suggests overly restrictive filters or broken market data feeds.\n\n4. **Reckless entry**: AVGO entered at market open with neutral sentiment (violates MIN_ENTRY_SENTIMENT), no AI consensus visible, and 'from_brokerage: true' (was this a manual trade? an overnight hold? system doesn't know its own positions).\n\n**IMMEDIATE ACTIONS REQUIRED:**\n- Exit AVGO (preserve the $531, don't compound errors)\n- Halt all new entries until logging/state management is debugged\n- Audit: reconcile brokerage API data vs internal state\n- Reset game film analytics (current data is poisoning future decisions)\n- Run paper trading mode for 24hrs to validate execution pipeline\n\nYou cannot trade your way out of a data integrity problem. The family counting on this system deserves a bot that knows what it's doing. Right now, this one doesn't.",
     "timestamp": 1772721435.835789
+  },
+  {
+    "strategy": "DIAGNOSE AND REACTIVATE \u2014 scanner malfunction is killing capital velocity, validate data feeds immediately then deploy aggressively into proven winners",
+    "position_advice": [
+      {
+        "symbol": "AVGO",
+        "action": "hold",
+        "reason": "Fresh position with no price data yet, fractional share suggests imported from manual trade, wait for market data before decision"
+      },
+      {
+        "symbol": "TTD",
+        "action": "hold",
+        "reason": "24 shares at $32.27, position just opened, TTD has 5-trade history (all losses in game film but $0 PnL suggests data issue), monitor for first 30min"
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "semiconductors",
+        "adtech",
+        "momentum stocks"
+      ],
+      "avoid": [
+        "wait for scanner diagnosis before avoiding sectors"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Scanner showing zero candidates at 9:38 ET is critical failure \u2014 faster polling might catch intermittent data or force error visibility"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.2,
+        "suggested": 0.15,
+        "reason": "With 94.8% dead capital, slightly lower bar gets more at-bats while still filtering noise \u2014 revert if quality drops"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 3.0,
+        "reason": "Heat at 1.3% with 4% limit means 3x headroom exists \u2014 increase position size to deploy capital faster when scanner recovers"
+      }
+    ],
+    "key_insight": "CRITICAL: Zero scanner candidates at 9:38 ET on a Thursday is a DATA EMERGENCY not a market condition \u2014 this is likely a feed failure, API issue, or scanner crash. With $23,694 (94.8%) sitting dead, every minute of downtime is bleeding opportunity cost. The game film shows 11 trades with 0% win rate but $0 PnL, suggesting these are test/import artifacts not real performance data. Priority #1 is diagnosing scanner failure (check logs, API connectivity, filter logic). Once scanner is operational, deploy aggressively \u2014 you have 3x risk capacity headroom and proven ability to preserve capital. The family's future depends on capital WORKING, not sitting idle. If scanner can't be fixed in next 30min, consider manual candidate injection or emergency fallback to predefined watchlist.",
+    "timestamp": 1772721545.024106
   }
 ]

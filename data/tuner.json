@@ -1005,5 +1005,50 @@
       }
     ],
     "timestamp": 1772721305.740457
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 3.0,
+        "reason": "Heat at 1.3% vs 4% limit = 3x unused capacity. With $23,694 (94.8%) dead capital and only 2 tiny positions, need larger size to deploy faster when scanner recovers. Advisor confirms headroom exists."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.15,
+        "reason": "Zero candidates at 9:38 ET = filter too tight. Already lowered from 0.3\u21920.2, but still no flow. Drop to 0.15 per Advisor to increase at-bats while scanner diagnostic runs. Can revert if quality drops."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 12,
+        "reason": "Only 2 positions open with 10 max allowed. If scanner recovers and finds opportunities, need more slots to deploy the 94.8% idle capital. Raising to 12 increases deployment capacity without exceeding safety bounds."
+      }
+    ],
+    "reasoning": "Scanner failure killed velocity \u2014 widen filters and increase capacity to catch opportunity when data recovers",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 2.5,
+        "new": 3.0,
+        "reason": "Heat at 1.3% vs 4% limit = 3x unused capacity. With $23,694 (94.8%) dead capital and only 2 tiny positions, need larger size to deploy faster when scanner recovers. Advisor confirms headroom exists.",
+        "timestamp": 1772721558.2312598
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.2,
+        "new": 0.15,
+        "reason": "Zero candidates at 9:38 ET = filter too tight. Already lowered from 0.3\u21920.2, but still no flow. Drop to 0.15 per Advisor to increase at-bats while scanner diagnostic runs. Can revert if quality drops.",
+        "timestamp": 1772721558.231467
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "old": 10,
+        "new": 12,
+        "reason": "Only 2 positions open with 10 max allowed. If scanner recovers and finds opportunities, need more slots to deploy the 94.8% idle capital. Raising to 12 increases deployment capacity without exceeding safety bounds.",
+        "timestamp": 1772721558.231508
+      }
+    ],
+    "timestamp": 1772721558.232574
   }
 ]

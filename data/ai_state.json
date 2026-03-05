@@ -1,1 +1,37 @@
-{}
+{
+  "last_observation": "Early market open showing mixed action - some momentum plays working (AMPX, OKTA up), but early volatility causing whipsaws (TTD stopped out at -3.76%, CRMD now red at -1.72%).",
+  "last_advice": "DIAGNOSE AND REACTIVATE \u2014 scanner malfunction is killing capital velocity, validate data feeds immediately then deploy aggressively into proven winners",
+  "last_tuner_changes": "POSITION_SIZE_PCT:2.5\u21923.0, MIN_ENTRY_SENTIMENT:0.2\u21920.15, MAX_CONCURRENT_POSITIONS:10\u219212",
+  "last_game_film_summary": null,
+  "last_position_manager": "healthy | 0 exits | 0 vetoes",
+  "last_consensus": {
+    "symbol": "HELP",
+    "final_decision": "SKIP",
+    "size_modifier": 0.0,
+    "avg_confidence": 74.0,
+    "claude": {
+      "model": "claude",
+      "decision": "SKIP",
+      "confidence": 75,
+      "reasoning": "Down 31% today with extremely low volume (0.1x avg), no news catalyst to explain the drop, price 16% below VWAP. RSI at 49 suggests no oversold bounce setup. No clear direction - could be a gap fill f",
+      "error": null
+    },
+    "gpt": {
+      "model": "gpt",
+      "decision": "SKIP",
+      "confidence": 62,
+      "reasoning": "HELP is down -31% and trading ~16% below VWAP with only 0.1x average volume\u2014this looks like a liquidity/air-pocket drop rather than actionable momentum. Sentiment is mildly positive but there\u2019s no new",
+      "error": null
+    },
+    "grok": {
+      "model": "grok",
+      "decision": "SKIP",
+      "confidence": 85,
+      "reasoning": "Massive -31% drop today on very low volume (0.1x avg) with no news or catalyst; neutral RSI but below VWAP; positive sentiment but no trending buzz indicates lack of momentum either way for near-term ",
+      "error": null
+    },
+    "perplexity": null,
+    "reasoning": "All models SKIP \u2014 BUY:0 SHORT:0 SKIP:3",
+    "timestamp": 1772722330.121957
+  }
+}
