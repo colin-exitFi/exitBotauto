@@ -265,7 +265,7 @@ async def get_pnl():
         "worst_trade": round(worst, 2),
         "drawdown_pct": round(drawdown, 2),
         "roi_pct": round(roi, 2),
-        "open_positions": len(positions),
+        "open_positions": len(_bot.entry_manager.get_positions()) if _bot and _bot.entry_manager else 0,
     }
 
 

@@ -2,76 +2,76 @@
   "sectors": {
     "XLK": {
       "sector": "Technology",
-      "price": 140.47,
+      "price": 140.39,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLF": {
       "sector": "Financials",
-      "price": 51.135,
+      "price": 51.15,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLE": {
       "sector": "Energy",
-      "price": 56.52,
+      "price": 56.645,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLV": {
       "sector": "Healthcare",
-      "price": 153.09,
+      "price": 153.39,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLY": {
       "sector": "Consumer Discretionary",
-      "price": 116.295,
+      "price": 116.37,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLP": {
       "sector": "Consumer Staples",
-      "price": 85.67,
+      "price": 85.765,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLI": {
       "sector": "Industrials",
-      "price": 172.155,
+      "price": 172.15,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLB": {
       "sector": "Materials",
-      "price": 50.965,
+      "price": 51.035,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLRE": {
       "sector": "Real Estate",
-      "price": 43.11,
+      "price": 43.145,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLU": {
       "sector": "Utilities",
-      "price": 46.53,
+      "price": 46.625,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "XLC": {
       "sector": "Communication",
       "price": 118.57,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     },
     "SPY": {
       "sector": "S&P 500 (benchmark)",
-      "price": 681.0,
+      "price": 681.235,
       "change_pct": 0,
-      "updated": 1772729174.105781
+      "updated": 1772730086.492126
     }
   },
-  "updated_at": 1772729175.0704231
+  "updated_at": 1772730087.0518148
 }

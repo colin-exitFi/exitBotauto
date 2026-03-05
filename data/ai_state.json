@@ -1,16 +1,16 @@
 {
-  "last_observation": "Mid-day Thursday session - positions inherited from prior session, no fresh trades today, scanner showing zero candidates signals either narrow market or scanner issues.",
+  "last_observation": "Mid-day Thursday, market open 2.5 hours - positions inherited from prior session, no fresh momentum scanner hits visible yet, likely consolidation phase or between momentum waves.",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "BATL",
+    "symbol": "TTDU",
     "decision": "SKIP",
     "size_pct": 0,
-    "trail_pct": 3.0,
-    "reasoning": "Jury AI call failed",
-    "confidence": 0.0,
-    "timestamp": 1772729846.0269
+    "trail_pct": 1.0,
+    "reasoning": "Risk explicitly denies: attempting to add to existing underwater TTDU position ($8.71 < $8.78 entry). Averaging down violates core risk rules. Despite 100% technical confidence and bullish sentiment, Risk veto is absolute per framework.",
+    "confidence": 95.0,
+    "timestamp": 1772730174.230939
   }
 }
