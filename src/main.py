@@ -851,13 +851,30 @@ class TradingBot:
         return derive_strategy_tag(candidate, direction)
 
     @staticmethod
-    def _determine_scan_interval(regime: str) -> int:
+    def _determine_scan_interval(self, regime: str) -> int:
         """
         Adaptive scan cadence:
-          high-vol regimes -> fast scans (default 60s)
-          low-vol/choppy   -> slow scans (default 300s)
-          mixed            -> baseline scan interval
+          market hours + high-vol -> fast scans (60s)
+          market hours + choppy   -> slow scans (300s)
+          extended hours (4-9:30 AM, 4-8 PM ET) -> 300s
+          overnight (8 PM - 4 AM ET) -> 600s
         """
+        from datetime import datetime
+        try:
+            import zoneinfo
+            et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
+        except Exception:
+            et_hour = 12
+
+        # Overnight: minimal scanning (thesis building only)
+        if et_hour >= 20 or et_hour < 4:
+            return 600  # 10 min
+
+        # Extended hours: slow scanning
+        if et_hour < 9 or (et_hour == 9 and datetime.now(zoneinfo.ZoneInfo("US/Eastern")).minute < 30) or et_hour >= 16:
+            return 300  # 5 min
+
+        # Market hours: adaptive by regime
         fast = max(15, int(getattr(settings, "SCAN_INTERVAL_FAST_SECONDS", 60)))
         slow = max(fast, int(getattr(settings, "SCAN_INTERVAL_SLOW_SECONDS", 300)))
         baseline = max(fast, int(settings.SCAN_INTERVAL_SECONDS))
@@ -1231,6 +1248,23 @@ class TradingBot:
                     logger.debug(f"⏳ {symbol} trail being adjusted by Exit Agent — skipping monitor check")
                     continue
                 if not pos.get("has_trailing_stop"):
+                    # During extended hours, trailing stops don't work on Alpaca.
+                    # ExtendedHoursGuard handles protection. Don't retry or emergency sell.
+                    from datetime import datetime
+                    try:
+                        import zoneinfo
+                        _et_now = datetime.now(zoneinfo.ZoneInfo("US/Eastern"))
+                        _et_h, _et_m = _et_now.hour, _et_now.minute
+                        _in_regular_hours = (_et_h == 9 and _et_m >= 30) or (10 <= _et_h < 16)
+                    except Exception:
+                        _in_regular_hours = True  # assume regular if can't determine
+
+                    if not _in_regular_hours:
+                        if not pos.get("_ext_hours_logged"):
+                            logger.info(f"🌙 {symbol} — extended hours, skipping trailing stop (guard handles protection)")
+                            pos["_ext_hours_logged"] = True
+                        continue
+
                     # First check if Alpaca already has a trailing stop for this symbol
                     try:
                         open_orders = await asyncio.get_event_loop().run_in_executor(
