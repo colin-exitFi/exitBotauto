@@ -291,7 +291,9 @@ class Scanner:
             if alpaca_snap:
                 if stock.get("price", 0) <= 0:
                     stock["price"] = alpaca_snap.get("price", 0)
-                if stock.get("change_pct", 0) == 0:
+                # ALWAYS prefer Alpaca change_pct — Polygon's todaysChangePerc is stale/inaccurate
+                # especially during extended hours. Alpaca calculates from prev_close to latest trade.
+                if alpaca_snap.get("change_pct", 0) != 0:
                     stock["change_pct"] = alpaca_snap.get("change_pct", 0)
                 if stock.get("volume", 0) == 0:
                     stock["volume"] = alpaca_snap.get("volume", 0)

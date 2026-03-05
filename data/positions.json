@@ -118,5 +118,25 @@
     "trailing_stop_order_id": "5e3fe536-52b4-489d-b9a7-0aad11124f49",
     "has_trailing_stop": true,
     "order_status": "filled"
+  },
+  "STEM": {
+    "symbol": "STEM",
+    "entry_price": 13.22,
+    "quantity": 61.521483,
+    "entry_time": 1772723822.919001,
+    "sentiment_at_entry": 0.6364,
+    "peak_price": 13.22,
+    "side": "long",
+    "order_id": "df39b74b-8a5c-4306-a0f2-56970cd533cd",
+    "partial_exit": false,
+    "atr_at_entry": null,
+    "extended_hours_entry": false,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "notional": 813.314,
+    "trail_pct": 3.0,
+    "trailing_stop_order_id": "8ff8f64f-6faa-4751-9838-fc6e2930aae0",
+    "has_trailing_stop": true,
+    "order_status": "filled"
   }
 }
