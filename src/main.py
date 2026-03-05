@@ -35,6 +35,7 @@ from ai.tuner import Tuner
 from ai.game_film import GameFilm
 from ai.position_manager import PositionManager
 from ai import trade_history
+from ai.consensus import ConsensusEngine
 from dashboard.dashboard import start_dashboard
 
 
@@ -132,6 +133,9 @@ class TradingBot:
             entry_manager=self.entry_manager,
         )
 
+        # Consensus engine
+        self.consensus_engine = ConsensusEngine()
+
         # AI layers
         self.observer = Observer()
         self.advisor = Advisor()
@@ -144,6 +148,7 @@ class TradingBot:
             "last_tuner_changes": None,
             "last_game_film_summary": None,
             "last_position_manager": None,
+            "last_consensus": None,
         }
 
         # Dashboard
@@ -271,6 +276,24 @@ class TradingBot:
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
                 continue
+
+            # Consensus engine — Claude + GPT jury must agree
+            if self.consensus_engine:
+                try:
+                    consensus = await self.consensus_engine.evaluate(
+                        symbol=symbol,
+                        price=candidate.get("price", 0),
+                        signals_data=candidate,
+                    )
+                    self.ai_layers["last_consensus"] = consensus.to_dict()
+                    if consensus.final_decision != "BUY":
+                        logger.info(f"🗳️ Consensus SKIP for {symbol}: {consensus.reasoning}")
+                        continue
+                    # Apply size modifier to sentiment_data for entry manager
+                    sentiment_data["consensus_size_modifier"] = consensus.size_modifier
+                    sentiment_data["consensus_confidence"] = consensus.avg_confidence
+                except Exception as e:
+                    logger.error(f"Consensus error for {symbol}: {e}")
 
             can = await self.entry_manager.can_enter(symbol, sentiment_score, positions)
             if can:

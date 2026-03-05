@@ -4,8 +4,11 @@ Scores candidates by volume spike, momentum, and sentiment.
 """
 
 import asyncio
+import time
 from typing import Dict, List, Optional
 from loguru import logger
+
+import httpx
 
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -36,6 +39,7 @@ class Scanner:
         self.min_momentum = settings.MIN_MOMENTUM_PCT
 
         self._cache: List[Dict] = []
+        self._news_cache: Dict[str, tuple] = {}  # symbol -> (timestamp, headlines)
         logger.info("Scanner initialized")
 
     async def scan(self) -> List[Dict]:
@@ -148,15 +152,59 @@ class Scanner:
                 except Exception as e:
                     logger.debug(f"Sentiment failed for {symbol}: {e}")
 
+            # Perplexity news headlines
+            news_headlines = await self._get_news(symbol)
+
             return {
                 **stock,
                 "avg_volume": avg_vol,
                 "volume_spike": vol_spike,
                 "sentiment_score": sentiment_score,
+                "news_headlines": news_headlines,
             }
         except Exception as e:
             logger.debug(f"Enrich failed for {symbol}: {e}")
             return None
+
+    # ── News via Perplexity ──────────────────────────────────────────
+
+    async def _get_news(self, symbol: str) -> List[str]:
+        """Get recent news headlines via Perplexity API. Cached 10 min."""
+        # Check cache
+        cached = self._news_cache.get(symbol)
+        if cached and (time.time() - cached[0]) < 600:
+            return cached[1]
+
+        api_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
+        if not api_key:
+            return []
+
+        model = getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro')
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(
+                    "https://api.perplexity.ai/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "max_tokens": 300,
+                        "messages": [{"role": "user", "content":
+                            f"What are the latest news headlines about {symbol} stock in the last 4 hours? "
+                            f"List only the headlines, one per line. No commentary."}],
+                    },
+                )
+                resp.raise_for_status()
+                text = resp.json()["choices"][0]["message"]["content"]
+                headlines = [line.strip().lstrip("•-123456789. ") for line in text.strip().split("\n") if line.strip()]
+                headlines = [h for h in headlines if len(h) > 10][:5]
+                self._news_cache[symbol] = (time.time(), headlines)
+                return headlines
+        except Exception as e:
+            logger.debug(f"Perplexity news failed for {symbol}: {e}")
+            return []
 
     # ── Scoring ────────────────────────────────────────────────────
 

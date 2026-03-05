@@ -134,9 +134,15 @@ async def get_ai_status():
 @app.get("/api/consensus")
 async def get_consensus():
     """Get consensus engine history and stats."""
-    if not _bot or not _bot.entry_manager or not hasattr(_bot.entry_manager, 'consensus'):
+    engine = None
+    if _bot:
+        # Try multiple locations where consensus engine might be stored
+        if hasattr(_bot, 'consensus_engine') and _bot.consensus_engine:
+            engine = _bot.consensus_engine
+        elif _bot.entry_manager and hasattr(_bot.entry_manager, 'consensus') and _bot.entry_manager.consensus:
+            engine = _bot.entry_manager.consensus
+    if not engine:
         return {"enabled": False, "history": [], "stats": {}}
-    engine = _bot.entry_manager.consensus
     return {
         "enabled": getattr(settings, 'CONSENSUS_ENABLED', True),
         "history": engine.get_history()[-10:],
@@ -159,6 +165,23 @@ async def get_history(limit: int = 20):
     for h in history:
         h["hold_time"] = f"{int(h.get('hold_seconds', 0) / 60)}m"
     return history
+
+
+@app.get("/api/trade-history")
+async def get_trade_history(limit: int = 20):
+    """Get persistent trade history with analytics."""
+    from ai import trade_history
+    trades = trade_history.get_recent(limit)
+    stats = trade_history.get_analytics()
+    # Compute best/worst
+    best = max(trades, key=lambda t: t.get("pnl", 0)) if trades else None
+    worst = min(trades, key=lambda t: t.get("pnl", 0)) if trades else None
+    return {
+        "trades": trades,
+        "stats": stats,
+        "best": best,
+        "worst": worst,
+    }
 
 
 @app.get("/api/metrics")
@@ -212,48 +235,76 @@ def start_dashboard(bot=None):
 
 # ── Dashboard HTML ─────────────────────────────────────────────────
 
-DASHBOARD_HTML = """<!DOCTYPE html>
+DASHBOARD_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>exitBotauto Dashboard</title>
 <style>
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes glow{0%,100%{box-shadow:0 0 5px rgba(88,166,255,.3)}50%{box-shadow:0 0 20px rgba(88,166,255,.6)}}
+@keyframes countUp{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes neonPulse{0%,100%{text-shadow:0 0 7px currentColor,0 0 10px currentColor}50%{text-shadow:0 0 20px currentColor,0 0 40px currentColor}}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px}
-.header{background:#161b22;border-bottom:1px solid #30363d;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
-.header h1{font-size:20px;color:#58a6ff}
+body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0a0e14}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+.header{background:linear-gradient(135deg,#0d1117 0%,#161b22 100%);border-bottom:1px solid #1f6feb33;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+.header h1{font-size:22px;color:#58a6ff;display:flex;align-items:center;gap:10px}
+.header h1 .logo{font-size:28px}
+.scan-dot{width:10px;height:10px;border-radius:50%;background:#3fb950;display:inline-block;animation:pulse 1.5s ease-in-out infinite}
+.scan-dot.idle{background:#484f58;animation:none}
 .header .status{display:flex;gap:12px;align-items:center}
-.badge{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
-.badge.running{background:#238636;color:#fff}
-.badge.paused{background:#d29922;color:#000}
-.badge.stopped{background:#da3633;color:#fff}
-.container{max-width:1400px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px}
-.card h2{font-size:14px;color:#8b949e;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px}
+.badge{padding:5px 14px;border-radius:12px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.badge.running{background:linear-gradient(135deg,#238636,#2ea043);color:#fff;box-shadow:0 0 12px rgba(46,160,67,.4)}
+.badge.paused{background:linear-gradient(135deg,#d29922,#e3b341);color:#000;box-shadow:0 0 12px rgba(227,179,65,.4)}
+.badge.stopped{background:linear-gradient(135deg,#da3633,#f85149);color:#fff;box-shadow:0 0 12px rgba(248,81,73,.4)}
+.container{max-width:1500px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:linear-gradient(145deg,#161b22 0%,#0d1117 100%);border:1px solid #30363d;border-radius:12px;padding:18px;animation:slideIn .4s ease-out;transition:border-color .3s,box-shadow .3s}
+.card:hover{border-color:#1f6feb55;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.card h2{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;border-bottom:1px solid #21262d;padding-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h2 .icon{font-size:16px}
 .full{grid-column:1/-1}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
-.metric{text-align:center;padding:12px;background:#0d1117;border-radius:6px}
-.metric .value{font-size:24px;font-weight:700;color:#58a6ff}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.metric{text-align:center;padding:14px 10px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s}
+.metric:hover{border-color:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.metric .value{font-size:22px;font-weight:800;color:#58a6ff;transition:all .3s}
 .metric .value.positive{color:#3fb950}
 .metric .value.negative{color:#f85149}
-.metric .label{font-size:11px;color:#8b949e;margin-top:4px}
+.metric .value.animated{animation:countUp .4s ease-out}
+.metric .label{font-size:10px;color:#6e7681;margin-top:6px;text-transform:uppercase;letter-spacing:.5px}
+.big-pnl{font-size:36px!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
 table{width:100%;border-collapse:collapse}
-th{text-align:left;font-size:11px;color:#8b949e;text-transform:uppercase;padding:8px;border-bottom:1px solid #21262d}
-td{padding:8px;border-bottom:1px solid #21262d}
-.positive{color:#3fb950}.negative{color:#f85149}
+th{text-align:left;font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px solid #21262d}
+td{padding:8px 10px;border-bottom:1px solid #21262d44;font-size:13px;transition:background .2s}
+tr:hover td{background:#161b2288}
+.positive{color:#3fb950}.negative{color:#f85149}.info{color:#58a6ff}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.tag-buy{background:#23863622;color:#3fb950;border:1px solid #23863644}
+.tag-skip{background:#da363322;color:#f85149;border:1px solid #da363344}
 .controls{display:flex;gap:8px}
-.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px}
-.btn-start{background:#238636;color:#fff}
-.btn-pause{background:#d29922;color:#000}
-.btn-stop{background:#da3633;color:#fff}
-.btn:hover{opacity:0.85}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
+.btn-start{background:linear-gradient(135deg,#238636,#2ea043);color:#fff}
+.btn-pause{background:linear-gradient(135deg,#d29922,#e3b341);color:#000}
+.btn-stop{background:linear-gradient(135deg,#da3633,#f85149);color:#fff}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.btn:active{transform:translateY(0)}
 .empty{color:#484f58;text-align:center;padding:24px;font-style:italic}
+.summary-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.summary-item{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 16px;flex:1;min-width:120px;text-align:center}
+.summary-item .val{font-size:20px;font-weight:800}
+.summary-item .lbl{font-size:10px;color:#6e7681;text-transform:uppercase;margin-top:2px}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ai-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;font-size:12px;line-height:1.5}
+.ai-card strong{color:#58a6ff;display:block;margin-bottom:4px}
+.ai-card.tuner{border-color:#d2a8ff33}.ai-card.pm{border-color:#3fb95033}
+.watermark{text-align:center;padding:20px;color:#21262d;font-size:11px;letter-spacing:2px}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>🤖 exitBotauto</h1>
+  <h1><span class="logo">⚡</span>exitBotauto <span class="scan-dot idle" id="scanDot"></span></h1>
   <div class="status">
     <span id="statusBadge" class="badge stopped">LOADING</span>
     <div class="controls">
@@ -264,77 +315,105 @@ td{padding:8px;border-bottom:1px solid #21262d}
   </div>
 </div>
 <div class="container">
+
+  <!-- Performance Metrics -->
   <div class="card full">
-    <h2>Performance</h2>
+    <h2><span class="icon">📊</span> Performance</h2>
     <div class="metrics" id="metrics"></div>
   </div>
+
+  <!-- AI Layers -->
   <div class="card full">
-    <h2>🧠 AI Layers <span id="aiEnabled" style="float:right;color:#8b949e"></span></h2>
+    <h2><span class="icon">🧠</span> AI Layers <span id="aiEnabled" style="margin-left:auto;color:#8b949e;font-size:11px"></span></h2>
     <div id="aiStatus" class="empty">Loading AI status...</div>
   </div>
+
+  <!-- Consensus Panel -->
   <div class="card full">
-    <h2>🗳️ AI Consensus <span id="consensusStats" style="float:right;color:#8b949e"></span></h2>
-    <table><thead><tr><th>Symbol</th><th>Claude</th><th>GPT</th><th>Perplexity</th><th>Decision</th><th>Confidence</th><th>Size</th></tr></thead>
+    <h2><span class="icon">🗳️</span> AI Consensus Jury <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <div class="summary-row" id="consensusSummary"></div>
+    <table><thead><tr><th>Symbol</th><th>Claude</th><th>GPT</th><th>Perplexity</th><th>Decision</th><th>Confidence</th><th>Size Mod</th></tr></thead>
     <tbody id="consensus"></tbody></table>
   </div>
+
+  <!-- Trade History Panel -->
   <div class="card full">
-    <h2>💼 Alpaca Portfolio <span id="portfolioValue" style="float:right;color:#58a6ff"></span></h2>
+    <h2><span class="icon">💰</span> Trade History <span id="tradeStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <div class="summary-row" id="tradeSummary"></div>
+    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L $</th><th>P&L %</th><th>Reason</th><th>Hold</th><th>Conviction</th><th>Risk Tier</th></tr></thead>
+    <tbody id="tradeHistory"></tbody></table>
+  </div>
+
+  <!-- Portfolio -->
+  <div class="card full">
+    <h2><span class="icon">💼</span> Alpaca Portfolio <span id="portfolioValue" style="margin-left:auto;color:#58a6ff;font-size:12px"></span></h2>
     <table><thead><tr><th>Symbol</th><th>Shares</th><th>Avg Price</th><th>Current</th><th>Value</th><th>P&L</th></tr></thead>
     <tbody id="portfolio"></tbody></table>
   </div>
+
+  <!-- Positions + Candidates side by side -->
   <div class="card">
-    <h2>Bot Positions</h2>
+    <h2><span class="icon">📈</span> Bot Positions</h2>
     <table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Hold</th></tr></thead>
     <tbody id="positions"></tbody></table>
   </div>
   <div class="card">
-    <h2>Scanner Candidates</h2>
-    <table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol Spike</th><th>Sentiment</th><th>Score</th></tr></thead>
+    <h2><span class="icon">🔍</span> Scanner Candidates</h2>
+    <table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol</th><th>Sent</th><th>Score</th></tr></thead>
     <tbody id="candidates"></tbody></table>
   </div>
+
+  <!-- Recent Exits -->
   <div class="card full">
-    <h2>Recent Trades</h2>
+    <h2><span class="icon">📋</span> Recent Exits</h2>
     <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th></tr></thead>
     <tbody id="history"></tbody></table>
   </div>
 </div>
+<div class="watermark">exitBotauto v1.0 — autonomous momentum trading</div>
+
 <script>
 const $ = s => document.getElementById(s);
+let _prevPnl = null;
 async function api(url, method='GET') {
   try { const r = await fetch(url, {method}); return await r.json(); } catch(e) { return null; }
 }
 function cls(v) { return v >= 0 ? 'positive' : 'negative'; }
 function fmt(v, d=2) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—'; }
+function holdStr(secs) { if(!secs) return '—'; const m=Math.floor(secs/60); const h=Math.floor(m/60); return h>0?h+'h '+m%60+'m':m+'m'; }
 
 async function refresh() {
   // Status
   const s = await api('/api/status');
   if (s) {
-    const b = $('statusBadge');
-    if (!s.running) { b.textContent='STOPPED'; b.className='badge stopped'; }
-    else if (s.paused) { b.textContent='PAUSED'; b.className='badge paused'; }
-    else { b.textContent='RUNNING'; b.className='badge running'; }
+    const b = $('statusBadge'), dot = $('scanDot');
+    if (!s.running) { b.textContent='STOPPED'; b.className='badge stopped'; dot.className='scan-dot idle'; }
+    else if (s.paused) { b.textContent='PAUSED'; b.className='badge paused'; dot.className='scan-dot idle'; }
+    else { b.textContent='RUNNING'; b.className='badge running'; dot.className='scan-dot'; }
   }
   // Metrics
   const m = await api('/api/metrics');
   if (m) {
+    const pnlChanged = _prevPnl !== null && _prevPnl !== (m.daily_pnl||0);
+    _prevPnl = m.daily_pnl||0;
+    const anim = pnlChanged ? ' animated' : '';
     $('metrics').innerHTML = `
-      <div class="metric"><div class="value" style="color:#d2a8ff;font-size:18px">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
+      <div class="metric"><div class="value" style="color:#d2a8ff;font-size:16px">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
       <div class="metric"><div class="value">$${(m.equity||0).toLocaleString()}</div><div class="label">Equity</div></div>
-      <div class="metric"><div class="value ${cls(m.daily_pnl||0)}">$${(m.daily_pnl||0).toFixed(2)}</div><div class="label">Daily P&L</div></div>
-      <div class="metric"><div class="value ${cls(m.daily_pnl_pct||0)}">${fmt(m.daily_pnl_pct||0)}%</div><div class="label">Daily %</div></div>
-      <div class="metric"><div class="value">${m.total_trades||0}</div><div class="label">Trades</div></div>
+      <div class="metric"><div class="value ${cls(m.daily_pnl||0)} big-pnl${anim}">$${(m.daily_pnl||0).toFixed(2)}</div><div class="label">Daily P&L</div></div>
+      <div class="metric"><div class="value ${cls(m.daily_pnl_pct||0)}${anim}">${fmt(m.daily_pnl_pct||0)}%</div><div class="label">Daily %</div></div>
+      <div class="metric"><div class="value info">${m.total_trades||0}</div><div class="label">Trades</div></div>
       <div class="metric"><div class="value">${((m.win_rate||0)*100).toFixed(0)}%</div><div class="label">Win Rate</div></div>
       <div class="metric"><div class="value">${m.consecutive_wins||0}W/${m.consecutive_losses||0}L</div><div class="label">Streak</div></div>
       <div class="metric"><div class="value">${(m.heat_pct||0).toFixed(0)}%</div><div class="label">Heat</div></div>
-      <div class="metric"><div class="value">${(m.tier_size_pct||0)}%</div><div class="label">Position Size</div></div>
-      <div class="metric"><div class="value">${m.tier_max_positions||0}</div><div class="label">Max Positions</div></div>
-      <div class="metric"><div class="value">$${(m.ath_equity||0).toLocaleString()}</div><div class="label">ATH Equity</div></div>
-      <div class="metric"><div class="value ${m.drawdown_pct > 0 ? 'negative' : ''}">${(m.drawdown_pct||0).toFixed(1)}%</div><div class="label">Drawdown</div></div>
-      <div class="metric"><div class="value">${(m.total_return_pct||0).toFixed(1)}%</div><div class="label">Total Return</div></div>
+      <div class="metric"><div class="value">${(m.tier_size_pct||0)}%</div><div class="label">Pos Size</div></div>
+      <div class="metric"><div class="value">${m.tier_max_positions||0}</div><div class="label">Max Pos</div></div>
+      <div class="metric"><div class="value">$${(m.ath_equity||0).toLocaleString()}</div><div class="label">ATH</div></div>
+      <div class="metric"><div class="value ${(m.drawdown_pct||0) > 0 ? 'negative' : ''}">${(m.drawdown_pct||0).toFixed(1)}%</div><div class="label">Drawdown</div></div>
+      <div class="metric"><div class="value ${cls(m.total_return_pct||0)}">${(m.total_return_pct||0).toFixed(1)}%</div><div class="label">Total Return</div></div>
       <div class="metric"><div class="value">$${(m.next_milestone||0).toLocaleString()}</div><div class="label">Next Milestone</div></div>
-      <div class="metric"><div class="value">${(m.milestone_progress_pct||0).toFixed(0)}%</div><div class="label">→ Progress</div></div>
-      <div class="metric"><div class="value">${(m.days_trading||0).toFixed(0)}d</div><div class="label">Days Trading</div></div>
+      <div class="metric"><div class="value info">${(m.milestone_progress_pct||0).toFixed(0)}%</div><div class="label">→ Progress</div></div>
+      <div class="metric"><div class="value">${(m.days_trading||0).toFixed(0)}d</div><div class="label">Days</div></div>
     `;
   }
   // AI Status
@@ -342,17 +421,58 @@ async function refresh() {
   if (ai) {
     $('aiEnabled').textContent = ai.enabled ? '✅ Active' : '❌ Disabled';
     if (ai.enabled) {
-      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
-      html += '<div><strong>Last Observation:</strong><br>' + (ai.last_observation ? ai.last_observation.substring(0, 200) + '...' : 'Pending...') + '</div>';
-      html += '<div><strong>Last Advice:</strong><br>' + (ai.last_advice ? ai.last_advice.substring(0, 200) + '...' : 'Pending...') + '</div>';
+      let html = '<div class="ai-grid">';
+      html += '<div class="ai-card"><strong>🔭 Observer</strong>' + (ai.last_observation ? ai.last_observation.substring(0,200)+'…' : '<em>Pending…</em>') + '</div>';
+      html += '<div class="ai-card"><strong>💡 Advisor</strong>' + (ai.last_advice ? ai.last_advice.substring(0,200)+'…' : '<em>Pending…</em>') + '</div>';
+      html += '<div class="ai-card tuner"><strong>🎛️ Tuner</strong>' + (ai.last_tuner_changes || '<em>No changes yet</em>') + '</div>';
+      html += '<div class="ai-card pm"><strong>🛡️ Position Manager</strong>' + (ai.last_position_manager || '<em>Pending…</em>') + '</div>';
       html += '</div>';
-      if (ai.last_tuner_changes) html += '<div style="margin-top:8px"><strong>Tuner:</strong> ' + ai.last_tuner_changes + '</div>';
+      if (ai.last_game_film) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#d2a8ff">🎬 Game Film:</strong> ' + ai.last_game_film + '</div>';
       $('aiStatus').innerHTML = html;
-    } else {
-      $('aiStatus').innerHTML = '<span class="empty">AI layers not initialized</span>';
-    }
+    } else { $('aiStatus').innerHTML = '<span class="empty">AI layers not initialized</span>'; }
   }
-  // Portfolio (Alpaca)
+  // Consensus
+  const con = await api('/api/consensus');
+  if (con) {
+    const st = con.stats || {};
+    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations | Est. cost: $${(st.estimated_cost||0).toFixed(2)}` : '❌ Disabled';
+    $('consensusSummary').innerHTML = con.enabled ? `
+      <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Total Calls</div></div>
+      <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY Signals</div></div>
+      <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP Signals</div></div>
+      <div class="summary-item"><div class="val" style="color:#d2a8ff">${((st.agreement_rate||0)*100).toFixed(0)}%</div><div class="lbl">Agreement Rate</div></div>
+      <div class="summary-item"><div class="val" style="color:#e3b341">$${(st.estimated_cost||0).toFixed(2)}</div><div class="lbl">API Cost</div></div>
+    ` : '';
+    $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
+      const voteStr = v => v ? `<span class="tag ${v.decision==='BUY'?'tag-buy':'tag-skip'}">${v.decision}</span> ${v.confidence}%` : '<span style="color:#484f58">—</span>';
+      return `<tr><td><strong>${h.symbol}</strong></td><td>${voteStr(h.claude)}</td><td>${voteStr(h.gpt)}</td><td>${voteStr(h.perplexity)}</td>
+        <td><span class="tag ${h.final_decision==='BUY'?'tag-buy':'tag-skip'}">${h.final_decision}</span></td>
+        <td>${(h.avg_confidence||0).toFixed(0)}%</td><td>${((h.size_modifier||1)*100).toFixed(0)}%</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">No consensus decisions yet</td></tr>';
+  }
+  // Trade History
+  const th = await api('/api/trade-history?limit=20');
+  if (th) {
+    const s = th.stats?.overall || {};
+    const best = th.best, worst = th.worst;
+    $('tradeStats').textContent = `${s.wins||0}W / ${s.losses||0}L`;
+    $('tradeSummary').innerHTML = th.trades.length ? `
+      <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Total Trades</div></div>
+      <div class="summary-item"><div class="val ${(s.win_rate_pct||0)>=50?'positive':'negative'}">${(s.win_rate_pct||0).toFixed(1)}%</div><div class="lbl">Win Rate</div></div>
+      <div class="summary-item"><div class="val ${cls(s.total_pnl||0)}">${fmt(s.total_pnl||0)}</div><div class="lbl">Total P&L</div></div>
+      <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">Best Trade ${best?best.symbol:''}</div></div>
+      <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">Worst Trade ${worst?worst.symbol:''}</div></div>
+    ` : '';
+    $('tradeHistory').innerHTML = th.trades.length ? th.trades.slice().reverse().map(t => `<tr>
+      <td><strong>${t.symbol||'?'}</strong></td>
+      <td>$${(t.entry_price||0).toFixed(2)}</td><td>$${(t.exit_price||0).toFixed(2)}</td>
+      <td class="${cls(t.pnl||0)}"><strong>${fmt(t.pnl||0)}</strong></td>
+      <td class="${cls(t.pnl_pct||0)}">${fmt(t.pnl_pct||0)}%</td>
+      <td>${t.reason||'—'}</td><td>${holdStr(t.hold_seconds)}</td>
+      <td>${t.conviction_level||'—'}</td><td>${t.risk_tier||'—'}</td>
+    </tr>`).join('') : '<tr><td colspan="9" class="empty">No completed trades yet</td></tr>';
+  }
+  // Portfolio
   const pf = await api('/api/portfolio');
   if (pf) {
     $('portfolioValue').textContent = `Cash: $${(pf.cash||0).toFixed(2)} | Total: $${(pf.total_value||0).toFixed(2)}`;
@@ -360,26 +480,10 @@ async function refresh() {
       const val = (p.current_price * p.quantity).toFixed(2);
       const pnl = p.open_pnl || ((p.current_price - p.average_price) * p.quantity);
       const pnlPct = p.average_price ? ((p.current_price - p.average_price) / p.average_price * 100) : 0;
-      return `<tr>
-        <td><strong>${p.symbol}</strong></td><td>${p.quantity.toFixed(4)}</td>
+      return `<tr><td><strong>${p.symbol}</strong></td><td>${p.quantity.toFixed(4)}</td>
         <td>$${(p.average_price||0).toFixed(2)}</td><td>$${(p.current_price||0).toFixed(2)}</td>
-        <td>$${val}</td><td class="${cls(pnl)}">${fmt(pnl)} (${fmt(pnlPct)}%)</td>
-      </tr>`;
+        <td>$${val}</td><td class="${cls(pnl)}">${fmt(pnl)} (${fmt(pnlPct)}%)</td></tr>`;
     }).join('') : '<tr><td colspan="6" class="empty">No holdings</td></tr>';
-  }
-  // Consensus
-  const con = await api('/api/consensus');
-  if (con) {
-    const st = con.stats || {};
-    $('consensusStats').textContent = con.enabled ?
-      `Agree: ${((st.agreement_rate||0)*100).toFixed(0)}% | Calls: ${st.total||0} | Cost: $${st.estimated_cost||0}` : '❌ Disabled';
-    $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
-      const cv = h.claude, gv = h.gpt, pv = h.perplexity;
-      const voteStr = v => v ? `<span class="${v.decision==='BUY'?'positive':'negative'}">${v.decision} ${v.confidence}%</span>` : '—';
-      return `<tr><td><strong>${h.symbol}</strong></td><td>${voteStr(cv)}</td><td>${voteStr(gv)}</td><td>${voteStr(pv)}</td>
-        <td class="${h.final_decision==='BUY'?'positive':'negative'}"><strong>${h.final_decision}</strong></td>
-        <td>${(h.avg_confidence||0).toFixed(0)}%</td><td>${((h.size_modifier||0)*100).toFixed(0)}%</td></tr>`;
-    }).join('') : '<tr><td colspan="7" class="empty">No consensus decisions yet</td></tr>';
   }
   // Bot Positions
   const pos = await api('/api/positions');
@@ -393,7 +497,7 @@ async function refresh() {
     <td><strong>${c.symbol}</strong></td><td>$${(c.price||0).toFixed(2)}</td>
     <td class="${cls(c.change_pct||0)}">${fmt(c.change_pct||0,1)}%</td>
     <td>${(c.volume_spike||0).toFixed(1)}x</td><td>${(c.sentiment_score||0).toFixed(2)}</td>
-    <td>${(c.score||0).toFixed(3)}</td>
+    <td><strong>${(c.score||0).toFixed(3)}</strong></td>
   </tr>`).join('') : '<tr><td colspan="6" class="empty">No candidates yet</td></tr>';
   // History
   const hist = await api('/api/history');
