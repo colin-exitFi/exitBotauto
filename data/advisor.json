@@ -1,43 +1,5 @@
 [
   {
-    "strategy": "Aggressive first-strike at market open \u2014 deploy 2-3 positions within first hour to establish momentum and activate capital velocity",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "momentum_growth",
-        "recent_earnings_movers"
-      ],
-      "avoid": [
-        "low_volume_premarket",
-        "extended_overnight_gaps"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "First trades should prioritize VELOCITY over size \u2014 take 1.2% wins fast to build psychological momentum and free capital for next opportunity"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.4,
-        "reason": "First trade is critical for confidence \u2014 require stronger conviction on initial entries, can loosen after establishing win streak"
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "First 30 minutes of market open are highest opportunity density \u2014 scan twice as fast during 9:30-10:00 ET window"
-      }
-    ],
-    "key_insight": "DEAD CAPITAL IS THE ENEMY. At market open tomorrow, priority #1 is deploying 2-3 positions within 60 minutes. Don't wait for 'perfect' setups \u2014 we need capital WORKING. Target gap-ups with volume confirmation, take 1-2% scalps aggressively, rotate winnings immediately. A 1.2% win reinvested 3x in one morning = 3.6% daily gain = 22% weekly velocity. The math only works if money is MOVING. First trade sets the tone \u2014 make it count, but don't overthink it. We're building momentum, not a museum piece.",
-    "timestamp": 1772678006.515732
-  },
-  {
     "strategy": "Prepare for pre-market assault: queue high-conviction setups for 4:00 AM ET open, prioritize liquidity and momentum over quantity",
     "position_advice": [],
     "sector_bias": {
@@ -1850,5 +1812,68 @@
     ],
     "key_insight": "You have a BROKEN CAPITAL VELOCITY PROBLEM masquerading as a risk management success. Yes, 5/6 positions are protected \u2014 great. But ZERO trades today + 62% idle cash + dry scanner pipeline = compounding has STOPPED. The math is brutal: at 2.5% position size, you need 4 positions working simultaneously to stay in the game. Right now you're sitting on $15.8K doing NOTHING while the market moves. Fix AMPX immediately (unprotected biotech is unacceptable), then get aggressive on deployment. The data shows you print money in the 08:00 hour (60% win rate, $412 PnL) and PDYN is your money printer (100% win rate, $443 total). Stop being passive. The family's future isn't built on idle cash \u2014 it's built on disciplined, relentless capital velocity. Every hour you sit on dead money is an hour you're NOT compounding toward $5M.",
     "timestamp": 1772724726.4266
+  },
+  {
+    "strategy": "Protect profits on SOC immediately, liquidate dead weight, then deploy idle capital aggressively into proven setups",
+    "position_advice": [
+      {
+        "symbol": "AMPX",
+        "action": "exit",
+        "reason": "$0.85 fractional position is dead capital, creates wash sale landmines, zero economic value \u2014 liquidate immediately"
+      },
+      {
+        "symbol": "AVGO",
+        "action": "hold",
+        "reason": "$1,820 blue-chip semiconductor with trailing stop active, defensive quality in largest position, let it run"
+      },
+      {
+        "symbol": "CRMD",
+        "action": "hold",
+        "reason": "$1,377 biotech with trailing stop protecting downside, high-risk but stop discipline is in place, monitor closely"
+      },
+      {
+        "symbol": "OKTA",
+        "action": "add",
+        "reason": "Cybersecurity holding $102, CRITICAL: add trailing stop NOW \u2014 unprotected position is a time bomb, then hold"
+      },
+      {
+        "symbol": "SOC",
+        "action": "add",
+        "reason": "Already +3.5% ($5.64 position), URGENT: add trailing stop to lock gains \u2014 profitable position with zero protection is strategic malpractice"
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "semiconductors",
+        "cybersecurity"
+      ],
+      "avoid": [
+        "micro-cap biotech without catalysts",
+        "anything creating fractional positions"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "All inherited positions show sentiment=0 (blind entries) \u2014 require minimum conviction to avoid random walk trading"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 3.0,
+        "reason": "Only 12.9% deployed, 87% cash idle \u2014 capital velocity demands faster deployment, increase base size to accelerate compounding"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 45,
+        "reason": "Zero scanner candidates, zero trades today \u2014 increase scanning frequency to find opportunities faster, market is open"
+      }
+    ],
+    "key_insight": "You have $22,108 (87%) sitting idle while SOC is already up 3.5% UNPROTECTED and OKTA has $102 exposed with NO STOP. This is not conservative \u2014 it's negligent. Fix the protection gaps in the next 60 seconds, then hunt aggressively. PDYN delivered $442 at 100% win rate \u2014 find more like that. Capital velocity isn't optional when you're building generational wealth from $25k. Every hour of idle cash is a compounding opportunity lost forever.",
+    "timestamp": 1772725193.3176682
   }
 ]

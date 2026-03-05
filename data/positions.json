@@ -2,22 +2,19 @@
   "AMPX": {
     "symbol": "AMPX",
     "entry_price": 14.671475,
-    "quantity": 112.058182781,
-    "entry_time": 1772724677.726093,
+    "quantity": 0.058182781,
+    "entry_time": 1772725154.537638,
     "sentiment_at_entry": 0,
     "peak_price": 14.671475,
     "order_id": "",
     "partial_exit": false,
-    "from_brokerage": true,
-    "has_trailing_stop": true,
-    "trailing_stop_order_id": "3d8827de-149e-4c5f-ace1-2e591e61f04f",
-    "trail_pct": 2.0
+    "from_brokerage": true
   },
   "AVGO": {
     "symbol": "AVGO",
     "entry_price": 330.891797,
     "quantity": 5.501586965,
-    "entry_time": 1772724677.726219,
+    "entry_time": 1772725154.537757,
     "sentiment_at_entry": 0,
     "peak_price": 330.891797,
     "order_id": "",
@@ -30,7 +27,7 @@
     "symbol": "CRMD",
     "entry_price": 6.343848,
     "quantity": 217.147625097,
-    "entry_time": 1772724677.726259,
+    "entry_time": 1772725154.5377998,
     "sentiment_at_entry": 0,
     "peak_price": 6.343848,
     "order_id": "",
@@ -39,18 +36,28 @@
     "has_trailing_stop": true,
     "trailing_stop_order_id": "5e3fe536-52b4-489d-b9a7-0aad11124f49"
   },
-  "SOC": {
-    "symbol": "SOC",
-    "entry_price": 12.324999,
-    "quantity": 131.457205659,
-    "entry_time": 1772724677.726348,
+  "OKTA": {
+    "symbol": "OKTA",
+    "entry_price": 79.588638,
+    "quantity": 1.283011743,
+    "entry_time": 1772725154.5378299,
     "sentiment_at_entry": 0,
-    "peak_price": 12.9,
+    "peak_price": 79.588638,
     "order_id": "",
     "partial_exit": false,
     "from_brokerage": true,
     "has_trailing_stop": true,
-    "trailing_stop_order_id": "25ee19f6-a551-4b45-abba-58dac9d78902",
-    "trail_pct": 1.2
+    "trailing_stop_order_id": "8334c2f4-5c38-4447-b1ae-cffa8eb48bb2"
+  },
+  "SOC": {
+    "symbol": "SOC",
+    "entry_price": 12.324999,
+    "quantity": 0.457205659,
+    "entry_time": 1772725154.537855,
+    "sentiment_at_entry": 0,
+    "peak_price": 12.755,
+    "order_id": "",
+    "partial_exit": false,
+    "from_brokerage": true
   }
 }

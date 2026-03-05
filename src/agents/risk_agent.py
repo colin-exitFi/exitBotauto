@@ -6,7 +6,7 @@ Uses Claude Sonnet (analytical).
 from typing import Dict, List
 from loguru import logger
 
-from agents.base_agent import call_claude
+from agents.base_agent import call_gpt
 
 
 DEFAULT_BRIEF = {
@@ -119,7 +119,7 @@ async def analyze(symbol: str, price: float, signals: Dict,
             sector_exposure=sector_exposure,
         )
 
-        result = await call_claude(prompt, max_tokens=400)
+        result = await call_gpt(prompt, max_tokens=400)
         if not result or "approved" not in result:
             logger.warning(f"Risk agent failed for {symbol} — blocking by default")
             return {**DEFAULT_BRIEF, "symbol": symbol}
