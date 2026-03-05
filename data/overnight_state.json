@@ -1,12 +1,12 @@
 {
-  "last_pharma_refresh": 1772676000.4506361,
-  "last_news_scan": 1772690692.247273,
+  "last_pharma_refresh": 1772697865.792626,
+  "last_news_scan": 1772698169.152849,
   "overnight_news": [
-    "Based on the search results provided, I cannot identify market-moving news events from the last 4 hours (since 2 AM UTC on March 5). The most recent information available is from March 4, 2026, which is outside your 4-hour window.",
-    "The latest market activity covered in the search results includes:",
-    "**March 4 market rebound**: S&P 500 up ~0.8%, Nasdaq up ~1.3%, Dow up ~0.5% following the previous day's decline[4]",
-    "**Broadcom earnings**: Posted after-hours on March 4[4]",
-    "**Coinbase gains**: Up ~15% following reports of private meetings between President Trump and the CEO[4]"
+    "**Trump's announcement on US risk insurance for Persian Gulf maritime trade (esp. Strait of Hormuz)**: Eased oil supply fears after Iran tensions, helping stocks rebound from intraday lows; impacts energy sector broadly (oil prices +4.7%).[1][4]",
+    "**Oil prices spike nearly 5% (Brent to $81, WTI to $74) on US-Iran/Middle East tensions**: Fuels inflation worries, delays Fed rate cut expectations to September; hits industrials (-2%), materials (-2.7%).[1][4]",
+    "**Dow/S&P/Nasdaq rebound sharply (Dow +0.49%, S&P +0.78%, Nasdaq +1.29%)**: Futures turned positive pre-market after volatile session, signaling improved sentiment for tomorrow.[1][2][7]",
+    "**Upcoming ADP private payrolls report (est. +48K Feb jobs)**: Key labor data could sway Fed policy views amid inflation/oil risks.[1]",
+    "**Earnings beats: Broadcom (AVGO), Okta (OKTA), Abercrombie & Fitch (ANF)**: Reported ahead of expectations, boosting tech/consumer stocks in rebound.[1][7]"
   ],
   "last_game_film": 1772681207.162543,
   "last_thesis": 1772681207.162543

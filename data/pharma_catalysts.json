@@ -1,36 +1,12 @@
 {
   "catalysts": [
     {
-      "ticker": "OTSKF",
-      "company": "Onsi",
-      "drug": "INQOVI + Venetoclax",
-      "indication": "Acute Myeloid Leukemia",
-      "date": "2026-02-25",
-      "type": "NDA[1]"
-    },
-    {
-      "ticker": "REGN",
-      "company": "Regeneron",
-      "drug": "Dupixent",
-      "indication": "Allergic Fungal Rhinosinusitis",
-      "date": "2026-02-28",
-      "type": "NDA[1]"
-    },
-    {
-      "ticker": "GSK",
-      "company": "GSK",
-      "drug": "Linerixibat",
-      "indication": "Cholestatic Pruritus (PBC)",
-      "date": "2026-03-24",
-      "type": "NDA[1]"
-    },
-    {
       "ticker": "LLY",
       "company": "Eli Lilly",
       "drug": "Orforglipron",
       "indication": "Type 2 Diabetes",
       "date": "2026-03-25",
-      "type": "NDA[1]"
+      "type": "sNDA[2]"
     },
     {
       "ticker": "RCKT",
@@ -38,18 +14,26 @@
       "drug": "Kresladi",
       "indication": "Danon Disease",
       "date": "2026-03-28",
-      "type": "NDA[1][2]"
+      "type": "BLA[1][2]"
     },
     {
-      "ticker": "LNTH",
-      "company": "Lantheus",
-      "drug": "Ga68-edotreotide",
-      "indication": "GEP-NETs Imaging",
-      "date": "2026-03-29",
-      "type": "NDA[1]"
+      "ticker": "ALDX",
+      "company": "Aldeyra",
+      "drug": "Reproxalap",
+      "indication": "Dry Eye Disease",
+      "date": "2026-03-16",
+      "type": "sNDA[4]"
+    },
+    {
+      "ticker": "RCKT",
+      "company": "Rocket Pharmaceuticals",
+      "drug": "Marnetegragene Autotemcel",
+      "indication": "Severe Leukocyte Adhesion Deficiency-I",
+      "date": "2026-03-28",
+      "type": "BLA[6]"
     }
   ],
   "known_approvals": [],
-  "last_pplx_refresh": 1772676004.093792,
-  "updated_at": "2026-03-04T20:00:04.094828"
+  "last_pplx_refresh": 1772697868.1637912,
+  "updated_at": "2026-03-05T02:04:28.165452"
 }

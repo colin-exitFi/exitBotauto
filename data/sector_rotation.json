@@ -1,0 +1,77 @@
+{
+  "sectors": {
+    "XLK": {
+      "sector": "Technology",
+      "price": 139.64,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLF": {
+      "sector": "Financials",
+      "price": 51.51,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLE": {
+      "sector": "Energy",
+      "price": 56.18,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLV": {
+      "sector": "Healthcare",
+      "price": 157.04,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLY": {
+      "sector": "Consumer Discretionary",
+      "price": 116.34,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLP": {
+      "sector": "Consumer Staples",
+      "price": 87.18,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLI": {
+      "sector": "Industrials",
+      "price": 175.96,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLB": {
+      "sector": "Materials",
+      "price": 51.925,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLRE": {
+      "sector": "Real Estate",
+      "price": 43.77,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLU": {
+      "sector": "Utilities",
+      "price": 47.27,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "XLC": {
+      "sector": "Communication",
+      "price": 118.79,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    },
+    "SPY": {
+      "sector": "S&P 500 (benchmark)",
+      "price": 685.56,
+      "change_pct": 0,
+      "updated": 1772716152.014436
+    }
+  },
+  "updated_at": 1772716152.520031
+}

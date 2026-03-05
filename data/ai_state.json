@@ -1,0 +1,30 @@
+{
+  "last_observation": "Market open just started (08:01 ET) - premarket movers showing strength with PDYN +18.4%, STEM +18.4%, LQDA +8.3% on bullish sentiment, but volume still building.",
+  "last_advice": "HALT ALL TRADING - Data integrity failure detected, require human verification before any capital deployment",
+  "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.65\u21920.75, POSITION_SIZE_PCT:3.0\u21922.5",
+  "last_game_film_summary": null,
+  "last_position_manager": null,
+  "last_consensus": {
+    "symbol": "BULL",
+    "final_decision": "SKIP",
+    "size_modifier": 0.0,
+    "avg_confidence": 67.5,
+    "claude": {
+      "model": "claude",
+      "decision": "SKIP",
+      "confidence": 75,
+      "reasoning": "BULL shows positive sentiment (0.92) and is up 2% today, but volume is critically low at 0.1x average, indicating no real momentum or conviction behind the move. Without technical indicators, news cat",
+      "error": null
+    },
+    "gpt": {
+      "model": "gpt",
+      "decision": "SKIP",
+      "confidence": 60,
+      "reasoning": "Low volume indicates a lack of momentum despite positive sentiment. Without additional signals like elevated volume or a news catalyst, it's uncertain if the upward movement will continue.",
+      "error": null
+    },
+    "perplexity": null,
+    "reasoning": "Both models say SKIP",
+    "timestamp": 1772716057.060547
+  }
+}

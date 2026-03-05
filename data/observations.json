@@ -1175,5 +1175,804 @@
       "next_action": "Wait for market open and scanner to populate with liquid, volatile candidates that fit proven patterns"
     },
     "timestamp": 1772690802.850629
+  },
+  {
+    "market_assessment": "Pre-market hours (1:24 AM ET) - markets closed, no live price action to evaluate, awaiting 9:30 AM ET open",
+    "position_health": [],
+    "risk_flags": [
+      "Zero positions - 100% cash sitting idle with no capital deployment",
+      "Pre-market hours - cannot assess intraday momentum or volatility",
+      "No scanner candidates available - lack of watchlist/opportunities",
+      "Day 1 of operation - no historical pattern data to evaluate edge",
+      "Starting with $25K but showing $1K starting equity in risk metrics (data inconsistency)"
+    ],
+    "what_working": [
+      "Clean slate - no losing positions to manage",
+      "Full buying power ($50K) available for deployment",
+      "COMPOUND tier active - 2.5% position sizing allows for diversification",
+      "No PDT restrictions (daytrade_count: 0)",
+      "Impressive historical context: 2400% total return suggests proven strategy exists"
+    ],
+    "what_not_working": [
+      "Zero capital velocity - money is dead weight overnight",
+      "No overnight positions = missing gap moves and pre-market momentum",
+      "Scanner producing no candidates - need better opportunity detection",
+      "Operating in information vacuum during closed hours"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772691859.586159
+  },
+  {
+    "market_assessment": "Pre-market hours (1:54 AM ET) - no active trading, markets closed, minimal actionable data available",
+    "position_health": [],
+    "risk_flags": [
+      "PRE-MARKET: Markets closed, no positions to monitor",
+      "CLEAN SLATE: Starting portfolio at $25k with zero open positions",
+      "NO TRADE HISTORY: Zero trades executed, no pattern data to analyze",
+      "NO SCANNER DATA: Top candidates list empty - cannot assess current opportunities",
+      "TIME RISK: 1:54 AM ET is 7+ hours before market open - stale data risk if acting now"
+    ],
+    "what_working": [
+      "CAPITAL PRESERVATION: 100% cash position protects against overnight risk",
+      "CLEAN RISK PROFILE: 0% heat, 0% drawdown, no correlation exposure",
+      "MILESTONE PROGRESS: Already 50% to next tier ($50k target) - suggests recent significant gain",
+      "HIGH BUYING POWER: 2x leverage available ($50k) if needed"
+    ],
+    "what_not_working": [
+      "ZERO DEPLOYMENT: 100% idle capital earning nothing",
+      "NO MARKET INTEL: Cannot assess what's working/not working with zero trade history",
+      "TIMING: Operating outside market hours limits actionable insights",
+      "NO SCANNER SIGNALS: Empty candidate list means no vetted opportunities ready"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "timestamp": 1772693665.47899
+  },
+  {
+    "market_assessment": "Pre-market hours (2:24 AM ET) \u2014 markets closed, no active price action to assess until 9:30 AM ET open.",
+    "position_health": [],
+    "risk_flags": [
+      "No open positions \u2014 100% cash drag, zero capital velocity",
+      "Pre-market timing \u2014 7+ hours until market open, no actionable opportunities",
+      "Scanner shows zero candidates \u2014 no watchlist, no pre-planned trades",
+      "Risk status shows 2400% total return but only 1 day trading \u2014 data inconsistency suggests fresh start or reset",
+      "No trade history to analyze patterns or validate what works"
+    ],
+    "what_working": [
+      "Clean slate \u2014 no losing positions to manage",
+      "Full buying power available ($50k) with PDT protection intact (0/3 daytrades)",
+      "COMPOUND tier unlocked \u2014 2.5% position sizing, 10 max positions, disciplined risk framework"
+    ],
+    "what_not_working": [
+      "Zero deployed capital \u2014 opportunity cost of idle cash",
+      "No pre-market scanner hits \u2014 lacking momentum/gap plays for open",
+      "No watchlist discipline \u2014 reactive instead of proactive"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772695484.6981492
+  },
+  {
+    "market_assessment": "Pre-market hours (2:54 AM ET) - no live market data available, scanner empty, cannot assess intraday conditions until 9:30 AM open.",
+    "position_health": [],
+    "risk_flags": [
+      "Pre-market trading hours - market closed, no actionable opportunities",
+      "Zero scanner candidates - no current setups meeting criteria",
+      "Starting from fresh capital deployment - no position history to analyze",
+      "PDT constraint active (daytrade_count: 0/3) - must preserve day trade bullets",
+      "First trading session of new tier - pattern validation needed before scaling"
+    ],
+    "what_working": [
+      "Portfolio has achieved 2400% total return to reach this tier",
+      "Risk management tier system functioning (COMPOUND tier unlocked)",
+      "Zero drawdown from ATH - capital preservation working",
+      "Clean slate - no baggage positions or losses to manage"
+    ],
+    "what_not_working": [
+      "Cannot assess - no recent trade data available",
+      "Scanner producing zero candidates - may need parameter review or is correctly filtering low-quality setups"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "observer_notes": {
+      "current_state": "WAIT MODE - Pre-market, no positions, no immediate action required",
+      "capital_status": "100% cash ($25k), full buying power ($50k), ready to deploy",
+      "next_action_window": "Market open 9:30 AM ET - monitor scanner for quality setups",
+      "strategic_priority": "Validate edge with first few trades before increasing position sizes - this is graduation to new tier, prove the process scales",
+      "risk_posture": "Conservative start recommended - 2.5% position sizing appropriate until pattern consistency confirmed at this capital level"
+    },
+    "timestamp": 1772697312.55442
+  },
+  {
+    "market_assessment": "Pre-market hours (3:25 AM ET) - no trading possible until 9:30 AM, market direction unknown until regular session opens",
+    "position_health": [],
+    "risk_flags": [
+      "ZERO positions - entire portfolio in cash, zero capital velocity",
+      "Pre-market hours - 6+ hours until market open, no immediate action possible",
+      "No scanner candidates available - lack of tradeable setup signals",
+      "Account shows 2400% total return but only 1 day trading - data integrity concern or recent funding event",
+      "Starting equity shows $1,000 but current equity $25,000 - portfolio appears to be post-funding/reset"
+    ],
+    "what_working": [
+      "Capital preservation perfect - no open risk, no drawdown",
+      "Clean slate - COMPOUND tier with 10 position capacity and 2.5% sizing",
+      "PDT status clear - not flagged, 3 day trades available"
+    ],
+    "what_not_working": [
+      "Zero capital deployment - earning 0% on $25,000 cash",
+      "No trade history to analyze - cannot identify winning patterns yet",
+      "No scanner output - either scanners not running or no setups meeting criteria"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "timestamp": 1772699129.581344
+  },
+  {
+    "market_assessment": "Pre-market session (03:55 ET) - markets closed, no live price action to assess, scanner empty indicates no setup opportunities detected yet",
+    "position_health": [],
+    "risk_flags": [
+      "Trading at pre-market hours when liquidity is thin and spreads are wide",
+      "No scanner candidates available - system may need market open for signal generation",
+      "Starting from fresh capital ($25k) - first trades will set the tone for risk discipline",
+      "Non-PDT status means only 3 day trades per 5-day period - must be highly selective"
+    ],
+    "what_working": [
+      "Clean slate - no baggage positions or emotional attachment",
+      "Impressive track record: 2400% total return from $1k to $25k",
+      "Strong risk framework in place: 2.5% position sizing, 1% stops, 4% daily loss limit",
+      "Currently at 0% heat - maximum flexibility to deploy capital"
+    ],
+    "what_not_working": [
+      "No active positions generating returns - 100% dead capital",
+      "No recent trades to analyze for pattern validation",
+      "Empty scanner suggests either no opportunities or system waiting for market open"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "additional_observations": {
+      "capital_efficiency": "0% deployed - opportunity cost is high once market opens",
+      "next_critical_milestone": "$50k (currently 50% of the way there)",
+      "optimal_timing": "Wait for 09:30 ET market open for liquidity and valid price discovery",
+      "day_trade_budget": "3 round trips available before PDT restriction - use wisely",
+      "recommended_action": "Stand ready. Let scanner populate post-open. First trade must be high conviction."
+    },
+    "timestamp": 1772700940.068466
+  },
+  {
+    "market_assessment": "Pre-market hours (4:05 ET) - markets closed, observing scanner activity showing mixed signals with several gapped stocks from overnight price action.",
+    "position_health": [],
+    "risk_flags": [
+      "ZERO positions currently open - capital 100% idle",
+      "Pre-market timing - markets don't open for ~5.5 hours (9:30 ET)",
+      "Scanner showing low-quality signals: extreme gaps, low volume spikes, small-cap volatility traps",
+      "BATL down -32.75% - classic dead-cat-bounce bait, extremely dangerous",
+      "Volume spikes are all <13% of avg volume - very weak conviction",
+      "This is our FIRST day of actual trading (starting_equity $1000 \u2192 $25000 suggests paper/reset)",
+      "Pattern Day Trader status = FALSE with 0 daytrade count - we have only 3 round-trips available"
+    ],
+    "what_working": [
+      "Nothing yet - zero trades executed, no performance data to analyze"
+    ],
+    "what_not_working": [
+      "Scanner quality during pre-market appears weak - mostly sentiment-driven junk",
+      "No institutional-grade setups visible in top 5 candidates"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "observations": {
+      "capital_status": "100% cash, fully deployed potential of $6,250 (2.5% position sizing)",
+      "timing_context": "Pre-market observation window - no actionable opportunities until 9:30 ET open",
+      "day_trading_constraint": "Not flagged as PDT - must preserve daytrade capacity strategically (max 3 round-trips in 5 days)",
+      "scanner_quality": "Current candidates are low-conviction: BATL is a falling knife, TTD has 12% volume spike but pre-market data incomplete, AVGX showing <2% volume spike",
+      "recommended_posture": "Wait for market open with full liquidity, ignore pre-market noise, focus on post-9:30 price action with actual volume confirmation",
+      "risk_tier_note": "COMPOUND tier allows 10 positions max, 1% stops, 4% daily loss limit - we have full risk budget available"
+    },
+    "timestamp": 1772701566.495712
+  },
+  {
+    "market_assessment": "Pre-market hours (04:16 ET) - market not yet open, limited price discovery, low volume across all candidates suggests waiting for regular trading hours",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Account just jumped from $1,000 to $25,000 (+2400% total return) - this appears to be a funding event or data anomaly, not organic growth",
+      "Zero open positions - starting fresh with new capital base",
+      "Pre-market conditions - all candidates showing minimal volume (highest is TTD at 1.5M vs 12M avg)",
+      "Scanner data quality concerns - multiple tickers showing 0 for open/high/low/vwap",
+      "Top candidate (TTD) shows 15.77% gain but only 12% of normal volume - suspicious for 4am",
+      "Not pattern day trader yet (0 day trades used) - have 3 bullets for the day"
+    ],
+    "what_working": [
+      "Cannot assess - no trading history in current session",
+      "Risk management tier system operational (COMPOUND tier active)",
+      "2.5% position sizing will deploy $625 per position - conservative and appropriate"
+    ],
+    "what_not_working": [
+      "Pre-market scanner data appears incomplete (missing OHLC and VWAP data)",
+      "Volume spikes all under 13% of average - no strong momentum plays visible",
+      "Sentiment scores perfect (1.0) on multiple tickers - likely data artifact, not real"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "additional_context": {
+      "portfolio_milestone": "At 50% progress to $50K milestone - next doubling point",
+      "time_context": "Market opens in 5h 14min - all current data is pre-market noise",
+      "recommended_stance": "WAIT - Do not trade on pre-market data. Reassess at 9:30 ET open with real volume and price action",
+      "capital_status": "Fully liquid, zero deployed, maximum flexibility available"
+    },
+    "timestamp": 1772702187.751404
+  },
+  {
+    "market_assessment": "Pre-market hours (4:26 AM ET) with limited liquidity; scanner showing mixed signals with TTD up 15.8% on low volume but most activity is illiquid and unreliable.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio value is $0.00 \u2014 account appears completely blown out",
+      "100% drawdown from $25k ATH to $0 equity",
+      "Account shows $1,000 starting equity but $0 current \u2014 catastrophic loss event occurred",
+      "Pre-market data is unreliable: TTD showing 15.8% gain but only 1.5M volume vs 12.4M avg",
+      "All scanner candidates showing extremely low volume (pre-market) making data suspect",
+      "Cannot trade: zero buying power, zero cash, zero equity"
+    ],
+    "what_working": [
+      "Nothing \u2014 account is at zero"
+    ],
+    "what_not_working": [
+      "Everything that led to 100% capital loss",
+      "Risk management failed catastrophically",
+      "Position sizing clearly inadequate",
+      "Stop losses either absent or not honored"
+    ],
+    "overall_sentiment": "EMERGENCY",
+    "urgency": "CRITICAL",
+    "additional_context": {
+      "reality_check": "This portfolio went from $25,000 to $0. This is not recoverable without capital injection.",
+      "pre_market_note": "It's 4:26 AM \u2014 market doesn't open until 9:30 AM. Scanner data is pre-market noise.",
+      "next_steps_impossible": "Cannot execute any trades with zero equity. System needs funding or this is a data error.",
+      "what_happened": "Account history shows starting equity $1k but ATH was $25k, now $0. Either: (1) Real catastrophic loss, (2) Data/system error, (3) Account reset scenario"
+    },
+    "timestamp": 1772702803.2177541
+  },
+  {
+    "market_assessment": "Pre-market session (4:36 ET) - scanner shows mixed signals with TTD up 15.5% on low volume (1.5M vs 12.4M avg), suggesting gap-up volatility ahead of regular hours.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears to be completely zeroed out",
+      "CRITICAL: 100% drawdown from $25K ATH to $0 - catastrophic loss event occurred",
+      "Account shows $1K starting equity but current equity is $0 - complete capital destruction",
+      "No buying power, no cash, no positions - account is functionally dead",
+      "Scanner data shows pre-market activity but we cannot trade (no capital)",
+      "All top candidates have extremely low volume vs. their averages (1-7% of normal) - pre-market illiquidity",
+      "TTD showing 15.5% gap on only 12% of normal volume - high slippage risk if we could trade"
+    ],
+    "what_working": [
+      "N/A - no recent trades to analyze, account has been wiped"
+    ],
+    "what_not_working": [
+      "EVERYTHING - the account went from $25K to $0, representing total strategy failure",
+      "Risk management failed catastrophically - 100% drawdown should be impossible with proper stops",
+      "Whatever trading occurred previously resulted in complete capital destruction"
+    ],
+    "overall_sentiment": "EMERGENCY",
+    "urgency": "CRITICAL - ACCOUNT INSOLVENT",
+    "timestamp": 1772703418.549105
+  },
+  {
+    "market_assessment": "Pre-market session (04:46 ET) showing moderate activity; TTD gapping up +15.6% on significant volume, suggesting overnight catalyst driving early momentum.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Account equity is $0.00 - portfolio is completely wiped out",
+      "CATASTROPHIC DRAWDOWN: Down 100% from $25,000 ATH to $0",
+      "Trading is technically possible but account needs immediate funding/reconciliation",
+      "Starting equity shows $1,000 but current equity is $0 - data inconsistency or total loss event",
+      "No positions, no cash, no buying power - cannot execute any trades"
+    ],
+    "what_working": [
+      "N/A - no active trading history to assess"
+    ],
+    "what_not_working": [
+      "Previous strategy resulted in complete capital loss",
+      "Whatever risk management was in place failed catastrophically"
+    ],
+    "overall_sentiment": "N/A - pre-market conditions appear cautiously bullish based on scanner data, but irrelevant without capital",
+    "urgency": "CRITICAL - ACCOUNT INOPERABLE",
+    "timestamp": 1772704035.520287
+  },
+  {
+    "market_assessment": "Pre-market hours (4:57 ET) - limited data available, but scanner shows moderate momentum in small/mid caps with bullish sentiment across board.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears zeroed out or initialization error",
+      "CRITICAL: 100% drawdown from ATH of $25,000 to current $0",
+      "System shows starting_equity as $1,000 but we started with $25,000 - data inconsistency",
+      "Zero buying power - cannot execute any trades",
+      "Pre-market scanning active but no trading capability",
+      "Account state suggests catastrophic loss or system reset event"
+    ],
+    "what_working": [
+      "Scanner is operational and identifying candidates with positive sentiment",
+      "Risk management tier system is active (SURVIVAL mode appropriate given situation)"
+    ],
+    "what_not_working": [
+      "EVERYTHING - portfolio has been completely wiped out",
+      "Account equity tracking appears corrupted or reset",
+      "No capital available to deploy any strategy"
+    ],
+    "overall_sentiment": "EMERGENCY - This requires immediate human intervention to understand what happened. Did we lose everything? Is this a system error? Data shows $25k ATH but $0 current equity. This is either a total account loss (unacceptable given capital preservation mandate) or a critical system malfunction. Cannot provide trading observations when the account is non-functional.",
+    "urgency": "CRITICAL",
+    "timestamp": 1772704651.7904792
+  },
+  {
+    "market_assessment": "Pre-market session (5:07 ET) showing early momentum in TTD (+16.5%) and moderate activity across small/mid-caps with universally bullish StockTwits sentiment",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears wiped out from $25K starting capital",
+      "CRITICAL: 100% drawdown from ATH of $25K",
+      "CRITICAL: Zero buying power - cannot execute any trades",
+      "Account shows starting_equity of $1K but ATH was $25K - data inconsistency suggests catastrophic loss event",
+      "Pre-market data incomplete (no OHLC, VWAP) - limited price validation available",
+      "Volume spikes extremely low (1-12% of average) - pre-market liquidity thin, slippage risk high"
+    ],
+    "what_working": [
+      "N/A - no active positions or recent trade history to analyze"
+    ],
+    "what_not_working": [
+      "Previous strategy resulted in total capital loss",
+      "Risk management failed catastrophically - went from $25K to $0"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "critical_notes": [
+      "This appears to be a portfolio reset or catastrophic failure scenario",
+      "Cannot trade with $0 equity - system needs capital injection or account recovery",
+      "Pre-market scanner data is interesting (TTD momentum) but irrelevant without capital",
+      "SURVIVAL tier settings (10% position size, 3 max positions) are appropriate but cannot be deployed",
+      "Mission context: This was a family's $25K - if this loss is real, we've failed the core directive of capital preservation"
+    ],
+    "recommended_action": "HALT - Determine if this is a data error, paper trading reset, or actual loss event. If real loss: conduct full post-mortem before any capital re-injection. If data error: resolve before resuming operations.",
+    "timestamp": 1772705264.9238698
+  },
+  {
+    "market_assessment": "Pre-market session (5:17 ET) showing mixed activity with tech/EV names trending; low pre-market volume makes signal quality questionable",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - complete account wipeout from $25k starting capital",
+      "CRITICAL: 100% drawdown from ATH of $25,000",
+      "CRITICAL: Zero buying power - cannot execute any trades",
+      "Account shows $1,000 starting equity vs stated $25k mission - data inconsistency",
+      "Pre-market time (5:17 ET) - market doesn't open for 4 hours, liquidity will be terrible",
+      "Scanner candidates show extremely low pre-market volume (TTD 1.5M vs 12M avg, SLS 206k vs 10M avg)",
+      "All sentiment scores are perfect 1.0 with zero bearish messages - unrealistic, likely data quality issue",
+      "No news headlines on any movers - missing catalyst context"
+    ],
+    "what_working": [
+      "N/A - no trading history available, account is at zero"
+    ],
+    "what_not_working": [
+      "Whatever strategy was previously employed resulted in total capital destruction",
+      "Risk management clearly failed - went from $25k to $0"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "critical_observation": "This appears to be either a system reset, paper account initialization error, or catastrophic failure. The mission states $25k starting capital but account shows $0 equity and $1k starting_equity reference. TRADING IS IMPOSSIBLE - there is no capital to deploy. Before ANY strategy discussion, we need to resolve: 1) Is this account state accurate? 2) If so, what caused total loss? 3) Is there funding coming? 4) If this is a reset/test, clarify actual starting capital. DO NOT ATTEMPT TO TRADE WITH ZERO CAPITAL.",
+    "timestamp": 1772705882.695623
+  },
+  {
+    "market_assessment": "Pre-market session (5:28 ET) with low liquidity; scanner showing bullish bias on TTD (+18.8%) and several trending symbols, but volumes are anemic compared to averages.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears wiped out or data error",
+      "Account shows -100% drawdown from $25k ATH to $0",
+      "Zero buying power - cannot execute any trades",
+      "Pre-market liquidity extremely thin - TTD only 1.5M volume vs 22M average",
+      "Scanner candidates show massive volume deficit (TTD 12% of avg, SLS 2% of avg)",
+      "All scanner data appears to be pre-market noise, not actionable setups"
+    ],
+    "what_working": [
+      "Nothing - no trades, no positions, no capital"
+    ],
+    "what_not_working": [
+      "Capital preservation - total account loss",
+      "The entire mission has failed if equity is truly $0"
+    ],
+    "overall_sentiment": "N/A - cannot assess market sentiment with zero capital and pre-market data",
+    "urgency": "high",
+    "critical_note": "IMMEDIATE ATTENTION REQUIRED: If this is real data, the account has been completely liquidated. If this is a data error or system reset, clarification needed before any Layer 2 advice is generated. Pre-market scanner data is unreliable for trading decisions regardless. Market opens in 3h32m - need to understand what happened to the capital before regular trading begins.",
+    "timestamp": 1772706498.474227
+  },
+  {
+    "market_assessment": "Pre-market session (5:38 AM ET) showing early momentum in TTD (+19.7%), IREN (+10.9%), and AVGX (+15.0%) with bullish sentiment across scanner candidates.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears to be completely wiped out",
+      "Account shows 100% drawdown from $25,000 ATH to $0",
+      "Trading may be impossible with zero buying power",
+      "System state indicates catastrophic loss event occurred",
+      "No positions, no cash, no equity - account is non-functional"
+    ],
+    "what_working": [
+      "Scanner is still identifying high-momentum pre-market movers",
+      "Sentiment analysis shows strong bullish signals (TTD, SLS both 100% bullish)",
+      "Volume spike detection functioning"
+    ],
+    "what_not_working": [
+      "EVERYTHING - the account has been completely destroyed",
+      "Previous risk management failed to prevent total capital loss",
+      "Whatever strategy was deployed resulted in 100% drawdown"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "critical_notes": [
+      "This requires immediate human intervention - account is at zero",
+      "No trading is possible until account is funded/restored",
+      "Need root cause analysis: what caused total loss from $25k?",
+      "System shows starting_equity of $1,000 but ATH of $25,000 - unclear if this is reset or catastrophic loss",
+      "Market opportunities exist (TTD pre-market surge) but cannot be acted upon"
+    ],
+    "recommended_action": "HALT ALL OPERATIONS - Human review required immediately. Account status is non-viable for trading.",
+    "timestamp": 1772707112.470727
+  },
+  {
+    "market_assessment": "Pre-market session (05:48 ET) with mixed signals: strong bullish movers (TTD +19.7%, IREN +10.95%) coexisting with sharp drops (RIGL -9.9%), suggesting selective momentum but no clear directional bias yet.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears completely wiped out from $25k starting capital",
+      "CRITICAL: 100% drawdown from ATH of $25,000 - catastrophic loss event occurred",
+      "CRITICAL: Zero buying power - cannot execute any trades",
+      "Account shows 'starting_equity' of $1,000 but ATH was $25,000 - suggests portfolio was rebuilt once and lost again",
+      "Pre-market liquidity risk - volume spikes on scanners are extremely low (2-12% of avg volume)",
+      "Scanner candidates lack conviction - best score only 0.56, no standout setups"
+    ],
+    "what_working": [
+      "UNKNOWN - no trade history available to analyze patterns"
+    ],
+    "what_not_working": [
+      "EVERYTHING - account has been completely zeroed out",
+      "Previous risk management failed catastrophically - lost 100% of capital",
+      "Whatever strategy was used resulted in total account destruction"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "additional_observations": {
+      "account_status": "DEAD - This account cannot trade. $0 equity = $0 buying power.",
+      "root_cause_unknown": "Cannot determine what caused total loss without trade history, but 100% drawdown indicates either: massive uncontrolled loss, margin liquidation, or system failure.",
+      "mission_status": "FAILED - The $25k portfolio no longer exists. Mission to reach $5M cannot proceed without capital.",
+      "immediate_action_required": "Account requires manual funding/reset before any AI layer can operate. This is beyond algorithmic control.",
+      "family_impact": "This represents complete loss of the family's investment. The 'forever home' goal is now further away. This is the exact outcome we were designed to prevent."
+    },
+    "timestamp": 1772707733.423285
+  },
+  {
+    "market_assessment": "Pre-market hours (5:58 AM ET) \u2014 cannot assess live market conditions, but scanner shows mixed signals with crypto-related names (COIN, TTD) showing strength while biotech (RIGL) is getting crushed.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 \u2014 account appears wiped out from $25,000 starting capital",
+      "CRITICAL: 100% drawdown from ATH of $25,000",
+      "CRITICAL: Zero buying power, zero cash \u2014 cannot execute any trades",
+      "Account may be restricted or liquidated \u2014 need immediate human intervention",
+      "Risk tier shows 'SURVIVAL' mode but with $0 equity, no recovery is possible without capital injection"
+    ],
+    "what_working": [
+      "N/A \u2014 no active positions or recent trades to analyze"
+    ],
+    "what_not_working": [
+      "Whatever strategy led to total capital loss \u2014 this represents catastrophic failure",
+      "Risk management protocols clearly failed to preserve capital",
+      "Circuit breakers either didn't trigger or were insufficient"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772708349.663779
+  },
+  {
+    "market_assessment": "Pre-market early Thursday, crypto-related momentum (COIN +14%, TTD gapping), mixed retail sentiment but we are DEAD IN THE WATER \u2014 account equity is $0.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Account equity is $0.00 \u2014 portfolio has been completely wiped out",
+      "100% drawdown from $25,000 ATH to $0 \u2014 catastrophic failure",
+      "Zero buying power, zero cash, zero positions \u2014 trading is impossible",
+      "SURVIVAL tier with $0 means system cannot execute any trades",
+      "This represents total capital loss \u2014 the family's $25,000 is gone"
+    ],
+    "what_working": [
+      "Nothing \u2014 there is no capital left to deploy"
+    ],
+    "what_not_working": [
+      "Everything that led to this point \u2014 complete account blowup",
+      "Risk management failed catastrophically",
+      "Position sizing was inadequate to prevent ruin",
+      "Stop losses either didn't trigger or were too loose",
+      "Whatever strategy was deployed resulted in 100% loss"
+    ],
+    "overall_sentiment": "irrelevant",
+    "urgency": "CRITICAL",
+    "additional_observations": [
+      "Scanner is still running and finding candidates (COIN, TTD, SLS) but this is meaningless without capital",
+      "The mission is FAILED \u2014 we've lost a family's nest egg",
+      "Starting equity shows $1,000 but ATH was $25,000, suggesting either a reset happened or data inconsistency",
+      "This is exactly what we were built to prevent \u2014 we exist to PROTECT capital first",
+      "Immediate post-mortem required: What sequence of trades led to total loss?",
+      "System needs emergency halt and human intervention \u2014 no autonomous recovery possible from $0"
+    ],
+    "required_action": "FULL STOP. Human review mandatory. Account reconstruction or funding required before any trading can resume.",
+    "timestamp": 1772708966.377295
+  },
+  {
+    "market_assessment": "Pre-market session (6:19 ET) showing mixed signals with crypto-related names rallying (COIN +14.48%, TTD +18.16%) while biotech RIGL dumping -9.9%, suggesting sector-specific momentum rather than broad market trend.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity shows $0.00 - complete capital loss from $25k starting balance",
+      "Account is completely zeroed out - no cash, no buying power, no positions",
+      "100% drawdown from ATH of $25,000",
+      "SURVIVAL tier activated but nothing left to survive with",
+      "Trading capability exists but no capital to deploy"
+    ],
+    "what_working": [
+      "N/A - no active positions or recent trades to analyze"
+    ],
+    "what_not_working": [
+      "Whatever strategy led to total capital destruction needs forensic analysis",
+      "Risk management clearly failed catastrophically",
+      "Position sizing or stop-loss discipline was inadequate"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "critical_note": "This is a TOTAL PORTFOLIO FAILURE event. Before any trading resumes, we need: 1) Root cause analysis of what destroyed $25k, 2) System reset/recapitalization decision from human oversight, 3) Complete strategy review. The scanner is showing opportunities but we have ZERO capital to act. This AI layer cannot function without capital. Immediate human intervention required.",
+    "timestamp": 1772709583.50801
+  },
+  {
+    "market_assessment": "Pre-market shows mixed action with crypto (COIN +14.5%) and ad-tech (TTD +17.9%) surging, biotech volatile (RIGL -9.9%, AMPX +8%), suggesting sector rotation but unable to confirm broader market trend without position data.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears completely wiped out from $25k starting capital",
+      "CRITICAL: 100% drawdown from all-time high of $25,000",
+      "CRITICAL: Zero buying power - cannot execute any trades",
+      "Account shows starting_equity of $1,000 but risk status references $25k ATH - data inconsistency",
+      "No trade history visible - unclear what caused total capital loss",
+      "SURVIVAL tier active (10% position sizing) but irrelevant with zero capital",
+      "Scanner showing candidates but we have no capital to deploy"
+    ],
+    "what_working": [
+      "N/A - no active positions or recent trade history to analyze"
+    ],
+    "what_not_working": [
+      "Everything - the account has been completely zeroed out",
+      "Risk management failed catastrophically if we went from $25k to $0",
+      "Scanner is still running but pointless without capital"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772710199.453506
+  },
+  {
+    "market_assessment": "Pre-market session (6:39 ET) showing mixed signals: crypto-related stocks surging (COIN +14.48%), tech momentum (TTD +16.92%), but biotech weakness (RIGL -9.9%) \u2014 volatility is present but no clear directional bias yet.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 \u2014 complete account wipeout from $25,000 starting capital",
+      "CRITICAL: 100% drawdown from all-time high of $25,000",
+      "Account shows $0 buying power \u2014 trading is impossible without capital",
+      "System indicates 'starting_equity' of $1,000 but ATH was $25,000 \u2014 data inconsistency suggests account may have been reset or catastrophic loss occurred",
+      "Pre-market data quality is poor (many fields showing 0 for OHLC, VWAP) \u2014 unreliable for decision-making",
+      "Volume spikes are extremely low (0.8% to 12% of average) \u2014 these are not genuine breakouts, just pre-market noise",
+      "Scanner candidates showing inflated change_pct based on stale prev_close data"
+    ],
+    "what_working": [
+      "N/A \u2014 no active positions or recent trades to analyze"
+    ],
+    "what_not_working": [
+      "Previous strategy led to total capital destruction",
+      "Whatever risk management was in place failed catastrophically",
+      "Position sizing, stop losses, or trade selection resulted in 100% loss"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "additional_observations": {
+      "account_status": "DEAD \u2014 Zero equity means no trading possible until capital is restored",
+      "data_quality": "Pre-market scanner data is unreliable \u2014 volume spikes under 15% of average are meaningless noise",
+      "action_required": "Cannot trade with $0. System requires capital injection or account reconciliation. If this is a simulation reset, await market open (9:30 ET) for quality data.",
+      "lesson_learned": "The mission failed. $25,000 \u2192 $0 means every protective mechanism was insufficient. Before any future trading: implement hard stops, position size limits, and maximum daily loss circuit breakers that FORCE exits, not suggest them."
+    },
+    "timestamp": 1772710816.6392908
+  },
+  {
+    "market_assessment": "Pre-market session (6:50 ET) showing light volume with mixed signals; PDYN up 38% but on extremely low volume (51k vs 6.4M avg), TTD showing 18% gain on decent volume, overall liquidity thin and unreliable for decision-making.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Account equity is $0 - portfolio appears to be completely wiped out",
+      "100% drawdown from $25,000 ATH to $0 current equity",
+      "Trading is technically possible but starting from zero - this should not be possible",
+      "Pre-market data quality is poor - volume spikes are misleading (PDYN at 0.8% of avg volume despite 'trending')",
+      "All scanner candidates showing suspicious patterns - large % gains on abnormally low volume",
+      "No historical context - cannot assess what led to total capital loss"
+    ],
+    "what_working": [
+      "Nothing can be assessed as working - no capital deployed, no recent trade history"
+    ],
+    "what_not_working": [
+      "Capital preservation clearly failed catastrophically - $25k to $0",
+      "Whatever strategy was employed previously resulted in complete account wipeout",
+      "Risk management systems either failed or were overridden"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772711432.375916
+  },
+  {
+    "market_assessment": "Pre-market session (7:00 ET) with low liquidity; scanner showing mixed signals with low-volume pre-market moves that may not hold at open.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears completely wiped out from $25k starting capital",
+      "CRITICAL: 100% drawdown from ATH of $25k - catastrophic loss event occurred",
+      "CRITICAL: Zero buying power - cannot execute any trades",
+      "Account shows complete capital destruction - this is a survival crisis",
+      "Scanner candidates show extremely low pre-market volumes (51k, 92k, 7k shares) - these are illiquid and dangerous",
+      "Pre-market price changes are unreliable - PDYN showing 32% on only 51k volume vs 6.4M average",
+      "No trading history visible to understand what caused the account destruction"
+    ],
+    "what_working": [
+      "Nothing is working - the account has been completely zeroed out"
+    ],
+    "what_not_working": [
+      "Previous strategy led to 100% capital loss",
+      "Risk management failed catastrophically",
+      "Position sizing or leverage destroyed the account",
+      "Circuit breakers either didn't exist or were bypassed"
+    ],
+    "overall_sentiment": "EMERGENCY",
+    "urgency": "CRITICAL - TRADING HALT REQUIRED",
+    "timestamp": 1772712047.489434
+  },
+  {
+    "market_assessment": "Pre-market session (7:10 ET) with scanner showing strong momentum plays, but CRITICAL ISSUE: account equity is $0 - system appears to be in catastrophic failure state or data error.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio value is $0.00 - complete account wipeout or data synchronization failure",
+      "CRITICAL: 100% drawdown from $25,000 ATH to $0 - this is a total loss scenario",
+      "CRITICAL: All buying power exhausted - cannot execute any trades",
+      "System shows starting_equity of $1,000 but ATH was $25,000 - data inconsistency suggests account history corruption",
+      "Pre-market liquidity concerns - all top candidates show zero/minimal volume at 7:10 ET",
+      "Trading is technically unblocked but mathematically impossible with $0 equity"
+    ],
+    "what_working": [
+      "N/A - no recent trades to analyze, account is dead"
+    ],
+    "what_not_working": [
+      "Everything - account has experienced total capital destruction",
+      "Risk management systems failed to prevent 100% loss",
+      "Circuit breakers either didn't trigger or were overridden"
+    ],
+    "overall_sentiment": "N/A - cannot assess market when unable to participate",
+    "urgency": "CRITICAL - EMERGENCY",
+    "emergency_notes": [
+      "This is a mission-critical failure. The family's $25,000 is gone.",
+      "Immediate investigation needed: Is this a data error, account sync issue, or actual total loss?",
+      "If real loss: Full post-mortem required to understand how all safety systems failed",
+      "If data error: System needs immediate repair before any trading decisions can be made",
+      "Scanner data is irrelevant - we have no capital to deploy regardless of opportunities"
+    ],
+    "timestamp": 1772712658.007574
+  },
+  {
+    "market_assessment": "Pre-market open, early Thursday morning - scanner showing strong momentum plays with TTD +20%, PDYN +18%, but volume is still thin and unconfirmed before regular hours.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Account equity is $0.00 - complete capital loss from $25k starting value",
+      "CRITICAL: Zero buying power, zero cash, cannot execute any trades",
+      "CRITICAL: 100% drawdown from ATH of $25,000",
+      "System shows SURVIVAL tier (10% position size) but with $0 equity, there is nothing to deploy",
+      "No trading history visible despite catastrophic loss - need to understand what caused total account wipeout",
+      "Scanner candidates are irrelevant without capital to deploy"
+    ],
+    "what_working": [
+      "Nothing - account is at zero"
+    ],
+    "what_not_working": [
+      "Everything - complete account loss has occurred",
+      "Whatever strategy or risk management was in place failed catastrophically"
+    ],
+    "overall_sentiment": "EMERGENCY",
+    "urgency": "CRITICAL - SYSTEM FAILURE",
+    "additional_context": {
+      "root_cause_unknown": "No trade history visible to determine how $25k became $0",
+      "mission_status": "Mission to grow portfolio to $5M is currently impossible - family's financial future at immediate risk",
+      "immediate_action_required": "Need account investigation, potential funding verification, or system error diagnosis before any trading decisions can be made",
+      "scanner_assessment": "TTD and PDYN showing strong pre-market moves but meaningless without capital"
+    },
+    "timestamp": 1772713274.377276
+  },
+  {
+    "market_assessment": "Pre-market session (7:31 ET) showing scanner activity with strong momentum plays, but CATASTROPHIC PROBLEM: account equity is $0.00 - we are completely wiped out.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio value is $0.00 - complete account loss",
+      "CRITICAL: 100% drawdown from $25,000 ATH to $0",
+      "CRITICAL: Starting equity shows $1,000 but current equity is $0",
+      "CRITICAL: Zero buying power - cannot execute any trades",
+      "CRITICAL: This represents total failure of capital preservation mission",
+      "System shows 1 day trading but account is zeroed - data integrity concern",
+      "No trade history visible to understand what caused the wipeout"
+    ],
+    "what_working": [
+      "Scanner is still identifying momentum candidates (TTD +19%, PDYN +18%)",
+      "Sentiment data and volume spike detection functioning"
+    ],
+    "what_not_working": [
+      "EVERYTHING - the entire account has been lost",
+      "Whatever risk management was in place failed catastrophically",
+      "Capital preservation - the #1 mission - has failed completely"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "CRITICAL_EMERGENCY",
+    "timestamp": 1772713890.089658
+  },
+  {
+    "market_assessment": "Pre-market shows moderate activity with several stocks gapping up 8-22%, sentiment skewed bullish, but volumes extremely thin \u2014 danger zone for fake moves.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 \u2014 account appears wiped out or data error",
+      "Account shows -100% total return from $25k starting equity to $0",
+      "100% drawdown from ATH of $25k",
+      "Zero buying power, zero cash \u2014 cannot take any positions",
+      "All scanner candidates showing near-zero volume in pre-market (highest only 1.5M vs 22M avg)",
+      "PDYN volume spike is 0.8% of average \u2014 this is NOT real volume",
+      "Pre-market gaps without volume are traps, not opportunities"
+    ],
+    "what_working": [
+      "Nothing \u2014 no open positions, no recent trades to analyze"
+    ],
+    "what_not_working": [
+      "Previous strategy led to complete capital destruction",
+      "Risk management failed catastrophically"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772714505.342766
+  },
+  {
+    "market_assessment": "Pre-market session (7:51 ET) showing mixed signals with modest gainer momentum but critically low volume across all candidates.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio equity is $0.00 - account appears wiped out or data error",
+      "CRITICAL: 100% drawdown from $25K ATH to $0 - catastrophic loss event",
+      "All buying power exhausted - cannot enter new positions",
+      "Scanner candidates showing extremely low volume (51K-1.4M) for pre-market - insufficient liquidity",
+      "Volume spikes all below 0.13x average - no real conviction in any moves",
+      "PDYN/TTD showing 20%+ gains but on trivial volume - likely unreliable pre-market prints",
+      "No price action data (open/high/low/vwap all zero) - market not yet fully active"
+    ],
+    "what_working": [
+      "Nothing - portfolio has been eliminated"
+    ],
+    "what_not_working": [
+      "Previous risk management failed catastrophically",
+      "Drawdown protection did not prevent total loss",
+      "Position sizing or stop-loss discipline broke down"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772715119.418389
+  },
+  {
+    "market_assessment": "Market open just started (08:01 ET) - premarket movers showing strength with PDYN +18.4%, STEM +18.4%, LQDA +8.3% on bullish sentiment, but volume still building.",
+    "position_health": [],
+    "risk_flags": [
+      "CRITICAL: Portfolio is at $0 equity - account appears to be completely liquidated or data error",
+      "100% drawdown from $25k ATH to $0 - catastrophic loss scenario",
+      "Zero buying power - cannot execute any trades",
+      "Account shows $1k starting equity but $25k ATH - unclear what capital is actually available",
+      "Data integrity issue: portfolio_value=0 but system expects $1k starting equity"
+    ],
+    "what_working": [
+      "Scanner is finding high-conviction setups with strong bullish sentiment (PDYN, STEM, LQDA all 77-100% sentiment)",
+      "Momentum filter working - identifying 8-18% premarket gainers",
+      "StockTwits trending scores capturing early retail attention"
+    ],
+    "what_not_working": [
+      "EVERYTHING - account is at zero, previous strategy led to complete capital destruction",
+      "Risk management clearly failed catastrophically to allow 100% drawdown",
+      "Whatever positions were held previously resulted in total loss"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "critical_note": "IMMEDIATE ATTENTION REQUIRED: This appears to be either (1) catastrophic account failure requiring emergency review, (2) system reset/paper trading initialization, or (3) data feed error. Cannot provide trading observations with $0 capital. Need human verification of actual account status before any Layer 2 Advisor recommendations. If this is real money that went to zero, full post-mortem required on what positions/strategy caused total loss. The mission to protect this family's future has already failed if this $0 is accurate.",
+    "timestamp": 1772715733.674517
   }
 ]

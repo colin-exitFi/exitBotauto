@@ -62,7 +62,7 @@
     },
     {
       "ticker": "IREN",
-      "conviction": 0.779,
+      "conviction": 0.8569000000000001,
       "side": "long",
       "reason": "StockTwits #25 trending | StockTwits #24 trending",
       "sources": "stocktwits",
@@ -72,7 +72,7 @@
     },
     {
       "ticker": "BABA",
-      "conviction": 0.8266800000000001,
+      "conviction": 0.41334000000000004,
       "side": "long",
       "reason": "StockTwits #24 trending | StockTwits #26 trending",
       "sources": "stocktwits",
@@ -82,7 +82,7 @@
     },
     {
       "ticker": "GLXY",
-      "conviction": 0.92,
+      "conviction": 0.98,
       "side": "long",
       "reason": "StockTwits #22 trending",
       "sources": "stocktwits",
@@ -142,7 +142,7 @@
     },
     {
       "ticker": "MSTR",
-      "conviction": 0.9,
+      "conviction": 0.98,
       "side": "long",
       "reason": "Top gainer at +10.37%, crypto exposure driving momentum.[2] | Up +10.37%, leading crypto-related gains amid Bitcoin exposure[4]",
       "sources": "perplexity",
@@ -152,7 +152,7 @@
     },
     {
       "ticker": "MARA",
-      "conviction": 0.9,
+      "conviction": 0.98,
       "side": "long",
       "reason": "Strong +7.27% move, tied to crypto sector surge.[2]",
       "sources": "perplexity",
@@ -172,23 +172,13 @@
     },
     {
       "ticker": "MU",
-      "conviction": 0.9,
+      "conviction": 0.98,
       "side": "long",
       "reason": "Micron up +5.55%, memory chip demand signals.[2] | Up +5.55%, semiconductor momentum in volatile session[4]",
       "sources": "perplexity",
       "added_at": 1772679846.476177,
       "last_refreshed": 1772681224.671028,
       "expires_at": 1772854024.671028
-    },
-    {
-      "ticker": "GTLB",
-      "conviction": 0.9,
-      "side": "long",
-      "reason": "Notable decliner at -6.18%, potential volatility in software.[2]",
-      "sources": "perplexity",
-      "added_at": 1772679846.4764311,
-      "last_refreshed": 1772679846.4764311,
-      "expires_at": 1772852646.4764311
     },
     {
       "ticker": "VELO",
@@ -202,7 +192,7 @@
     },
     {
       "ticker": "AMPX",
-      "conviction": 0.92,
+      "conviction": 0.98,
       "side": "long",
       "reason": "StockTwits #22 trending",
       "sources": "stocktwits",
@@ -251,6 +241,6 @@
       "expires_at": 1772854024.670775
     }
   ],
-  "updated_at": "2026-03-04T21:27:04.671998",
-  "count": 25
+  "updated_at": "2026-03-05T00:24:19.798377",
+  "count": 24
 }

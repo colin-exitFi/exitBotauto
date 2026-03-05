@@ -146,8 +146,15 @@ class ConsensusEngine:
             logger.debug(f"Consensus cache hit for {symbol}")
             return cached
 
-        # Rate limit
-        max_per_hour = getattr(settings, 'CONSENSUS_MAX_CALLS_PER_HOUR', 20)
+        # Rate limit — higher during market hours (4AM-8PM ET)
+        from datetime import datetime as _dt
+        try:
+            import zoneinfo
+            _et_hour = _dt.now(zoneinfo.ZoneInfo("US/Eastern")).hour
+        except Exception:
+            _et_hour = 12
+        default_limit = 60 if 4 <= _et_hour < 20 else 20
+        max_per_hour = getattr(settings, 'CONSENSUS_MAX_CALLS_PER_HOUR', default_limit)
         now = time.time()
         self._call_timestamps = [t for t in self._call_timestamps if now - t < 3600]
         if len(self._call_timestamps) >= max_per_hour:

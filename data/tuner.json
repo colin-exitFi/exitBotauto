@@ -579,5 +579,161 @@
       }
     ],
     "timestamp": 1772690828.485343
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.7,
+        "reason": "Scanner returning ZERO candidates for multiple cycles. Advisor explicitly states 'entry bar is too high - need viable opportunities to deploy capital.' We've ratcheted 0.65\u21920.7\u21920.75 with zero deployments. Reverting to 0.7 to unblock pipeline while maintaining quality threshold."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 30,
+        "reason": "Advisor recommends 30sec: 'Capital velocity requires faster opportunity detection - especially in first 30 mins of market open when momentum is strongest.' Market opens in ~4 hours. Pre-positioning for high-velocity scanning window."
+      }
+    ],
+    "reasoning": "UNBLOCK THE PIPELINE: Zero trades + zero candidates = broken opportunity flow. Dead capital is the enemy. Lowering sentiment bar to 0.7 (still high-quality) + faster 30sec scanning creates deployment path while maintaining risk discipline.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.75,
+        "new": 0.7,
+        "reason": "Scanner returning ZERO candidates for multiple cycles. Advisor explicitly states 'entry bar is too high - need viable opportunities to deploy capital.' We've ratcheted 0.65\u21920.7\u21920.75 with zero deployments. Reverting to 0.7 to unblock pipeline while maintaining quality threshold.",
+        "timestamp": 1772691882.714219
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor recommends 30sec: 'Capital velocity requires faster opportunity detection - especially in first 30 mins of market open when momentum is strongest.' Market opens in ~4 hours. Pre-positioning for high-velocity scanning window.",
+        "timestamp": 1772691882.714477
+      }
+    ],
+    "timestamp": 1772691882.715473
+  },
+  {
+    "changes": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.5,
+        "reason": "Advisor explicitly recommends 1.5%: 'Lock in early wins faster with no history \u2014 TP1 at 1.5% builds confidence and compounds faster than holding for 2%'. Zero trades = need psychological momentum from early wins."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.75,
+        "reason": "Advisor recommends 0.75: 'Demand higher conviction on first trades to establish positive momentum'. Previous revert to 0.7 hasn't produced deployment in 30+ minutes. First trades set tone \u2014 quality over quantity."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 30,
+        "reason": "Advisor recommends 30sec (appears in 3 consecutive recommendations): 'Pre-market: need faster scanning 9:00-9:30 AM to catch gap movers before institutional algos'. Market opens in ~7 hours \u2014 pre-position now for high-velocity window."
+      }
+    ],
+    "reasoning": "Zero capital deployed after multiple tuning cycles. Advisor's current recommendations are SPECIFIC and data-backed for day 1 virgin system: tighten TP1 to lock early wins, raise sentiment bar despite scanner drought (first trades must work), accelerate scanning for market open. All 3 changes align with 'first 3 trades set psychological tone' directive.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 2.0,
+        "new": 1.5,
+        "reason": "Advisor explicitly recommends 1.5%: 'Lock in early wins faster with no history \u2014 TP1 at 1.5% builds confidence and compounds faster than holding for 2%'. Zero trades = need psychological momentum from early wins.",
+        "timestamp": 1772695525.123948
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.7,
+        "new": 0.75,
+        "reason": "Advisor recommends 0.75: 'Demand higher conviction on first trades to establish positive momentum'. Previous revert to 0.7 hasn't produced deployment in 30+ minutes. First trades set tone \u2014 quality over quantity.",
+        "timestamp": 1772695525.124105
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor recommends 30sec (appears in 3 consecutive recommendations): 'Pre-market: need faster scanning 9:00-9:30 AM to catch gap movers before institutional algos'. Market opens in ~7 hours \u2014 pre-position now for high-velocity window.",
+        "timestamp": 1772695525.124148
+      }
+    ],
+    "timestamp": 1772695525.125956
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.65,
+        "reason": "Scanner showing ZERO candidates for 4+ hours across multiple 0.7\u21920.75 oscillations. Advisor explicitly states current threshold = 'too restrictive'. With market open in 6 hours and $25K idle, quality bar preventing ALL deployment is strategic failure. Drop to 0.65 to unblock pipeline."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 3.0,
+        "reason": "Advisor recommendation supported by math: current 2.5% = max 25% deployment (10 positions). Increase to 3.0% = max 30% deployment to improve capital velocity. With 0 trades and risk tier allowing this, bigger positions = faster compounding once deployment starts."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.25,
+        "reason": "Advisor recommends lowering from 1.5% to 1.25%: 'lock early wins faster to build win rate confidence'. Zero trade history = need psychological momentum. Lower TP1 = faster first wins = validation loop. Can raise once patterns emerge."
+      }
+    ],
+    "reasoning": "Emergency deployment unblock: 4 hours of zero candidates = scanner asphyxiation from over-tuned sentiment threshold, time to inject capital velocity",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.75,
+        "new": 0.65,
+        "reason": "Scanner showing ZERO candidates for 4+ hours across multiple 0.7\u21920.75 oscillations. Advisor explicitly states current threshold = 'too restrictive'. With market open in 6 hours and $25K idle, quality bar preventing ALL deployment is strategic failure. Drop to 0.65 to unblock pipeline.",
+        "timestamp": 1772699151.456851
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 2.5,
+        "new": 3.0,
+        "reason": "Advisor recommendation supported by math: current 2.5% = max 25% deployment (10 positions). Increase to 3.0% = max 30% deployment to improve capital velocity. With 0 trades and risk tier allowing this, bigger positions = faster compounding once deployment starts.",
+        "timestamp": 1772699151.457814
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 1.5,
+        "new": 1.25,
+        "reason": "Advisor recommends lowering from 1.5% to 1.25%: 'lock early wins faster to build win rate confidence'. Zero trade history = need psychological momentum. Lower TP1 = faster first wins = validation loop. Can raise once patterns emerge.",
+        "timestamp": 1772699151.457868
+      }
+    ],
+    "timestamp": 1772699151.458813
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.75,
+        "reason": "Advisor explicitly recommends 0.75 citing PDT constraint: 'With only 3 day trades per 5-day period, we cannot afford mediocre setups.' Previous oscillation 0.65\u21920.7\u21920.75\u21920.7\u21920.75\u21920.65 shows indecision, but NOW we have data: 0 trades in pre-market is CORRECT behavior per Advisor ('scanner being empty pre-market is correct behavior \u2014 liquidity doesn't exist yet'). Raise bar for market open."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "Advisor explicitly calls out mismatch: 'Current config shows 2.5% in risk status but 3.0% in parameters \u2014 reconcile to 2.5%'. Risk tier = COMPOUND at 2.5%. Parameter drift = 3.0%. Align to tier rules. Previous bump to 3.0% was premature with 0 trades to validate system performance at current capital level."
+      }
+    ],
+    "reasoning": "Pre-market idle capital is strategy, not failure \u2014 tighten quality bar for market open, align position sizing to proven risk tier.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.65,
+        "new": 0.75,
+        "reason": "Advisor explicitly recommends 0.75 citing PDT constraint: 'With only 3 day trades per 5-day period, we cannot afford mediocre setups.' Previous oscillation 0.65\u21920.7\u21920.75\u21920.7\u21920.75\u21920.65 shows indecision, but NOW we have data: 0 trades in pre-market is CORRECT behavior per Advisor ('scanner being empty pre-market is correct behavior \u2014 liquidity doesn't exist yet'). Raise bar for market open.",
+        "timestamp": 1772701243.654485
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 3.0,
+        "new": 2.5,
+        "reason": "Advisor explicitly calls out mismatch: 'Current config shows 2.5% in risk status but 3.0% in parameters \u2014 reconcile to 2.5%'. Risk tier = COMPOUND at 2.5%. Parameter drift = 3.0%. Align to tier rules. Previous bump to 3.0% was premature with 0 trades to validate system performance at current capital level.",
+        "timestamp": 1772701243.654857
+      }
+    ],
+    "timestamp": 1772701243.656954
   }
 ]
