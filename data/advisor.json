@@ -1,44 +1,5 @@
 [
   {
-    "strategy": "Pre-market preparation mode: identify high-probability first trade candidates to deploy capital at open and establish psychological momentum.",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech_mega_caps",
-        "energy",
-        "momentum_stocks"
-      ],
-      "avoid": [
-        "low_volume_small_caps",
-        "volatile_biotechs",
-        "unproven_penny_stocks"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "First trade needs quick win for psychological momentum - tighter TP1 increases probability of banking green, then let TP2 run"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.4,
-        "reason": "With zero track record, first trade must be high-conviction - raise bar slightly to avoid weak setups"
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 180,
-        "suggested": 60,
-        "reason": "At market open (9:30-10:00 ET), scan every 60s to catch momentum breakouts - capital velocity demands speed"
-      }
-    ],
-    "key_insight": "The first trade is disproportionately important. It sets psychological tone and validates the entire system. Focus tomorrow's open on ONE high-probability setup: liquid mega-cap (AAPL/MSFT/NVDA/TSLA) with clear technical setup + positive momentum. Get $70 deployed fast, bank TP1 at 1.2%, establish the win streak counter. Dead capital is the enemy - deploy by 10:00 AM ET or accept you're losing 6 hours of compounding opportunity. Pre-market: monitor futures, identify which sector is leading, have 3 symbols ready to scan hard at 9:30 bell.",
-    "timestamp": 1772671413.370749
-  },
-  {
     "strategy": "Pre-market prep mode: tighten scanner criteria, bias toward high-volume gappers at open, then execute aggressively to break the zero-velocity deadlock",
     "position_advice": [],
     "sector_bias": {
@@ -1698,5 +1659,38 @@
     ],
     "key_insight": "THIS IS A CRISIS. 11 straight losses with $0 PnL (likely commission-bleed or rounding) and 100% trailing-stop exits in <5min means the bot is entering at LOCAL TOPS and getting immediately flushed. The scanner is feeding bad signals OR the execution timing is backwards (buying breakouts that immediately fail). DO NOT DEPLOY CAPITAL until you diagnose: (1) Are entries happening on exhaustion moves vs. continuation setups? (2) Is the trailing stop too tight for the volatility of these names? (3) Why is TTD (5 losses) and PDYN (6 losses) being repeatedly selected when they're clearly not working? This is not 'waiting for market data' \u2014 this is a broken entry algorithm that will bleed this account to zero. The Observer is worried about idle cash, but idle cash beats ACTIVE DESTRUCTION. Fix the scanner/entry logic before resuming. Capital preservation is job #1.",
     "timestamp": 1772718351.727059
+  },
+  {
+    "strategy": "HALT ALL TRADING IMMEDIATELY \u2014 11 consecutive losses in <5min with $0 PnL indicates critical execution failure, likely data feed or order routing malfunction.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL \u2014 trading should be suspended until execution issues diagnosed"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "11/11 losses with 0.2min avg hold time and $0 total PnL is mathematically impossible unless orders are being instantly stopped out or filled at catastrophic prices \u2014 suggests broker API issue, data feed delay, or order execution bug"
+      },
+      {
+        "param": "MIN_HOLD_TIME_SECONDS",
+        "current": 0,
+        "suggested": 300,
+        "reason": "12-second average hold time on losing trades suggests stop losses triggering on bid/ask spread noise rather than actual price movement"
+      },
+      {
+        "param": "SCANNER_VALIDATION",
+        "current": "unknown",
+        "suggested": "REQUIRED",
+        "reason": "Zero scanner output at market open is red flag \u2014 need to verify data feed is live and scanner logic is functioning"
+      }
+    ],
+    "key_insight": "THIS IS NOT A STRATEGY PROBLEM \u2014 THIS IS A TECHNICAL FAILURE. The data shows 11 trades executed at 07:XX (pre-market or timestamp issue?), all exiting via trailing stop in under 5 minutes with ZERO net PnL. This pattern indicates: (1) orders being filled at terrible prices then immediately stopped out, (2) data feed latency causing stale signals, or (3) stop losses set too tight for actual market spread. The scanner showing zero candidates at market open compounds concerns about data integrity. DO NOT DEPLOY CAPITAL until you verify: real-time data feed is working, order fills are at expected prices, stops are triggering on actual price movement not spread noise, and scanner is seeing live opportunities. The PDT limit (3 trades/week) makes this 100x more critical \u2014 you cannot afford to burn day trades on broken execution. Current win rate of 0% with instant exits is a technical malfunction, not a market condition. FIX THE PLUMBING BEFORE TRADING ANOTHER DOLLAR.",
+    "timestamp": 1772718493.483296
   }
 ]

@@ -472,6 +472,7 @@ tr:hover td{background:#161b2288}
 .positive{color:#3fb950}.negative{color:#f85149}.info{color:#58a6ff}
 .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
 .tag-buy{background:#23863622;color:#3fb950;border:1px solid #23863644}
+.tag-short{background:#a371f722;color:#d2a8ff;border:1px solid #a371f744}
 .tag-skip{background:#da363322;color:#f85149;border:1px solid #da363344}
 .controls{display:flex;gap:8px}
 .btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
@@ -537,9 +538,9 @@ tr:hover td{background:#161b2288}
 
   <!-- Consensus Panel -->
   <div class="card full">
-    <h2><span class="icon">🗳️</span> AI Consensus Jury <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <h2><span class="icon">🗳️</span> AI Consensus Jury <span style="font-size:11px;color:#6e7681;font-weight:400;margin-left:8px">3-Model Majority Vote</span> <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="consensusSummary"></div>
-    <table><thead><tr><th>Symbol</th><th>Claude</th><th>GPT</th><th>Perplexity</th><th>Decision</th><th>Confidence</th><th>Size Mod</th></tr></thead>
+    <table><thead><tr><th>Symbol</th><th>🟣 Claude</th><th>🟢 GPT-5.2</th><th>🔵 Grok-4</th><th>Decision</th><th>Confidence</th><th>Size Mod</th></tr></thead>
     <tbody id="consensus"></tbody></table>
   </div>
 
@@ -682,11 +683,18 @@ async function refresh() {
       <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP Signals</div></div>
       <div class="summary-item"><div class="val" style="color:#d2a8ff">${((st.agreement_rate||0)*100).toFixed(0)}%</div><div class="lbl">Agreement Rate</div></div>
       <div class="summary-item"><div class="val" style="color:#e3b341">$${(st.estimated_cost||0).toFixed(2)}</div><div class="lbl">API Cost</div></div>
+      <div class="summary-item"><div class="val" style="color:#8b949e;font-size:11px">🟣${(st.api_calls||{}).claude||0} 🟢${(st.api_calls||{}).gpt||0} 🔵${(st.api_calls||{}).grok||0}</div><div class="lbl">Model Calls</div></div>
     ` : '';
     $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
-      const voteStr = v => v ? `<span class="tag ${v.decision==='BUY'?'tag-buy':'tag-skip'}">${v.decision}</span> ${v.confidence}%` : '<span style="color:#484f58">—</span>';
-      return `<tr><td><strong>${h.symbol}</strong></td><td>${voteStr(h.claude)}</td><td>${voteStr(h.gpt)}</td><td>${voteStr(h.perplexity)}</td>
-        <td><span class="tag ${h.final_decision==='BUY'?'tag-buy':'tag-skip'}">${h.final_decision}</span></td>
+      const voteStr = v => {
+        if (!v) return '<span style="color:#484f58">—</span>';
+        if (v.error) return `<span class="tag" style="background:#da363333;color:#f85149">ERR</span>`;
+        const cls = v.decision==='BUY'?'tag-buy':v.decision==='SHORT'?'tag-short':'tag-skip';
+        return `<span class="tag ${cls}">${v.decision}</span> ${v.confidence}%`;
+      };
+      const decCls = h.final_decision==='BUY'?'tag-buy':h.final_decision==='SHORT'?'tag-short':'tag-skip';
+      return `<tr><td><strong>${h.symbol}</strong></td><td>${voteStr(h.claude)}</td><td>${voteStr(h.gpt)}</td><td>${voteStr(h.grok)}</td>
+        <td><span class="tag ${decCls}">${h.final_decision}</span></td>
         <td>${(h.avg_confidence||0).toFixed(0)}%</td><td>${((h.size_modifier||1)*100).toFixed(0)}%</td></tr>`;
     }).join('') : '<tr><td colspan="7" class="empty">No consensus decisions yet</td></tr>';
   }
