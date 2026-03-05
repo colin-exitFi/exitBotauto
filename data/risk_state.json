@@ -1,1 +1,8 @@
-{"starting_equity": 25000.0, "ath_equity": 25000.0, "wash_sale_list": {}, "round_trips": []}
+{
+  "equity": 24999.16,
+  "starting_equity": 25000.0,
+  "ath_equity": 25000.0,
+  "start_date": 1772728235.076226,
+  "wash_sale_list": {},
+  "round_trips": []
+}

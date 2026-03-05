@@ -1,1 +1,16 @@
-{}
+{
+  "last_observation": null,
+  "last_advice": null,
+  "last_tuner_changes": null,
+  "last_game_film_summary": null,
+  "last_position_manager": "healthy | 0 exits | 0 vetoes",
+  "last_consensus": {
+    "symbol": "TTD",
+    "decision": "BUY",
+    "size_pct": 1.5,
+    "trail_pct": 3.0,
+    "reasoning": "Strong CATALYST (magnitude 9) with CEO's record $150M insider purchase signals exceptional conviction during weakness. SENTIMENT bullish with rising social velocity supports momentum. Despite TECHNICAL sell signal, stock is at resistance not breakdown, and insider buying typically precedes reversals",
+    "confidence": 68.0,
+    "timestamp": 1772728350.198066
+  }
+}

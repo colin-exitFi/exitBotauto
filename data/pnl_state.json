@@ -1,1 +1,12 @@
-{"starting_equity": 25000.0, "total_realized_pnl": 0, "today_realized_pnl": 0, "today_date": "2026-03-05", "peak_equity": 25000.0, "total_trades": 0, "winning_trades": 0, "losing_trades": 0, "best_trade": 0, "worst_trade": 0}
+{
+  "starting_equity": 25000.0,
+  "total_realized_pnl": 0,
+  "today_realized_pnl": 0,
+  "today_date": "2026-03-05",
+  "peak_equity": 25000.0,
+  "total_trades": 0,
+  "winning_trades": 0,
+  "losing_trades": 0,
+  "best_trade": 0,
+  "worst_trade": 0
+}
