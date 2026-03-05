@@ -371,11 +371,19 @@ class ConsensusEngine:
             logger.error(f"Claude API error: {e}")
             return ModelVote(model="claude", decision="SKIP", confidence=0, error=str(e))
 
+    _gpt_disabled_until: float = 0  # class-level circuit breaker for billing issues
+
     async def _call_gpt(self, prompt: str) -> ModelVote:
         if not settings.OPENAI_API_KEY:
             return ModelVote(model="gpt", decision="SKIP", confidence=0, error="No API key")
 
-        model = getattr(settings, 'OPENAI_MODEL', 'gpt-4o')
+        # Circuit breaker: if billing issue detected, skip GPT for 15 min
+        if time.time() < ConsensusEngine._gpt_disabled_until:
+            remaining = int(ConsensusEngine._gpt_disabled_until - time.time())
+            return ModelVote(model="gpt", decision="ERR", confidence=0,
+                           error=f"GPT disabled (billing issue, retry in {remaining}s)")
+
+        model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.2')
         try:
             async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
                 resp = await client.post(
@@ -391,6 +399,7 @@ class ConsensusEngine:
                     },
                 )
                 resp.raise_for_status()
+                ConsensusEngine._gpt_disabled_until = 0  # reset circuit breaker on success
                 self._api_calls["gpt"] += 1
                 text = resp.json()["choices"][0]["message"]["content"]
                 data = _parse_json(text)
@@ -403,10 +412,16 @@ class ConsensusEngine:
                     stop_price=data.get("stop_price"),
                 )
         except Exception as e:
-            # Exponential backoff on 429
-            if "429" in str(e):
-                for attempt, wait in enumerate([5, 15, 30], 1):
-                    logger.warning(f"GPT rate limited, retry {attempt}/3 in {wait}s...")
+            err_str = str(e)
+            # insufficient_quota = billing issue, not rate limit. Disable for 15 min.
+            if "insufficient_quota" in err_str or ("429" in err_str and "quota" in err_str.lower()):
+                logger.error(f"⚠️ GPT BILLING ISSUE (insufficient_quota) — disabling for 15 min. Add credits at platform.openai.com")
+                ConsensusEngine._gpt_disabled_until = time.time() + 900
+                return ModelVote(model="gpt", decision="ERR", confidence=0, error="insufficient_quota")
+            # Real rate limit — retry with backoff
+            if "429" in err_str:
+                for attempt, wait in enumerate([5, 15], 1):
+                    logger.warning(f"GPT rate limited, retry {attempt}/2 in {wait}s...")
                     await asyncio.sleep(wait)
                     try:
                         async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
@@ -423,12 +438,16 @@ class ConsensusEngine:
                             data = _parse_json(text)
                             return ModelVote(model="gpt", decision=data.get("decision", "SKIP").upper(),
                                             confidence=int(data.get("confidence", 0)), reasoning=data.get("reasoning", ""))
-                    except Exception:
-                        if attempt == 3:
+                    except Exception as retry_e:
+                        if "insufficient_quota" in str(retry_e):
+                            ConsensusEngine._gpt_disabled_until = time.time() + 900
+                            logger.error("⚠️ GPT BILLING ISSUE detected on retry — disabling for 15 min")
+                            return ModelVote(model="gpt", decision="ERR", confidence=0, error="insufficient_quota")
+                        if attempt == 2:
                             break
                         continue
             logger.error(f"GPT API error: {e}")
-            return ModelVote(model="gpt", decision="ERR", confidence=0, error=str(e))
+            return ModelVote(model="gpt", decision="ERR", confidence=0, error=err_str)
 
     async def _call_grok(self, prompt: str) -> ModelVote:
         if not settings.XAI_API_KEY:
