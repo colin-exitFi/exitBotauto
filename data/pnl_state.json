@@ -1,12 +1,12 @@
 {
   "starting_equity": 25000.0,
-  "total_realized_pnl": -5.732155999999865,
-  "today_realized_pnl": -5.732155999999865,
+  "total_realized_pnl": 0,
+  "today_realized_pnl": 0,
   "today_date": "2026-03-05",
-  "peak_equity": 25028.16,
-  "total_trades": 8,
-  "winning_trades": 6,
-  "losing_trades": 2,
-  "best_trade": 24.387844000000012,
-  "worst_trade": -24.95999999999998
+  "peak_equity": 25000.0,
+  "total_trades": 0,
+  "winning_trades": 0,
+  "losing_trades": 0,
+  "best_trade": 0,
+  "worst_trade": 0
 }

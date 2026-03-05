@@ -192,7 +192,7 @@ class Scanner:
         # ── ENRICH ALL with Polygon snapshot data ──────────────────
         # This fills in price, change_pct, volume for StockTwits-only tickers
         candidates = []
-        for stock in all_symbols[:30]:  # cap at 30 to manage API calls
+        for stock in all_symbols[:50]:  # enrich more candidates for diversity
             enriched = await self._enrich(stock)
             if enriched:
                 candidates.append(enriched)
@@ -206,7 +206,7 @@ class Scanner:
             c["score"] = self._calculate_score(c)
         filtered.sort(key=lambda x: x["score"], reverse=True)
 
-        self._cache = filtered[:10]
+        self._cache = filtered[:20]  # Keep more candidates for orchestrator diversity
 
         # Record today's big runners for tomorrow's fade watchlist
         if self.fade:

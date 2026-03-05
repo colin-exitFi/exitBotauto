@@ -823,24 +823,24 @@ class TradingBot:
 
         positions = self.entry_manager.get_positions()
 
-        # Evaluate more candidates — skip recently-SKIPped ones to find fresh opportunities
+        # Evaluate candidates — skip held tickers and recently-SKIPped to find FRESH opportunities
         evaluated = 0
-        for candidate in candidates[:15]:  # Look at top 15 instead of just 5
-            if evaluated >= 5:  # But only fully evaluate up to 5 per cycle
+        held_symbols = {p.get("symbol") for p in positions}
+        for candidate in candidates[:20]:  # Look at top 20
+            if evaluated >= 8:  # Evaluate up to 8 per cycle (more diversity)
                 break
             symbol = candidate["symbol"]
+
+            # Skip tickers we already hold (don't waste AI calls re-evaluating held positions)
+            if symbol in held_symbols:
+                continue
+
             sentiment_score = candidate.get("sentiment_score", 0)
             sentiment_data = self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score}
 
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
                 continue
-
-            evaluated += 1
-
-            # Stagger AI calls to avoid rate limits (2s between consensus evaluations)
-            if evaluated > 1:
-                await asyncio.sleep(2)
 
             # Specialized Agent Orchestrator — 5 agents + jury
             if self.orchestrator:
@@ -850,10 +850,17 @@ class TradingBot:
                         price=candidate.get("price", 0),
                         signals_data=candidate,
                     )
+                    # Only count as "evaluated" if we actually made AI calls (not cooldown skip)
+                    if "cooldown" not in verdict.reasoning.lower():
+                        evaluated += 1
+                        # Stagger AI calls to avoid rate limits
+                        if evaluated > 1:
+                            await asyncio.sleep(1.5)
                     self.ai_layers["last_consensus"] = verdict.to_dict()
                     if verdict.decision not in ("BUY", "SHORT"):
-                        logger.info(f"🗳️ Jury SKIP for {symbol}: {verdict.reasoning}")
-                        log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning}")
+                        if "cooldown" not in verdict.reasoning.lower():
+                            logger.info(f"🗳️ Jury SKIP for {symbol}: {verdict.reasoning}")
+                            log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning}")
                         continue
                     direction = verdict.decision
                     # Map jury sizing to consensus_size_modifier (0-1 range)

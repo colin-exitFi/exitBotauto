@@ -53,7 +53,7 @@ class Orchestrator:
         """
         # Skip cooldown
         skip_ts = self._skip_cache.get(symbol)
-        if skip_ts and (time.time() - skip_ts) < 120:
+        if skip_ts and (time.time() - skip_ts) < 300:  # 5 min cooldown after SKIP
             return JuryVerdict(
                 symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
                 reasoning="Skip cooldown (2 min)",
