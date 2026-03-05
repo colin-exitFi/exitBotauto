@@ -33,7 +33,7 @@ def _check_rate_limit() -> bool:
         _et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
     except Exception:
         _et_hour = 12
-    default_limit = 60 if 4 <= _et_hour < 20 else 20
+    default_limit = 200 if 4 <= _et_hour < 20 else 30
     max_per_hour = getattr(settings, 'CONSENSUS_MAX_CALLS_PER_HOUR', default_limit)
     now = time.time()
     _call_timestamps[:] = [t for t in _call_timestamps if now - t < 3600]

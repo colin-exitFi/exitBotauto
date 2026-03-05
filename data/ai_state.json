@@ -1,16 +1,16 @@
 {
-  "last_observation": "Day 1, market open for 1h53m - we are sitting on 100% DEAD CAPITAL with zero positions and zero scanner candidates showing momentum.",
+  "last_observation": "Market is bleeding red (SPY -1.18%, QQQ -1.07%, DIA -2.11%) but that's creating volatility plays\u2014rotation into small-cap AI/tech runners while institutions dump.",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": null,
   "last_position_manager": null,
   "last_consensus": {
-    "symbol": "BATL",
+    "symbol": "AVGO",
     "decision": "SKIP",
     "size_pct": 0,
     "trail_pct": 3.0,
-    "reasoning": "Skip cooldown (2 min)",
+    "reasoning": "Jury AI call failed",
     "confidence": 0.0,
-    "timestamp": 1772731839.104083
+    "timestamp": 1772738129.845852
   }
 }
