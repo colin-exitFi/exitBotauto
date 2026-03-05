@@ -571,5 +571,53 @@
     "overall_sentiment": "neutral",
     "urgency": "low",
     "timestamp": 1772678227.897454
+  },
+  {
+    "market_assessment": "After-hours market (20:38 ET) \u2014 regular trading closed, limited liquidity and price discovery until 9:30 ET tomorrow.",
+    "position_health": [],
+    "risk_flags": [
+      "Zero positions deployed \u2014 $1,000 in dead capital earning nothing",
+      "After-hours timing \u2014 cannot execute quality entries until market open",
+      "No scanner candidates visible \u2014 need fresh market data at open",
+      "Pattern day trader status: false \u2014 limited to 3 day trades per 5 rolling days"
+    ],
+    "what_working": [
+      "Clean slate \u2014 no bad positions to manage",
+      "Full buying power available for tomorrow's open",
+      "GROWTH tier allows 5 positions at 7% each ($70/position)",
+      "No drawdown to recover from"
+    ],
+    "what_not_working": [
+      "Zero deployment = zero velocity = zero progress toward $1M goal",
+      "After-hours limitation prevents immediate action",
+      "No historical trade data to identify profitable patterns yet"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772678337.228768
+  },
+  {
+    "market_assessment": "Market is closed (20:48 ET after-hours) - no actionable opportunities until 9:30 ET open tomorrow",
+    "position_health": [],
+    "risk_flags": [
+      "Zero positions - 100% dead capital sitting idle",
+      "No trade history yet - untested system on day 1",
+      "Empty scanner candidates - no pre-market setup identification",
+      "After-hours timing - 12+ hours until market open"
+    ],
+    "what_working": [
+      "Clean slate - no bad positions to clean up",
+      "Full buying power available ($1000)",
+      "GROWTH tier parameters allow 5 positions at 7% each ($350 max deployed)",
+      "No pattern day trader restrictions yet"
+    ],
+    "what_not_working": [
+      "Capital completely undeployed - opportunity cost mounting",
+      "No scanner output - need pre-market setup candidates",
+      "No trading rhythm established yet"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772678941.235837
   }
 ]

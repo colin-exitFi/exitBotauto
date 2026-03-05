@@ -43,8 +43,8 @@ ALPACA_PAPER = _env("ALPACA_PAPER", "true").lower() in ("true", "1", "yes")
 POLYGON_API_KEY = _env("POLYGON_API_KEY")
 
 # ── Trading Parameters ────────────────────────────────────────────
-TOTAL_CAPITAL = _env_float("TOTAL_CAPITAL", 10000)
-DEPLOYED_CAPITAL = _env_float("DEPLOYED_CAPITAL", 1000)
+TOTAL_CAPITAL = _env_float("TOTAL_CAPITAL", 25000)
+DEPLOYED_CAPITAL = _env_float("DEPLOYED_CAPITAL", 25000)
 POSITION_SIZE_PCT = _env_float("POSITION_SIZE_PCT", 2.0)
 MAX_CONCURRENT_POSITIONS = _env_int("MAX_CONCURRENT_POSITIONS", 5)
 MAX_DAILY_LOSS_PCT = _env_float("MAX_DAILY_LOSS_PCT", 3.0)
