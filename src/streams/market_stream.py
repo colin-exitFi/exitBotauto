@@ -33,9 +33,11 @@ class MarketStream:
     Maintains live prices, detects breakouts, feeds scanner.
     """
 
-    # Free tier uses IEX, paid uses SIP
+    # Free tier uses IEX feed — works with both paper and live keys
+    # The sandbox URL is only for the "FAKEPACA" test symbol
+    # Paper/live accounts both use the main URL with IEX feed
     WS_URL = "wss://stream.data.alpaca.markets/v2/iex"
-    SANDBOX_URL = "wss://stream.data.sandbox.alpaca.markets/v2/iex"
+    SANDBOX_URL = "wss://stream.data.alpaca.markets/v2/iex"  # Same URL — paper keys work here
 
     def __init__(self):
         self._ws = None

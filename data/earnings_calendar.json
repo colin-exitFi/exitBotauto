@@ -1,0 +1,719 @@
+{
+  "earnings": [
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-05",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-06",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-07",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-08",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-09",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-10",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "FROG",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AVGO",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IREN",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "SSRM",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NVDA",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "COIN",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "EMAT",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "HOOD",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "NOK",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "GLXY",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "STVN",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "AXTI",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "IBRX",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    },
+    {
+      "ticker": "MRNA",
+      "date": "2026-03-11",
+      "source": "yahoo",
+      "timing": "unknown"
+    }
+  ],
+  "fetched_at": 1772677958.744483
+}
