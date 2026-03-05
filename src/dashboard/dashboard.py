@@ -735,10 +735,14 @@ async function refresh() {
   }
   // Bot Positions
   const pos = await api('/api/positions');
-  $('positions').innerHTML = pos && pos.length ? pos.map(p => `<tr>
-    <td><strong>${p.symbol}</strong></td><td>${(p.side||'long').toUpperCase()}</td><td>${p.quantity}</td><td>$${p.entry_price}</td>
-    <td>$${p.current_price}</td><td class="${cls(p.pnl)}">${fmt(p.pnl)} (${fmt(p.pnl_pct)}%)</td><td>${p.trail_pct||3}%</td><td>${p.protection||'?'}</td><td>${p.hold_time}</td>
-  </tr>`).join('') : '<tr><td colspan="6" class="empty">No open positions</td></tr>';
+  $('positions').innerHTML = pos && pos.length ? pos.map(p => {
+    const isPending = p.order_status === 'pending';
+    const statusBadge = isPending ? '<span class="tag" style="background:#e3b34122;color:#e3b341;border:1px solid #e3b34144;margin-left:4px">PENDING</span>' : '';
+    return `<tr style="${isPending ? 'opacity:0.7' : ''}">
+    <td><strong>${p.symbol}</strong>${statusBadge}</td><td>${(p.side||'long').toUpperCase()}</td><td>${p.quantity}</td><td>$${p.entry_price}</td>
+    <td>${isPending ? '<span style="color:#e3b341">awaiting fill</span>' : '$'+p.current_price}</td><td class="${cls(p.pnl)}">${isPending ? '—' : fmt(p.pnl)+' ('+fmt(p.pnl_pct)+'%)'}</td><td>${p.trail_pct||3}%</td><td>${isPending ? 'limit order' : (p.protection||'?')}</td><td>${isPending ? '—' : p.hold_time}</td>
+  </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">No open positions</td></tr>';
   // Candidates
   const cand = await api('/api/candidates');
   $('candidates').innerHTML = cand && cand.length ? cand.slice(0,10).map(c => `<tr>

@@ -6,7 +6,7 @@
       "drug": "Orforglipron",
       "indication": "Type 2 Diabetes",
       "date": "2026-03-25",
-      "type": "sNDA[2]"
+      "type": "NDA[1]"
     },
     {
       "ticker": "RCKT",
@@ -14,26 +14,18 @@
       "drug": "Kresladi",
       "indication": "Danon Disease",
       "date": "2026-03-28",
-      "type": "BLA[1][2]"
+      "type": "NDA[1]"
     },
     {
-      "ticker": "ALDX",
-      "company": "Aldeyra",
-      "drug": "Reproxalap",
-      "indication": "Dry Eye Disease",
-      "date": "2026-03-16",
-      "type": "sNDA[4]"
-    },
-    {
-      "ticker": "RCKT",
-      "company": "Rocket Pharmaceuticals",
-      "drug": "Marnetegragene Autotemcel",
-      "indication": "Severe Leukocyte Adhesion Deficiency-I",
-      "date": "2026-03-28",
-      "type": "BLA[6]"
+      "ticker": "LNTH",
+      "company": "Lantheus",
+      "drug": "Ga68-edotreotide",
+      "indication": "GEP-NETs Imaging",
+      "date": "2026-03-29",
+      "type": "NDA[1]"
     }
   ],
   "known_approvals": [],
-  "last_pplx_refresh": 1772697868.1637912,
-  "updated_at": "2026-03-05T02:04:28.165452"
+  "last_pplx_refresh": 1772719502.79364,
+  "updated_at": "2026-03-05T08:05:02.795324"
 }

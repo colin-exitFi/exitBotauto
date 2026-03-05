@@ -1,1 +1,19 @@
-{}
+{
+  "last_observation": "Market just opened (08:58 ET) - too early to assess trend, awaiting first 30min for directional clarity and volume confirmation.",
+  "last_advice": null,
+  "last_tuner_changes": null,
+  "last_game_film_summary": null,
+  "last_position_manager": "healthy | 0 exits | 0 vetoes",
+  "last_consensus": {
+    "symbol": "BULL",
+    "final_decision": "SKIP",
+    "size_modifier": 0.0,
+    "avg_confidence": 0,
+    "claude": null,
+    "gpt": null,
+    "grok": null,
+    "perplexity": null,
+    "reasoning": "Skip cooldown (5 min)",
+    "timestamp": 1772719458.933902
+  }
+}
