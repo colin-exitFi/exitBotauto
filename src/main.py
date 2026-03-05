@@ -29,6 +29,7 @@ from signals.twitter import TwitterSentimentClient
 from signals.pharma_catalyst import PharmaCatalystScanner
 from signals.fade_runner import FadeRunnerScanner
 from signals.watchlist import DynamicWatchlist
+from dashboard.dashboard import log_activity
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
 from risk.risk_manager import RiskManager
@@ -372,6 +373,8 @@ class TradingBot:
                 tasks_run.append("watchlist_rebuild")
                 tasks_run.append("thesis")
                 logger.success(f"📋 Tomorrow's thesis: bias={thesis.get('market_bias', '?')}, watchlist={len(self.watchlist)} tickers")
+                log_activity("research", f"Watchlist rebuilt: {len(self.watchlist)} tickers, market bias: {thesis.get('market_bias', '?')}", 
+                            {"watchlist_count": len(self.watchlist), "bias": thesis.get("market_bias", "?")})
             except Exception as e:
                 logger.debug(f"Overnight thesis/watchlist failed: {e}")
 
@@ -381,8 +384,10 @@ class TradingBot:
                 news = await self._scan_overnight_news()
                 if news:
                     state["last_news_scan"] = now
-                    state["overnight_news"] = news[:5]  # Keep top 5
+                    state["overnight_news"] = news[:5]
                     tasks_run.append("news")
+                    for headline in news[:3]:
+                        log_activity("research", f"📰 {headline[:120]}")
             except Exception as e:
                 logger.debug(f"News scan failed: {e}")
 
@@ -396,6 +401,7 @@ class TradingBot:
             except Exception:
                 pass
         else:
+            log_activity("thinking", f"Overnight idle ({et.strftime('%H:%M')} ET) — waiting for next research cycle")
             logger.debug(f"🌙 Overnight idle ({et.strftime('%H:%M')} ET) — next thesis at 10PM, news in {max(0, int(2*3600 - (now - last_news)))//60}min")
 
     async def _build_overnight_thesis(self) -> dict:
@@ -487,18 +493,23 @@ class TradingBot:
                 # Observer (every 10 min)
                 obs = await self.observer.run(self)
                 if obs:
-                    self.ai_layers["last_observation"] = obs.get("market_assessment", str(obs)[:200])
+                    obs_text = obs.get("market_assessment", str(obs)[:200])
+                    self.ai_layers["last_observation"] = obs_text
+                    log_activity("ai", f"🔭 Observer: {obs_text[:150]}")
 
                 # Advisor (every 30 min)
                 adv = await self.advisor.run(self, self.observer.get_last_output())
                 if adv:
-                    self.ai_layers["last_advice"] = adv.get("strategy", str(adv)[:200])
+                    adv_text = adv.get("strategy", str(adv)[:200])
+                    self.ai_layers["last_advice"] = adv_text
+                    log_activity("ai", f"🎯 Advisor: {adv_text[:150]}")
 
                 # Tuner (every 30 min)
                 tun = await self.tuner.run(self, self.advisor.get_last_output())
                 if tun and tun.get("applied"):
                     changes_str = ", ".join(f"{c['param']}:{c['old']}→{c['new']}" for c in tun["applied"])
                     self.ai_layers["last_tuner_changes"] = changes_str
+                    log_activity("ai", f"🔧 Tuner: {changes_str}")
 
                 # Game Film (every 60 min)
                 gf = await self.game_film.run(self)
@@ -549,7 +560,9 @@ class TradingBot:
                     self.ai_layers["last_consensus"] = consensus.to_dict()
                     if consensus.final_decision != "BUY":
                         logger.info(f"🗳️ Consensus SKIP for {symbol}: {consensus.reasoning}")
+                        log_activity("ai", f"🗳️ {symbol}: SKIP — {consensus.reasoning[:100]}")
                         continue
+                    log_activity("trade", f"🗳️ {symbol}: BUY consensus! conf={consensus.avg_confidence}% size={consensus.size_modifier}%")
                     # Apply size modifier to sentiment_data for entry manager
                     sentiment_data["consensus_size_modifier"] = consensus.size_modifier
                     sentiment_data["consensus_confidence"] = consensus.avg_confidence

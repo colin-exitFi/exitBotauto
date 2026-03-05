@@ -178,6 +178,14 @@ class Scanner:
                 pass
 
         logger.success(f"Scan complete: {len(self._cache)} ranked candidates")
+        
+        # Log to dashboard activity feed
+        try:
+            from src.dashboard.dashboard import log_activity
+            top = [f"{c['symbol']} ({c['change_pct']:+.1f}%)" for c in self._cache[:5]]
+            log_activity("scan", f"Found {len(self._cache)} candidates: {', '.join(top)}")
+        except Exception:
+            pass
         for c in self._cache[:8]:
             src = c.get("source", "?")
             bull = c.get("st_bullish", 0)

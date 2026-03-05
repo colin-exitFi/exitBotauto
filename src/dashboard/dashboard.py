@@ -22,10 +22,29 @@ app = FastAPI(title="exitBotauto", version="1.0.0")
 # Global reference to bot instance (set by main.py)
 _bot = None
 
+# Activity feed — circular buffer of bot thoughts/actions
+_activity_feed: List[Dict] = []
+_MAX_FEED_SIZE = 100
+
 
 def set_bot(bot):
     global _bot
     _bot = bot
+
+
+def log_activity(category: str, message: str, data: dict = None):
+    """Log an activity to the dashboard feed. Categories: thinking, scan, trade, ai, alert, research."""
+    global _activity_feed
+    entry = {
+        "timestamp": time.time(),
+        "time_str": time.strftime("%H:%M:%S"),
+        "category": category,
+        "message": message,
+        "data": data or {},
+    }
+    _activity_feed.append(entry)
+    if len(_activity_feed) > _MAX_FEED_SIZE:
+        _activity_feed = _activity_feed[-_MAX_FEED_SIZE:]
 
 
 # ── API Endpoints ──────────────────────────────────────────────────
@@ -191,6 +210,20 @@ async def get_metrics():
     return _bot.risk_manager.get_status()
 
 
+@app.get("/api/activity")
+async def get_activity(limit: int = 50):
+    """Get recent activity feed — bot's thoughts, research, decisions."""
+    return _activity_feed[-limit:]
+
+
+@app.get("/api/watchlist")
+async def get_watchlist():
+    """Get current dynamic watchlist."""
+    if not _bot or not hasattr(_bot, 'watchlist'):
+        return []
+    return _bot.watchlist.get_all()
+
+
 @app.post("/api/pause")
 async def pause():
     if _bot:
@@ -351,6 +384,17 @@ tr:hover td{background:#161b2288}
     <tbody id="portfolio"></tbody></table>
   </div>
 
+  <!-- Activity Feed + Watchlist side by side -->
+  <div class="card">
+    <h2><span class="icon">🧠</span> Bot Activity Feed</h2>
+    <div id="activityFeed" style="max-height:300px;overflow-y:auto;font-size:12px;line-height:1.8"></div>
+  </div>
+  <div class="card">
+    <h2><span class="icon">📋</span> Watchlist <span id="watchlistCount" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <table><thead><tr><th>Ticker</th><th>Side</th><th>Conv</th><th>Source</th><th>Reason</th></tr></thead>
+    <tbody id="watchlist"></tbody></table>
+  </div>
+
   <!-- Positions + Candidates side by side -->
   <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
@@ -499,6 +543,27 @@ async function refresh() {
     <td>${(c.volume_spike||0).toFixed(1)}x</td><td>${(c.sentiment_score||0).toFixed(2)}</td>
     <td><strong>${(c.score||0).toFixed(3)}</strong></td>
   </tr>`).join('') : '<tr><td colspan="6" class="empty">No candidates yet</td></tr>';
+  // Activity Feed
+  const activity = await api('/api/activity?limit=30');
+  if (activity && activity.length) {
+    const catColors = {thinking:'#8b949e',scan:'#58a6ff',trade:'#3fb950',ai:'#d2a8ff',alert:'#f85149',research:'#f0883e'};
+    $('activityFeed').innerHTML = activity.reverse().map(a => {
+      const color = catColors[a.category] || '#8b949e';
+      return `<div style="padding:3px 0;border-bottom:1px solid #21262d33"><span style="color:#484f58;font-size:11px">${a.time_str}</span> <span style="color:${color};font-weight:600">[${a.category}]</span> ${a.message}</div>`;
+    }).join('');
+  }
+
+  // Watchlist
+  const wl = await api('/api/watchlist');
+  $('watchlistCount').textContent = wl ? `${wl.length} tickers` : '';
+  $('watchlist').innerHTML = wl && wl.length ? wl.slice(0,15).map(w => `<tr>
+    <td><strong>${w.ticker}</strong></td>
+    <td>${w.side === 'short' ? '<span style="color:#f85149">🔴 SHORT</span>' : '<span style="color:#3fb950">🟢 LONG</span>'}</td>
+    <td>${(w.conviction||0).toFixed(2)}</td>
+    <td style="color:#6e7681">${w.sources||''}</td>
+    <td style="font-size:11px;color:#8b949e">${(w.reason||'').substring(0,60)}</td>
+  </tr>`).join('') : '<tr><td colspan="5" class="empty">Watchlist builds at 10PM ET</td></tr>';
+
   // History
   const hist = await api('/api/history');
   $('history').innerHTML = hist && hist.length ? hist.reverse().slice(0,15).map(h => `<tr>
