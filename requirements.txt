@@ -1,0 +1,35 @@
+# Core
+python-dotenv>=1.0.0
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# Trading & Market Data
+alpaca-py>=0.30.0
+polygon-api-client>=1.13.0
+
+# Sentiment
+vaderSentiment>=3.3.2
+tweepy>=4.14.0
+
+# AI
+openai>=1.50.0
+anthropic>=0.40.0
+
+# Data
+pandas>=2.2.0
+numpy>=1.26.0
+python-dateutil>=2.8.2
+
+# Web Dashboard
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pydantic>=2.9.0
+
+# Logging
+loguru>=0.7.2
+
+# Timezone
+pytz>=2024.1
+
+# Utils
+websockets>=12.0

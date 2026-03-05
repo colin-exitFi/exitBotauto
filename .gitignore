@@ -1,0 +1,9 @@
+.env
+*.pyc
+__pycache__
+.venv
+venv
+*.log
+journal/
+fills_history.json
+config_state.json
