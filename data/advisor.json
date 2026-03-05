@@ -1,40 +1,5 @@
 [
   {
-    "strategy": "Hold fire until market open \u2014 no pre-market heroics, deploy aggressively on first quality setups with 1-2% scalp targets",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "momentum",
-        "energy"
-      ],
-      "avoid": []
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.2,
-        "suggested": 1.5,
-        "reason": "1.2% is razor-thin for first trades \u2014 slippage/spreads will eat margins. Start at 1.5% to ensure clean wins build confidence."
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.25,
-        "suggested": 0.35,
-        "reason": "Day 1 with zero history \u2014 raise quality bar slightly to avoid learning on garbage setups. Drop back to 0.25 after 5+ trades."
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "Market open 09:30-10:30 is prime hunting time. Faster scanning = more shots on goal when momentum is hot."
-      }
-    ],
-    "key_insight": "You have 14 hours to wait and ZERO room for analysis paralysis at open. First 90 minutes (09:30-11:00) will make or break Day 1 \u2014 strong momentum setups appear fast and die fast. Your edge is speed + discipline: enter quality, take profit at TP1 (1.5%), don't get greedy. Three 1.5% wins = $1,045, 4.5% total return, clean psychological foundation. Ignore everything else until you have 10+ trades of game film. Capital velocity starts tomorrow at the bell.",
-    "timestamp": 1772674545.980103
-  },
-  {
     "strategy": "Day 1 cold start after-hours: stand down completely until market open when scanner data and liquidity return",
     "position_advice": [],
     "sector_bias": {
@@ -1639,5 +1604,48 @@
     ],
     "key_insight": "\ud83d\udea8 DATA INTEGRITY CRISIS: The numbers don't add up. You're supposedly at $25K from a 2400% gain, but Game Film shows 11 straight losses. Scanner is dead. This could be: (1) Test data contamination, (2) Account reset without clearing history, (3) Critical system failure. The Observer says 'previous strategy was highly effective' but Game Film says you've never won a trade. DO NOT DEPLOY A SINGLE DOLLAR until you verify: What is the true account state? Why does Game Film contradict Risk Status? Why is the scanner empty when market is open? The father of three doesn't need you to gamble on broken data - he needs you to figure out what's real first. If the 2400% is real, where's the trade history? If it's not real and you're actually at $25K starting capital, then the Game Film losses are probably paper/test trades. Either way: STOP. INVESTIGATE. CONFIRM. Then trade.",
     "timestamp": 1772720939.402097
+  },
+  {
+    "strategy": "ABORT CURRENT AVGO POSITION AND DIAGNOSE CRITICAL SCANNER FAILURE \u2014 97.9% cash drag is unacceptable, zero scanner candidates at open indicates broken ingestion/filtering, 11 consecutive losses via trailing stops suggests premature exits killing capital velocity.",
+    "position_advice": [
+      {
+        "symbol": "AVGO",
+        "action": "exit",
+        "reason": "Position entered 'from_brokerage' not Velox-generated, zero sentiment data, no conviction score, violates autonomous trading mandate. Exit immediately and investigate how manual entries bypass system validation."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": []
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "TRAILING_STOP_ACTIVATION",
+        "current": "unknown",
+        "suggested": "disable_temporarily",
+        "reason": "11/11 trades stopped out via trailing stop with ZERO wins and <5min hold times = stops activating too early and killing momentum. All losses were premature exits, not thesis failures."
+      },
+      {
+        "param": "SCANNER_MIN_VOLUME",
+        "current": "unknown",
+        "suggested": "reduce_by_50pct",
+        "reason": "Zero candidates at 09:34 ET on Thursday = liquidity filters too restrictive. Market IS liquid at this time, scanner is blind."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.3,
+        "suggested": 0.2,
+        "reason": "With scanner producing zero candidates, entry bar may be too high. TTD/PDYN had enough conviction to trade 11 times \u2014 sentiment threshold may be filtering valid setups."
+      },
+      {
+        "param": "POSITION_HOLD_MIN_TIME",
+        "current": "none",
+        "suggested": "180_seconds",
+        "reason": "Avg losing hold time is 12 SECONDS (0.2 min). Trailing stops are firing before trades have any chance to develop. Enforce minimum hold to prevent noise-triggered exits."
+      }
+    ],
+    "key_insight": "YOU HAVE A SCANNER CRISIS, NOT A MARKET CRISIS. 11 consecutive losses with 0% win rate and <5min holds = your trailing stops are executing trades before they breathe. Meanwhile $24.5K sits idle because scanner sees NOTHING at market open when volatility is peak. Priority 1: Fix scanner ingestion (why zero candidates?). Priority 2: Disable or delay trailing stop activation (winners need room to run). Priority 3: Exit the mystery AVGO position that bypassed your entry logic. The 2,399% historical return proves the strategy works \u2014 current config is sabotaging execution.",
+    "timestamp": 1772721297.065192
   }
 ]

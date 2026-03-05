@@ -960,5 +960,50 @@
       }
     ],
     "timestamp": 1772719799.7117682
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 60,
+        "reason": "REVERTING previous change \u2014 300s interval caused 'zero scanner candidates at 09:34 ET' when market was actively liquid. Missing RTH opportunities is worse than noise risk. Need faster scanning to catch momentum."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.2,
+        "reason": "0.3 threshold + slow scan = zero candidates = 97.9% cash drag. Lower to 0.2 as Advisor suggests \u2014 previous 11 trades had conviction to execute repeatedly, sentiment bar may be filtering valid setups."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.5,
+        "reason": "Previous tightening to 1.0% was correct direction but Advisor data shows <5min holds = stops firing on noise before thesis can develop. Widen slightly to 1.5% to reduce premature exits while keeping tighter than original 2.0%."
+      }
+    ],
+    "reasoning": "Scanner blindness (zero candidates) is killing capital velocity \u2014 reverting scan speed and lowering entry bar to restore opportunity flow while keeping trailing stop tighter than original to protect against quick reversals.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 300,
+        "new": 60,
+        "reason": "REVERTING previous change \u2014 300s interval caused 'zero scanner candidates at 09:34 ET' when market was actively liquid. Missing RTH opportunities is worse than noise risk. Need faster scanning to catch momentum.",
+        "timestamp": 1772721305.738403
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.3,
+        "new": 0.2,
+        "reason": "0.3 threshold + slow scan = zero candidates = 97.9% cash drag. Lower to 0.2 as Advisor suggests \u2014 previous 11 trades had conviction to execute repeatedly, sentiment bar may be filtering valid setups.",
+        "timestamp": 1772721305.739319
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 1.0,
+        "new": 1.5,
+        "reason": "Previous tightening to 1.0% was correct direction but Advisor data shows <5min holds = stops firing on noise before thesis can develop. Widen slightly to 1.5% to reduce premature exits while keeping tighter than original 2.0%.",
+        "timestamp": 1772721305.739378
+      }
+    ],
+    "timestamp": 1772721305.740457
   }
 ]

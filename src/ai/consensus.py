@@ -96,17 +96,25 @@ ADDITIONAL SIGNALS:
 - Fade signal (short setup): {fade_info}
 - Earnings: {earnings_info}
 
-DECISION FRAMEWORK:
-- BUY if: momentum is strong, sentiment is positive, volume is elevated, stock has room to run
-- BUY if: social buzz is high and price is still moving up (momentum intact)
-- BUY if: news catalyst + volume spike (early stage of a move)
-- SHORT if: stock ran 30%+ yesterday and is showing weakness/profit-taking today (fade the runner)
-- SHORT if: sentiment is turning very bearish, volume is spiking on the downside, breaking key support
-- SHORT if: bad news catalyst (earnings miss, FDA rejection, SEC investigation) with heavy selling
-- SKIP ONLY if: no clear direction, low volume, or mixed signals that don't favor either side
-- DO NOT skip just because a stock already moved today — momentum stocks keep running
-- DO NOT evaluate as a long-term hold — we're in and out within hours
-- Remember: 3% trailing stop protects us. The question is NOT "is this safe?" but "is this likely to go higher?"
+DECISION FRAMEWORK — DEFAULT TO ACTION:
+Your DEFAULT should be BUY or SHORT. We have a 3% trailing stop — the downside is capped. Dead capital sitting in cash is the REAL risk.
+
+- BUY if: stock is up today with any positive catalyst (news, sentiment, volume, momentum)
+- BUY if: social buzz is elevated — retail attention = momentum fuel
+- BUY if: price is above VWAP and trending up — momentum is your friend
+- BUY if: any news catalyst exists (earnings beat, FDA, contract, upgrade) — even if stock already moved
+- BUY if: RSI is 40-70 with upward price action — healthy momentum zone
+- SHORT if: stock ran 30%+ yesterday and is fading today (profit-taking)
+- SHORT if: clear negative catalyst (earnings miss, FDA reject, downgrade) with selling pressure
+- SKIP ONLY if: stock is clearly dying (negative momentum + bearish sentiment + bad news) AND you wouldn't go short either
+- SKIP ONLY if: literally no data available to make any assessment
+
+CRITICAL MINDSET:
+- We are MOMENTUM TRADERS, not value investors. If it's moving, we ride it.
+- The trailing stop handles risk. Your job is to GET US IN to runners.
+- A stock up 20% today can easily go 30%. Don't overthink it.
+- Missing a 10% runner because you SKIPped is WORSE than losing 3% on a bad entry.
+- When in doubt, BUY with lower confidence (50-60%) — let the trailing stop decide.
 
 Respond with ONLY valid JSON (no markdown):
 {{"decision": "BUY" or "SHORT" or "SKIP", "confidence": 0-100, "reasoning": "brief explanation", "target_price": number or null, "stop_price": number or null}}"""
@@ -152,11 +160,11 @@ class ConsensusEngine:
 
         # Skip cooldown — don't re-evaluate SKIPped tickers for 5 minutes
         skip_ts = self._skip_cache.get(symbol)
-        if skip_ts and (time.time() - skip_ts) < 300:
-            logger.debug(f"Skip cooldown active for {symbol} ({int(300 - (time.time() - skip_ts))}s left)")
+        if skip_ts and (time.time() - skip_ts) < 120:
+            logger.debug(f"Skip cooldown active for {symbol} ({int(120 - (time.time() - skip_ts))}s left)")
             return ConsensusResult(symbol=symbol, final_decision="SKIP",
                                    size_modifier=0.0, avg_confidence=0,
-                                   reasoning="Skip cooldown (5 min)")
+                                   reasoning="Skip cooldown (2 min)")
 
         # Check cache
         cached = self._cache.get(symbol)
@@ -622,24 +630,40 @@ class ConsensusEngine:
                 avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
                 reasoning=f"Majority SHORT (2/3: {', '.join(voters)}) — {size:.0%} size, conf={avg_conf:.0f}%")
 
-        # Only 2 models working and they disagree, or all 3 split → Perplexity tie-break
-        if len(working) == 2:
-            w1, w2 = working[0], working[1]
-            if w1[1].decision != w2[1].decision and w1[1].decision != "SKIP" and w2[1].decision != "SKIP":
-                logger.info(f"🔀 2 models split for {symbol} ({w1[0]}={w1[1].decision}, {w2[0]}={w2[1].decision}) → Perplexity tie-break")
-                pplx = await self._call_perplexity(symbol, signals)
-                if not pplx.error and pplx.decision in ("BUY", "SHORT"):
-                    return ConsensusResult(
-                        symbol=symbol, final_decision=pplx.decision, size_modifier=0.6,
-                        avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
-                        perplexity_vote=pplx,
-                        reasoning=f"Tie-break: Perplexity says {pplx.decision} — 60% size")
+        # 1 BUY or SHORT with the rest SKIP → trade at reduced size (aggressive mode)
+        # Dead capital is the enemy. If ANY model sees an opportunity, take it at reduced size.
+        if len(buy_votes) == 1 and len(short_votes) == 0:
+            voter = buy_votes[0]
+            if voter.confidence >= 55:
+                return ConsensusResult(
+                    symbol=symbol, final_decision="BUY", size_modifier=0.5,
+                    avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                    reasoning=f"Single BUY from {voter.model} (conf={voter.confidence}%) — 50% size, trailing stop protects")
 
-        # All SKIP or no majority → SKIP
+        if len(short_votes) == 1 and len(buy_votes) == 0:
+            voter = short_votes[0]
+            if voter.confidence >= 60:
+                return ConsensusResult(
+                    symbol=symbol, final_decision="SHORT", size_modifier=0.4,
+                    avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                    reasoning=f"Single SHORT from {voter.model} (conf={voter.confidence}%) — 40% size")
+
+        # BUY vs SHORT split → Perplexity tie-break
+        if len(buy_votes) >= 1 and len(short_votes) >= 1:
+            logger.info(f"🔀 BUY/SHORT split for {symbol} → Perplexity tie-break")
+            pplx = await self._call_perplexity(symbol, signals)
+            if not pplx.error and pplx.decision in ("BUY", "SHORT"):
+                return ConsensusResult(
+                    symbol=symbol, final_decision=pplx.decision, size_modifier=0.5,
+                    avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
+                    perplexity_vote=pplx,
+                    reasoning=f"Tie-break: Perplexity says {pplx.decision} — 50% size")
+
+        # All SKIP → SKIP
         return ConsensusResult(
             symbol=symbol, final_decision="SKIP", size_modifier=0.0,
             avg_confidence=avg_conf, claude_vote=claude, gpt_vote=gpt, grok_vote=grok,
-            reasoning=f"No majority — BUY:{len(buy_votes)} SHORT:{len(short_votes)} SKIP:{len(skip_votes)}")
+            reasoning=f"All models SKIP — BUY:{len(buy_votes)} SHORT:{len(short_votes)} SKIP:{len(skip_votes)}")
 
 
 # ── Helpers ───────────────────────────────────────────────────────
