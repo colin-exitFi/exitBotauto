@@ -60,7 +60,8 @@ class ConsensusResult:
 
 ANALYSIS_PROMPT = """You are a SHORT-TERM MOMENTUM TRADER inside Velox, an autonomous trading engine.
 Mission: grow $25K to $5M through capital velocity. This portfolio represents a family's financial future.
-Capital preservation is job #1 — you cannot grow what you've lost. When uncertain, SKIP.
+Every position has a 3% trailing stop — our downside is capped. Dead capital is the real enemy.
+Be AGGRESSIVE on entries when momentum is clear. The trailing stop handles risk — your job is to find runners.
 
 Your job is to find stocks likely to move 2-5% in the next few hours — UP or DOWN.
 
@@ -141,8 +142,12 @@ class ConsensusEngine:
 
         # Check cache
         cached = self._cache.get(symbol)
-        cache_ttl = getattr(settings, 'CONSENSUS_CACHE_SECONDS', 300)
-        if cached and (time.time() - cached.timestamp) < cache_ttl:
+        # SKIP decisions expire fast (90s) so we re-evaluate with fresh data
+        # BUY/SHORT decisions cache longer (5 min) since they're actionable
+        base_ttl = getattr(settings, 'CONSENSUS_CACHE_SECONDS', 300)
+        if cached:
+            ttl = 90 if cached.final_decision == "SKIP" else base_ttl
+            if (time.time() - cached.timestamp) < ttl:
             logger.debug(f"Consensus cache hit for {symbol}")
             return cached
 

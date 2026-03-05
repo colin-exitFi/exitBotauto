@@ -1,6 +1,6 @@
 {
-  "last_observation": "Market open just started (08:01 ET) - premarket movers showing strength with PDYN +18.4%, STEM +18.4%, LQDA +8.3% on bullish sentiment, but volume still building.",
-  "last_advice": "HALT ALL TRADING - Data integrity failure detected, require human verification before any capital deployment",
+  "last_observation": "CRITICAL ALERT: Portfolio has been completely liquidated \u2014 equity is $0.00 from a starting balance of $25,000, representing a catastrophic 100% loss.",
+  "last_advice": "FULL STOP \u2014 Trading is mathematically impossible with $0 equity; system requires emergency capital injection or formal shutdown.",
   "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.65\u21920.75, POSITION_SIZE_PCT:3.0\u21922.5",
   "last_game_film_summary": null,
   "last_position_manager": null,
@@ -12,19 +12,19 @@
     "claude": {
       "model": "claude",
       "decision": "SKIP",
-      "confidence": 75,
-      "reasoning": "BULL shows positive sentiment (0.92) and is up 2% today, but volume is critically low at 0.1x average, indicating no real momentum or conviction behind the move. Without technical indicators, news cat",
+      "confidence": 65,
+      "reasoning": "BULL showing +2.01% gain but volume is critically low at 0.1x average - insufficient momentum for continuation. Social sentiment is strongly positive (0.91) but without volume confirmation or news cat",
       "error": null
     },
     "gpt": {
       "model": "gpt",
       "decision": "SKIP",
-      "confidence": 60,
-      "reasoning": "Low volume indicates a lack of momentum despite positive sentiment. Without additional signals like elevated volume or a news catalyst, it's uncertain if the upward movement will continue.",
+      "confidence": 70,
+      "reasoning": "Low volume indicates lack of strong momentum. Although sentiment is positive, no news or elevated social buzz. Insufficient data to confidently predict a significant short-term move.",
       "error": null
     },
     "perplexity": null,
     "reasoning": "Both models say SKIP",
-    "timestamp": 1772716057.060547
+    "timestamp": 1772716585.9232
   }
 }

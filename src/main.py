@@ -798,7 +798,11 @@ class TradingBot:
 
         positions = self.entry_manager.get_positions()
 
-        for candidate in candidates[:5]:
+        # Evaluate more candidates — skip recently-SKIPped ones to find fresh opportunities
+        evaluated = 0
+        for candidate in candidates[:15]:  # Look at top 15 instead of just 5
+            if evaluated >= 5:  # But only fully evaluate up to 5 per cycle
+                break
             symbol = candidate["symbol"]
             sentiment_score = candidate.get("sentiment_score", 0)
             sentiment_data = self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score}
@@ -806,6 +810,8 @@ class TradingBot:
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
                 continue
+
+            evaluated += 1
 
             # Consensus engine — Claude + GPT jury must agree on direction
             if self.consensus_engine:

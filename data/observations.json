@@ -1974,5 +1974,27 @@
     "urgency": "high",
     "critical_note": "IMMEDIATE ATTENTION REQUIRED: This appears to be either (1) catastrophic account failure requiring emergency review, (2) system reset/paper trading initialization, or (3) data feed error. Cannot provide trading observations with $0 capital. Need human verification of actual account status before any Layer 2 Advisor recommendations. If this is real money that went to zero, full post-mortem required on what positions/strategy caused total loss. The mission to protect this family's future has already failed if this $0 is accurate.",
     "timestamp": 1772715733.674517
+  },
+  {
+    "market_assessment": "CRITICAL ALERT: Portfolio has been completely liquidated \u2014 equity is $0.00 from a starting balance of $25,000, representing a catastrophic 100% loss.",
+    "position_health": [],
+    "risk_flags": [
+      "TOTAL CAPITAL LOSS: Portfolio value is $0.00",
+      "System shows $25K ATH but current equity is zero \u2014 complete wipeout occurred",
+      "No cash, no buying power, no positions \u2014 account is effectively dead",
+      "100% drawdown from ATH is unrecoverable without fresh capital injection",
+      "SURVIVAL tier engaged but there's nothing left to protect",
+      "This represents catastrophic failure of risk management protocols"
+    ],
+    "what_working": [],
+    "what_not_working": [
+      "Capital preservation failed completely",
+      "Circuit breakers did not prevent total loss",
+      "Position sizing or stop-loss discipline clearly failed",
+      "Whatever strategy was employed led to complete account blow-up"
+    ],
+    "overall_sentiment": "n/a",
+    "urgency": "CRITICAL_SYSTEM_FAILURE",
+    "timestamp": 1772716249.832129
   }
 ]
