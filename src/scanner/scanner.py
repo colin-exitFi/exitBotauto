@@ -25,12 +25,13 @@ class Scanner:
       5. Score & rank
     """
 
-    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None):
+    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None):
         self.polygon = polygon_client
         self.sentiment = sentiment_analyzer
         self.stocktwits = stocktwits_client
         self.alpaca = alpaca_client
         self.pharma = pharma_scanner
+        self.fade = fade_scanner
 
         self.min_price = settings.MIN_PRICE
         self.max_price = settings.MAX_PRICE
@@ -107,6 +108,30 @@ class Scanner:
             except Exception as e:
                 logger.warning(f"Pharma catalyst scan failed: {e}")
 
+        # ── SOURCE 4: Fade yesterday's runners (SHORT signals) ─────
+        fade_signals = []
+        if self.fade:
+            try:
+                fade_signals = await self.fade.scan()
+                for sig in fade_signals:
+                    ticker = sig.get("symbol", "")
+                    if ticker and ticker.isalpha() and len(ticker) <= 5:
+                        stocktwits_candidates.append({
+                            "symbol": ticker,
+                            "price": sig.get("current_price", 0),
+                            "change_pct": sig.get("price_change_from_run", 0),
+                            "volume": 0,
+                            "source": "fade",
+                            "side": "short",
+                            "fade_signal": sig.get("signal_type", ""),
+                            "fade_score": sig.get("score", 0),
+                            "fade_run_pct": sig.get("run_change_pct", 0),
+                        })
+                if fade_signals:
+                    logger.info(f"📉 Fade candidates: {len(fade_signals)} short setups")
+            except Exception as e:
+                logger.warning(f"Fade runner scan failed: {e}")
+
         # ── MERGE: deduplicate by symbol ───────────────────────────
         seen = {}
         for s in polygon_candidates:
@@ -144,6 +169,14 @@ class Scanner:
         filtered.sort(key=lambda x: x["score"], reverse=True)
 
         self._cache = filtered[:10]
+
+        # Record today's big runners for tomorrow's fade watchlist
+        if self.fade:
+            try:
+                self.fade.record_todays_runners(filtered)
+            except Exception:
+                pass
+
         logger.success(f"Scan complete: {len(self._cache)} ranked candidates")
         for c in self._cache[:8]:
             src = c.get("source", "?")

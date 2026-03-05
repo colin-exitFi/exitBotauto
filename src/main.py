@@ -27,6 +27,7 @@ from sentiment.sentiment_analyzer import SentimentAnalyzer
 from signals.stocktwits import StockTwitsClient
 from signals.twitter import TwitterSentimentClient
 from signals.pharma_catalyst import PharmaCatalystScanner
+from signals.fade_runner import FadeRunnerScanner
 from entry.entry_manager import EntryManager
 from exit.exit_manager import ExitManager
 from risk.risk_manager import RiskManager
@@ -115,13 +116,17 @@ class TradingBot:
         # Pharma catalyst scanner (FDA PDUFA dates)
         self.pharma_scanner = PharmaCatalystScanner()
 
-        # Scanner (with StockTwits + Pharma)
+        # Fade runner scanner (short yesterday's big runners)
+        self.fade_scanner = FadeRunnerScanner(polygon_client=self.polygon_client)
+
+        # Scanner (with StockTwits + Pharma + Fade)
         self.scanner = Scanner(
             polygon_client=self.polygon_client,
             sentiment_analyzer=self.sentiment_analyzer,
             stocktwits_client=self.stocktwits_client,
             alpaca_client=self.alpaca_client,
             pharma_scanner=self.pharma_scanner,
+            fade_scanner=self.fade_scanner,
         )
 
         # Entry manager

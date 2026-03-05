@@ -406,6 +406,77 @@ class AlpacaClient:
             logger.error(f"Bracket order error for {symbol}: {e}")
             return self.place_limit_buy(symbol, int(qty), limit_price, extended_hours)
 
+    def place_bracket_short(self, symbol: str, qty: int, limit_price: float,
+                            stop_loss_pct: float = 3.0, take_profit_pct: float = None) -> Optional[Dict]:
+        """
+        Place a bracket SHORT order: SELL SHORT + stop loss (buy to cover) + optional take profit.
+        
+        Args:
+            symbol: Stock ticker
+            qty: Number of shares to short
+            limit_price: Limit price for the short sale
+            stop_loss_pct: Stop loss percentage ABOVE entry (covers the short)
+            take_profit_pct: Take profit percentage BELOW entry
+        """
+        self._ensure_init()
+        if qty < 1:
+            logger.warning(f"Bracket short requires whole shares, got {qty}")
+            return None
+
+        try:
+            stop_price = round(limit_price * (1 + stop_loss_pct / 100), 2)  # ABOVE for shorts
+
+            order_data = {
+                'symbol': symbol,
+                'qty': str(int(qty)),
+                'side': 'sell',
+                'type': 'limit',
+                'limit_price': str(round(limit_price, 2)),
+                'time_in_force': 'gtc',
+                'order_class': 'bracket' if take_profit_pct else 'oto',
+                'stop_loss': {
+                    'stop_price': str(stop_price),
+                },
+            }
+
+            if take_profit_pct:
+                tp_price = round(limit_price * (1 - take_profit_pct / 100), 2)  # BELOW for shorts
+                order_data['take_profit'] = {'limit_price': str(tp_price)}
+
+            resp = requests.post(
+                f'{self._base_url}/v2/orders',
+                headers=self._rest_headers(),
+                json=order_data,
+            )
+
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                legs = data.get('legs', [])
+                logger.success(
+                    f"🩳 Bracket SHORT: SELL {qty} {symbol} @ ${limit_price:.2f} "
+                    f"stop=${stop_price:.2f} ({stop_loss_pct}%) [{len(legs)} legs]"
+                )
+                return {
+                    'id': data['id'],
+                    'symbol': symbol,
+                    'side': 'sell',
+                    'type': 'bracket',
+                    'qty': str(qty),
+                    'limit_price': str(limit_price),
+                    'stop_price': str(stop_price),
+                    'status': data['status'],
+                    'order_class': data.get('order_class', ''),
+                    'legs': legs,
+                    'is_short': True,
+                }
+            else:
+                logger.error(f"Bracket short failed: {resp.status_code} {resp.text[:200]}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Bracket short error for {symbol}: {e}")
+            return None
+
     def place_trailing_stop(self, symbol: str, qty: int, trail_percent: float = 3.0) -> Optional[Dict]:
         """
         Place a trailing stop sell order on an existing position.
