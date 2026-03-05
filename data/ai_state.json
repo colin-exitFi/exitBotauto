@@ -1,1 +1,20 @@
-{}
+{
+  "last_observation": "Market closing in 6 minutes - end of trading day Thursday, no meaningful action possible until tomorrow's open.",
+  "last_advice": null,
+  "last_tuner_changes": null,
+  "last_game_film_summary": null,
+  "last_position_manager": "healthy | 0 exits | 0 vetoes",
+  "last_consensus": {
+    "symbol": "GAP",
+    "decision": "SKIP",
+    "size_pct": 0,
+    "trail_pct": 3.0,
+    "reasoning": "Skip cooldown (2 min)",
+    "confidence": 0.0,
+    "provider_used": "",
+    "timestamp": 1772751762.7506502
+  },
+  "scan_regime": "mixed",
+  "scan_regime_raw": "mixed",
+  "scan_interval_seconds": 60
+}
