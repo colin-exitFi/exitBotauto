@@ -232,9 +232,10 @@ class ConsensusEngine:
             try:
                 async with httpx.AsyncClient(timeout=8) as client:
                     # Get 20 bars for RSI calculation
+                    # Use daily bars (more reliable, especially pre-market)
                     resp = await client.get(
-                        f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/5/minute/"
-                        f"2026-03-04/2026-03-05?adjusted=true&sort=desc&limit=20"
+                        f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/1/day/"
+                        f"2026-02-10/2026-03-05?adjusted=true&sort=desc&limit=20"
                         f"&apiKey={settings.POLYGON_API_KEY}")
                     if resp.status_code == 200:
                         bars = resp.json().get("results", [])

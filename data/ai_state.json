@@ -1,6 +1,6 @@
 {
-  "last_observation": "Pre-market open on Thursday \u2014 clean slate, zero positions, fresh capital ready to deploy, waiting for market open signal.",
-  "last_advice": "Fresh capital, clean slate \u2014 focus on securing first wins with high-probability setups only, prioritize capital preservation and data collection over volume",
+  "last_observation": "Market just opened (08:27 ET Thursday), no positions established yet, clean slate with full capital available for deployment.",
+  "last_advice": "Deploy capital immediately into 3-5 high-conviction liquid positions to establish baseline performance and initiate compounding velocity.",
   "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.75\u21920.65, SCAN_INTERVAL_SECONDS:60\u219260, TAKE_PROFIT_1_PCT:1.25\u21921.0",
   "last_game_film_summary": null,
   "last_position_manager": null,
@@ -8,23 +8,23 @@
     "symbol": "BULL",
     "final_decision": "SKIP",
     "size_modifier": 0.0,
-    "avg_confidence": 55.25,
+    "avg_confidence": 62.5,
     "claude": {
       "model": "claude",
       "decision": "SKIP",
       "confidence": 65,
-      "reasoning": "BULL is up 2% pre-market but volume is critically low at 0.1x average, indicating no institutional momentum. StockTwits sentiment is positive at 0.80, but without volume confirmation this is retail no",
+      "reasoning": "BULL at $6.08 with +2.01% today shows modest positive momentum, and StockTwits sentiment is strong at 0.80. However, volume is critically low at 0.1x average - this is dead money with no catalyst. No ",
       "error": null
     },
     "gpt": {
       "model": "gpt",
-      "decision": "ERR",
-      "confidence": 0,
-      "reasoning": "",
-      "error": "Client error '429 Too Many Requests' for url 'https://api.openai.com/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+      "decision": "SKIP",
+      "confidence": 60,
+      "reasoning": "The stock has low volume at 0.1x average, indicating weak momentum. Although the social sentiment is positive, there is no significant news catalyst or technical indicators provided to support a stron",
+      "error": null
     },
     "perplexity": null,
-    "reasoning": "GPT failed; Claude says SKIP conf=55%",
-    "timestamp": 1772717219.5738938
+    "reasoning": "Both models say SKIP",
+    "timestamp": 1772717289.266407
   }
 }
