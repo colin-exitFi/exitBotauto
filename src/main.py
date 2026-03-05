@@ -50,6 +50,7 @@ from ai.game_film import GameFilm
 from ai.position_manager import PositionManager
 from ai import trade_history
 from ai.consensus import ConsensusEngine
+from agents.orchestrator import Orchestrator
 from dashboard.dashboard import start_dashboard
 
 
@@ -192,8 +193,15 @@ class TradingBot:
             polygon_client=self.polygon_client,
         )
 
-        # Consensus engine
+        # Consensus engine (legacy — kept for fallback/dashboard compat)
         self.consensus_engine = ConsensusEngine()
+
+        # Specialized Agent Orchestrator (new architecture)
+        self.orchestrator = Orchestrator(
+            broker=self.alpaca_client,
+            entry_manager=self.entry_manager,
+            risk_manager=self.risk_manager,
+        )
 
         # AI layers
         self.observer = Observer()
@@ -265,6 +273,9 @@ class TradingBot:
 
         # Launch AI layers as background tasks
         ai_task = asyncio.create_task(self._ai_loop())
+
+        # Start Exit Agent monitoring loop
+        await self.orchestrator.start_exit_agent()
 
         scan_interval = settings.SCAN_INTERVAL_SECONDS
         monitor_interval = 5
@@ -828,27 +839,32 @@ class TradingBot:
             if evaluated > 1:
                 await asyncio.sleep(2)
 
-            # Consensus engine — Claude + GPT jury must agree on direction
-            if self.consensus_engine:
+            # Specialized Agent Orchestrator — 5 agents + jury
+            if self.orchestrator:
                 try:
-                    consensus = await self.consensus_engine.evaluate(
+                    verdict = await self.orchestrator.evaluate(
                         symbol=symbol,
                         price=candidate.get("price", 0),
                         signals_data=candidate,
                     )
-                    self.ai_layers["last_consensus"] = consensus.to_dict()
-                    if consensus.final_decision not in ("BUY", "SHORT"):
-                        logger.info(f"🗳️ Consensus SKIP for {symbol}: {consensus.reasoning}")
-                        log_activity("ai", f"🗳️ {symbol}: SKIP — {consensus.reasoning[:100]}")
+                    self.ai_layers["last_consensus"] = verdict.to_dict()
+                    if verdict.decision not in ("BUY", "SHORT"):
+                        logger.info(f"🗳️ Jury SKIP for {symbol}: {verdict.reasoning}")
+                        log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning[:100]}")
                         continue
-                    direction = consensus.final_decision
-                    log_activity("trade", f"🗳️ {symbol}: {direction} consensus! conf={consensus.avg_confidence}% size={consensus.size_modifier}%")
-                    sentiment_data["consensus_size_modifier"] = consensus.size_modifier
-                    sentiment_data["consensus_confidence"] = consensus.avg_confidence
+                    direction = verdict.decision
+                    # Map jury sizing to consensus_size_modifier (0-1 range)
+                    tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
+                    tier_size = tier.get("size_pct", 2.0)
+                    size_modifier = min(1.0, verdict.size_pct / tier_size) if tier_size > 0 else 1.0
+                    log_activity("trade", f"🗳️ {symbol}: {direction} verdict! conf={verdict.confidence}% size={verdict.size_pct}% trail={verdict.trail_pct}%")
+                    sentiment_data["consensus_size_modifier"] = size_modifier
+                    sentiment_data["consensus_confidence"] = verdict.confidence
                     sentiment_data["consensus_direction"] = direction
+                    sentiment_data["jury_trail_pct"] = verdict.trail_pct
                 except Exception as e:
-                    logger.error(f"Consensus error for {symbol}: {e}")
-                    continue  # Never trade without consensus
+                    logger.error(f"Orchestrator error for {symbol}: {e}")
+                    continue  # Never trade without agent consensus
 
             can = await self.entry_manager.can_enter(symbol, sentiment_score, positions)
             if can:
@@ -1168,6 +1184,9 @@ class TradingBot:
     async def shutdown(self):
         """Graceful shutdown."""
         logger.info("🛑 Shutting down...")
+        # Stop exit agent
+        if hasattr(self, 'orchestrator') and self.orchestrator:
+            await self.orchestrator.stop_exit_agent()
         # Stop streams
         if self.market_stream:
             await self.market_stream.stop()

@@ -197,12 +197,16 @@ class EntryManager:
             except Exception:
                 pass
 
-        # Calculate trail percent (ATR-based or default 3%)
-        trail_pct = 3.0  # default
-        if atr_value and atr_value > 0:
-            # ATR-based trail: 1.5x ATR as percentage of price
-            trail_pct = round((atr_value * 1.5 / price) * 100, 2)
-            trail_pct = max(1.0, min(trail_pct, 4.0))  # clamp 1.5-5%
+        # Calculate trail percent: prefer jury recommendation, then ATR-based, then default 3%
+        trail_pct = sentiment_data.get("jury_trail_pct", None)
+        if trail_pct is None:
+            trail_pct = 3.0  # default
+            if atr_value and atr_value > 0:
+                # ATR-based trail: 1.5x ATR as percentage of price
+                trail_pct = round((atr_value * 1.5 / price) * 100, 2)
+                trail_pct = max(1.0, min(trail_pct, 4.0))  # clamp 1-4%
+        else:
+            trail_pct = max(1.0, min(5.0, float(trail_pct)))  # clamp jury recommendation
 
         # ── STEP 1: BUY the stock ─────────────────────────────────
         order = None
