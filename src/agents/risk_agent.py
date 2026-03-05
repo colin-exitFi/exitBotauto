@@ -24,13 +24,20 @@ Your job: approve or deny new positions based on HARD LIMITS ONLY.
 APPROVE unless a hard limit is violated. Trailing stops (3%) cap individual position risk.
 
 DENY ONLY FOR:
-- Duplicate position (already holding this ticker)
 - Wash sale violation (sold at loss within 31 days)  
 - Max positions reached
 - Daily circuit breaker triggered (-4%+ daily loss)
 - Sector concentration >50%
+- Adding to a LOSING position (averaging down = catching a knife. NEVER.)
+
+ALLOW adding to an EXISTING position IF:
+- The existing position is PROFITABLE (current price > entry price)
+- The stock is still showing momentum (the fact it's being evaluated means it's running)
+- Total position size after adding stays under 5% of equity
+- This is "averaging UP on a winner" — a legitimate momentum strategy
 
 DO NOT deny because of: "portfolio heat", "recent losses", "risk-off environment", "concentration concerns" below 50%, or subjective risk opinions. Those are not your job.
+If approving an add-to-winner, set max_size_pct to 1.5% (smaller add) and note "averaging up on profitable position" in reasoning.
 
 PROPOSED TRADE:
 - Symbol: {symbol}

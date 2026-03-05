@@ -77,21 +77,21 @@ class EntryManager:
             return False
 
         if symbol in self.positions:
-            logger.debug(f"Already in position: {symbol}")
-            return False
-
-        # Also check Alpaca directly — prevent buying more if we already hold shares
-        try:
-            alpaca_positions = self.broker.get_positions() if self.broker else []
-            for p in alpaca_positions:
-                if p.get("symbol") == symbol and float(p.get("qty", 0)) > 0:
-                    logger.debug(f"Already holding {symbol} on Alpaca ({p.get('qty')} shares) — syncing")
-                    # Sync: add to our tracked positions so we don't keep checking
-                    self.positions[symbol] = {"symbol": symbol, "entry_price": float(p.get("avg_entry_price", 0)),
-                                              "quantity": float(p.get("qty", 0)), "side": "long"}
+            # Allow averaging up on profitable positions (Risk Agent will validate)
+            pos = self.positions[symbol]
+            entry_price = pos.get("entry_price", 0)
+            peak_price = pos.get("peak_price", entry_price)
+            if entry_price > 0 and peak_price > entry_price:
+                pnl_pct = ((peak_price - entry_price) / entry_price) * 100
+                if pnl_pct >= 3.0:  # Only average up if we're up at least 3%
+                    logger.info(f"📈 {symbol} already held at ${entry_price:.2f}, peak ${peak_price:.2f} (+{pnl_pct:.1f}%) — allowing average-up evaluation")
+                    # Don't block — let Risk Agent decide
+                else:
+                    logger.debug(f"Already in position: {symbol} (only +{pnl_pct:.1f}%, need +3% to average up)")
                     return False
-        except Exception:
-            pass
+            else:
+                logger.debug(f"Already in position: {symbol} (underwater — blocking)")
+                return False
 
         if sentiment_score < self.min_sentiment:
             logger.debug(f"{symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")

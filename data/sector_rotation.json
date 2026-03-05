@@ -2,76 +2,76 @@
   "sectors": {
     "XLK": {
       "sector": "Technology",
-      "price": 140.06,
+      "price": 140.47,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLF": {
       "sector": "Financials",
-      "price": 51.05,
+      "price": 51.135,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLE": {
       "sector": "Energy",
-      "price": 56.455,
+      "price": 56.52,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLV": {
       "sector": "Healthcare",
-      "price": 153.24,
+      "price": 153.09,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLY": {
       "sector": "Consumer Discretionary",
-      "price": 115.835,
+      "price": 116.295,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLP": {
       "sector": "Consumer Staples",
-      "price": 85.66,
+      "price": 85.67,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLI": {
       "sector": "Industrials",
-      "price": 171.87,
+      "price": 172.155,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLB": {
       "sector": "Materials",
-      "price": 50.9,
+      "price": 50.965,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLRE": {
       "sector": "Real Estate",
-      "price": 43.07,
+      "price": 43.11,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLU": {
       "sector": "Utilities",
-      "price": 46.57,
+      "price": 46.53,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "XLC": {
       "sector": "Communication",
-      "price": 118.365,
+      "price": 118.57,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     },
     "SPY": {
       "sector": "S&P 500 (benchmark)",
-      "price": 679.69,
+      "price": 681.0,
       "change_pct": 0,
-      "updated": 1772728235.274606
+      "updated": 1772729174.105781
     }
   },
-  "updated_at": 1772728235.8115861
+  "updated_at": 1772729175.0704231
 }
