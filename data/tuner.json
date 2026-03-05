@@ -501,5 +501,50 @@
       }
     ],
     "timestamp": 1772689735.182247
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "CRITICAL ALIGNMENT: Advisor explicitly states 'Config shows 5% but risk tier correctly shows 2.5% - align config to match COMPOUND tier.' Risk system shows tier_size_pct=2.5, config shows 5.0. This mismatch creates execution risk. Reverting to tier-defined 2.5% for first trades."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.7,
+        "reason": "Advisor recommendation: 'No track record yet - raise quality bar for initial trades to 0.7.' With 0 trades, 3 daytrades available, and PDT constraints, every entry must be A++. Current 0.65 too permissive for virgin system testing."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 30,
+        "reason": "Advisor: 'Pre-market and first hour require faster scanning - 30sec intervals capture gap-fill momentum.' Market opens in ~5 hours. Faster scanning in volatile pre-market is data-backed strategy for initial deployment window."
+      }
+    ],
+    "reasoning": "Day 1 calibration: align config to risk tier (2.5% sizing), raise entry bar for untested system (0.7 sentiment), enable faster opportunity capture during critical pre-market session (30s scanning).",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 5.0,
+        "new": 2.5,
+        "reason": "CRITICAL ALIGNMENT: Advisor explicitly states 'Config shows 5% but risk tier correctly shows 2.5% - align config to match COMPOUND tier.' Risk system shows tier_size_pct=2.5, config shows 5.0. This mismatch creates execution risk. Reverting to tier-defined 2.5% for first trades.",
+        "timestamp": 1772690141.171257
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.65,
+        "new": 0.7,
+        "reason": "Advisor recommendation: 'No track record yet - raise quality bar for initial trades to 0.7.' With 0 trades, 3 daytrades available, and PDT constraints, every entry must be A++. Current 0.65 too permissive for virgin system testing.",
+        "timestamp": 1772690141.171558
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor: 'Pre-market and first hour require faster scanning - 30sec intervals capture gap-fill momentum.' Market opens in ~5 hours. Faster scanning in volatile pre-market is data-backed strategy for initial deployment window.",
+        "timestamp": 1772690141.171608
+      }
+    ],
+    "timestamp": 1772690141.172585
   }
 ]

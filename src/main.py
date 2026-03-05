@@ -538,6 +538,44 @@ class TradingBot:
                     with open(thesis_file, "w") as f:
                         json.dump(thesis, f, indent=2)
 
+                # 7. POST-EARNINGS REACTION CHECK
+                # Check AH price action for today's earnings — remove/flip bad reactions
+                try:
+                    today_earnings = await self.earnings_scanner.get_today()
+                    if today_earnings:
+                        for earn in today_earnings:
+                            ticker = earn.get("ticker", "")
+                            if not ticker:
+                                continue
+                            try:
+                                snapshot = self.scanner._get_alpaca_snapshot(ticker)
+                                if snapshot:
+                                    close = snapshot.get("prev_close", 0)
+                                    latest = snapshot.get("price", 0)
+                                    if close and latest and close > 0:
+                                        ah_change_pct = snapshot.get("change_pct", 0)
+                                        if ah_change_pct <= -2.0:
+                                            # Bad earnings reaction — remove from LONG or flip to SHORT
+                                            self.watchlist.remove(ticker)
+                                            logger.warning(
+                                                f"📉 POST-EARNINGS FLUSH: {ticker} down {ah_change_pct:.1f}% AH — removed from watchlist"
+                                            )
+                                            log_activity("research", f"📉 {ticker} post-earnings: {ah_change_pct:+.1f}% AH — removed")
+                                        elif ah_change_pct >= 3.0:
+                                            # Good earnings reaction — boost conviction
+                                            self.watchlist.add(
+                                                ticker, side="long",
+                                                conviction=min(0.95, 0.7 + ah_change_pct / 50),
+                                                source="earnings_reaction",
+                                                reason=f"Earnings beat: {ah_change_pct:+.1f}% AH gap up"
+                                            )
+                                            logger.info(f"📈 POST-EARNINGS GAP: {ticker} up {ah_change_pct:+.1f}% AH — boosted")
+                                            log_activity("research", f"📈 {ticker} post-earnings: {ah_change_pct:+.1f}% AH — boosted")
+                            except Exception:
+                                pass
+                except Exception as e:
+                    logger.debug(f"Post-earnings reaction check failed: {e}")
+
                 state["last_thesis"] = now
                 tasks_run.append("watchlist_rebuild")
                 tasks_run.append("thesis")
