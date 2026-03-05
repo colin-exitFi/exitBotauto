@@ -1,13 +1,1 @@
-{
-  "equity": 24700.51,
-  "starting_equity": 25000.0,
-  "ath_equity": 25002.74,
-  "start_date": 1772731405.422941,
-  "wash_sale_list": {
-    "SOC": {
-      "loss": -39.71,
-      "exit_time": 1772742663.732629
-    }
-  },
-  "round_trips": []
-}
+{}
