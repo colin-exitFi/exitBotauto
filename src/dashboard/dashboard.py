@@ -286,6 +286,55 @@ async def get_pnl():
     }
 
 
+@app.get("/api/intelligence")
+async def get_intelligence():
+    """Get all intelligence sources status for dashboard."""
+    if not _bot:
+        return {}
+    result = {}
+
+    # Earnings
+    if hasattr(_bot, 'earnings_scanner') and _bot.earnings_scanner:
+        today = await _bot.earnings_scanner.get_today()
+        result["earnings"] = {
+            "today_count": len(today),
+            "today_tickers": [e["ticker"] for e in today[:10]],
+        }
+
+    # Unusual options
+    if hasattr(_bot, 'options_scanner') and _bot.options_scanner:
+        result["unusual_options"] = {
+            "count": len(_bot.options_scanner._cache),
+            "bullish": _bot.options_scanner.get_bullish_tickers()[:5],
+            "bearish": _bot.options_scanner.get_bearish_tickers()[:5],
+        }
+
+    # Congress
+    if hasattr(_bot, 'congress_scanner') and _bot.congress_scanner:
+        buys = _bot.congress_scanner.get_buy_signals()
+        result["congress"] = {
+            "total_trades": len(_bot.congress_scanner._trades),
+            "top_buys": [{"ticker": s["ticker"], "members": s["count"]} for s in buys[:5]],
+        }
+
+    # Short interest
+    if hasattr(_bot, 'short_scanner') and _bot.short_scanner:
+        squeeze = _bot.short_scanner.get_squeeze_candidates()
+        result["short_interest"] = {
+            "high_si_count": len(_bot.short_scanner._data),
+            "squeeze_candidates": [s["ticker"] for s in squeeze[:5]],
+        }
+
+    # Sector rotation
+    if hasattr(_bot, 'sector_model') and _bot.sector_model:
+        result["sectors"] = _bot.sector_model.get_dashboard_data()
+        result["sector_bias"] = _bot.sector_model.get_sector_bias()
+        focus = _bot.sector_model.suggest_focus()
+        result["sector_focus"] = focus
+
+    return result
+
+
 @app.get("/api/streams")
 async def get_streams():
     """Get WebSocket stream status."""

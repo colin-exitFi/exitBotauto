@@ -31,6 +31,10 @@ from signals.fade_runner import FadeRunnerScanner
 from signals.watchlist import DynamicWatchlist
 from signals.edgar import EdgarScanner
 from signals.earnings import EarningsScanner
+from signals.unusual_options import UnusualOptionsScanner
+from signals.congress import CongressScanner
+from signals.short_interest import ShortInterestScanner
+from signals.sector_rotation import SectorRotationModel
 from streams.market_stream import MarketStream
 from streams.trade_stream import TradeStream
 from dashboard.dashboard import log_activity
@@ -132,6 +136,18 @@ class TradingBot:
 
         # Earnings calendar scanner
         self.earnings_scanner = EarningsScanner()
+
+        # Unusual options activity scanner
+        self.options_scanner = UnusualOptionsScanner()
+
+        # Congressional trading scanner
+        self.congress_scanner = CongressScanner()
+
+        # Short interest / squeeze detector
+        self.short_scanner = ShortInterestScanner()
+
+        # Sector rotation model
+        self.sector_model = SectorRotationModel(polygon_client=self.polygon_client)
 
         # Real-time WebSocket streams
         self.market_stream = MarketStream()
@@ -305,6 +321,9 @@ class TradingBot:
                 if now - last_scan >= scan_interval:
                     last_scan = now
                     try:
+                        # Update sector rotation for scanning focus
+                        if self.sector_model:
+                            await self.sector_model.update()
                         candidates = await self.scanner.scan()
                         # Subscribe to real-time data for top candidates
                         if candidates and self.market_stream:
@@ -461,6 +480,48 @@ class TradingBot:
                         )
                     if earnings_signals:
                         logger.info(f"📅 Added {len(earnings_signals)} earnings plays to watchlist")
+
+                # 5c. Unusual options activity
+                uoa_signals = []
+                if self.options_scanner:
+                    uoa_signals = await self.options_scanner.scan()
+                    for sig in uoa_signals:
+                        side = "long" if sig.get("bias") == "bullish" else "short"
+                        self.watchlist.add(
+                            sig["ticker"], side=side, conviction=sig.get("conviction", 0.5),
+                            source="options_flow", reason=sig.get("reason", "unusual options activity")
+                        )
+                    if uoa_signals:
+                        logger.info(f"🎯 Added {len(uoa_signals)} unusual options signals to watchlist")
+                        log_activity("research", f"🎯 Unusual options: {len(uoa_signals)} signals — {', '.join(s['ticker'] for s in uoa_signals[:5])}")
+
+                # 5d. Congressional trading
+                congress_trades = []
+                if self.congress_scanner:
+                    congress_trades = await self.congress_scanner.scan()
+                    buy_signals = self.congress_scanner.get_buy_signals()
+                    for sig in buy_signals[:5]:
+                        self.watchlist.add(
+                            sig["ticker"], side="long", conviction=0.4 + (0.1 * min(sig["count"], 3)),
+                            source="congress", reason=f"{sig['count']} congress members buying"
+                        )
+                    if buy_signals:
+                        logger.info(f"🏛️ Congress buys: {', '.join(s['ticker'] for s in buy_signals[:5])}")
+                        log_activity("research", f"🏛️ Congress buying: {', '.join(s['ticker'] for s in buy_signals[:5])}")
+
+                # 5e. Short interest / squeeze candidates
+                si_stocks = []
+                if self.short_scanner:
+                    si_stocks = await self.short_scanner.scan()
+                    squeeze_candidates = self.short_scanner.get_squeeze_candidates()
+                    for sc in squeeze_candidates[:5]:
+                        self.watchlist.add(
+                            sc["ticker"], side="long", conviction=sc.get("conviction", 0.4),
+                            source="short_squeeze", reason=sc.get("reason", "high short interest")
+                        )
+                    if squeeze_candidates:
+                        logger.info(f"🩳 Squeeze candidates: {', '.join(s['ticker'] for s in squeeze_candidates[:5])}")
+                        log_activity("research", f"🩳 Squeeze candidates: {', '.join(s['ticker'] for s in squeeze_candidates[:5])}")
 
                 # 6. REBUILD WATCHLIST from all sources
                 self.watchlist.rebuild_overnight(
