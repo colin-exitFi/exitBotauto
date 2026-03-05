@@ -1,30 +1,18 @@
 {
-  "last_observation": "Market just opened (08:27 ET Thursday), no positions established yet, clean slate with full capital available for deployment.",
-  "last_advice": "Deploy capital immediately into 3-5 high-conviction liquid positions to establish baseline performance and initiate compounding velocity.",
-  "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.75\u21920.65, SCAN_INTERVAL_SECONDS:60\u219260, TAKE_PROFIT_1_PCT:1.25\u21921.0",
+  "last_observation": "Market just opened (8:28 ET Thursday) - pre-market price discovery phase, volatility typically elevated in first 30 minutes, institutional order flow still establishing direction.",
+  "last_advice": "Deploy capital immediately but surgically \u2014 first 30 minutes is prime hunting ground for momentum continuation plays, use 3-4 positions to establish market read while preserving daytrades for exit flexibility.",
+  "last_tuner_changes": "POSITION_SIZE_PCT:2.5\u21923.0, TAKE_PROFIT_1_PCT:1.0\u21921.5, MIN_ENTRY_SENTIMENT:0.65\u21920.7",
   "last_game_film_summary": null,
-  "last_position_manager": null,
+  "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
     "symbol": "BULL",
     "final_decision": "SKIP",
     "size_modifier": 0.0,
-    "avg_confidence": 62.5,
-    "claude": {
-      "model": "claude",
-      "decision": "SKIP",
-      "confidence": 65,
-      "reasoning": "BULL at $6.08 with +2.01% today shows modest positive momentum, and StockTwits sentiment is strong at 0.80. However, volume is critically low at 0.1x average - this is dead money with no catalyst. No ",
-      "error": null
-    },
-    "gpt": {
-      "model": "gpt",
-      "decision": "SKIP",
-      "confidence": 60,
-      "reasoning": "The stock has low volume at 0.1x average, indicating weak momentum. Although the social sentiment is positive, there is no significant news catalyst or technical indicators provided to support a stron",
-      "error": null
-    },
+    "avg_confidence": 0,
+    "claude": null,
+    "gpt": null,
     "perplexity": null,
-    "reasoning": "Both models say SKIP",
-    "timestamp": 1772717289.266407
+    "reasoning": "Rate limit reached",
+    "timestamp": 1772717831.720578
   }
 }

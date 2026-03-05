@@ -388,25 +388,30 @@ class ConsensusEngine:
                     stop_price=data.get("stop_price"),
                 )
         except Exception as e:
-            # Retry once on 429
+            # Exponential backoff on 429
             if "429" in str(e):
-                logger.warning(f"GPT rate limited, retrying in 3s...")
-                await asyncio.sleep(3)
-                try:
-                    async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
-                        resp = await client.post(
-                            "https://api.openai.com/v1/chat/completions",
-                            headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
-                            json={"model": model, "messages": [{"role": "user", "content": prompt}],
-                                  "temperature": 0.3, "max_tokens": 500},
-                        )
-                        resp.raise_for_status()
-                        text = resp.json()["choices"][0]["message"]["content"]
-                        data = _parse_json(text)
-                        return ModelVote(model="gpt", decision=data.get("decision", "SKIP").upper(),
-                                        confidence=int(data.get("confidence", 0)), reasoning=data.get("reasoning", ""))
-                except Exception:
-                    pass
+                for attempt, wait in enumerate([5, 15, 30], 1):
+                    logger.warning(f"GPT rate limited, retry {attempt}/3 in {wait}s...")
+                    await asyncio.sleep(wait)
+                    try:
+                        async with httpx.AsyncClient(timeout=self.TIMEOUT) as client:
+                            resp = await client.post(
+                                "https://api.openai.com/v1/chat/completions",
+                                headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                                         "Content-Type": "application/json"},
+                                json={"model": model, "messages": [{"role": "user", "content": prompt}],
+                                      "temperature": 0.3, "max_tokens": 500},
+                            )
+                            resp.raise_for_status()
+                            self._api_calls["gpt"] += 1
+                            text = resp.json()["choices"][0]["message"]["content"]
+                            data = _parse_json(text)
+                            return ModelVote(model="gpt", decision=data.get("decision", "SKIP").upper(),
+                                            confidence=int(data.get("confidence", 0)), reasoning=data.get("reasoning", ""))
+                    except Exception:
+                        if attempt == 3:
+                            break
+                        continue
             logger.error(f"GPT API error: {e}")
             return ModelVote(model="gpt", decision="ERR", confidence=0, error=str(e))
 

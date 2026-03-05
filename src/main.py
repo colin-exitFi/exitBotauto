@@ -813,6 +813,10 @@ class TradingBot:
 
             evaluated += 1
 
+            # Stagger AI calls to avoid rate limits (2s between consensus evaluations)
+            if evaluated > 1:
+                await asyncio.sleep(2)
+
             # Consensus engine — Claude + GPT jury must agree on direction
             if self.consensus_engine:
                 try:

@@ -780,5 +780,50 @@
       }
     ],
     "timestamp": 1772717028.710423
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 3.0,
+        "reason": "Advisor explicitly recommends 3.0% citing 'zero positions and full daytrade allowance' \u2014 we can afford larger starter positions to maximize opening volatility. Current 2.5% undercapitalizes the exact window we're built for."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.5,
+        "reason": "Advisor recommends 1.5%: 'Opening volatility often produces 1.5-2% moves in minutes. TP1 at 1% leaves meat on the bone.' We dropped to 1.0% to chase quick wins but have ZERO trades \u2014 market isn't giving us 1% setups, need to target the actual volatility range."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.7,
+        "reason": "Advisor recommends 0.7 as compromise: 'Higher conviction threshold reduces false starts' but 0.75 blocked deployment entirely yesterday. Split the difference \u2014 0.7 balances quality bar with execution unlock."
+      }
+    ],
+    "reasoning": "Market IS open, we have 3 daytrades, $25K idle, and ZERO positions 30+ min into prime hunting window \u2014 advisory is explicit: DEPLOY NOW. Reverting defensive downsizing.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 2.5,
+        "new": 3.0,
+        "reason": "Advisor explicitly recommends 3.0% citing 'zero positions and full daytrade allowance' \u2014 we can afford larger starter positions to maximize opening volatility. Current 2.5% undercapitalizes the exact window we're built for.",
+        "timestamp": 1772717345.556643
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 1.0,
+        "new": 1.5,
+        "reason": "Advisor recommends 1.5%: 'Opening volatility often produces 1.5-2% moves in minutes. TP1 at 1% leaves meat on the bone.' We dropped to 1.0% to chase quick wins but have ZERO trades \u2014 market isn't giving us 1% setups, need to target the actual volatility range.",
+        "timestamp": 1772717345.55677
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.65,
+        "new": 0.7,
+        "reason": "Advisor recommends 0.7 as compromise: 'Higher conviction threshold reduces false starts' but 0.75 blocked deployment entirely yesterday. Split the difference \u2014 0.7 balances quality bar with execution unlock.",
+        "timestamp": 1772717345.556812
+      }
+    ],
+    "timestamp": 1772717345.558038
   }
 ]
