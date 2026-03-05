@@ -14,17 +14,14 @@ from loguru import logger
 
 import anthropic
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from config import settings
 from .trade_history import get_analytics
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
-MODEL = "claude-sonnet-4-5-20250929"
+MODEL = getattr(settings, "CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 CONFIG_STATE_FILE = DATA_DIR / "config_state.json"
 
-from ai.mission import MISSION
+from src.ai.mission import MISSION
 
 # Hard bounds — tuner CANNOT exceed these
 TUNABLE_PARAMS = {
@@ -94,8 +91,7 @@ class Tuner:
         # HARD LOCK: Don't tune until we have 20+ REAL trades with game film data
         # Fail-closed: if we can't verify trade count, DO NOT TUNE
         try:
-            from src.ai.trade_history import trade_history
-            total = trade_history.get_stats().get("overall", {}).get("total", 0)
+            total = int(get_analytics().get("total_trades", 0))
         except Exception as e:
             logger.warning(f"🔧 Tuner: LOCKED — cannot verify trade count ({e}), refusing to tune")
             return None

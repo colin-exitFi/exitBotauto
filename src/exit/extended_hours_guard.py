@@ -22,8 +22,6 @@ from datetime import datetime
 
 import pytz
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
@@ -135,6 +133,7 @@ class ExtendedHoursGuard:
             hwm = max(price, pos.get("peak_price", price), entry_price)
             guard = {
                 "hwm": hwm,
+                "lwm": min(price, entry_price),
                 "limit_order_id": None,
                 "trail_pct": trail_pct,
                 "last_limit_price": 0,
@@ -174,9 +173,24 @@ class ExtendedHoursGuard:
             except Exception as e:
                 logger.error(f"Emergency extended sell failed for {symbol}: {e}")
                 return None
+        elif side == "short" and price >= stop_price:
+            logger.warning(f"🚨 {symbol} short extended stop hit @ ${price:.2f} (stop=${stop_price:.2f})")
+            await self._cancel_guard(symbol)
+            try:
+                self._place_extended_limit_buy(symbol, qty, round(price * 1.002, 2))
+                return f"STOP_HIT_BUY_TO_COVER @ ${price:.2f}"
+            except Exception as e:
+                logger.error(f"Emergency short extended cover failed for {symbol}: {e}")
+                return None
 
         # Only update limit order if stop price moved up (ratchet — never lowers)
-        if stop_price > guard["last_limit_price"]:
+        should_update = False
+        if side == "long":
+            should_update = stop_price > guard["last_limit_price"]
+        else:
+            should_update = guard["last_limit_price"] == 0 or stop_price < guard["last_limit_price"]
+
+        if should_update:
             # Cancel old limit order
             if guard.get("limit_order_id"):
                 try:
@@ -184,16 +198,25 @@ class ExtendedHoursGuard:
                 except Exception:
                     pass
 
-            # Place new limit sell at stop price
-            order = self._place_extended_limit_sell(symbol, qty, stop_price)
+            # Place new limit order at stop price (sell for longs, buy-to-cover for shorts)
+            if side == "long":
+                order = self._place_extended_limit_sell(symbol, qty, stop_price)
+            else:
+                order = self._place_extended_limit_buy(symbol, qty, stop_price)
             if order:
                 guard["limit_order_id"] = order.get("id", "")
                 guard["last_limit_price"] = stop_price
+                if side == "long":
+                    logger.info(
+                        f"🛡️ {symbol} extended guard updated: limit sell @ ${stop_price:.2f} "
+                        f"(HWM=${guard['hwm']:.2f}, trail={trail_pct}%, price=${price:.2f})"
+                    )
+                    return f"LIMIT_UPDATED @ ${stop_price:.2f}"
                 logger.info(
-                    f"🛡️ {symbol} extended guard updated: limit sell @ ${stop_price:.2f} "
-                    f"(HWM=${guard['hwm']:.2f}, trail={trail_pct}%, price=${price:.2f})"
+                    f"🛡️ {symbol} short extended guard updated: limit buy @ ${stop_price:.2f} "
+                    f"(LWM=${guard.get('lwm', price):.2f}, trail={trail_pct}%, price=${price:.2f})"
                 )
-                return f"LIMIT_UPDATED @ ${stop_price:.2f}"
+                return f"LIMIT_BUY_UPDATED @ ${stop_price:.2f}"
             else:
                 logger.warning(f"⚠️ Failed to place extended guard for {symbol}")
                 return None
@@ -220,7 +243,11 @@ class ExtendedHoursGuard:
             # Place trailing stop % (regular hours)
             if not pos.get("has_trailing_stop"):
                 try:
-                    stop_order = self.broker.place_trailing_stop(symbol, qty, trail_pct)
+                    side = pos.get("side", "long")
+                    if side == "short" and hasattr(self.broker, "place_trailing_stop_short"):
+                        stop_order = self.broker.place_trailing_stop_short(symbol, qty, trail_pct)
+                    else:
+                        stop_order = self.broker.place_trailing_stop(symbol, qty, trail_pct)
                     if stop_order:
                         pos["has_trailing_stop"] = True
                         pos["trailing_stop_order_id"] = stop_order.get("id")
@@ -238,7 +265,11 @@ class ExtendedHoursGuard:
         # No guard but also no trailing stop — fix it
         if not pos.get("has_trailing_stop"):
             try:
-                stop_order = self.broker.place_trailing_stop(symbol, qty, trail_pct)
+                side = pos.get("side", "long")
+                if side == "short" and hasattr(self.broker, "place_trailing_stop_short"):
+                    stop_order = self.broker.place_trailing_stop_short(symbol, qty, trail_pct)
+                else:
+                    stop_order = self.broker.place_trailing_stop(symbol, qty, trail_pct)
                 if stop_order:
                     pos["has_trailing_stop"] = True
                     pos["trailing_stop_order_id"] = stop_order.get("id")
@@ -265,6 +296,7 @@ class ExtendedHoursGuard:
                 f'{self.broker._base_url}/v2/orders',
                 headers=self.broker._rest_headers(),
                 json=order_data,
+                timeout=10,
             )
             if resp.status_code in (200, 201):
                 return resp.json()
@@ -273,6 +305,33 @@ class ExtendedHoursGuard:
                 return None
         except Exception as e:
             logger.error(f"Extended limit sell error for {symbol}: {e}")
+            return None
+
+    def _place_extended_limit_buy(self, symbol: str, qty: int, price: float) -> Optional[Dict]:
+        """Place a limit buy order valid for extended hours (short cover protection)."""
+        try:
+            import requests
+            order_data = {
+                'symbol': symbol,
+                'qty': str(qty),
+                'side': 'buy',
+                'type': 'limit',
+                'limit_price': str(round(price, 2)),
+                'time_in_force': 'day',
+                'extended_hours': True,
+            }
+            resp = requests.post(
+                f'{self.broker._base_url}/v2/orders',
+                headers=self.broker._rest_headers(),
+                json=order_data,
+                timeout=10,
+            )
+            if resp.status_code in (200, 201):
+                return resp.json()
+            logger.error(f"Extended limit buy failed: {resp.status_code} {resp.text[:200]}")
+            return None
+        except Exception as e:
+            logger.error(f"Extended limit buy error for {symbol}: {e}")
             return None
 
     async def _cancel_guard(self, symbol: str):

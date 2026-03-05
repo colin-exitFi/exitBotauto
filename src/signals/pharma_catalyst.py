@@ -25,8 +25,6 @@ from loguru import logger
 import httpx
 import requests
 
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"

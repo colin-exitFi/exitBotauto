@@ -1,130 +1,144 @@
 {
-  "generated_at": 1772731230.6355588,
-  "total_trades": 8,
-  "total_wins": 2,
-  "total_losses": 6,
-  "overall_win_rate_pct": 25.0,
-  "total_pnl": -5.73,
-  "avg_win": 16.33,
-  "avg_loss": -6.4,
+  "generated_at": 1772745186.374997,
+  "total_trades": 6,
+  "total_wins": 1,
+  "total_losses": 5,
+  "overall_win_rate_pct": 16.7,
+  "total_pnl": -44.2,
+  "avg_win": 0.8,
+  "avg_loss": -9.0,
   "by_symbol": {
-    "AMPX": {
+    "VG": {
       "trades": 1,
-      "wins": 1,
-      "pnl": 24.39,
-      "win_rate_pct": 100.0,
-      "avg_pnl": 24.39
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
     },
-    "TTDU": {
-      "trades": 2,
+    "ACHR": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "NPT": {
+      "trades": 1,
       "wins": 0,
       "pnl": 0.0,
       "win_rate_pct": 0.0,
       "avg_pnl": 0.0
     },
     "BATL": {
-      "trades": 4,
+      "trades": 3,
       "wins": 1,
-      "pnl": -5.16,
-      "win_rate_pct": 25.0,
-      "avg_pnl": -1.29
-    },
-    "TNGX": {
-      "trades": 1,
-      "wins": 0,
-      "pnl": -24.96,
-      "win_rate_pct": 0.0,
-      "avg_pnl": -24.96
+      "pnl": -44.2,
+      "win_rate_pct": 33.3,
+      "avg_pnl": -14.73
     }
   },
   "by_hour": {
-    "11": {
+    "13": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "14": {
       "trades": 5,
       "wins": 1,
-      "pnl": -0.57,
+      "pnl": -44.2,
       "win_rate_pct": 20.0,
-      "avg_pnl": -0.11
-    },
-    "10": {
-      "trades": 3,
-      "wins": 1,
-      "pnl": -5.16,
-      "win_rate_pct": 33.3,
-      "avg_pnl": -1.72
+      "avg_pnl": -8.84
     }
   },
   "by_hold_duration": {
+    "5-30min": {
+      "trades": 2,
+      "wins": 1,
+      "pnl": 0.8,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 0.4
+    },
+    "30min-2h": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
     "<5min": {
-      "trades": 8,
-      "wins": 2,
-      "pnl": -5.73,
-      "win_rate_pct": 25.0,
-      "avg_pnl": -0.72
+      "trades": 3,
+      "wins": 0,
+      "pnl": -45.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -15.0
     }
   },
   "by_exit_reason": {
     "trailing_stop": {
-      "trades": 4,
+      "trades": 3,
       "wins": 0,
       "pnl": 0.0,
       "win_rate_pct": 0.0,
       "avg_pnl": 0.0
     },
     "trailing_stop_ws": {
-      "trades": 4,
-      "wins": 2,
-      "pnl": -5.73,
-      "win_rate_pct": 50.0,
-      "avg_pnl": -1.43
+      "trades": 3,
+      "wins": 1,
+      "pnl": -44.2,
+      "win_rate_pct": 33.3,
+      "avg_pnl": -14.73
     }
   },
   "by_risk_tier": {
     "COMPOUND": {
-      "trades": 4,
+      "trades": 3,
       "wins": 0,
       "pnl": 0.0,
       "win_rate_pct": 0.0,
       "avg_pnl": 0.0
     },
     "unknown": {
-      "trades": 4,
-      "wins": 2,
-      "pnl": -5.73,
-      "win_rate_pct": 50.0,
-      "avg_pnl": -1.43
+      "trades": 3,
+      "wins": 1,
+      "pnl": -44.2,
+      "win_rate_pct": 33.3,
+      "avg_pnl": -14.73
     }
   },
   "by_conviction": {
     "high": {
-      "trades": 1,
+      "trades": 2,
       "wins": 0,
       "pnl": 0.0,
       "win_rate_pct": 0.0,
       "avg_pnl": 0.0
     },
     "normal": {
-      "trades": 7,
-      "wins": 2,
-      "pnl": -5.73,
-      "win_rate_pct": 28.6,
-      "avg_pnl": -0.82
+      "trades": 4,
+      "wins": 1,
+      "pnl": -44.2,
+      "win_rate_pct": 25.0,
+      "avg_pnl": -11.05
     }
   },
   "by_day_of_week": {
     "Thursday": {
-      "trades": 8,
-      "wins": 2,
-      "pnl": -5.73,
-      "win_rate_pct": 25.0,
-      "avg_pnl": -0.72
+      "trades": 6,
+      "wins": 1,
+      "pnl": -44.2,
+      "win_rate_pct": 16.7,
+      "avg_pnl": -7.37
     }
   },
   "max_win_streak": 1,
-  "max_loss_streak": 6,
-  "avg_winner_hold_min": 3.6,
-  "avg_loser_hold_min": 1.9,
-  "recent_20_win_rate_pct": 25.0,
-  "recent_20_pnl": -5.73,
+  "max_loss_streak": 5,
+  "avg_winner_hold_min": 25.4,
+  "avg_loser_hold_min": 13.7,
+  "recent_20_win_rate_pct": 16.7,
+  "recent_20_pnl": -44.2,
   "recommendations": {
     "worst_symbols": [
       "BATL"

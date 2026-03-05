@@ -9,8 +9,6 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
@@ -25,7 +23,12 @@ class ExitManager:
         if not self.polygon:
             return None
         try:
-            bars = self.polygon.get_bars(symbol, timeframe="5Min", limit=settings.ATR_PERIOD + 1)
+            bars = self.polygon.get_bars(
+                symbol,
+                timespan="minute",
+                multiplier=5,
+                limit=settings.ATR_PERIOD + 1,
+            )
             if not bars or len(bars) < settings.ATR_PERIOD + 1:
                 logger.warning(f"Not enough bars for ATR on {symbol}, got {len(bars) if bars else 0}")
                 return None
@@ -76,25 +79,43 @@ class ExitManager:
         symbol = position["symbol"]
         entry_price = position["entry_price"]
         quantity = position["quantity"]
+        side = position.get("side", "long")
         peak_price = position.get("peak_price", entry_price)
         entry_time = position.get("entry_time", time.time())
         partial = position.get("partial_exit", False)
 
-        pnl_pct = ((current_price - entry_price) / entry_price) * 100
+        if side == "short":
+            pnl_pct = ((entry_price - current_price) / entry_price) * 100
+        else:
+            pnl_pct = ((current_price - entry_price) / entry_price) * 100
         hold_seconds = time.time() - entry_time
 
-        # Update peak for trailing stop
-        if self.entry and current_price > peak_price:
-            self.entry.update_peak_price(symbol, current_price)
-            peak_price = current_price
+        # Update favorable extreme for trailing stop:
+        # - longs track highest price since entry
+        # - shorts track lowest price since entry (stored in peak_price key for compatibility)
+        if self.entry:
+            if side == "short":
+                if current_price < peak_price:
+                    if symbol in self.entry.positions:
+                        self.entry.positions[symbol]["peak_price"] = current_price
+                    peak_price = current_price
+            elif current_price > peak_price:
+                self.entry.update_peak_price(symbol, current_price)
+                peak_price = current_price
 
         # ── A. STOP LOSS: ATR-based with fixed backup ──────────────
         atr_at_entry = position.get("atr_at_entry")
         if atr_at_entry and atr_at_entry > 0:
-            # ATR-based stop: 1.5x ATR below entry
-            atr_stop_price = entry_price - (settings.ATR_STOP_MULTIPLIER * atr_at_entry)
-            if current_price <= atr_stop_price:
-                return await self._execute_exit(position, quantity, current_price, "atr_stop_loss", pnl_pct)
+            if side == "short":
+                # Short ATR stop: cover if price rises 1.5x ATR above entry
+                atr_stop_price = entry_price + (settings.ATR_STOP_MULTIPLIER * atr_at_entry)
+                if current_price >= atr_stop_price:
+                    return await self._execute_exit(position, quantity, current_price, "atr_stop_loss", pnl_pct)
+            else:
+                # Long ATR stop: sell if price falls 1.5x ATR below entry
+                atr_stop_price = entry_price - (settings.ATR_STOP_MULTIPLIER * atr_at_entry)
+                if current_price <= atr_stop_price:
+                    return await self._execute_exit(position, quantity, current_price, "atr_stop_loss", pnl_pct)
         else:
             # Fallback: fixed percentage stop from risk tier
             dynamic_stop = self.stop_loss_pct
@@ -123,17 +144,31 @@ class ExitManager:
             return await self._execute_exit(position, quantity, current_price, "take_profit_2", pnl_pct)
 
         # ── D. TRAILING STOP: ATR-based or fixed from peak ──────────
-        if partial and peak_price > entry_price:
+        if partial:
             atr_at_entry = position.get("atr_at_entry")
-            if atr_at_entry and atr_at_entry > 0:
-                # ATR trailing: 2x ATR below highest price since entry
-                atr_trail_price = peak_price - (settings.ATR_TRAIL_MULTIPLIER * atr_at_entry)
-                if current_price <= atr_trail_price:
-                    return await self._execute_exit(position, quantity, current_price, "atr_trailing_stop", pnl_pct)
+            if side == "short":
+                # For shorts, peak_price stores lowest favorable price reached.
+                if peak_price < entry_price:
+                    if atr_at_entry and atr_at_entry > 0:
+                        # Short ATR trailing: cover if price bounces 2x ATR above low-water mark.
+                        atr_trail_price = peak_price + (settings.ATR_TRAIL_MULTIPLIER * atr_at_entry)
+                        if current_price >= atr_trail_price:
+                            return await self._execute_exit(position, quantity, current_price, "atr_trailing_stop", pnl_pct)
+                    else:
+                        trailing_retrace = ((current_price - peak_price) / peak_price) * 100 if peak_price else 0
+                        if trailing_retrace >= self.trailing_pct:
+                            return await self._execute_exit(position, quantity, current_price, "trailing_stop", pnl_pct)
             else:
-                trailing_pnl = ((current_price - peak_price) / peak_price) * 100
-                if trailing_pnl <= -self.trailing_pct:
-                    return await self._execute_exit(position, quantity, current_price, "trailing_stop", pnl_pct)
+                if peak_price > entry_price:
+                    if atr_at_entry and atr_at_entry > 0:
+                        # Long ATR trailing: sell if price drops 2x ATR below high-water mark.
+                        atr_trail_price = peak_price - (settings.ATR_TRAIL_MULTIPLIER * atr_at_entry)
+                        if current_price <= atr_trail_price:
+                            return await self._execute_exit(position, quantity, current_price, "atr_trailing_stop", pnl_pct)
+                    else:
+                        trailing_pnl = ((current_price - peak_price) / peak_price) * 100 if peak_price else 0
+                        if trailing_pnl <= -self.trailing_pct:
+                            return await self._execute_exit(position, quantity, current_price, "trailing_stop", pnl_pct)
 
         # ── E. SENTIMENT EXIT: score < 0 ──────────────────────────
         if sentiment_score < 0:
@@ -156,7 +191,14 @@ class ExitManager:
             price = await asyncio.get_event_loop().run_in_executor(
                 None, self.polygon.get_price, symbol
             ) if self.polygon else pos.get("entry_price", 0)
-            pnl_pct = ((price - pos["entry_price"]) / pos["entry_price"]) * 100 if pos["entry_price"] else 0
+            side = pos.get("side", "long")
+            if pos["entry_price"]:
+                if side == "short":
+                    pnl_pct = ((pos["entry_price"] - price) / pos["entry_price"]) * 100
+                else:
+                    pnl_pct = ((price - pos["entry_price"]) / pos["entry_price"]) * 100
+            else:
+                pnl_pct = 0
             await self._execute_exit(pos, pos["quantity"], price, reason, pnl_pct)
 
     # ── Execution ──────────────────────────────────────────────────
@@ -170,17 +212,21 @@ class ExitManager:
         logger.warning(f"🔴 EXIT {symbol}: {reason} | {quantity} shares @ ${price:.2f} | P&L: {pnl_pct:+.2f}%")
 
         order = None
+        side = position.get("side", "long")
         if self.broker:
-            order = await asyncio.get_event_loop().run_in_executor(
-                None, self.broker.place_market_sell, symbol, quantity
-            )
+            broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
+            order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, quantity)
             if not order:
                 logger.error(f"Exit order FAILED for {symbol}! Will retry next tick.")
                 return None
 
-        pnl_dollars = (price - position["entry_price"]) * quantity
+        if side == "short":
+            pnl_dollars = (position["entry_price"] - price) * quantity
+        else:
+            pnl_dollars = (price - position["entry_price"]) * quantity
         trade = {
             "symbol": symbol,
+            "side": "buy_to_cover" if side == "short" else "sell",
             "entry_price": position["entry_price"],
             "exit_price": price,
             "quantity": quantity,

@@ -21,6 +21,7 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 import httpx
+from config import settings
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 CACHE_FILE = DATA_DIR / "congress_trades.json"
@@ -121,10 +122,6 @@ class CongressScanner:
 
     async def _fetch_via_perplexity(self) -> List[Dict]:
         """Use Perplexity to find recent congressional trades."""
-        import sys, os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from config import settings
-
         pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
         if not pplx_key:
             return []

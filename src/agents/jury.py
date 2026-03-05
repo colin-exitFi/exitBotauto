@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 from loguru import logger
 
-from agents.base_agent import call_claude
+from src.agents.base_agent import call_claude, call_gpt, call_grok
 
 
 @dataclass
@@ -19,6 +19,7 @@ class JuryVerdict:
     trail_pct: float  # trailing stop %
     reasoning: str
     confidence: float = 0.0
+    provider_used: str = ""
     briefs: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
 
@@ -30,6 +31,7 @@ class JuryVerdict:
             "trail_pct": self.trail_pct,
             "reasoning": self.reasoning,
             "confidence": self.confidence,
+            "provider_used": self.provider_used,
             "timestamp": self.timestamp,
         }
 
@@ -89,7 +91,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
                 lines.append(f"  {k}: {v}")
             return "\n".join(lines) if lines else "  No data"
 
-        from ai.mission import MISSION_SHORT
+        from src.ai.mission import MISSION_SHORT
         prompt = PROMPT_TEMPLATE.format(
             mission=MISSION_SHORT,
             symbol=symbol,
@@ -101,13 +103,26 @@ async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
             macro=fmt(briefs.get("macro", {})),
         )
 
-        result = await call_claude(prompt, max_tokens=400)
+        result = None
+        provider_used = None
+        provider_chain = [
+            ("claude", call_claude),
+            ("gpt", call_gpt),
+            ("grok", call_grok),
+        ]
+        for provider_name, caller in provider_chain:
+            result = await caller(prompt, max_tokens=400)
+            if result and "decision" in result:
+                provider_used = provider_name
+                break
 
         if not result or "decision" not in result:
             logger.warning(f"Jury failed for {symbol} — defaulting to SKIP")
             return JuryVerdict(
                 symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
-                reasoning="Jury AI call failed", briefs=briefs,
+                reasoning="Jury AI chain failed (claude->gpt->grok)",
+                provider_used=provider_used or "",
+                briefs=briefs,
             )
 
         # Check if risk agent denied — hard override
@@ -118,6 +133,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
                 return JuryVerdict(
                     symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
                     reasoning=f"Risk agent denied: {risk_brief.get('reasoning', 'portfolio risk too high')}",
+                    provider_used=provider_used or "",
                     briefs=briefs,
                 )
 
@@ -139,13 +155,14 @@ async def deliberate(symbol: str, price: float, briefs: Dict) -> JuryVerdict:
             trail_pct=trail_pct,
             reasoning=str(result.get("reasoning", ""))[:300],
             confidence=max(0, min(100, float(result.get("confidence", 0)))),
+            provider_used=provider_used or "",
             briefs=briefs,
         )
 
         logger.info(
             f"🗳️ Jury verdict for {symbol}: {verdict.decision} "
             f"size={verdict.size_pct}% trail={verdict.trail_pct}% "
-            f"conf={verdict.confidence}% — {verdict.reasoning[:100]}"
+            f"conf={verdict.confidence}% provider={provider_used or '?'} — {verdict.reasoning[:100]}"
         )
         return verdict
 

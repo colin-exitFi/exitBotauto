@@ -6,7 +6,7 @@ Uses Claude Sonnet for nuanced technical reads.
 from typing import Dict
 from loguru import logger
 
-from agents.base_agent import call_claude
+from src.agents.base_agent import call_claude
 
 
 DEFAULT_BRIEF = {

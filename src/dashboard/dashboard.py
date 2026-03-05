@@ -7,14 +7,13 @@ import os
 import json
 import time
 import threading
+import hmac
 from typing import Dict, List, Optional
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 import uvicorn
 from loguru import logger
 
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 app = FastAPI(title="Velox", version="2.0.0")
@@ -45,6 +44,61 @@ def log_activity(category: str, message: str, data: dict = None):
     _activity_feed.append(entry)
     if len(_activity_feed) > _MAX_FEED_SIZE:
         _activity_feed = _activity_feed[-_MAX_FEED_SIZE:]
+
+
+def _extract_dashboard_token(request: Request) -> str:
+    """Extract dashboard token from header or query string."""
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    return request.query_params.get("token", "").strip()
+
+
+@app.middleware("http")
+async def dashboard_auth_middleware(request: Request, call_next):
+    """Protect dashboard HTML + API endpoints with bearer token auth."""
+    path = request.url.path
+    protected = (
+        path == "/"
+        or path.startswith("/api/")
+        or path == "/docs"
+        or path.startswith("/docs/")
+        or path == "/redoc"
+        or path.startswith("/redoc")
+        or path == "/openapi.json"
+    )
+    if protected:
+        expected = (getattr(settings, "DASHBOARD_TOKEN", "") or "").strip()
+        if not expected:
+            if path.startswith("/api/"):
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "error": "Dashboard token not configured",
+                        "hint": "Set DASHBOARD_TOKEN in .env",
+                    },
+                )
+            return HTMLResponse(
+                "<h1>Dashboard unavailable</h1><p>Set DASHBOARD_TOKEN in .env.</p>",
+                status_code=503,
+            )
+
+        provided = _extract_dashboard_token(request)
+        if not provided or not hmac.compare_digest(provided, expected):
+            if path.startswith("/api/"):
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "error": "Unauthorized",
+                        "hint": "Provide Authorization: Bearer <token> or ?token=<token>",
+                    },
+                )
+            return HTMLResponse(
+                "<h1>Unauthorized</h1><p>Provide ?token=&lt;token&gt; or Authorization bearer token.</p>",
+                status_code=401,
+            )
+
+    return await call_next(request)
 
 
 # ── API Endpoints ──────────────────────────────────────────────────
@@ -185,14 +239,11 @@ async def get_candidates():
 async def get_history(limit: int = 20):
     # Pull from persistent trade history (includes trailing stop exits)
     try:
-        from ai.trade_history import TradeHistory
-        th = TradeHistory()
-        trades = th.load_all()
-        if isinstance(trades, dict):
-            trades = trades.get("trades", [])
+        from src.ai import trade_history
+        trades = trade_history.get_recent(limit)
         # Format for dashboard
         result = []
-        for t in trades[-limit:]:
+        for t in trades:
             result.append({
                 "symbol": t.get("symbol", "?"),
                 "entry_price": t.get("entry_price", 0),
@@ -218,7 +269,7 @@ async def get_history(limit: int = 20):
 @app.get("/api/trade-history")
 async def get_trade_history(limit: int = 20):
     """Get persistent trade history with analytics."""
-    from ai import trade_history
+    from src.ai import trade_history
     trades = trade_history.get_recent(limit)
     stats = trade_history.get_analytics()
     # Compute best/worst
@@ -229,6 +280,35 @@ async def get_trade_history(limit: int = 20):
         "stats": stats,
         "best": best,
         "worst": worst,
+    }
+
+
+@app.get("/api/equity-curve")
+async def get_equity_curve(limit: int = 120):
+    """Return realized-equity curve points derived from trade history."""
+    from src.ai import trade_history
+
+    stats = trade_history.get_analytics()
+    curve = stats.get("equity_curve", [])
+    if limit < 1:
+        limit = 1
+    points = curve[-limit:]
+    starting = settings.TOTAL_CAPITAL
+    if _bot and getattr(_bot, "pnl_state", None):
+        starting = _bot.pnl_state.get("starting_equity", settings.TOTAL_CAPITAL)
+
+    series = [
+        {
+            "timestamp": p.get("timestamp", 0),
+            "cumulative_pnl": p.get("cumulative_pnl", 0),
+            "equity": round(starting + p.get("cumulative_pnl", 0), 2),
+        }
+        for p in points
+    ]
+    return {
+        "starting_equity": round(starting, 2),
+        "count": len(curve),
+        "points": series,
     }
 
 
@@ -531,6 +611,13 @@ tr:hover td{background:#161b2288}
     </div>
   </div>
 
+  <!-- Equity Curve -->
+  <div class="card full">
+    <h2><span class="icon">📈</span> Equity Curve <span id="equityCurveStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <div id="equityCurveMeta" style="font-size:12px;color:#8b949e;margin-bottom:8px">Loading...</div>
+    <svg id="equityCurveSvg" viewBox="0 0 900 180" preserveAspectRatio="none" style="width:100%;height:180px;background:#0b1020;border:1px solid #21262d;border-radius:8px"></svg>
+  </div>
+
   <!-- Performance Metrics -->
   <div class="card full">
     <h2><span class="icon">📊</span> Risk Metrics</h2>
@@ -555,7 +642,7 @@ tr:hover td{background:#161b2288}
   <div class="card full">
     <h2><span class="icon">💰</span> Trade History <span id="tradeStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="tradeSummary"></div>
-    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L $</th><th>P&L %</th><th>Reason</th><th>Hold</th><th>Conviction</th><th>Risk Tier</th></tr></thead>
+    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L $</th><th>P&L %</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Sources</th><th>Slip(bps)</th></tr></thead>
     <tbody id="tradeHistory"></tbody></table>
   </div>
 
@@ -601,12 +688,53 @@ tr:hover td{background:#161b2288}
 <script>
 const $ = s => document.getElementById(s);
 let _prevPnl = null;
+const _dashToken = new URLSearchParams(window.location.search).get('token') || '';
+function withToken(url) {
+  if (!_dashToken) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(_dashToken);
+}
 async function api(url, method='GET') {
-  try { const r = await fetch(url, {method}); return await r.json(); } catch(e) { return null; }
+  try {
+    const headers = _dashToken ? {'Authorization': `Bearer ${_dashToken}`} : {};
+    const r = await fetch(withToken(url), {method, headers});
+    return await r.json();
+  } catch(e) { return null; }
 }
 function cls(v) { return v >= 0 ? 'positive' : 'negative'; }
 function fmt(v, d=2) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—'; }
 function holdStr(secs) { if(!secs) return '—'; const m=Math.floor(secs/60); const h=Math.floor(m/60); return h>0?h+'h '+m%60+'m':m+'m'; }
+function topPnlBucket(obj) {
+  if (!obj) return null;
+  const rows = Object.entries(obj);
+  if (!rows.length) return null;
+  rows.sort((a, b) => (b[1]?.pnl || 0) - (a[1]?.pnl || 0));
+  return {name: rows[0][0], pnl: rows[0][1]?.pnl || 0};
+}
+function renderEquityCurve(points) {
+  const svg = $('equityCurveSvg');
+  if (!svg) return;
+  if (!points || points.length < 2) {
+    svg.innerHTML = '<text x="20" y="90" fill="#8b949e" font-size="12">Not enough trade history for equity curve</text>';
+    return;
+  }
+  const w = 900, h = 180, pad = 12;
+  const ys = points.map(p => p.equity || 0);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanY = (maxY - minY) || 1;
+  const pts = points.map((p, i) => {
+    const x = pad + (i / (points.length - 1)) * (w - 2 * pad);
+    const y = h - pad - (((p.equity || 0) - minY) / spanY) * (h - 2 * pad);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+  const last = points[points.length - 1]?.equity || 0;
+  const first = points[0]?.equity || 0;
+  const stroke = last >= first ? '#3fb950' : '#f85149';
+  svg.innerHTML = `
+    <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="2.5" />
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#21262d" stroke-width="1" />
+  `;
+}
 
 async function refresh() {
   // Status
@@ -644,6 +772,17 @@ async function refresh() {
     $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
     $('worstTrade').className = 'value negative';
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+  }
+  // Equity curve
+  const ec = await api('/api/equity-curve?limit=120');
+  if (ec) {
+    const pts = ec.points || [];
+    const latest = pts.length ? pts[pts.length - 1] : null;
+    $('equityCurveStats').textContent = `${ec.count || 0} trades`;
+    $('equityCurveMeta').textContent = latest
+      ? `Start $${(ec.starting_equity||0).toFixed(2)} -> ${pts.length ? '$'+(latest.equity||0).toFixed(2) : '—'}`
+      : 'No completed trades yet';
+    renderEquityCurve(pts);
   }
   // Metrics
   const m = await api('/api/metrics');
@@ -709,6 +848,8 @@ async function refresh() {
   if (th) {
     const s = th.stats?.overall || {};
     const best = th.best, worst = th.worst;
+    const bestStrategy = topPnlBucket(th.stats?.by_strategy_tag);
+    const bestSource = topPnlBucket(th.stats?.by_signal_source);
     $('tradeStats').textContent = `${s.wins||0}W / ${s.losses||0}L`;
     $('tradeSummary').innerHTML = th.trades.length ? `
       <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Total Trades</div></div>
@@ -716,6 +857,8 @@ async function refresh() {
       <div class="summary-item"><div class="val ${cls(s.total_pnl||0)}">${fmt(s.total_pnl||0)}</div><div class="lbl">Total P&L</div></div>
       <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">Best Trade ${best?best.symbol:''}</div></div>
       <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">Worst Trade ${worst?worst.symbol:''}</div></div>
+      <div class="summary-item"><div class="val ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name:'—'}</div><div class="lbl">Top Strategy</div></div>
+      <div class="summary-item"><div class="val ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?bestSource.name:'—'}</div><div class="lbl">Top Source</div></div>
     ` : '';
     $('tradeHistory').innerHTML = th.trades.length ? th.trades.slice().reverse().map(t => `<tr>
       <td><strong>${t.symbol||'?'}</strong></td>
@@ -723,8 +866,10 @@ async function refresh() {
       <td class="${cls(t.pnl||0)}"><strong>${fmt(t.pnl||0)}</strong></td>
       <td class="${cls(t.pnl_pct||0)}">${fmt(t.pnl_pct||0)}%</td>
       <td>${t.reason||'—'}</td><td>${holdStr(t.hold_seconds)}</td>
-      <td>${t.conviction_level||'—'}</td><td>${t.risk_tier||'—'}</td>
-    </tr>`).join('') : '<tr><td colspan="9" class="empty">No completed trades yet</td></tr>';
+      <td>${t.strategy_tag||'—'}</td>
+      <td style="font-size:11px;color:#8b949e">${Array.isArray(t.signal_sources)?t.signal_sources.join(', '):(t.signal_sources||'—')}</td>
+      <td class="${(t.slippage_bps||0) > 0 ? 'negative' : 'positive'}">${fmt(t.slippage_bps||0, 1)}</td>
+    </tr>`).join('') : '<tr><td colspan="10" class="empty">No completed trades yet</td></tr>';
   }
   // Portfolio
   const pf = await api('/api/portfolio');

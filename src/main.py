@@ -12,46 +12,44 @@ import sys
 import time
 from pathlib import Path
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent))
-
 from loguru import logger
 from dotenv import load_dotenv
 
 from config import settings
-from broker.alpaca_client import AlpacaClient
-from data.polygon_client import PolygonClient
-from scanner.scanner import Scanner
-from sentiment.sentiment_analyzer import SentimentAnalyzer
-from signals.stocktwits import StockTwitsClient
-from signals.twitter import TwitterSentimentClient
-from signals.pharma_catalyst import PharmaCatalystScanner
-from signals.fade_runner import FadeRunnerScanner
-from signals.watchlist import DynamicWatchlist
-from signals.edgar import EdgarScanner
-from signals.earnings import EarningsScanner
-from signals.unusual_options import UnusualOptionsScanner
-from signals.congress import CongressScanner
-from signals.short_interest import ShortInterestScanner
-from signals.sector_rotation import SectorRotationModel
-from streams.market_stream import MarketStream
-from streams.trade_stream import TradeStream
-from dashboard.dashboard import log_activity
-import persistence
-from entry.entry_manager import EntryManager
-from exit.exit_manager import ExitManager
-from exit.extended_hours_guard import ExtendedHoursGuard
-from risk.risk_manager import RiskManager
-from ai.observer import Observer
-from ai.advisor import Advisor
-from ai.tuner import Tuner
-from ai.game_film import GameFilm
-from ai.position_manager import PositionManager
-from ai import trade_history
-from ai.consensus import ConsensusEngine
-from agents.orchestrator import Orchestrator
-from dashboard.dashboard import start_dashboard
+from src.broker.alpaca_client import AlpacaClient
+from src.data.polygon_client import PolygonClient
+from src.scanner.scanner import Scanner
+from src.sentiment.sentiment_analyzer import SentimentAnalyzer
+from src.signals.stocktwits import StockTwitsClient
+from src.signals.twitter import TwitterSentimentClient
+from src.signals.pharma_catalyst import PharmaCatalystScanner
+from src.signals.fade_runner import FadeRunnerScanner
+from src.signals.watchlist import DynamicWatchlist
+from src.signals.edgar import EdgarScanner
+from src.signals.earnings import EarningsScanner
+from src.signals.unusual_options import UnusualOptionsScanner
+from src.signals.congress import CongressScanner
+from src.signals.short_interest import ShortInterestScanner
+from src.signals.sector_rotation import SectorRotationModel
+from src.streams.market_stream import MarketStream
+from src.streams.trade_stream import TradeStream
+from src.dashboard.dashboard import log_activity
+from src import persistence
+from src.entry.entry_manager import EntryManager
+from src.exit.exit_manager import ExitManager
+from src.exit.extended_hours_guard import ExtendedHoursGuard
+from src.risk.risk_manager import RiskManager
+from src.ai.observer import Observer
+from src.ai.advisor import Advisor
+from src.ai.tuner import Tuner
+from src.ai.game_film import GameFilm
+from src.ai.position_manager import PositionManager
+from src.ai import trade_history
+from src.ai.consensus import ConsensusEngine
+from src.agents.orchestrator import Orchestrator
+from src.dashboard.dashboard import start_dashboard
+from src.data.trade_schema import normalize_trade_record
+from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
 
 
 class TradingBot:
@@ -278,6 +276,9 @@ class TradingBot:
         await self.orchestrator.start_exit_agent()
 
         scan_interval = settings.SCAN_INTERVAL_SECONDS
+        self.scan_regime = "mixed"
+        self.ai_layers["scan_regime"] = self.scan_regime
+        self.ai_layers["scan_interval_seconds"] = scan_interval
         monitor_interval = 5
         last_scan = 0
         last_equity_sync = 0
@@ -351,6 +352,16 @@ class TradingBot:
                             self.market_stream.set_prev_closes(prev_closes)
                             await self.market_stream.subscribe(top_symbols + pos_symbols)
                         await self._process_candidates(candidates)
+
+                        new_regime = self.scanner.get_last_market_regime() if self.scanner else "mixed"
+                        new_scan_interval = self._determine_scan_interval(new_regime)
+                        if new_regime != self.scan_regime or new_scan_interval != scan_interval:
+                            logger.info(f"⏱️ Adaptive scan cadence: regime={new_regime}, interval={new_scan_interval}s")
+                            log_activity("scan", f"Adaptive cadence: regime={new_regime}, interval={new_scan_interval}s")
+                        self.scan_regime = new_regime
+                        scan_interval = new_scan_interval
+                        self.ai_layers["scan_regime"] = self.scan_regime
+                        self.ai_layers["scan_interval_seconds"] = scan_interval
                     except Exception as e:
                         logger.error(f"Scan error: {e}")
 
@@ -816,6 +827,46 @@ class TradingBot:
 
             await asyncio.sleep(30)  # Check every 30s, layers self-throttle
 
+    @staticmethod
+    def _extract_signal_sources(candidate: dict) -> list:
+        return extract_signal_sources(candidate)
+
+    @staticmethod
+    def _derive_strategy_tag(candidate: dict, direction: str) -> str:
+        return derive_strategy_tag(candidate, direction)
+
+    @staticmethod
+    def _determine_scan_interval(regime: str) -> int:
+        """
+        Adaptive scan cadence:
+          high-vol regimes -> fast scans (default 60s)
+          low-vol/choppy   -> slow scans (default 300s)
+          mixed            -> baseline scan interval
+        """
+        fast = max(15, int(getattr(settings, "SCAN_INTERVAL_FAST_SECONDS", 60)))
+        slow = max(fast, int(getattr(settings, "SCAN_INTERVAL_SLOW_SECONDS", 300)))
+        baseline = max(fast, int(settings.SCAN_INTERVAL_SECONDS))
+
+        if regime in ("risk_on", "risk_off"):
+            return fast
+        if regime == "choppy":
+            return slow
+        return baseline
+
+    @staticmethod
+    def _compute_entry_slippage_bps(entry_price: float, signal_price: float, side: str) -> float:
+        """
+        Compute signed entry slippage in bps vs signal price.
+        Positive = adverse fill. Negative = favorable fill.
+        """
+        if not entry_price or not signal_price:
+            return 0.0
+        if side == "short":
+            # Short adverse slippage means entry lower than signal.
+            return ((signal_price - entry_price) / signal_price) * 10000
+        # Long adverse slippage means entry higher than signal.
+        return ((entry_price - signal_price) / signal_price) * 10000
+
     async def _process_candidates(self, candidates):
         """Evaluate scanner candidates for entry with position manager veto."""
         if not self.risk_manager.can_trade():
@@ -836,7 +887,12 @@ class TradingBot:
                 continue
 
             sentiment_score = candidate.get("sentiment_score", 0)
-            sentiment_data = self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score}
+            sentiment_data = dict(self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score})
+            signal_price = float(candidate.get("price", 0) or 0)
+            signal_sources = self._extract_signal_sources(candidate)
+            sentiment_data["signal_price"] = signal_price
+            sentiment_data["decision_price"] = signal_price
+            sentiment_data["signal_sources"] = signal_sources
 
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
@@ -872,12 +928,17 @@ class TradingBot:
                     sentiment_data["consensus_confidence"] = verdict.confidence
                     sentiment_data["consensus_direction"] = direction
                     sentiment_data["jury_trail_pct"] = verdict.trail_pct
+                    sentiment_data["provider_used"] = getattr(verdict, "provider_used", "")
+                    sentiment_data["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
                 except Exception as e:
                     logger.error(f"Orchestrator error for {symbol}: {e}")
                     continue  # Never trade without agent consensus
 
             logger.info(f"🔑 {symbol} REACHED ENTRY BLOCK (orchestrator={bool(self.orchestrator)})")
             direction = sentiment_data.get("consensus_direction", "BUY")
+            sentiment_data.setdefault("provider_used", "")
+            sentiment_data.setdefault("consensus_confidence", 0)
+            sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -sentiment_score if direction == "SHORT" else sentiment_score
@@ -894,6 +955,8 @@ class TradingBot:
 
     async def _monitor_pending_orders(self):
         """Monitor unfilled limit orders and adjust price if stale."""
+        from functools import partial
+
         try:
             open_orders = await asyncio.get_event_loop().run_in_executor(
                 None, self.alpaca_client.get_orders
@@ -930,7 +993,7 @@ class TradingBot:
             # Get current price
             try:
                 snapshot = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: self.alpaca_client.get_latest_price(symbol)
+                    None, partial(self.alpaca_client.get_latest_price, symbol)
                 )
                 current_price = snapshot if isinstance(snapshot, (int, float)) else 0
             except Exception:
@@ -948,7 +1011,7 @@ class TradingBot:
                 log_activity("trade", f"📝 {symbol}: limit ${limit_price:.2f} → ${new_limit:.2f} (stale {int(age_seconds)}s)")
 
                 result = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: self.alpaca_client.replace_order(order_id, new_limit)
+                    None, partial(self.alpaca_client.replace_order, order_id, new_limit)
                 )
                 if result:
                     # Update our tracked position entry price
@@ -958,7 +1021,7 @@ class TradingBot:
                     # If replace fails (e.g. order already filled), cancel and let next cycle re-enter
                     logger.warning(f"Replace failed for {symbol} — cancelling stale order")
                     await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: self.alpaca_client.cancel_order(order_id)
+                        None, partial(self.alpaca_client.cancel_order, order_id)
                     )
                     if symbol in self.entry_manager.positions:
                         self.entry_manager.remove_position(symbol)
@@ -968,10 +1031,40 @@ class TradingBot:
                 logger.info(f"⏰ Cancelling stale order for {symbol} — {int(age_seconds)}s old, price near limit but no fill")
                 log_activity("trade", f"⏰ {symbol}: cancelled stale order after {int(age_seconds//60)}min")
                 await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: self.alpaca_client.cancel_order(order_id)
+                    None, partial(self.alpaca_client.cancel_order, order_id)
                 )
                 if symbol in self.entry_manager.positions:
                     self.entry_manager.remove_position(symbol)
+
+    def _record_realized_exit(self, trade_record: dict):
+        """
+        Record a fully closed trade exactly once across history, risk, P&L state, and persistence.
+        Centralized to avoid drift between polling and websocket exit paths.
+        """
+        trade_record = normalize_trade_record(trade_record)
+
+        pnl = float(trade_record.get("pnl", 0))
+        symbol = trade_record.get("symbol", "")
+
+        trade_history.record_trade(trade_record)
+        if self.entry_manager and symbol:
+            self.entry_manager.remove_position(symbol)
+        if self.risk_manager:
+            self.risk_manager.record_trade(trade_record)
+
+        self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
+        self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
+        self.pnl_state["total_trades"] = self.pnl_state.get("total_trades", 0) + 1
+        if pnl >= 0:
+            self.pnl_state["winning_trades"] = self.pnl_state.get("winning_trades", 0) + 1
+        else:
+            self.pnl_state["losing_trades"] = self.pnl_state.get("losing_trades", 0) + 1
+        self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
+        self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
+
+        persistence.save_pnl_state(self.pnl_state)
+        persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
+        persistence.save_trades([trade_record])
 
     async def _monitor_positions(self):
         """
@@ -1017,67 +1110,83 @@ class TradingBot:
                     continue
 
                 if symbol not in alpaca_symbols:
-                    entry_price = pos.get("entry_price", 0)
-                    # Get the last fill price from closed orders
-                    exit_price = entry_price  # default
+                    if pos.get("_exit_recorded") or pos.get("_exit_recording"):
+                        logger.debug(f"{symbol}: trailing stop exit already being/been recorded — skipping duplicate")
+                        continue
+                    pos["_exit_recording"] = True
                     try:
-                        orders = await asyncio.get_event_loop().run_in_executor(
-                            None, self.alpaca_client.get_orders, "closed"
-                        )
-                        for o in orders:
-                            if o.get("symbol") == symbol and o.get("type") == "trailing_stop":
-                                exit_price = float(o.get("filled_avg_price", entry_price))
-                                break
-                    except Exception:
-                        pass
+                        entry_price = pos.get("entry_price", 0)
+                        side = pos.get("side", "long")
+                        # Get the latest matching trailing-stop fill price from closed orders
+                        exit_price = entry_price  # default
+                        try:
+                            orders = await asyncio.get_event_loop().run_in_executor(
+                                None, self.alpaca_client.get_orders, "closed"
+                            )
+                            expected_side = "sell" if side == "long" else "buy"
+                            latest = None
+                            latest_key = ""
+                            for o in orders:
+                                if o.get("symbol") != symbol:
+                                    continue
+                                if o.get("type") != "trailing_stop":
+                                    continue
+                                if o.get("side") and o.get("side") != expected_side:
+                                    continue
+                                if not o.get("filled_avg_price"):
+                                    continue
+                                ts_key = str(o.get("filled_at") or o.get("updated_at") or o.get("submitted_at") or "")
+                                if ts_key >= latest_key:
+                                    latest_key = ts_key
+                                    latest = o
+                            if latest:
+                                exit_price = float(latest.get("filled_avg_price", entry_price))
+                        except Exception:
+                            pass
 
-                    qty = pos.get("quantity", 0)
-                    side = pos.get("side", "long")
-                    if side == "short":
-                        pnl = (entry_price - exit_price) * qty
-                    else:
-                        pnl = (exit_price - entry_price) * qty
-                    pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
-                    if side == "short":
-                        pnl_pct = -pnl_pct
+                        qty = pos.get("quantity", 0)
+                        if side == "short":
+                            pnl = (entry_price - exit_price) * qty
+                        else:
+                            pnl = (exit_price - entry_price) * qty
+                        pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
+                        if side == "short":
+                            pnl_pct = -pnl_pct
 
-                    trade_record = {
-                        "symbol": symbol,
-                        "side": "sell" if side == "long" else "buy_to_cover",
-                        "entry_price": entry_price,
-                        "exit_price": exit_price,
-                        "quantity": qty,
-                        "pnl": pnl,
-                        "pnl_pct": pnl_pct,
-                        "reason": "trailing_stop",
-                        "hold_seconds": time.time() - pos.get("entry_time", time.time()),
-                        "entry_time": pos.get("entry_time", 0),
-                        "exit_time": time.time(),
-                        "sentiment_at_entry": pos.get("sentiment_at_entry", 0),
-                        "conviction_level": pos.get("conviction_level", "normal"),
-                        "risk_tier": self.risk_manager.get_risk_tier().get("name", "?"),
-                    }
-                    trade_history.record_trade(trade_record)
-                    self.entry_manager.remove_position(symbol)
-                    self.risk_manager.record_trade({"pnl": pnl})
+                        trade_record = {
+                            "symbol": symbol,
+                            "side": "sell" if side == "long" else "buy_to_cover",
+                            "entry_price": entry_price,
+                            "exit_price": exit_price,
+                            "quantity": qty,
+                            "pnl": pnl,
+                            "pnl_pct": pnl_pct,
+                            "reason": "trailing_stop",
+                            "hold_seconds": time.time() - pos.get("entry_time", time.time()),
+                            "entry_time": pos.get("entry_time", 0),
+                            "exit_time": time.time(),
+                            "sentiment_at_entry": pos.get("sentiment_at_entry", 0),
+                            "conviction_level": pos.get("conviction_level", "normal"),
+                            "risk_tier": self.risk_manager.get_risk_tier().get("name", "?"),
+                            "strategy_tag": pos.get("strategy_tag", "unknown"),
+                            "signal_sources": pos.get("signal_sources", ["unknown"]),
+                            "decision_confidence": pos.get("decision_confidence", 0),
+                            "provider_used": pos.get("provider_used", ""),
+                            "signal_price": pos.get("signal_price", entry_price),
+                            "decision_price": pos.get("decision_price", entry_price),
+                            "fill_price": exit_price,
+                            "slippage_bps": self._compute_entry_slippage_bps(
+                                entry_price, pos.get("signal_price", entry_price), side
+                            ),
+                        }
+                        self._record_realized_exit(trade_record)
 
-                    # Update P&L tracking
-                    self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
-                    self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
-                    self.pnl_state["total_trades"] = self.pnl_state.get("total_trades", 0) + 1
-                    if pnl >= 0:
-                        self.pnl_state["winning_trades"] = self.pnl_state.get("winning_trades", 0) + 1
-                    else:
-                        self.pnl_state["losing_trades"] = self.pnl_state.get("losing_trades", 0) + 1
-                    self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
-                    self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
-                    persistence.save_pnl_state(self.pnl_state)
-                    persistence.save_positions(self.entry_manager.positions)
-                    persistence.save_trades([trade_record])
-
-                    emoji = "✅" if pnl >= 0 else "❌"
-                    logger.info(f"{emoji} TRAILING STOP EXIT: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
-                    log_activity("trade", f"{emoji} {symbol} stopped out: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                        pos["_exit_recorded"] = True
+                        emoji = "✅" if pnl >= 0 else "❌"
+                        logger.info(f"{emoji} TRAILING STOP EXIT: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                        log_activity("trade", f"{emoji} {symbol} stopped out: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                    finally:
+                        pos.pop("_exit_recording", None)
                     continue
 
                 # ── VERIFY TRAILING STOP EXISTS ──
@@ -1105,9 +1214,11 @@ class TradingBot:
                         logger.warning(f"⚠️ {symbol} has NO trailing stop — attempt {retry_count}/5")
                         qty = int(float(pos.get("quantity", 0)))
                         trail_pct = pos.get("trail_pct", 3.0)
+                        side = pos.get("side", "long")
+                        trail_fn = self.alpaca_client.place_trailing_stop_short if side == "short" and hasattr(self.alpaca_client, "place_trailing_stop_short") else self.alpaca_client.place_trailing_stop
                         if qty >= 1:
                             stop_order = await asyncio.get_event_loop().run_in_executor(
-                                None, self.alpaca_client.place_trailing_stop, symbol, qty, trail_pct
+                                None, trail_fn, symbol, qty, trail_pct
                             )
                             if stop_order:
                                 pos["has_trailing_stop"] = True
@@ -1116,12 +1227,13 @@ class TradingBot:
                                 logger.success(f"📈 Trailing stop placed: {symbol} trail={trail_pct}%")
                             elif retry_count >= 5:
                                 # Only emergency sell after 5 failed attempts across 5 scan cycles
-                                logger.error(f"🚨 TRAILING STOP FAILED 5x for {symbol} — MARKET SELLING for protection")
+                                logger.error(f"🚨 TRAILING STOP FAILED 5x for {symbol} — FORCED MARKET EXIT for protection")
+                                emergency_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
                                 await asyncio.get_event_loop().run_in_executor(
-                                    None, self.alpaca_client.place_market_sell, symbol, qty
+                                    None, emergency_fn, symbol, qty
                                 )
                                 self.entry_manager.remove_position(symbol)
-                                log_activity("alert", f"🚨 Emergency market sell: {symbol} — trailing stop failed 5x")
+                                log_activity("alert", f"🚨 Emergency market exit: {symbol} — trailing stop failed 5x")
                             else:
                                 logger.warning(f"⚠️ Trailing stop failed for {symbol} — will retry next cycle ({retry_count}/5)")
 
@@ -1140,46 +1252,47 @@ class TradingBot:
         if not pos:
             logger.warning(f"Trailing stop filled for {symbol} but no tracked position")
             return
+        if pos.get("_exit_recorded") or pos.get("_exit_recording"):
+            logger.debug(f"{symbol}: trailing stop exit already being/been recorded — skipping duplicate callback")
+            return
+        pos["_exit_recording"] = True
+        try:
+            entry_price = pos.get("entry_price", fill_price)
+            side = pos.get("side", "long")
+            if side == "short":
+                pnl = (entry_price - fill_price) * qty
+            else:
+                pnl = (fill_price - entry_price) * qty
+            pnl_pct = ((fill_price - entry_price) / entry_price * 100) if entry_price else 0
+            if side == "short":
+                pnl_pct = -pnl_pct
 
-        entry_price = pos.get("entry_price", fill_price)
-        side = pos.get("side", "long")
-        if side == "short":
-            pnl = (entry_price - fill_price) * qty
-        else:
-            pnl = (fill_price - entry_price) * qty
-        pnl_pct = ((fill_price - entry_price) / entry_price * 100) if entry_price else 0
-        if side == "short":
-            pnl_pct = -pnl_pct
+            # Record trade
+            trade_record = {
+                "symbol": symbol, "side": "sell" if side == "long" else "buy_to_cover",
+                "entry_price": entry_price, "exit_price": fill_price,
+                "quantity": qty, "pnl": pnl, "pnl_pct": pnl_pct,
+                "reason": "trailing_stop_ws", "hold_seconds": time.time() - pos.get("entry_time", time.time()),
+                "entry_time": pos.get("entry_time", 0), "exit_time": time.time(),
+                "strategy_tag": pos.get("strategy_tag", "unknown"),
+                "signal_sources": pos.get("signal_sources", ["unknown"]),
+                "decision_confidence": pos.get("decision_confidence", 0),
+                "provider_used": pos.get("provider_used", ""),
+                "signal_price": pos.get("signal_price", entry_price),
+                "decision_price": pos.get("decision_price", entry_price),
+                "fill_price": fill_price,
+                "slippage_bps": self._compute_entry_slippage_bps(
+                    entry_price, pos.get("signal_price", entry_price), side
+                ),
+            }
+            self._record_realized_exit(trade_record)
 
-        # Record trade
-        trade_record = {
-            "symbol": symbol, "side": "sell" if side == "long" else "buy_to_cover",
-            "entry_price": entry_price, "exit_price": fill_price,
-            "quantity": qty, "pnl": pnl, "pnl_pct": pnl_pct,
-            "reason": "trailing_stop_ws", "hold_seconds": time.time() - pos.get("entry_time", time.time()),
-            "entry_time": pos.get("entry_time", 0), "exit_time": time.time(),
-        }
-        trade_history.record_trade(trade_record)
-        self.entry_manager.remove_position(symbol)
-        self.risk_manager.record_trade({"pnl": pnl})
-
-        # Update P&L
-        self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
-        self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
-        self.pnl_state["total_trades"] = self.pnl_state.get("total_trades", 0) + 1
-        if pnl >= 0:
-            self.pnl_state["winning_trades"] = self.pnl_state.get("winning_trades", 0) + 1
-        else:
-            self.pnl_state["losing_trades"] = self.pnl_state.get("losing_trades", 0) + 1
-        self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
-        self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
-        persistence.save_pnl_state(self.pnl_state)
-        persistence.save_positions(self.entry_manager.positions)
-        persistence.save_trades([trade_record])
-
-        emoji = "✅" if pnl >= 0 else "❌"
-        logger.info(f"{emoji} WS TRAILING STOP: {symbol} @ ${fill_price:.2f} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
-        log_activity("trade", f"{emoji} {symbol} stopped out (WS): ${pnl:.2f} ({pnl_pct:+.1f}%)")
+            pos["_exit_recorded"] = True
+            emoji = "✅" if pnl >= 0 else "❌"
+            logger.info(f"{emoji} WS TRAILING STOP: {symbol} @ ${fill_price:.2f} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+            log_activity("trade", f"{emoji} {symbol} stopped out (WS): ${pnl:.2f} ({pnl_pct:+.1f}%)")
+        finally:
+            pos.pop("_exit_recording", None)
 
     def _send_trade_alert(self, pos: dict, direction: str):
         """Send Slack webhook alert on trade entry."""

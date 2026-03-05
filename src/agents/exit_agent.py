@@ -9,10 +9,7 @@ import time
 from typing import Dict, List, Optional
 from loguru import logger
 
-from agents.base_agent import call_claude
-
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+from src.agents.base_agent import call_claude
 
 
 DEFAULT_ACTION = {
@@ -259,8 +256,10 @@ class ExitAgent:
 
                 qty = int(float(pos.get("quantity", 0)))
                 if qty >= 1 and hasattr(self.broker, 'place_trailing_stop'):
+                    side = pos.get("side", "long")
+                    trail_fn = self.broker.place_trailing_stop_short if side == "short" and hasattr(self.broker, "place_trailing_stop_short") else self.broker.place_trailing_stop
                     new_stop = await asyncio.get_event_loop().run_in_executor(
-                        None, self.broker.place_trailing_stop, symbol, qty, new_trail
+                        None, trail_fn, symbol, qty, new_trail
                     )
                     if new_stop:
                         pos["trail_pct"] = new_trail
@@ -270,7 +269,7 @@ class ExitAgent:
                         # Failed — restore old stop
                         logger.warning(f"Trail adjust failed for {symbol} — restoring {old_trail}%")
                         restore = await asyncio.get_event_loop().run_in_executor(
-                            None, self.broker.place_trailing_stop, symbol, qty, old_trail
+                            None, trail_fn, symbol, qty, old_trail
                         )
                         if restore:
                             pos["trailing_stop_order_id"] = restore.get("id")

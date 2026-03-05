@@ -9,9 +9,9 @@ import time
 from typing import Dict, List, Optional
 from loguru import logger
 
-from agents import technical_agent, sentiment_agent, catalyst_agent, risk_agent, macro_agent
-from agents.jury import JuryVerdict, deliberate
-from agents.exit_agent import ExitAgent
+from src.agents import technical_agent, sentiment_agent, catalyst_agent, risk_agent, macro_agent
+from src.agents.jury import JuryVerdict, deliberate
+from src.agents.exit_agent import ExitAgent
 
 
 class Orchestrator:
@@ -174,7 +174,7 @@ class Orchestrator:
         return list(self._history)
 
     def get_stats(self) -> Dict:
-        from agents.base_agent import get_api_stats
+        from src.agents.base_agent import get_api_stats
         total = len(self._history)
         if not total:
             return {"total": 0, "api_calls": get_api_stats()}

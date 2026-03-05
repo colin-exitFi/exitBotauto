@@ -6,7 +6,7 @@ Uses Grok-4 (native X/Twitter access).
 from typing import Dict
 from loguru import logger
 
-from agents.base_agent import call_grok
+from src.agents.base_agent import call_grok
 
 
 DEFAULT_BRIEF = {

@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
 
+from src.data.trade_schema import normalize_trade_record
+
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 HISTORY_FILE = DATA_DIR / "trade_history.json"
 MAX_TRADES = 5000
@@ -17,6 +19,7 @@ MAX_TRADES = 5000
 def record_trade(trade: Dict):
     """Append a completed trade to persistent history."""
     DATA_DIR.mkdir(exist_ok=True)
+    trade = normalize_trade_record(trade)
     trade["recorded_at"] = time.time()
     history = load_all()
     history.append(trade)
@@ -36,8 +39,10 @@ def load_all() -> List[Dict]:
         data = json.loads(HISTORY_FILE.read_text())
         # Support both formats: raw list or {"trades": [...]}
         if isinstance(data, dict):
-            return data.get("trades", [])
-        return data if isinstance(data, list) else []
+            data = data.get("trades", [])
+        if not isinstance(data, list):
+            return []
+        return [normalize_trade_record(t) for t in data]
     except Exception:
         return []
 
@@ -107,6 +112,49 @@ def get_analytics() -> Dict:
         v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
         v["pnl"] = round(v["pnl"], 2)
 
+    # By strategy tag
+    by_strategy = {}
+    for t in history:
+        strategy = t.get("strategy_tag", "unknown") or "unknown"
+        if strategy not in by_strategy:
+            by_strategy[strategy] = {"trades": 0, "wins": 0, "pnl": 0.0}
+        by_strategy[strategy]["trades"] += 1
+        by_strategy[strategy]["pnl"] += t.get("pnl", 0)
+        if t.get("pnl", 0) > 0:
+            by_strategy[strategy]["wins"] += 1
+    for v in by_strategy.values():
+        v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
+        v["pnl"] = round(v["pnl"], 2)
+
+    # By signal source (participation attribution)
+    by_signal_source = {}
+    for t in history:
+        sources = t.get("signal_sources", []) or ["unknown"]
+        if isinstance(sources, str):
+            sources = [s.strip() for s in sources.split(",") if s.strip()]
+        if not sources:
+            sources = ["unknown"]
+        for source in sources:
+            if source not in by_signal_source:
+                by_signal_source[source] = {"trades": 0, "wins": 0, "pnl": 0.0}
+            by_signal_source[source]["trades"] += 1
+            by_signal_source[source]["pnl"] += t.get("pnl", 0)
+            if t.get("pnl", 0) > 0:
+                by_signal_source[source]["wins"] += 1
+    for v in by_signal_source.values():
+        v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
+        v["pnl"] = round(v["pnl"], 2)
+
+    # Equity curve (realized P&L accumulation over time)
+    equity_curve = []
+    running_pnl = 0.0
+    for t in history:
+        running_pnl += t.get("pnl", 0)
+        equity_curve.append({
+            "timestamp": t.get("exit_time", t.get("recorded_at", 0)),
+            "cumulative_pnl": round(running_pnl, 2),
+        })
+
     # By hold duration
     by_hold = {"<5m": _bucket_init(), "5-30m": _bucket_init(), "30m-2h": _bucket_init(), "2-4h": _bucket_init(), ">4h": _bucket_init()}
     for t in history:
@@ -148,7 +196,10 @@ def get_analytics() -> Dict:
         "by_symbol": dict(sorted(by_symbol.items(), key=lambda x: x[1]["pnl"], reverse=True)[:20]),
         "by_hour": by_hour,
         "by_exit_reason": by_reason,
+        "by_strategy_tag": dict(sorted(by_strategy.items(), key=lambda x: x[1]["pnl"], reverse=True)),
+        "by_signal_source": dict(sorted(by_signal_source.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_hold_duration": by_hold,
+        "equity_curve": equity_curve[-500:],
         "recent_50": {
             "wins": recent_wins,
             "win_rate_pct": round(recent_wins / max(1, len(recent)) * 100, 1),

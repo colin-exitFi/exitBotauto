@@ -25,6 +25,7 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 import httpx
+from config import settings
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 CACHE_FILE = DATA_DIR / "unusual_options.json"
@@ -91,10 +92,6 @@ class UnusualOptionsScanner:
 
     async def check_ticker(self, ticker: str) -> Dict:
         """Check options flow for a specific ticker using Alpaca options data."""
-        import sys, os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from config import settings
-
         result = {"ticker": ticker, "has_unusual": False, "signals": []}
 
         try:
@@ -180,10 +177,6 @@ class UnusualOptionsScanner:
 
     async def _fetch_via_perplexity(self) -> List[Dict]:
         """Use Perplexity to find unusual options activity from live web."""
-        import sys, os
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from config import settings
-
         pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
         if not pplx_key:
             return []

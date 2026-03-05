@@ -6,7 +6,7 @@ Uses Claude Sonnet (analytical).
 from typing import Dict, List
 from loguru import logger
 
-from agents.base_agent import call_gpt
+from src.agents.base_agent import call_gpt
 
 
 DEFAULT_BRIEF = {
@@ -96,7 +96,7 @@ async def analyze(symbol: str, price: float, signals: Dict,
             positions_summary = "  No open positions"
 
         # Sector info
-        from risk.risk_manager import SECTOR_MAP
+        from src.risk.risk_manager import SECTOR_MAP
         sector = SECTOR_MAP.get(symbol, "Unknown")
         sector_notional = sum(
             p.get("entry_price", 0) * p.get("quantity", 0)

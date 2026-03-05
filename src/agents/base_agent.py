@@ -9,8 +9,6 @@ from typing import Dict, Optional
 from loguru import logger
 import httpx
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 

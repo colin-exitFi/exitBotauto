@@ -19,8 +19,6 @@ from loguru import logger
 
 import websockets
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
@@ -163,14 +161,17 @@ class TradeStream:
                 f"@ ${fill_price:.2f} (type={order_type})"
             )
 
-            # Detect trailing stop fill
-            if order_type == "trailing_stop" and order.get("side") == "sell":
-                logger.info(f"🛑 TRAILING STOP FILLED: {symbol} @ ${fill_price:.2f}")
+            # Detect trailing stop fill (longs: sell, shorts: buy-to-cover)
+            if order_type == "trailing_stop":
+                logger.info(
+                    f"🛑 TRAILING STOP FILLED: {symbol} side={order.get('side')} @ ${fill_price:.2f}"
+                )
                 if self._on_stop_triggered:
                     try:
-                        await asyncio.coroutine(self._on_stop_triggered)(symbol, fill_price, filled_qty) \
-                            if asyncio.iscoroutinefunction(self._on_stop_triggered) \
-                            else self._on_stop_triggered(symbol, fill_price, filled_qty)
+                        if asyncio.iscoroutinefunction(self._on_stop_triggered):
+                            await self._on_stop_triggered(symbol, fill_price, filled_qty)
+                        else:
+                            self._on_stop_triggered(symbol, fill_price, filled_qty)
                     except Exception as e:
                         logger.error(f"Stop callback error: {e}")
 

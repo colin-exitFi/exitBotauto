@@ -373,5 +373,707 @@
     "overall_sentiment": "bearish",
     "urgency": "HIGH - End of day approaching with shorts exposed, 79% cash drag killing velocity, need long momentum runners identified NOW for tomorrow's open",
     "timestamp": 1772741076.056759
+  },
+  {
+    "market_assessment": "Market close in 48 minutes - we're holding two SHORT positions into final hour with zero long exposure and $26K sitting idle.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "Short from $11.64, 3% trail - entered 10min ago at session end, risky timing for shorts with close approaching and potential short squeeze"
+      },
+      {
+        "symbol": "ACHR",
+        "status": "at_risk",
+        "note": "Short from $6.345, tight 1% trail - also fresh entry, small cap shorts into close are dangerous, need current price to assess"
+      }
+    ],
+    "risk_flags": [
+      "CAPITAL INEFFICIENCY: $26,302 cash (>100% of equity) sitting idle while market still open",
+      "WRONG DIRECTION: Holding shorts into final hour - statistically bullish bias into close",
+      "CONCENTRATED SHORT EXPOSURE: Both positions are shorts, no hedging, exposed to coordinated squeeze",
+      "TIMING RISK: Entered shorts at 3:05 PM - worst time, low liquidity into close amplifies volatility",
+      "NO SCANNER DATA: Zero top candidates means we're flying blind on what's actually moving",
+      "MINIMAL DEPLOYMENT: Only $1,303 at risk (5.2% of equity) - massive underutilization"
+    ],
+    "what_working": [
+      "Unknown - no completed trades today to assess patterns"
+    ],
+    "what_not_working": [
+      "Capital deployment - 95% sitting in cash",
+      "Position timing - shorting into market close is low-probability",
+      "Market alignment - shorts during what's typically a bullish final hour"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "critical_observations": [
+      "We have 48 MINUTES of trading left and $26K doing nothing",
+      "These shorts were entered at 3:05 PM - extremely recent and poorly timed",
+      "AAL (airline) and ACHR (aerospace) are correlated - sector concentration risk",
+      "If these positions are slightly red, consider cutting immediately and flipping long",
+      "Need CURRENT PRICES urgently to make exit decision before 4PM",
+      "Empty scanner = we're not identifying momentum opportunities that exist RIGHT NOW"
+    ],
+    "timestamp": 1772741562.765486
+  },
+  {
+    "market_assessment": "Late-day Thursday market showing mild bearish pressure (SPY -0.87%, QQQ -0.71%, DIA -1.85%), but individual momentum plays like TTD (+18.84%) and TTDU (+39.78%) are still ripping - selective stock-picking environment.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short entry at $11.64, position just opened (~40min ago), trailing stop at 3% protecting $745 notional - clean short thesis on weak airline sentiment (-0.45)"
+      },
+      {
+        "symbol": "ACHR",
+        "status": "healthy",
+        "note": "Short entry at $6.345, fresh position (~38min ago), tight 1% trail protecting $558 notional - bearish sentiment (-0.43) playing out"
+      },
+      {
+        "symbol": "TTD",
+        "status": "at_risk",
+        "note": "Long entry at $30.055, now at $29.90 - DOWN $155 (-0.52%) in 40 minutes despite being up 18.84% on the day. Fading after strong move, needs to hold or we take the $155 hit. 4% trail gives room but watch closely."
+      }
+    ],
+    "risk_flags": [
+      "TTD position opened at peak and immediately reversing - classic chase into exhaustion pattern",
+      "Only 6.6% portfolio heat deployed ($1,461 / $24,909) - sitting on $24,760 cash while runners like TTDU (+39.78%) are in play",
+      "3 positions all opened within 40 minutes of each other during 2:42-3:22pm window - no staggered entries",
+      "Two shorts (AAL, ACHR) + one long (TTD) = minimal correlation risk but mixed directional exposure in bearish tape",
+      "Down -$45 on day with only 3 trades (1W-2L) - 33% win rate, need to flip momentum"
+    ],
+    "what_working": [
+      "Short entries on weak sentiment stocks (AAL -0.45, ACHR -0.43) appear timed well",
+      "Trailing stops are live on all 3 positions - risk management in place",
+      "Scanner finding real momentum (TTDU +39.78%, TTD +18.84%, EXPE +12.75%)"
+    ],
+    "what_not_working": [
+      "Chasing extended runners at end-of-day (TTD entry at $30.05 now $29.90 = immediate drawdown)",
+      "Capital sitting idle - only $1,461 of $24,909 working (5.9% deployment)",
+      "Late-day entries at 3:22pm with only 38 minutes to close = timing risk"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "key_observation": "MASSIVE CAPITAL INEFFICIENCY - We have $24,760 cash burning a hole doing NOTHING while TTDU is up 39.78% with 4.1x volume spike, EXPE up 12.75%, VG up 7.2% with 90% bullish sentiment. TTD position is already underwater from poor entry timing. We're trading like a $2,500 account, not a $25,000 account. The scanner is FINDING runners - we're just not DEPLOYING into them aggressively enough. With 38 minutes to close, we need to either add to winners NOW or prepare overnight plays for tomorrow's open. Dead money = dead dreams of $5M.",
+    "timestamp": 1772742178.804459
+  },
+  {
+    "market_assessment": "Market showing late-day weakness (SPY -0.78%, DIA -1.80%) but high-momentum small caps are defying broader trend with explosive moves on massive volume spikes.",
+    "position_health": [
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "+32.86% runner, 27x volume, perfect entry execution - THIS is what we hunt"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "+38% runner, 4x volume, barely moved from entry - coiled spring"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "+0.90 sentiment, flat at entry, trailing stop protecting"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "+19% mover, 1.2x volume, flat at entry price"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "healthy",
+        "note": "+32.7% runner, 7.8x volume, flat at entry"
+      },
+      {
+        "symbol": "BATL",
+        "status": "healthy",
+        "note": "Flat at entry, 4.5% trail protecting"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Large cap ($250), flat at entry, stable"
+      },
+      {
+        "symbol": "NPT",
+        "status": "at_risk",
+        "note": "NO TRAILING STOP - must fix immediately, otherwise flat"
+      },
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position, flat at peak, 3% trail active"
+      },
+      {
+        "symbol": "ACHR",
+        "status": "healthy",
+        "note": "Short position, flat at peak, 1% trail active"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NPT has no trailing stop order - vulnerability exposure",
+      "27 minutes until market close - need exit plan for day trades",
+      "10/10 positions deployed - at max capacity, can't add new runners",
+      "Only 25% win rate today (1W/3L) - strategy execution still finding rhythm",
+      "Heat at 14.4% with all positions near entry - minimal cushion if market reverses"
+    ],
+    "what_working": [
+      "HIGH CONVICTION MOMENTUM ENTRIES - PDYN/TTDU/TNGX are EXACTLY the pattern (30%+ movers, massive volume)",
+      "Position sizing discipline - all positions ~$500-750 notional, properly scaled",
+      "Trailing stops installed on 9/10 positions - protecting capital",
+      "Short exposure (AAL/ACHR) provides hedge against market weakness"
+    ],
+    "what_not_working": [
+      "SOC emergency exit (-5.32%) shows flash crash vulnerability - but proper stop discipline saved us from worse",
+      "Entries are precise but haven't captured much P&L yet - positions need time/room to run",
+      "Win rate suffering from early chop - need runners to develop"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1772742808.916662
+  },
+  {
+    "market_assessment": "Market showing late-day weakness (SPY -0.75%, DIA -1.74%) but our momentum plays are WORKING - multiple runners up 30%+, we're in the right names at the right time.",
+    "position_health": [
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Up 38% on day, we're in at $8.88, current $8.84 - slight fade but trailing stop protecting gains, strong volume spike 4.4x"
+      },
+      {
+        "symbol": "TTD",
+        "status": "at_risk",
+        "note": "Up 18.9% on day but we entered at peak $30.055, now $29.92 - underwater by $0.135/share (-0.45%), needs to hold or will hit trail"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Entered at $9.875, this is THE runner we wanted - need current price to confirm but high conviction play with 4.5% trail"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "dying",
+        "note": "Up 34.85% on day but entered at $16.30, NOW at $16.565 - only +1.6% gain, massive volume spike 8.26x suggests top is in, 3% trail will likely hit soon"
+      },
+      {
+        "symbol": "VG",
+        "status": "at_risk",
+        "note": "Up 6% on day, entered at $12.00, now $11.86 - DOWN 1.2%, underwater and fading, 5% trail gives room but momentum stalling"
+      },
+      {
+        "symbol": "BATL",
+        "status": "healthy",
+        "note": "Entered $19.44, normal conviction, 5% trail provides cushion, need current price to assess"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Large cap stabilizer at $250.52, 4.5% trail, low volatility play for balance"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "Entered $11.00, high conviction, strong sentiment 0.875, fresh position with 3% trail"
+      },
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "SHORT at $11.64 with 3% trail - airlines weak in down market, good hedge position"
+      }
+    ],
+    "risk_flags": [
+      "CONCENTRATION RISK: 9 positions open with only $8,106 deployed = small position sizing but scattered focus",
+      "TIMING RISK: Entered multiple positions at PEAK prices during momentum surge - TTD, VG underwater, TNGX barely green",
+      "MARKET CLOSE: 15:43 ET = 17 minutes to close, positions will be held overnight unless stopped out",
+      "CAPITAL INEFFICIENCY: $17,515 cash (70% of account) sitting DEAD while we're only $621 away from milestone",
+      "STOP CLUSTERING: Multiple 3-4.5% trails mean simultaneous stops possible if market gaps down overnight"
+    ],
+    "what_working": [
+      "MOMENTUM HUNTING: TTDU +38%, TNGX +34%, TTD +18% - we're finding the runners",
+      "VOLUME CONFIRMATION: All entries had strong volume/sentiment signals",
+      "TRAILING STOPS: Protecting us (see SOC emergency exit -5.32% vs potential worse loss)",
+      "HEDGING: AAL short provides downside protection in weak market"
+    ],
+    "what_not_working": [
+      "ENTRY TIMING: Chasing peaks - entered TTD at $30.055 (now $29.92), VG at $12.00 (now $11.86), getting faded immediately",
+      "POSITION SIZING: Too cautious - $500-750 positions with $17K cash means missing serious compounding velocity",
+      "WIN CAPTURE: 50% win rate but -0.34% daily PnL = not holding winners long enough or taking losses too quickly",
+      "CAPITAL VELOCITY: Only 6 trades today, 9 positions but most opened in last hour = slow deployment pace"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "action_bias": "DEPLOY MORE CAPITAL NOW - We have $17,515 cash earning NOTHING with 17 minutes left. HELP is down -30% with 57x volume spike and 0.83 sentiment - potential bounce play. We're $621 from breaking even but sitting on 70% cash. This is EXACTLY the conservative paralysis that kills velocity. Either add to winners (TTDU, NCI) or enter new runners. Dead money = lost compounding.",
+    "timestamp": 1772743432.339831
+  },
+  {
+    "market_assessment": "Market closing in 7 minutes - late day session with mixed action, runners showing exhaustion patterns, indexes slightly red indicating defensive close.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position at entry, clean setup"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "At entry price, just opened"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Up +0.46% from entry, momentum still strong (+33% day), already in position"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Down -0.79% from entry on +37% runner - showing weakness vs entry"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Up +1.21% from entry, clean momentum"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "At entry, stable"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "healthy",
+        "note": "At entry, just opened"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "At entry, just opened"
+      }
+    ],
+    "risk_flags": [
+      "MARKET CLOSE IN 7 MINUTES - all positions will carry overnight",
+      "8 positions open = HIGH concentration risk going into close",
+      "Only 72% of capital deployed but heat at 14% - acceptable",
+      "Recent SOC flash crash loss (-$40) shows late-day volatility risk",
+      "TTDU showing immediate weakness after entry - may be exhaustion on +37% runner",
+      "Multiple positions entered in last 10 minutes - no time to prove themselves before close"
+    ],
+    "what_working": [
+      "Chasing momentum runners with volume (PDYN +33%, TTDU +37%, VG +8.6%)",
+      "Trailing stops protecting positions (all have stops in place)",
+      "Quick entry execution on hot names",
+      "VG and PDYN showing immediate follow-through"
+    ],
+    "what_not_working": [
+      "SOC flash crashed -5.3% in 2 minutes after entry - late-day chop danger",
+      "TTDU entered near HOD on +37% move, immediately showing weakness",
+      "Timing - entering 6 positions in final 20 minutes = overnight exposure not day trades"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "critical_observations": [
+      "CLOSING BELL URGENCY: 7 minutes left - these become overnight holds",
+      "Portfolio became heavily loaded in final minutes with untested positions",
+      "SOC loss proves late-day entries are dangerous - exhaustion risk on all runners",
+      "Win rate 57% but only -0.34% down today = management working",
+      "PDYN already owned and working - no need to chase more",
+      "Decision point: Hold 8 positions overnight OR trim the weakest before 4pm"
+    ],
+    "recommended_focus": "IMMEDIATE: Assess if carrying 8 positions overnight aligns with risk management. Consider trimming TTDU (immediate weakness) and any others not showing conviction before market close in 7 minutes. Otherwise, trailing stops will protect overnight.",
+    "timestamp": 1772744026.0168068
+  },
+  {
+    "market_assessment": "Strong momentum day with multiple runners showing 30%+ gains (SOC +37%, TNGX +36%), high volume spikes, and bullish sentiment - chase-worthy conditions.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position at break-even, 3% trail protecting capital"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Just entered, at entry price, strong sentiment (0.71), 4.5% trail active"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Just entered, perfect sentiment (1.0), tight 4.5% trail - this is the type we want"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "New entry, strong sentiment (0.85), 3% trail live"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "UP 2.17% already (+$13.50), still trending on scanner (+9.66% day), 5% trail giving room to run - WINNER"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "UP 0.41% (+$2.07), mega-cap momentum +13.46% on day, still on scanner - solid"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "healthy",
+        "note": "UP 2.91% (+$14.48), HUGE runner +36.56% on day, still has momentum - let it run"
+      },
+      {
+        "symbol": "NCI",
+        "status": "at_risk",
+        "note": "Just entered at 11.0, no current price data - monitor closely for immediate movement"
+      }
+    ],
+    "risk_flags": [
+      "8 positions = near max capacity (10 limit) - deployment almost complete",
+      "Only $18,716 cash left vs $41K buying power - room for 2-3 more positions if needed",
+      "Heat at 14% is healthy - well within risk bounds",
+      "Down -0.34% on day but 3-win streak active - variance is normal",
+      "SOC stop-out was CORRECT (-5.32% loss = $40) vs current +37.41% move = we re-entered too early on a flash crash, not a strategy failure"
+    ],
+    "what_working": [
+      "Chasing strong momentum runners with volume (VG +2.17%, TNGX +2.91%, EXPE +0.41%)",
+      "High conviction entries with perfect sentiment (PDYN 1.0, VG on scanner twice)",
+      "Trailing stops protecting capital (SOC stop saved us from worse)",
+      "Quick deployment into multiple runners - capital velocity executing as designed"
+    ],
+    "what_not_working": [
+      "SOC re-entry timing was off - took a -5.32% hit on what's now +37% (BUT: we stopped out correctly, this was execution not strategy)",
+      "Most positions just entered in last hour - too early to judge performance",
+      "Not enough data yet on whether 3-5% trails are optimal for these volatile runners"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "key_observations": [
+      "CRITICAL: SOC is +37.41% NOW after we stopped out at -5.32%. This is EXACTLY the scenario in the mission brief - we took a $40 lesson but missed a potential $200+ gain by not re-entering.",
+      "VG proving the strategy: +9.66% on day, we're in it, it's working (+2.17%), still trending",
+      "We have 3 positions showing immediate gains (VG, TNGX, EXPE) = strategy working",
+      "Portfolio is 27% deployed ($6,773/$24,737) with trailing stops = aggressive but protected",
+      "SOC lesson: When we stop out on a flash crash (-5% in 2min), watch for re-entry if it recovers - that volatility creates opportunity"
+    ],
+    "action_bias": "HOLD current positions and LET WINNERS RUN. VG, TNGX, EXPE are proving the thesis. Monitor for new extreme runners (40%+ moves with volume) for final 2 position slots. SOC at +37% is tempting but burned us once - need confirmation of stability before re-entry.",
+    "timestamp": 1772744642.2216809
+  },
+  {
+    "market_assessment": "Market close (16:13 ET) - end of day positioning complete, 9 active positions deployed with trailing stops in place, most entered in final hours of trading.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position flat at entry, market closed - safe overnight hold"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Flat at entry, 5% trail protects, after-hours will reveal momentum"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "TOP SCANNER (+33.87%) - up 0.86% from our 9.875 entry, this is THE runner we wanted, 4.5% trail locked"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Flat at 8.88 entry, tight 3% trail, low-risk hold"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "SCANNER #2 (+9.66%) - up 2.17% from our 12.00 entry, momentum confirmed, 5% trail gives room"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Flat at entry, 4.5% trail, small position"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "healthy",
+        "note": "Flat at entry, tight 3% trail, manageable risk"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "Flat at entry, 3% trail, late session entry"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "EXTENDED HOURS ENTRY with NO TRAILING STOP yet - needs stop placed at market open tomorrow"
+      }
+    ],
+    "risk_flags": [
+      "IOT has no trailing stop protection - extended hours entry vulnerability",
+      "8 of 9 positions flat or slightly up - no significant momentum captured yet today",
+      "Daily P&L negative -$83.91 (-0.34%) - treading water",
+      "27.5% deployed ($6,801 of $24,764) - SIGNIFICANT CASH DRAG sitting idle",
+      "Market closed - cannot deploy remaining $17,716 cash until tomorrow 9:30am",
+      "SOC emergency exit at -5.32% shows we're still catching bad entries"
+    ],
+    "what_working": [
+      "PDYN entry timing - caught the +33% scanner leader at 9.875, now up",
+      "VG entry timing - caught +9.66% momentum at 12.00, now up 2.17%",
+      "Trailing stops prevented worse damage (3-6 winners suggest stops working)",
+      "High conviction on momentum leaders (PDYN, VG both performing)"
+    ],
+    "what_not_working": [
+      "SOC flash crash (-5.32% in 2 minutes) - need better entry timing filters",
+      "Too cautious deployment - only 27.5% capital working, missing velocity",
+      "Waiting too long to deploy - positions entered near close, limited upside capture today",
+      "No overnight momentum plays captured in extended hours (except IOT)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772745245.8492532
+  },
+  {
+    "market_assessment": "Late Thursday session (4:23 PM ET) - market closed, extended hours active with two pending AH entries (IOT, MRVL), showing continuation of momentum trading into after-hours.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "healthy",
+        "note": "Short position at entry price $11.64, well-protected with 3% trail"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "At entry $30.055, fresh position with 5% trail room"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "At entry $9.875, 5% trail - this is the runner we discussed missing earlier"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Entry $8.88, current $8.78 (-1.1%), tight 3% trail on volatile +37% runner"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Entry $12.00, current $12.26 (+2.2%), working well with 5% trail"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "At entry $250.52, normal conviction 3% trail"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Entry $16.30, only 2% trail (tightest in portfolio), most vulnerable"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "At entry $11.00, 3% trail, high conviction"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry $29.60, order PENDING, no trailing stop yet"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry $81.56, order PENDING, no trailing stop yet, +4.44% runner"
+      }
+    ],
+    "risk_flags": [
+      "MAX POSITION COUNT: 10/10 positions open - portfolio is FULL, no room for new entries",
+      "TWO PENDING AH ORDERS: IOT and MRVL have no trailing stops yet, unprotected exposure of ~$1,305",
+      "HEAT AT 15.3%: Approaching concerning levels, heavily deployed",
+      "RECENT STOP-OUT: SOC crashed -5.32% in 2 minutes, lost $40 - volatility reminder",
+      "PORTFOLIO CONCENTRATION: $6,793 deployed on $24,757 equity = 27.4% deployed, but at max position count",
+      "EXTENDED HOURS RISK: Two AH positions without stops in illiquid conditions"
+    ],
+    "what_working": [
+      "VG +2.2%: Momentum runner holding gains after +9.66% day move",
+      "Aggressive position taking: 10 positions deployed rapidly after strategy shift",
+      "Trailing stops: Protected 7/10 positions with automated risk management",
+      "Win rate: 4/7 (57.14%) with 3 consecutive wins before SOC stop-out"
+    ],
+    "what_not_working": [
+      "SOC flash crash: -5.32% in 2 minutes, emergency exit needed - volatility kills",
+      "TTDU slippage: Entry at $8.88, already down to $8.78 on a +37% day move (bought the top?)",
+      "Position sizing at max: Can't add to winners or take new opportunities",
+      "AH execution: Two pending orders without protection in thin markets"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "actionable_observations": {
+      "immediate_concerns": [
+        "Get trailing stops on IOT and MRVL IMMEDIATELY when orders fill",
+        "Portfolio is maxed out - need exits to create rotation capacity",
+        "TNGX has tightest stop (2%) and may get clipped early"
+      ],
+      "strategic_notes": [
+        "We pivoted to aggressive deployment after 'dead capital' realization - now testing if 10 positions is optimal",
+        "VG appears twice (position + scanner) - already own it, it's working",
+        "SOC back in scanners at $13.85 after we stopped at $13.18 - classic momentum whipsaw",
+        "Day PnL only -$83.91 (-0.34%) despite SOC loss - other positions offsetting"
+      ],
+      "capital_velocity_status": "STALLED - Portfolio full, $18,716 cash sitting idle but nowhere to deploy it. Need exits to rotate."
+    },
+    "timestamp": 1772745854.0336971
+  },
+  {
+    "market_assessment": "Market showing strong momentum in tech/AI names with extended hours action continuing - PDYN +33.87%, MRVL +7.85%, VG +9.66% all running with volume confirmation",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "Short position at peak price - only position not following momentum theme, countertrend risk in bullish market"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "At entry, 3.5% trail set, strong sentiment 0.71"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "MONSTER - up 33.87% still trending, we're in at 9.875, now 9.96, 5% trail appropriate for this runner"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "At entry, tight 3% trail, high conviction"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Up 9.66% and still climbing (12.26 vs entry 12.00), 4% trail will lock gains"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "At entry, normal conviction, adequate trail"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Only 2% trail - tightest of portfolio, most vulnerable to noise"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "At entry, high conviction, 3% trail"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO TRAILING STOP SET YET - order pending, needs immediate attention"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO TRAILING STOP SET YET - order pending, up 7.85% and we need protection"
+      }
+    ],
+    "risk_flags": [
+      "TWO POSITIONS WITHOUT TRAILING STOPS (IOT, MRVL) - extended hours orders pending, critical vulnerability",
+      "10/10 positions deployed - at max capacity, no room for new momentum without exits",
+      "Heat at 15.3% - moderate but climbing",
+      "One countertrend short (AAL) in bullish momentum market - thematic mismatch",
+      "SOC just flash crashed on us (-5.32% in 2min) - market showing volatility spikes",
+      "Extended hours trading increases gap risk overnight"
+    ],
+    "what_working": [
+      "Momentum chasing - PDYN, VG, MRVL all proving the strategy",
+      "High conviction entries with positive sentiment (0.7-1.0 range)",
+      "Quick redeployment after SOC loss - kept capital moving",
+      "Volume spike filtering - all winners had 2x+ volume"
+    ],
+    "what_not_working": [
+      "SOC flash crash shows some runners are traps - need faster exits on sudden reversals",
+      "Short position (AAL) fighting the tape in momentum market",
+      "2% trail on TNGX too tight - may get shaken out of winner"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772746475.7220092
+  },
+  {
+    "market_assessment": "Market closing in 16 minutes - extended hours momentum plays active with MRVL/IOT pending fills, but day session winding down with mixed results",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "Short position near EOD - vulnerable to after-hours gap, no current price data to confirm status"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Just entered, 5% trail provides room, high conviction momentum play"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Fresh entry, perfect 1.0 sentiment, 5% trail, strong momentum candidate"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "+37% runner, already in from 8.88, now at 8.78 - still in range, massive volume spike (4.5x)"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "+9.66% today, now 12.26 vs entry 12.00 - up 2.2%, perfect sentiment (1.0), still has room"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Normal conviction position, 4% trail, lower risk allocation"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Only 2% trail - tightest stop of all positions, vulnerable to normal volatility"
+      },
+      {
+        "symbol": "NCI",
+        "status": "healthy",
+        "note": "High conviction, strong sentiment (0.875), 3% trail adequate"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours pending - NO TRAILING STOP SET, vulnerable to gap action"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours pending - NO TRAILING STOP SET, +7.85% monster but exposed without protection"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 2 extended-hours positions (IOT, MRVL) pending with NO trailing stops - $1,305 exposed",
+      "Market closes in 16 minutes - 8 day positions need monitoring through close",
+      "10/10 max positions - portfolio fully deployed, no dry powder for new opportunities",
+      "Heat at 15.3% - moderate exposure but approaching concerning levels",
+      "Short AAL position vulnerable to EOD covering squeeze",
+      "SOC just stopped out for -$40 on flash crash - volatility is HIGH",
+      "Only $19,454 cash against $24,733 equity - 78.6% deployed"
+    ],
+    "what_working": [
+      "High-conviction momentum entries with strong sentiment (PDYN 1.0, VG 0.905)",
+      "Volume spike plays (TTDU 4.5x, IOT 3.7x)",
+      "Extended hours aggressive positioning on runners (MRVL +7.85%)",
+      "Quick redeployment after stops (7 positions entered today)"
+    ],
+    "what_not_working": [
+      "Flash crash vulnerability - SOC stopped for -5.32% in 2 minutes",
+      "Tight 2% trailing stops (TNGX) may be too sensitive for volatile runners",
+      "Short position (AAL) adds complexity near market close"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772747082.2490392
   }
 ]

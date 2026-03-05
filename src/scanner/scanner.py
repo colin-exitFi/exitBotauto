@@ -10,9 +10,8 @@ from loguru import logger
 
 import httpx
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
+from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
 
 
 class Scanner:
@@ -42,6 +41,10 @@ class Scanner:
 
         self._cache: List[Dict] = []
         self._news_cache: Dict[str, tuple] = {}
+        self._performance_cache: Dict = {}
+        self._performance_cache_at = 0.0
+        self._performance_cache_ttl = 300  # 5 min
+        self._last_market_regime = "mixed"
         logger.info("Scanner initialized")
 
     async def scan(self) -> List[Dict]:
@@ -201,9 +204,23 @@ class Scanner:
         filtered = [c for c in candidates if self._passes_filter(c)]
         logger.info(f"After filter: {len(filtered)} candidates (from {len(candidates)} enriched)")
 
-        # ── SCORE & RANK ───────────────────────────────────────────
+        # ── SCORE & RANK (adaptive by regime + recent hit-rate) ───
+        regime = self._detect_market_regime(filtered)
+        self._last_market_regime = regime
+        performance = self._load_performance_snapshot()
+        logger.info(f"Market regime: {regime}")
         for c in filtered:
-            c["score"] = self._calculate_score(c)
+            c["strategy_tag"] = self._derive_strategy_tag(c)
+            c["signal_sources"] = self._extract_signal_sources(c)
+            c["market_regime"] = regime
+            c["strategy_win_rate_pct"] = round(
+                self._estimate_strategy_hit_rate(c["strategy_tag"], performance) * 100, 1
+            )
+            c["source_win_rate_pct"] = round(
+                self._estimate_source_hit_rate(c["signal_sources"], performance) * 100, 1
+            )
+            c["score_multiplier"] = round(self._performance_multiplier(c, performance), 3)
+            c["score"] = self._calculate_score(c, regime=regime, performance=performance)
         filtered.sort(key=lambda x: x["score"], reverse=True)
 
         self._cache = filtered[:20]  # Keep more candidates for orchestrator diversity
@@ -215,7 +232,7 @@ class Scanner:
             except Exception:
                 pass
 
-        logger.success(f"Scan complete: {len(self._cache)} ranked candidates")
+        logger.success(f"Scan complete: {len(self._cache)} ranked candidates ({regime})")
         
         # Log to dashboard activity feed
         try:
@@ -232,13 +249,16 @@ class Scanner:
                 f"  {c['symbol']:6s} ${c['price']:.2f}  chg={c['change_pct']:+.1f}%  "
                 f"vol={c.get('volume_spike',0):.1f}x  "
                 f"social={c.get('sentiment_score',0):+.2f}({bull}🟢/{bear}🔴)  "
-                f"score={c['score']:.3f}  [{src}]"
+                f"score={c['score']:.3f}({c.get('score_multiplier',1.0):.2f}x)  [{src}]"
             )
 
         return self._cache
 
     def get_cached_candidates(self) -> List[Dict]:
         return list(self._cache)
+
+    def get_last_market_regime(self) -> str:
+        return self._last_market_regime
 
     # ── Filtering (on ENRICHED data) ───────────────────────────────
 
@@ -439,15 +459,200 @@ class Scanner:
 
     # ── Scoring ────────────────────────────────────────────────────
 
-    def _calculate_score(self, c: Dict) -> float:
+    @staticmethod
+    def _extract_signal_sources(candidate: Dict) -> List[str]:
+        return extract_signal_sources(candidate)
+
+    @staticmethod
+    def _derive_strategy_tag(candidate: Dict) -> str:
+        return derive_strategy_tag(candidate, candidate.get("side", "long"))
+
+    @staticmethod
+    def _clamp(value: float, low: float, high: float) -> float:
+        return max(low, min(high, value))
+
+    def _detect_market_regime(self, candidates: List[Dict]) -> str:
         """
-        Composite score from multiple signals:
-          volume_spike (0.15): capped at 5x → 0-1
-          momentum     (0.15): change_pct / 10, capped 0-1
-          sentiment    (0.25): (-1 to 1) → 0-1
-          trending     (0.15): StockTwits score / 30, capped 0-1
-          pharma       (0.20): catalyst proximity and type
-          news         (0.10): has headlines = 1.0, none = 0.3
+        Lightweight regime inference from current candidate tape.
+        Returns: risk_on, risk_off, choppy, mixed.
+        """
+        if not candidates:
+            return "choppy"
+
+        moves = [float(c.get("change_pct", 0) or 0) for c in candidates]
+        avg_abs_move = sum(abs(m) for m in moves) / max(1, len(moves))
+        advancers = sum(1 for m in moves if m > 0.5)
+        decliners = sum(1 for m in moves if m < -0.5)
+        breadth_total = max(1, advancers + decliners)
+        breadth = advancers / breadth_total
+
+        if avg_abs_move >= 3.0 and breadth >= 0.62:
+            return "risk_on"
+        if avg_abs_move >= 3.0 and breadth <= 0.38:
+            return "risk_off"
+        if avg_abs_move <= 1.2:
+            return "choppy"
+        return "mixed"
+
+    def _load_performance_snapshot(self) -> Dict:
+        """
+        Pull recent realized performance attribution from trade history.
+        Cached to avoid file reads every scan.
+        """
+        now = time.time()
+        if self._performance_cache and (now - self._performance_cache_at) < self._performance_cache_ttl:
+            return self._performance_cache
+
+        snapshot = {"by_strategy": {}, "by_source": {}}
+        try:
+            from src.ai import trade_history
+
+            analytics = trade_history.get_analytics() or {}
+            by_strategy = analytics.get("by_strategy_tag", {}) or {}
+            by_source = analytics.get("by_signal_source", {}) or {}
+
+            for tag, bucket in by_strategy.items():
+                snapshot["by_strategy"][tag] = self._normalize_perf_bucket(bucket)
+            for src, bucket in by_source.items():
+                snapshot["by_source"][src] = self._normalize_perf_bucket(bucket)
+        except Exception as e:
+            logger.debug(f"Scanner performance snapshot unavailable: {e}")
+
+        self._performance_cache = snapshot
+        self._performance_cache_at = now
+        return snapshot
+
+    def _normalize_perf_bucket(self, bucket: Dict) -> Dict:
+        trades = int(bucket.get("trades", 0) or 0)
+        win_rate_raw = float(bucket.get("win_rate", bucket.get("win_rate_pct", 0)) or 0)
+        win_rate = win_rate_raw / 100.0 if win_rate_raw > 1 else win_rate_raw
+        pnl = float(bucket.get("pnl", 0) or 0)
+        pnl_per_trade = (pnl / trades) if trades > 0 else 0.0
+        pnl_score = self._clamp(0.5 + (pnl_per_trade / 25.0), 0.0, 1.0)
+        blended_score = self._clamp((win_rate * 0.7) + (pnl_score * 0.3), 0.0, 1.0)
+        return {"trades": trades, "win_rate": self._clamp(win_rate, 0.0, 1.0), "score": blended_score}
+
+    def _estimate_strategy_hit_rate(self, strategy_tag: str, performance: Dict) -> float:
+        if not performance:
+            return 0.5
+        bucket = (performance.get("by_strategy", {}) or {}).get(strategy_tag)
+        if not bucket:
+            return 0.5
+        if bucket.get("trades", 0) < 5:
+            return 0.5
+        return float(bucket.get("win_rate", 0.5))
+
+    def _estimate_source_hit_rate(self, signal_sources: List[str], performance: Dict) -> float:
+        if not performance:
+            return 0.5
+        by_source = performance.get("by_source", {}) or {}
+        scores = []
+        for src in signal_sources or []:
+            bucket = by_source.get(src)
+            if bucket and bucket.get("trades", 0) >= 5:
+                scores.append(float(bucket.get("win_rate", 0.5)))
+        if not scores:
+            return 0.5
+        return sum(scores) / len(scores)
+
+    def _performance_multiplier(self, c: Dict, performance: Dict) -> float:
+        """
+        Convert realized strategy/source performance into a bounded multiplier.
+        Neutral when history is sparse.
+        """
+        if not performance:
+            return 1.0
+
+        strategy_tag = c.get("strategy_tag", "unknown")
+        signal_sources = c.get("signal_sources", [])
+        by_strategy = performance.get("by_strategy", {}) or {}
+        by_source = performance.get("by_source", {}) or {}
+
+        multipliers = []
+
+        strat_bucket = by_strategy.get(strategy_tag)
+        if strat_bucket and strat_bucket.get("trades", 0) >= 8:
+            strat_score = float(strat_bucket.get("score", 0.5))
+            multipliers.append(0.85 + (strat_score * 0.40))  # 0.85x..1.25x
+
+        source_scores = []
+        for src in signal_sources:
+            bucket = by_source.get(src)
+            if bucket and bucket.get("trades", 0) >= 8:
+                source_scores.append(float(bucket.get("score", 0.5)))
+        if source_scores:
+            avg_source_score = sum(source_scores) / len(source_scores)
+            multipliers.append(0.85 + (avg_source_score * 0.40))
+
+        if not multipliers:
+            return 1.0
+        avg_mult = sum(multipliers) / len(multipliers)
+        return self._clamp(avg_mult, 0.85, 1.25)
+
+    def _regime_weights(self, regime: str, side: str) -> Dict[str, float]:
+        # Base profile
+        weights = {
+            "volume": 0.15,
+            "momentum": 0.15,
+            "sentiment": 0.25,
+            "trending": 0.15,
+            "pharma": 0.20,
+            "news": 0.10,
+        }
+
+        if regime == "risk_on":
+            weights = {
+                "volume": 0.24,
+                "momentum": 0.24,
+                "sentiment": 0.20,
+                "trending": 0.16,
+                "pharma": 0.10,
+                "news": 0.06,
+            }
+            if side == "short":
+                weights["momentum"] = 0.18
+                weights["sentiment"] = 0.26
+                weights["pharma"] = 0.14
+
+        elif regime == "risk_off":
+            if side == "short":
+                weights = {
+                    "volume": 0.22,
+                    "momentum": 0.22,
+                    "sentiment": 0.24,
+                    "trending": 0.14,
+                    "pharma": 0.12,
+                    "news": 0.06,
+                }
+            else:
+                weights = {
+                    "volume": 0.14,
+                    "momentum": 0.11,
+                    "sentiment": 0.30,
+                    "trending": 0.16,
+                    "pharma": 0.20,
+                    "news": 0.09,
+                }
+
+        elif regime == "choppy":
+            weights = {
+                "volume": 0.12,
+                "momentum": 0.10,
+                "sentiment": 0.28,
+                "trending": 0.18,
+                "pharma": 0.22,
+                "news": 0.10,
+            }
+
+        total = sum(weights.values()) or 1.0
+        return {k: v / total for k, v in weights.items()}
+
+    def _calculate_score(self, c: Dict, regime: str = "mixed", performance: Optional[Dict] = None) -> float:
+        """
+        Composite score from:
+          1) feature scores (volume/momentum/sentiment/trending/pharma/news),
+          2) regime-specific dynamic weights,
+          3) bounded multiplier from recent realized hit-rate attribution.
         """
         vol_score = min(c.get("volume_spike", 0) / 5.0, 1.0)
         mom_score = min(abs(c.get("change_pct", 0)) / 10.0, 1.0)
@@ -459,5 +664,16 @@ class Scanner:
         # Pharma catalyst bonus — upcoming FDA decisions are HUGE signals
         pharma_score = c.get("pharma_score", 0)
 
-        return (vol_score * 0.15 + mom_score * 0.15 + sent_score * 0.25 +
-                twits_score * 0.15 + pharma_score * 0.20 + news_score * 0.10)
+        side = str(c.get("side", "long")).lower()
+        weights = self._regime_weights(regime, side)
+        base_score = (
+            vol_score * weights["volume"]
+            + mom_score * weights["momentum"]
+            + sent_score * weights["sentiment"]
+            + twits_score * weights["trending"]
+            + pharma_score * weights["pharma"]
+            + news_score * weights["news"]
+        )
+
+        multiplier = self._performance_multiplier(c, performance or {})
+        return base_score * multiplier

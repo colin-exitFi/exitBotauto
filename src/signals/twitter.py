@@ -9,8 +9,6 @@ from typing import Dict, List
 from loguru import logger
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 BASE_URL = "https://api.twitter.com/2"

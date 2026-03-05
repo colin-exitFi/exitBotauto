@@ -16,8 +16,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from loguru import logger
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from .trade_history import load_all, get_analytics
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"

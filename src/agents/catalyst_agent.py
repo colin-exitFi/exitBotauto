@@ -6,7 +6,7 @@ Uses Perplexity (research-focused, has web search).
 from typing import Dict
 from loguru import logger
 
-from agents.base_agent import call_perplexity
+from src.agents.base_agent import call_perplexity
 
 
 DEFAULT_BRIEF = {

@@ -6,7 +6,7 @@ Uses GPT-5.2.
 from typing import Dict
 from loguru import logger
 
-from agents.base_agent import call_gpt
+from src.agents.base_agent import call_gpt
 
 
 DEFAULT_BRIEF = {

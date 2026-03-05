@@ -8,8 +8,6 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from loguru import logger
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
@@ -220,7 +218,12 @@ class EntryManager:
                     )
                 else:
                     order = await asyncio.get_event_loop().run_in_executor(
-                        None, self.broker.place_limit_buy, symbol, int(shares) if shares >= 1 else shares, limit_price
+                        None,
+                        self.broker.place_limit_buy,
+                        symbol,
+                        int(shares) if shares >= 1 else shares,
+                        limit_price,
+                        True,
                     )
             elif hasattr(self.broker, 'smart_buy'):
                 order = await asyncio.get_event_loop().run_in_executor(
@@ -278,9 +281,17 @@ class EntryManager:
             return None
 
         # Record position
+        signal_sources = sentiment_data.get("signal_sources", ["unknown"])
+        if isinstance(signal_sources, str):
+            signal_sources = [s.strip() for s in signal_sources.split(",") if s.strip()]
+        if not isinstance(signal_sources, list):
+            signal_sources = ["unknown"]
+        if not signal_sources:
+            signal_sources = ["unknown"]
         position = {
             "symbol": symbol,
             "entry_price": price,
+            "fill_price": price,
             "quantity": shares,
             "entry_time": time.time(),
             "sentiment_at_entry": sentiment_data.get("score", 0),
@@ -297,6 +308,13 @@ class EntryManager:
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
             "order_status": "pending" if extended else "filled",  # limit orders need fill confirmation
+            "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "signal_sources": signal_sources,
+            "decision_confidence": sentiment_data.get("consensus_confidence", 0),
+            "provider_used": sentiment_data.get("provider_used", ""),
+            "signal_price": sentiment_data.get("signal_price", price),
+            "decision_price": sentiment_data.get("decision_price", price),
+            "_exit_recorded": False,
         }
         self.positions[symbol] = position
         if extended:
@@ -374,12 +392,13 @@ class EntryManager:
                 'qty': str(shares),
                 'side': 'sell',
                 'type': 'market',
-                'time_in_force': 'gtc' if not extended else 'day',
+                'time_in_force': 'day',
             }
             resp = req_lib.post(
                 f'{self.broker._base_url}/v2/orders',
                 headers=self.broker._rest_headers(),
                 json=order_data,
+                timeout=10,
             )
             if resp.status_code in (200, 201):
                 order = resp.json()
@@ -395,32 +414,48 @@ class EntryManager:
         if order:
             await asyncio.sleep(1)
             try:
-                import requests as req_lib
-                stop_data = {
-                    'symbol': symbol,
-                    'qty': str(shares),
-                    'side': 'buy',  # buy to cover
-                    'type': 'trailing_stop',
-                    'trail_percent': str(trail_pct),
-                    'time_in_force': 'gtc',
-                }
-                resp = req_lib.post(
-                    f'{self.broker._base_url}/v2/orders',
-                    headers=self.broker._rest_headers(),
-                    json=stop_data,
-                )
-                if resp.status_code in (200, 201):
-                    trailing_stop_order = resp.json()
+                if hasattr(self.broker, 'place_trailing_stop_short'):
+                    trailing_stop_order = await asyncio.get_event_loop().run_in_executor(
+                        None, self.broker.place_trailing_stop_short, symbol, shares, trail_pct
+                    )
+                else:
+                    import requests as req_lib
+                    stop_data = {
+                        'symbol': symbol,
+                        'qty': str(shares),
+                        'side': 'buy',  # buy to cover
+                        'type': 'trailing_stop',
+                        'trail_percent': str(trail_pct),
+                        'time_in_force': 'gtc',
+                    }
+                    resp = req_lib.post(
+                        f'{self.broker._base_url}/v2/orders',
+                        headers=self.broker._rest_headers(),
+                        json=stop_data,
+                        timeout=10,
+                    )
+                    trailing_stop_order = resp.json() if resp.status_code in (200, 201) else None
+
+                if trailing_stop_order:
                     logger.success(f"📉 SHORT trailing stop set: {symbol} {shares}sh trail={trail_pct}%")
                 else:
-                    logger.warning(f"⚠️ SHORT trailing stop FAILED for {symbol}: {resp.text[:200]}")
+                    logger.warning(f"⚠️ SHORT trailing stop FAILED for {symbol}")
             except Exception as e:
                 logger.warning(f"⚠️ SHORT trailing stop error for {symbol}: {e}")
+
+        signal_sources = sentiment_data.get("signal_sources", ["unknown"])
+        if isinstance(signal_sources, str):
+            signal_sources = [s.strip() for s in signal_sources.split(",") if s.strip()]
+        if not isinstance(signal_sources, list):
+            signal_sources = ["unknown"]
+        if not signal_sources:
+            signal_sources = ["unknown"]
 
         position = {
             "symbol": symbol,
             "side": "short",
             "entry_price": price,
+            "fill_price": price,
             "quantity": shares,
             "entry_time": time.time(),
             "sentiment_at_entry": sentiment_data.get("score", 0),
@@ -434,6 +469,13 @@ class EntryManager:
             "trail_pct": trail_pct,
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
+            "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "signal_sources": signal_sources,
+            "decision_confidence": sentiment_data.get("consensus_confidence", 0),
+            "provider_used": sentiment_data.get("provider_used", ""),
+            "signal_price": sentiment_data.get("signal_price", price),
+            "decision_price": sentiment_data.get("decision_price", price),
+            "_exit_recorded": False,
         }
         self.positions[symbol] = position
         trail_info = f" 📉 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
@@ -451,23 +493,36 @@ class EntryManager:
                 if not sym or sym in self.positions:
                     continue
                 # Note: crypto positions use Coinbase API for pricing
-                qty = p.get("quantity", 0)
+                raw_qty = float(p.get("quantity", 0) or 0)
+                side = p.get("side")
+                if side not in ("long", "short"):
+                    side = "short" if raw_qty < 0 else "long"
+                qty = abs(raw_qty)
                 if qty <= 0:
                     continue
                 avg_price = p.get("average_price", 0)
                 cur_price = p.get("current_price", avg_price)
                 self.positions[sym] = {
                     "symbol": sym,
+                    "side": side,
                     "entry_price": avg_price,
                     "quantity": qty,
                     "entry_time": time.time(),  # approximate — we don't know real entry time
                     "sentiment_at_entry": 0,
-                    "peak_price": max(avg_price, cur_price),
+                    "peak_price": max(avg_price, cur_price) if side == "long" else min(avg_price, cur_price),
                     "order_id": "",
                     "partial_exit": False,
                     "from_brokerage": True,  # flag so we know this was pre-existing
+                    "strategy_tag": "carryover",
+                    "signal_sources": ["broker_sync"],
+                    "decision_confidence": 0,
+                    "provider_used": "",
+                    "signal_price": avg_price,
+                    "decision_price": avg_price,
+                    "_exit_recorded": False,
                 }
-                logger.info(f"📦 Loaded position: {qty:.4f} {sym} @ ${avg_price:.2f} (current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f})")
+                side_tag = "SHORT" if side == "short" else "LONG"
+                logger.info(f"📦 Loaded {side_tag} position: {qty:.4f} {sym} @ ${avg_price:.2f} (current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f})")
             # Check for existing trailing stop orders and mark positions accordingly
             try:
                 open_orders = self.broker.get_orders(status="open")

@@ -63,6 +63,8 @@ MIN_VOLUME = _env_int("MIN_VOLUME", 1_000_000)
 VOLUME_SPIKE_MULTIPLIER = _env_float("VOLUME_SPIKE_MULTIPLIER", 2.0)
 MIN_MOMENTUM_PCT = _env_float("MIN_MOMENTUM_PCT", 2.0)
 SCAN_INTERVAL_SECONDS = _env_int("SCAN_INTERVAL_SECONDS", 300)
+SCAN_INTERVAL_FAST_SECONDS = _env_int("SCAN_INTERVAL_FAST_SECONDS", 60)
+SCAN_INTERVAL_SLOW_SECONDS = _env_int("SCAN_INTERVAL_SLOW_SECONDS", 300)
 
 # ── Sentiment Parameters ──────────────────────────────────────────
 MIN_ENTRY_SENTIMENT = _env_float("MIN_ENTRY_SENTIMENT", 0.3)
@@ -72,6 +74,7 @@ EXIT_SENTIMENT_CRITICAL = _env_float("EXIT_SENTIMENT_CRITICAL", 0.0)
 # ── Dashboard ─────────────────────────────────────────────────────
 DASHBOARD_HOST = _env("DASHBOARD_HOST", "0.0.0.0")
 DASHBOARD_PORT = _env_int("DASHBOARD_PORT", 8421)
+DASHBOARD_TOKEN = _env("DASHBOARD_TOKEN", "")
 
 # ── Logging ───────────────────────────────────────────────────────
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")

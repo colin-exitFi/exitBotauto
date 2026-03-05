@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
 
+from src.data.trade_schema import normalize_trade_record
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
@@ -47,9 +49,10 @@ def save_trades(trades: List[Dict]):
     """Save trade history to disk (append-friendly)."""
     try:
         existing = load_trades()
+        normalized_new = [normalize_trade_record(t) for t in trades]
         # Merge: add new trades that aren't already there (by entry_time + symbol)
         existing_keys = {(t.get("symbol", ""), t.get("entry_time", 0)) for t in existing}
-        for t in trades:
+        for t in normalized_new:
             key = (t.get("symbol", ""), t.get("entry_time", 0))
             if key not in existing_keys:
                 existing.append(t)

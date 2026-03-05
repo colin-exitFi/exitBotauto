@@ -18,8 +18,6 @@ from alpaca.trading.enums import OrderSide, TimeInForce, OrderStatus, QueryOrder
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestTradeRequest, StockSnapshotRequest
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import settings
 
 
@@ -104,9 +102,15 @@ class AlpacaClient:
             positions = self._trading_client.get_all_positions()
             result = []
             for p in positions:
+                raw_qty = float(p.qty)
+                side = str(getattr(p, "side", "")).lower()
+                if side not in ("long", "short"):
+                    side = "short" if raw_qty < 0 else "long"
+                qty = abs(raw_qty)
                 result.append({
                     "symbol": p.symbol,
-                    "quantity": float(p.qty),
+                    "quantity": qty,
+                    "side": side,
                     "average_price": float(p.avg_entry_price),
                     "current_price": float(p.current_price),
                     "market_value": float(p.market_value),
@@ -228,6 +232,7 @@ class AlpacaClient:
                 f"{self._base_url}/v2/orders/{order_id}",
                 headers=self._rest_headers(),
                 json={"limit_price": str(round(limit_price, 2))},
+                timeout=10,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -408,6 +413,7 @@ class AlpacaClient:
                 f'{self._base_url}/v2/orders',
                 headers=self._rest_headers(),
                 json=order_data,
+                timeout=10,
             )
             
             if resp.status_code in (200, 201):
@@ -481,6 +487,7 @@ class AlpacaClient:
                 f'{self._base_url}/v2/orders',
                 headers=self._rest_headers(),
                 json=order_data,
+                timeout=10,
             )
 
             if resp.status_code in (200, 201):
@@ -536,6 +543,7 @@ class AlpacaClient:
                 f'{self._base_url}/v2/orders',
                 headers=self._rest_headers(),
                 json=order_data,
+                timeout=10,
             )
             
             if resp.status_code in (200, 201):
@@ -561,6 +569,53 @@ class AlpacaClient:
 
         except Exception as e:
             logger.error(f"Trailing stop error for {symbol}: {e}")
+            return None
+
+    def place_trailing_stop_short(self, symbol: str, qty, trail_percent: float = 3.0) -> Optional[Dict]:
+        """
+        Place a trailing stop BUY order for a short position (buy-to-cover).
+        """
+        self._ensure_init()
+        try:
+            order_data = {
+                'symbol': symbol,
+                'qty': str(qty),
+                'side': 'buy',
+                'type': 'trailing_stop',
+                'trail_percent': str(trail_percent),
+                'time_in_force': 'gtc',
+            }
+
+            resp = requests.post(
+                f'{self._base_url}/v2/orders',
+                headers=self._rest_headers(),
+                json=order_data,
+                timeout=10,
+            )
+
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                logger.success(
+                    f"📉 Short trailing stop: {symbol} {qty}sh trail={trail_percent}% "
+                    f"hwm={data.get('hwm', '?')} stop={data.get('stop_price', 'tracking')}"
+                )
+                return {
+                    'id': data['id'],
+                    'symbol': symbol,
+                    'side': 'buy',
+                    'type': 'trailing_stop',
+                    'qty': str(qty),
+                    'trail_percent': str(trail_percent),
+                    'stop_price': data.get('stop_price'),
+                    'hwm': data.get('hwm'),
+                    'status': data['status'],
+                }
+
+            logger.error(f"Short trailing stop failed: {resp.status_code} {resp.text[:200]}")
+            return None
+
+        except Exception as e:
+            logger.error(f"Short trailing stop error for {symbol}: {e}")
             return None
 
     def upgrade_to_trailing_stop(self, symbol: str, qty: int, 
@@ -589,6 +644,7 @@ class AlpacaClient:
             resp = requests.get(
                 f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest",
                 headers=self._rest_headers(),
+                timeout=10,
             )
             resp.raise_for_status()
             return float(resp.json().get("trade", {}).get("p", 0))

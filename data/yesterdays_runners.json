@@ -1,14 +1,4 @@
 {
-  "runners": [
-    {
-      "symbol": "NCI",
-      "date": "2026-03-05",
-      "change_pct": 44.74,
-      "close_price": 11.1086,
-      "volume": 1353518.0,
-      "volume_spike": 1.2105275951155354,
-      "sentiment_at_peak": 0.875
-    }
-  ],
-  "updated_at": "2026-03-05T14:10:24.905213"
+  "runners": [],
+  "updated_at": "2026-03-05T15:46:54.024204"
 }
