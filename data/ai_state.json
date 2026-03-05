@@ -1,16 +1,16 @@
 {
-  "last_observation": "Mid-day Thursday, market open 2.5 hours - positions inherited from prior session, no fresh momentum scanner hits visible yet, likely consolidation phase or between momentum waves.",
+  "last_observation": "Market open 2h7m, no scanner candidates firing = low momentum environment or scanner issues; we're underdeployed at 15% capital utilization",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "TTDU",
-    "decision": "SKIP",
-    "size_pct": 0,
-    "trail_pct": 1.0,
-    "reasoning": "Risk explicitly denies: attempting to add to existing underwater TTDU position ($8.71 < $8.78 entry). Averaging down violates core risk rules. Despite 100% technical confidence and bullish sentiment, Risk veto is absolute per framework.",
-    "confidence": 95.0,
-    "timestamp": 1772730174.230939
+    "symbol": "BATL",
+    "decision": "BUY",
+    "size_pct": 1.5,
+    "trail_pct": 3.5,
+    "reasoning": "Technical BUY at 99% confidence + Risk approved at 2.5% max = clear entry per framework. Geopolitical oil catalyst + $15M institutional placement provide fundamental fuel. Price at $24.84 near resistance ($26.08) sets up breakout potential. Choppy macro and sector unknowns warrant modest sizing vs m",
+    "confidence": 82.0,
+    "timestamp": 1772730549.601544
   }
 }

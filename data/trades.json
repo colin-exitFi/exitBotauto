@@ -60,5 +60,22 @@
     "conviction_level": "normal",
     "risk_tier": "COMPOUND",
     "recorded_at": 1772730268.703551
+  },
+  {
+    "symbol": "TTDU",
+    "side": "sell",
+    "entry_price": 8.82,
+    "exit_price": 8.82,
+    "quantity": 42.516553,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "reason": "trailing_stop",
+    "hold_seconds": 97.3855459690094,
+    "entry_time": 1772730537.593407,
+    "exit_time": 1772730634.978953,
+    "sentiment_at_entry": 0.8462,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "recorded_at": 1772730634.9790459
   }
 ]

@@ -235,7 +235,7 @@ async def get_pnl():
             equity = float(acct.get("equity", 25000.0))
             # Get unrealized directly from Alpaca positions
             alpaca_positions = _bot.alpaca_client.get_positions()
-            unrealized = sum(float(p.get("unrealized_pl", 0)) for p in alpaca_positions)
+            unrealized = sum(float(p.get("unrealized_pnl", p.get("unrealized_pl", p.get("open_pnl", 0)))) for p in alpaca_positions)
             if equity > peak:
                 peak = equity
                 pnl["peak_equity"] = peak
