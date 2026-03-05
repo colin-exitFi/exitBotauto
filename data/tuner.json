@@ -546,5 +546,38 @@
       }
     ],
     "timestamp": 1772690141.172585
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.75,
+        "reason": "Advisor explicitly recommends 0.75: 'With zero trade history and $25K at stake, raise the bar slightly \u2014 only take elite setups until we establish what works in current market regime.' Zero trades = no data on what works. Every entry is a learning trade."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 30,
+        "reason": "Advisor recommends 30sec: 'At market open, opportunities move fast \u2014 tighten scan cadence to catch momentum breaks early.' Market opens in 9.5 hours. Pre-positioning scan speed for volatile open where A+ setups appear and vanish in seconds."
+      }
+    ],
+    "reasoning": "Following Advisor's exact recommendations for virgin system entering first live trading session \u2014 raise quality bar (0.7\u21920.75) and tighten reaction time (60\u219230sec) for market open deployment.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.7,
+        "new": 0.75,
+        "reason": "Advisor explicitly recommends 0.75: 'With zero trade history and $25K at stake, raise the bar slightly \u2014 only take elite setups until we establish what works in current market regime.' Zero trades = no data on what works. Every entry is a learning trade.",
+        "timestamp": 1772690828.483392
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Advisor recommends 30sec: 'At market open, opportunities move fast \u2014 tighten scan cadence to catch momentum breaks early.' Market opens in 9.5 hours. Pre-positioning scan speed for volatile open where A+ setups appear and vanish in seconds.",
+        "timestamp": 1772690828.4835498
+      }
+    ],
+    "timestamp": 1772690828.485343
   }
 ]

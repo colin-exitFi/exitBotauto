@@ -93,7 +93,15 @@ class Observer:
             if bot.alpaca_client:
                 account = bot.alpaca_client.get_account()
 
-            prompt = f"""Current state at {time.strftime('%H:%M ET')}:
+            from datetime import datetime as _dt
+            try:
+                import zoneinfo
+                _now_et = _dt.now(zoneinfo.ZoneInfo("US/Eastern")).strftime("%Y-%m-%d %H:%M ET (%A)")
+            except Exception:
+                _now_et = time.strftime('%Y-%m-%d %H:%M ET')
+
+            prompt = f"""Current date/time: {_now_et}
+Current state:
 
 ACCOUNT:
 {json.dumps(account, indent=2)}

@@ -66,6 +66,8 @@ Your job is to find stocks likely to move 2-5% in the next few hours — UP or D
 
 CRITICAL CONTEXT: We have a TRAILING STOP at 3% protecting every position. If we're wrong, we lose 3% max. If we're right and it runs 20%, the trailing stop locks in the profit. Our ONLY job is to pick stocks more likely to go UP than DOWN in the near term. We are NOT evaluating this as a long-term investment.
 
+CURRENT DATE/TIME: {current_datetime}
+
 SYMBOL: {symbol}
 CURRENT PRICE: ${price:.2f}
 TODAY'S CHANGE: {change_pct:+.2f}%
@@ -213,7 +215,15 @@ class ConsensusEngine:
         else:
             news_str = str(news_list) or "No recent news available"
 
+        from datetime import datetime
+        try:
+            import zoneinfo
+            now_et = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).strftime("%Y-%m-%d %H:%M ET (%A)")
+        except Exception:
+            now_et = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+
         return ANALYSIS_PROMPT.format(
+            current_datetime=now_et,
             symbol=symbol,
             price=price,
             change_pct=signals.get("change_pct", 0),
