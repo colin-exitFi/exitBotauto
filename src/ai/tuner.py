@@ -91,6 +91,16 @@ class Tuner:
 
     async def run(self, bot, advisor_output: Optional[Dict] = None) -> Optional[Dict]:
         """Run tuning cycle. Returns changes applied or None."""
+        # HARD LOCK: Don't tune until we have 20+ REAL trades with game film data
+        try:
+            from src.ai.trade_history import trade_history
+            total = trade_history.get_stats().get("overall", {}).get("total", 0)
+            if total < 20:
+                logger.info(f"🔧 Tuner: LOCKED — need {20 - total} more trades before tuning (have {total})")
+                return None
+        except Exception:
+            pass
+
         now = time.time()
         from datetime import datetime
         try:

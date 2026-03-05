@@ -262,10 +262,14 @@ class EntryManager:
             "trail_pct": trail_pct,
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
+            "order_status": "pending" if extended else "filled",  # limit orders need fill confirmation
         }
         self.positions[symbol] = position
-        trail_info = f" 📈 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
-        logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total){trail_info}")
+        if extended:
+            logger.success(f"📋 LIMIT ORDER PLACED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total) — awaiting fill")
+        else:
+            trail_info = f" 📈 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
+            logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total){trail_info}")
         return position
 
     async def enter_short(self, symbol: str, sentiment_data: Dict) -> Optional[Dict]:

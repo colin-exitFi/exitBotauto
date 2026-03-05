@@ -878,11 +878,26 @@ class TradingBot:
             logger.debug(f"Alpaca position sync error: {e}")
             return
 
+        # Also get open orders to detect pending (unfilled) entries
+        try:
+            open_orders = await asyncio.get_event_loop().run_in_executor(
+                None, self.alpaca_client.get_orders
+            )
+            pending_buy_symbols = {o["symbol"] for o in open_orders
+                                   if o.get("side") == "buy" and o.get("status") in ("new", "accepted", "pending_new", "partially_filled")}
+        except Exception:
+            pending_buy_symbols = set()
+
         for pos in list(positions):
             symbol = pos["symbol"]
             try:
                 # ── DETECT TRAILING STOP FILLS ──
                 # If we're tracking it but Alpaca no longer has it → trailing stop fired
+                # BUT: if there's still a pending buy order, the position hasn't opened yet
+                if symbol in pending_buy_symbols:
+                    logger.debug(f"{symbol}: pending buy order still open — waiting for fill")
+                    continue
+
                 if symbol not in alpaca_symbols:
                     entry_price = pos.get("entry_price", 0)
                     # Get the last fill price from closed orders
