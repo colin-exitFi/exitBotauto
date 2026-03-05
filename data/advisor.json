@@ -1,0 +1,122 @@
+[
+  {
+    "strategy": "Prepare for next session \u2014 optimize scanner to catch early movers, favor gap-up momentum with volume confirmation",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "energy",
+        "momentum_gappers"
+      ],
+      "avoid": [
+        "low_volume_after_hours"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Zero sentiment threshold too permissive \u2014 need bullish bias filter to avoid chop trades"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 5.0,
+        "suggested": 7.0,
+        "reason": "Risk tier already at 7% \u2014 align position sizing to match, maximize capital velocity on first wins"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 300,
+        "suggested": 180,
+        "reason": "5min scan too slow for momentum plays \u2014 need faster pulse at market open to catch breakouts"
+      },
+      {
+        "param": "MIN_VOLUME_FILTER",
+        "current": "unknown",
+        "suggested": 500000,
+        "reason": "Scanner showing zero candidates \u2014 likely need explicit volume floor to find liquid movers"
+      }
+    ],
+    "key_insight": "Day 1, hour 0 \u2014 the only risk right now is NOT trading. Scanner criteria are likely too tight or missing volume/volatility filters. When market opens, we need to be HUNTING not spectating. First trade is psychological \u2014 take it clean, take profit fast, build momentum. Empty scanner after-hours is fine, but if this persists into first 30min of regular session, we have a sourcing problem not a strategy problem. Adjust thresholds NOW so we're ready to pounce at 9:30 ET.",
+    "timestamp": 1772671030.037568
+  },
+  {
+    "strategy": "Pre-market preparation mode: identify high-probability first trade candidates to deploy capital at open and establish psychological momentum.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech_mega_caps",
+        "energy",
+        "momentum_stocks"
+      ],
+      "avoid": [
+        "low_volume_small_caps",
+        "volatile_biotechs",
+        "unproven_penny_stocks"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 1.2,
+        "reason": "First trade needs quick win for psychological momentum - tighter TP1 increases probability of banking green, then let TP2 run"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.3,
+        "suggested": 0.4,
+        "reason": "With zero track record, first trade must be high-conviction - raise bar slightly to avoid weak setups"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 180,
+        "suggested": 60,
+        "reason": "At market open (9:30-10:00 ET), scan every 60s to catch momentum breakouts - capital velocity demands speed"
+      }
+    ],
+    "key_insight": "The first trade is disproportionately important. It sets psychological tone and validates the entire system. Focus tomorrow's open on ONE high-probability setup: liquid mega-cap (AAPL/MSFT/NVDA/TSLA) with clear technical setup + positive momentum. Get $70 deployed fast, bank TP1 at 1.2%, establish the win streak counter. Dead capital is the enemy - deploy by 10:00 AM ET or accept you're losing 6 hours of compounding opportunity. Pre-market: monitor futures, identify which sector is leading, have 3 symbols ready to scan hard at 9:30 bell.",
+    "timestamp": 1772671413.370749
+  },
+  {
+    "strategy": "Pre-market prep mode: tighten scanner criteria, bias toward high-volume gappers at open, then execute aggressively to break the zero-velocity deadlock",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "momentum",
+        "earnings_movers"
+      ],
+      "avoid": [
+        "low_volume",
+        "after_hours_only"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.4,
+        "suggested": 0.35,
+        "reason": "Lower barrier for first trades - we need DATA to optimize from, can't tune a silent system"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Market open will be fast - need higher scan frequency to catch momentum before it's priced in"
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.2,
+        "suggested": 1.0,
+        "reason": "Start tighter to GUARANTEE early wins and build confidence data - can expand once we have proof of execution"
+      }
+    ],
+    "key_insight": "You're in analysis paralysis limbo. The biggest risk isn't losing 1.5% on a bad trade - it's burning entire trading days at 0% velocity. At market open (9:30 ET), prioritize EXECUTION over perfection: take the first 2-3 qualified setups even if sentiment is borderline. We need game film to learn from. A small loss teaches more than perfect idle cash. Target: 3+ trades in first 90 minutes tomorrow to kickstart the feedback loop.",
+    "timestamp": 1772672092.9187741
+  }
+]

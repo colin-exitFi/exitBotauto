@@ -116,6 +116,7 @@ class TradingBot:
             polygon_client=self.polygon_client,
             sentiment_analyzer=self.sentiment_analyzer,
             stocktwits_client=self.stocktwits_client,
+            alpaca_client=self.alpaca_client,
         )
 
         # Entry manager

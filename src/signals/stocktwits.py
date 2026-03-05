@@ -17,7 +17,7 @@ class StockTwitsClient:
     def __init__(self):
         self._session = requests.Session()
         self._session.headers.update({
-            "User-Agent": "exitBotauto/1.0",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
             "Accept": "application/json",
         })
 

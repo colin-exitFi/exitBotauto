@@ -1,0 +1,75 @@
+[
+  {
+    "market_assessment": "Market closed (18:36 ET after-hours) - no live trading opportunities, scanner empty, awaiting next session",
+    "position_health": [],
+    "risk_flags": [
+      "No positions open - 100% capital idle",
+      "Zero trades executed - bot hasn't engaged yet",
+      "Scanner showing no candidates - may need different scan criteria or awaiting market open",
+      "After-hours timing - limited actionable opportunities"
+    ],
+    "what_working": [
+      "Clean slate - no losses to recover from",
+      "Full buying power available ($1,000)",
+      "Risk management framework active and properly configured",
+      "PDT-safe status allows flexibility"
+    ],
+    "what_not_working": [
+      "Capital velocity at zero - no stacking happening",
+      "No trade history to learn from yet",
+      "Scanner producing no candidates - criteria may be too restrictive or market is quiet"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772671018.039567
+  },
+  {
+    "market_assessment": "After hours (18:43 ET) - market closed, no active trading opportunities until 9:30 ET open tomorrow.",
+    "position_health": [],
+    "risk_flags": [
+      "Market closed - no positions can be entered or exited",
+      "100% cash position - zero capital deployed",
+      "No scanner candidates visible - need live market data",
+      "Starting from absolute zero - first trade critical for psychological momentum"
+    ],
+    "what_working": [
+      "Clean slate - no baggage from bad positions",
+      "Full buying power available",
+      "GROWTH tier allows 5 positions at 7% each = 35% max deployment",
+      "No pattern day trader restrictions"
+    ],
+    "what_not_working": [
+      "Dead capital - $1000 earning 0% sitting idle",
+      "After hours = missed opportunity to start compounding today",
+      "No trade history to analyze patterns or validate strategy",
+      "No scanner data to identify tomorrow's targets"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772671401.273706
+  },
+  {
+    "market_assessment": "After-hours session (18:54 ET) - markets closed, zero activity, clean slate with full capital available for tomorrow's session",
+    "position_health": [],
+    "risk_flags": [
+      "No positions = 100% dead capital sitting idle",
+      "Zero trades executed = strategy not yet operational",
+      "After-hours timing limits immediate action opportunity",
+      "No scanner candidates visible = need market open for liquidity"
+    ],
+    "what_working": [
+      "Clean risk profile - no baggage, no losers to manage",
+      "Full buying power intact - maximum flexibility",
+      "GROWTH tier parameters appropriate for $1k starting capital (7% position size, 1.5% stops)",
+      "PDT-free status allows aggressive day trading without restrictions"
+    ],
+    "what_not_working": [
+      "Capital velocity = ZERO (no deployment, no compounding)",
+      "After-hours presents limited actionable opportunities",
+      "Scanner showing no candidates - may need better data feed or market hours"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1772672082.366535
+  }
+]

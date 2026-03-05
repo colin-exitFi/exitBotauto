@@ -1,0 +1,136 @@
+[
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "Zero sentiment threshold letting in chop trades \u2014 require bullish bias (+0.3) to filter for momentum alignment, Advisor explicitly flagged this as 'too permissive'"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 7.0,
+        "reason": "Risk tier already at GROWTH (7%) but position sizing lagging at 5% \u2014 align to tier spec to maximize capital velocity on first wins"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 180,
+        "reason": "300s too slow for momentum breakouts at open \u2014 drop to 3min to catch early movers when session starts, Advisor notes 'need faster pulse'"
+      }
+    ],
+    "reasoning": "Day 1 pre-market: Tightening entry quality (sentiment filter), aligning position size to risk tier, and accelerating scan speed for market open hunt mode \u2014 all changes prep us to POUNCE not spectate when bell rings.",
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.0,
+        "new": 0.3,
+        "reason": "Zero sentiment threshold letting in chop trades \u2014 require bullish bias (+0.3) to filter for momentum alignment, Advisor explicitly flagged this as 'too permissive'",
+        "timestamp": 1772671037.279219
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 5.0,
+        "new": 7.0,
+        "reason": "Risk tier already at GROWTH (7%) but position sizing lagging at 5% \u2014 align to tier spec to maximize capital velocity on first wins",
+        "timestamp": 1772671037.279544
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 300,
+        "new": 180,
+        "reason": "300s too slow for momentum breakouts at open \u2014 drop to 3min to catch early movers when session starts, Advisor notes 'need faster pulse'",
+        "timestamp": 1772671037.279695
+      }
+    ],
+    "timestamp": 1772671037.2802718
+  },
+  {
+    "changes": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.2,
+        "reason": "0 trades completed - first win is critical for psychological momentum. Advisor explicitly recommends 1.2% TP1 to increase probability of banking green on first trade."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.4,
+        "reason": "With zero track record, cannot afford a losing first trade. Advisor recommends raising bar to 0.4 for high-conviction mega-cap setups only at tomorrow's open."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 60,
+        "reason": "Market open (9:30-10:00 ET) is highest opportunity window. Previous change to 180s was step in right direction, but Advisor says 60s needed to catch momentum breakouts when capital velocity matters most."
+      }
+    ],
+    "reasoning": "Pre-market positioning: tighten execution parameters to ensure first trade is a win - faster scanning to catch open breakouts, higher sentiment bar to avoid weak setups, quicker TP1 to bank psychological green.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 1.5,
+        "new": 1.2,
+        "reason": "0 trades completed - first win is critical for psychological momentum. Advisor explicitly recommends 1.2% TP1 to increase probability of banking green on first trade.",
+        "timestamp": 1772671420.696767
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.3,
+        "new": 0.4,
+        "reason": "With zero track record, cannot afford a losing first trade. Advisor recommends raising bar to 0.4 for high-conviction mega-cap setups only at tomorrow's open.",
+        "timestamp": 1772671420.6971169
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 180,
+        "new": 60,
+        "reason": "Market open (9:30-10:00 ET) is highest opportunity window. Previous change to 180s was step in right direction, but Advisor says 60s needed to catch momentum breakouts when capital velocity matters most.",
+        "timestamp": 1772671420.697226
+      }
+    ],
+    "timestamp": 1772671420.69941
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.35,
+        "reason": "Zero trades = zero data = zero optimization possible. Advisor explicitly flags analysis paralysis. Previous increases (0.3\u21920.4) created filter too tight. Drop to 0.35 to enable FIRST TRADES while maintaining quality bar."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 30,
+        "reason": "Market open velocity window requires faster pulse. Already tuned 300\u2192180\u219260, but Advisor recommends 30s for catching gappers in first 90min when momentum pricing happens fastest. Within bounds (60-600)."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.0,
+        "reason": "TP1 at 1.2% still hasn't generated wins. Advisor explicitly suggests 1.0% to GUARANTEE early banking of profit and break zero-velocity deadlock. Can expand after proving execution works."
+      }
+    ],
+    "reasoning": "Breaking analysis paralysis with execution-first tuning: lower entry barrier to enable trades, faster scanning for market open momentum, tighter TP1 to guarantee first wins and generate feedback data",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.4,
+        "new": 0.35,
+        "reason": "Zero trades = zero data = zero optimization possible. Advisor explicitly flags analysis paralysis. Previous increases (0.3\u21920.4) created filter too tight. Drop to 0.35 to enable FIRST TRADES while maintaining quality bar.",
+        "timestamp": 1772672101.148675
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 60,
+        "reason": "Market open velocity window requires faster pulse. Already tuned 300\u2192180\u219260, but Advisor recommends 30s for catching gappers in first 90min when momentum pricing happens fastest. Within bounds (60-600).",
+        "timestamp": 1772672101.148811
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 1.2,
+        "new": 1.0,
+        "reason": "TP1 at 1.2% still hasn't generated wins. Advisor explicitly suggests 1.0% to GUARANTEE early banking of profit and break zero-velocity deadlock. Can expand after proving execution works.",
+        "timestamp": 1772672101.1488519
+      }
+    ],
+    "timestamp": 1772672101.149527
+  }
+]

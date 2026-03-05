@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 # Load .env from project root
 _project_root = Path(__file__).resolve().parent.parent
-load_dotenv(_project_root / ".env")
+load_dotenv(_project_root / ".env", override=True)
 
 
 def _env(key: str, default: str = "") -> str:
