@@ -576,6 +576,38 @@ class TradingBot:
                 except Exception as e:
                     logger.debug(f"Post-earnings reaction check failed: {e}")
 
+                # 8. PRICE VALIDATION — cross-reference entire watchlist against real prices
+                try:
+                    all_tickers = self.watchlist.get_tickers()
+                    if all_tickers:
+                        import requests as _req
+                        _headers = {
+                            'APCA-API-KEY-ID': settings.ALPACA_API_KEY,
+                            'APCA-API-SECRET-KEY': settings.ALPACA_SECRET_KEY,
+                        }
+                        syms = ','.join(all_tickers)
+                        _r = _req.get(
+                            f'https://data.alpaca.markets/v2/stocks/snapshots?symbols={syms}&feed=iex',
+                            headers=_headers, timeout=10
+                        )
+                        if _r.status_code == 200:
+                            raw_snaps = _r.json()
+                            # Convert to format watchlist expects
+                            price_snaps = {}
+                            for sym, data in raw_snaps.items():
+                                lt = data.get('latestTrade', {})
+                                pb = data.get('prevDailyBar', {})
+                                price = lt.get('p', 0)
+                                prev = pb.get('c', 0)
+                                chg = ((price - prev) / prev * 100) if prev > 0 else 0
+                                price_snaps[sym] = {"price": price, "change_pct": round(chg, 2), "prev_close": prev}
+                            result = self.watchlist.validate_with_prices(price_snaps)
+                            if result["removed"]:
+                                log_activity("research", f"🔍 Price validation removed: {', '.join(result['removed'])}")
+                            logger.info(f"🔍 Price validation complete: {len(result['removed'])} removed, {len(result['adjusted'])} adjusted")
+                except Exception as e:
+                    logger.debug(f"Price validation failed: {e}")
+
                 state["last_thesis"] = now
                 tasks_run.append("watchlist_rebuild")
                 tasks_run.append("thesis")

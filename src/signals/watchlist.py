@@ -192,11 +192,18 @@ class DynamicWatchlist:
 
         # ── Perplexity AI picks (highest conviction — real-time web research) ──
         if perplexity_picks:
+            bearish_signals = ["declin", "down ", "drop", "fall", "crash", "sell", "bear", "weak", "loss", "miss"]
             for p in perplexity_picks:
                 ticker = p.get("ticker", "")
                 reason = p.get("reason", "AI pick")
+                reason_lower = reason.lower()
                 conviction = 0.7 + min(len(reason) / 200, 0.2)  # Longer reason = more researched
-                if self.add(ticker, conviction, "long", reason, "perplexity", ttl_hours=48):
+                # Detect side from reason text
+                is_bearish = sum(1 for w in bearish_signals if w in reason_lower) >= 2
+                side = "short" if is_bearish else "long"
+                if is_bearish:
+                    logger.debug(f"Perplexity pick {ticker} detected as bearish: {reason[:60]}")
+                if self.add(ticker, conviction, side, reason, "perplexity", ttl_hours=48):
                     added += 1
 
         # ── Pharma catalysts (high conviction near PDUFA date) ──
@@ -247,6 +254,71 @@ class DynamicWatchlist:
                 f"  {'🟢' if item['side']=='long' else '🔴'} {item['ticker']:6s} "
                 f"conv={item['conviction']:.2f}  {item['reason'][:60]}"
             )
+
+    def validate_with_prices(self, snapshots: Dict[str, Dict]):
+        """
+        Cross-reference watchlist against real price data.
+        Fix mismatched sides, remove contradictions, adjust conviction.
+        
+        snapshots: {ticker: {"price": float, "change_pct": float, "prev_close": float}}
+        """
+        removed = []
+        flipped = []
+        adjusted = []
+
+        for ticker, item in list(self._items.items()):
+            snap = snapshots.get(ticker)
+            if not snap:
+                continue
+
+            change_pct = snap.get("change_pct", 0)
+            side = item.get("side", "long")
+            conv = item.get("conviction", 0)
+            reason = item.get("reason", "").lower()
+
+            # RULE 1: LONG side but stock is significantly down → flip to SHORT or remove
+            if side == "long" and change_pct <= -3.0:
+                self.remove(ticker)
+                removed.append(f"{ticker} ({change_pct:+.1f}%)")
+                logger.warning(f"🔍 PRICE CHECK: Removed {ticker} — marked LONG but down {change_pct:.1f}%")
+                continue
+
+            # RULE 2: LONG side but stock is moderately down → reduce conviction
+            if side == "long" and change_pct <= -1.5:
+                item["conviction"] = max(0.1, conv * 0.5)
+                adjusted.append(f"{ticker} ({change_pct:+.1f}%)")
+                logger.info(f"🔍 PRICE CHECK: Reduced {ticker} conviction — LONG but down {change_pct:.1f}%")
+
+            # RULE 3: SHORT side but stock is ripping up → remove
+            if side == "short" and change_pct >= 5.0:
+                self.remove(ticker)
+                removed.append(f"{ticker} ({change_pct:+.1f}%)")
+                logger.warning(f"🔍 PRICE CHECK: Removed {ticker} — marked SHORT but up {change_pct:.1f}%")
+                continue
+
+            # RULE 4: Reason contains bearish language but marked LONG
+            bearish_words = ["decliner", "decline", "down ", "dropped", "falling", "crash", "sell-off", "selloff"]
+            if side == "long" and any(w in reason for w in bearish_words):
+                # Check if price confirms bearish
+                if change_pct < 0:
+                    self.remove(ticker)
+                    removed.append(f"{ticker} (bearish reason)")
+                    logger.warning(f"🔍 REASON CHECK: Removed {ticker} — LONG with bearish reason + negative price")
+                    continue
+
+            # RULE 5: Strong momentum confirmation → boost conviction slightly
+            if side == "long" and change_pct >= 5.0 and conv < 0.95:
+                item["conviction"] = min(0.98, conv * 1.1)
+                logger.debug(f"🔍 PRICE CHECK: Boosted {ticker} — LONG and up {change_pct:.1f}%")
+
+        self.save()
+
+        if removed:
+            logger.warning(f"🔍 Price validation removed {len(removed)}: {', '.join(removed)}")
+        if adjusted:
+            logger.info(f"🔍 Price validation reduced {len(adjusted)}: {', '.join(adjusted)}")
+
+        return {"removed": removed, "flipped": flipped, "adjusted": adjusted}
 
     def __len__(self):
         return len(self._items)
