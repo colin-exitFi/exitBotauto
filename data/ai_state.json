@@ -1,19 +1,37 @@
 {
-  "last_observation": "Market just opened (08:58 ET) - too early to assess trend, awaiting first 30min for directional clarity and volume confirmation.",
-  "last_advice": null,
-  "last_tuner_changes": null,
+  "last_observation": "Market just opened (09:08 ET Thursday), pre-market positions entered but not yet confirmed - awaiting market open price action to validate entries.",
+  "last_advice": "IMMEDIATE HALT \u2014 Cancel pending pre-market orders, wait for RTH open confirmation, then rebuild positions with proper risk controls.",
+  "last_tuner_changes": "SCAN_INTERVAL_SECONDS:60\u2192300, TRAILING_STOP_PCT:2.0\u21921.0, MIN_ENTRY_SENTIMENT:0.0\u21920.3",
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "BULL",
+    "symbol": "LWLG",
     "final_decision": "SKIP",
     "size_modifier": 0.0,
-    "avg_confidence": 0,
-    "claude": null,
-    "gpt": null,
-    "grok": null,
+    "avg_confidence": 69.33333333333333,
+    "claude": {
+      "model": "claude",
+      "decision": "SKIP",
+      "confidence": 75,
+      "reasoning": "RSI at 87.5 is severely overbought, already +25.9% above VWAP after a +6.68% move today. Volume data unavailable (0.0x) is critical red flag - cannot confirm if this has real momentum or is on fumes. ",
+      "error": null
+    },
+    "gpt": {
+      "model": "gpt",
+      "decision": "SKIP",
+      "confidence": 63,
+      "reasoning": "Price is extremely extended intraday (RSI 87.5, ~26% above VWAP). With no confirmed volume expansion (0.0x avg) and no clear fresh catalyst, odds favor mean-reversion/whipsaw rather than a clean addit",
+      "error": null
+    },
+    "grok": {
+      "model": "grok",
+      "decision": "BUY",
+      "confidence": 70,
+      "reasoning": "Positive sentiment (1.00), news catalysts like corporate update and small-cap surge mentions, price up 6.68% indicating momentum; overbought RSI but trailing stop protects downside.",
+      "error": null
+    },
     "perplexity": null,
-    "reasoning": "Skip cooldown (5 min)",
-    "timestamp": 1772719458.933902
+    "reasoning": "No majority \u2014 BUY:1 SHORT:0 SKIP:2",
+    "timestamp": 1772720007.429662
   }
 }

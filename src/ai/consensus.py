@@ -80,7 +80,8 @@ VOLUME: {volume_spike:.1f}x average (higher = more momentum)
 SOCIAL SENTIMENT:
 - StockTwits: {sentiment_score:.2f} (range -1 to +1, positive = bullish crowd)
 - Trending on StockTwits: {trending}
-- Twitter/X buzz: {twitter_volume}
+- X/Twitter trending reason: {grok_x_reason}
+- X/Twitter sentiment: {grok_x_sentiment}
 
 TECHNICALS:
 - RSI: {rsi}
@@ -88,6 +89,11 @@ TECHNICALS:
 - ATR: {atr}
 
 NEWS: {news}
+
+ADDITIONAL SIGNALS:
+- Pharma catalyst: {pharma_info}
+- Fade signal (short setup): {fade_info}
+- Earnings: {earnings_info}
 
 DECISION FRAMEWORK:
 - BUY if: momentum is strong, sentiment is positive, volume is elevated, stock has room to run
@@ -180,6 +186,14 @@ class ConsensusEngine:
 
         # Enrich with technicals + news if missing
         await self._enrich_signals(symbol, price, signals_data)
+
+        # Log what data the AI is actually getting
+        logger.info(f"📊 {symbol} signal data: price=${price:.2f} chg={signals_data.get('change_pct',0):+.1f}% "
+                     f"vol={signals_data.get('volume_spike',0):.1f}x RSI={signals_data.get('rsi','N/A')} "
+                     f"VWAP={signals_data.get('vwap_relation','N/A')} ATR={signals_data.get('atr','N/A')} "
+                     f"news={len(signals_data.get('news_headlines',signals_data.get('news',[])) or [])} "
+                     f"social={signals_data.get('sentiment_score',0):.2f} "
+                     f"grok_x={signals_data.get('grok_x_reason','')[:50] or 'none'}")
 
         # Build prompt with enriched data
         prompt = self._build_prompt(symbol, price, signals_data)
@@ -326,11 +340,15 @@ class ConsensusEngine:
             volume_spike=signals.get("volume_spike", 1.0),
             sentiment_score=signals.get("sentiment_score", 0),
             trending=signals.get("trending", "unknown"),
-            twitter_volume=signals.get("twitter_volume", "unknown"),
+            grok_x_reason=signals.get("grok_x_reason", "Not trending on X") or "Not trending on X",
+            grok_x_sentiment=signals.get("grok_x_sentiment", "N/A") or "N/A",
             rsi=signals.get("rsi", "N/A"),
             vwap_relation=signals.get("vwap_relation", "N/A"),
             atr=signals.get("atr", "N/A"),
             news=news_str,
+            pharma_info=signals.get("pharma_drug", "None") if signals.get("pharma_signal") else "None",
+            fade_info=f"Ran +{signals.get('fade_run_pct',0):.0f}% yesterday — watching for weakness" if signals.get("fade_signal") else "None",
+            earnings_info=signals.get("earnings_date", "None") or "None",
         )
 
     # ── Model Calls ───────────────────────────────────────────────

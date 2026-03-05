@@ -915,5 +915,50 @@
       }
     ],
     "timestamp": 1772718248.217152
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "System shows 11 losses all <5min holds with trailing stops - scanning every 60s creates whipsaw entries in choppy extended hours. Slow down to 5min to filter noise and wait for RTH liquidity."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.0,
+        "reason": "2.0% trailing stop too loose for micro-timeframe holds - 11 consecutive losses all hit trailing stops within minutes. Tighten to 1.0% to reduce bleed on quick reversals until execution bugs resolved."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "0.0 threshold allowing garbage entries (PDYN microcap, null ATR data). Raise to 0.3 to require actual conviction - this kills velocity but we're at 100% loss rate, capital preservation trumps activity."
+      }
+    ],
+    "reasoning": "Emergency brake - advisor correct that this is execution bug not bad luck, slow everything down until data integrity restored",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 300,
+        "reason": "System shows 11 losses all <5min holds with trailing stops - scanning every 60s creates whipsaw entries in choppy extended hours. Slow down to 5min to filter noise and wait for RTH liquidity.",
+        "timestamp": 1772719799.7092211
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 2.0,
+        "new": 1.0,
+        "reason": "2.0% trailing stop too loose for micro-timeframe holds - 11 consecutive losses all hit trailing stops within minutes. Tighten to 1.0% to reduce bleed on quick reversals until execution bugs resolved.",
+        "timestamp": 1772719799.710669
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.0,
+        "new": 0.3,
+        "reason": "0.0 threshold allowing garbage entries (PDYN microcap, null ATR data). Raise to 0.3 to require actual conviction - this kills velocity but we're at 100% loss rate, capital preservation trumps activity.",
+        "timestamp": 1772719799.710737
+      }
+    ],
+    "timestamp": 1772719799.7117682
   }
 ]

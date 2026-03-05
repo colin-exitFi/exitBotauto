@@ -1,0 +1,53 @@
+[
+  {
+    "symbol": "PDYN",
+    "side": "sell",
+    "entry_price": 8.56,
+    "exit_price": 8.56,
+    "quantity": 31.030958,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "reason": "trailing_stop",
+    "hold_seconds": 750.7587430477142,
+    "entry_time": 1772719189.055292,
+    "exit_time": 1772719939.814036,
+    "sentiment_at_entry": 0.6,
+    "conviction_level": "normal",
+    "risk_tier": "COMPOUND",
+    "recorded_at": 1772719939.814115
+  },
+  {
+    "symbol": "AVGO",
+    "side": "sell",
+    "entry_price": 331.62,
+    "exit_price": 331.62,
+    "quantity": 0.800992,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "reason": "trailing_stop",
+    "hold_seconds": 573.2911260128021,
+    "entry_time": 1772719366.566463,
+    "exit_time": 1772719939.85759,
+    "sentiment_at_entry": 0.3333,
+    "conviction_level": "normal",
+    "risk_tier": "COMPOUND",
+    "recorded_at": 1772719939.857665
+  },
+  {
+    "symbol": "UAMY",
+    "side": "sell",
+    "entry_price": 10.11,
+    "exit_price": 10.11,
+    "quantity": 39.410237,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "reason": "trailing_stop",
+    "hold_seconds": 0.24639487266540527,
+    "entry_time": 1772719939.649952,
+    "exit_time": 1772719939.8963468,
+    "sentiment_at_entry": 1.0,
+    "conviction_level": "high",
+    "risk_tier": "COMPOUND",
+    "recorded_at": 1772719939.8964028
+  }
+]
