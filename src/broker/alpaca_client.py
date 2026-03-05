@@ -120,15 +120,15 @@ class AlpacaClient:
 
     # ── Orders ─────────────────────────────────────────────────────
 
-    def place_market_buy(self, symbol: str, qty_or_notional: Union[int, float]) -> Optional[Dict]:
+    def place_market_buy(self, symbol: str, qty_or_notional: Union[int, float], force_notional: bool = False) -> Optional[Dict]:
         """
         Place a market buy order.
-        If qty_or_notional is a float with decimals or < 1, treat as notional (dollar amount).
-        Otherwise treat as share quantity.
+        If force_notional=True or value is float, treat as dollar amount.
+        If int, treat as share quantity.
         """
         self._ensure_init()
         try:
-            is_notional = isinstance(qty_or_notional, float) and (qty_or_notional != int(qty_or_notional) or qty_or_notional < 1)
+            is_notional = force_notional or (isinstance(qty_or_notional, float))
             if is_notional:
                 req = MarketOrderRequest(
                     symbol=symbol,
@@ -242,7 +242,7 @@ class AlpacaClient:
         For smaller orders, use market order directly.
         """
         if notional <= 500:
-            return self.place_market_buy(symbol, notional)
+            return self.place_market_buy(symbol, notional, force_notional=True)
 
         self._ensure_init()
         try:
@@ -279,11 +279,11 @@ class AlpacaClient:
             # Not filled — cancel and use market
             self.cancel_order(order_id)
             logger.info(f"Smart buy: limit not filled for {symbol}, falling back to market")
-            return self.place_market_buy(symbol, notional)
+            return self.place_market_buy(symbol, notional, force_notional=True)
 
         except Exception as e:
             logger.error(f"Smart buy failed ({symbol}), falling back to market: {e}")
-            return self.place_market_buy(symbol, notional)
+            return self.place_market_buy(symbol, notional, force_notional=True)
 
     def smart_sell(self, symbol: str, qty: float, timeout_seconds: int = 10) -> Optional[Dict]:
         """
