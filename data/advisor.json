@@ -1,68 +1,5 @@
 [
   {
-    "strategy": "Pre-market positioning: verify scanner config tonight, execute aggressive momentum capture at open with tight profit-taking discipline",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "tech",
-        "energy",
-        "momentum_stocks"
-      ],
-      "avoid": [
-        "low_volume_after_hours"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "First 30 minutes of trading day are highest velocity - need faster scanning to catch momentum before it runs"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 1.2,
-        "reason": "With zero history, take quick wins early to build confidence and compound velocity - can adjust up after 10+ trades"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.3,
-        "suggested": 0.4,
-        "reason": "Clean slate means we can afford to be selective - higher quality entries reduce early losses that kill momentum"
-      }
-    ],
-    "key_insight": "CRITICAL: Scanner returning zero candidates is the highest risk right now. Before market open, verify: (1) API keys are active, (2) scanner has valid symbol universe, (3) filters aren't too restrictive. At open, deploy all 5 positions within first 45 minutes if quality setups exist - sitting on $1K cash while market runs is THE failure mode. First 3 trades set psychological tone - make them disciplined winners, even if small. Your edge is speed and repetition, not perfect entries.",
-    "immediate_actions": [
-      {
-        "action": "verify_scanner_config",
-        "priority": "CRITICAL",
-        "reason": "Empty scanner = zero trades = mission failure",
-        "deadline": "before 9:30 AM ET open"
-      },
-      {
-        "action": "prepare_watchlist",
-        "priority": "HIGH",
-        "reason": "Have 10-15 liquid, high-momentum tickers ready as backup if scanner is slow",
-        "deadline": "before open"
-      },
-      {
-        "action": "set_opening_range_alert",
-        "priority": "MEDIUM",
-        "reason": "9:30-10:00 AM is prime hunting time - be ready to deploy capital fast",
-        "deadline": "9:25 AM ET"
-      }
-    ],
-    "day_one_targets": {
-      "min_acceptable": "3 trades executed, 2% total gain ($20)",
-      "good_outcome": "5 positions deployed, 3-4% gain ($30-40), 60%+ win rate",
-      "excellent_outcome": "5+ trades, 5%+ gain ($50+), proof scanner works, clean execution"
-    },
-    "mental_model": "You're a day-one startup with $1K seed funding. Every hour without revenue (trades) is burning runway. Ship fast, learn fast, iterate fast. The goal isn't perfection - it's proof of concept that the system works and capital can velocity-compound. Take the first good setup you see at open, even if it's not perfect. Momentum > hesitation.",
-    "timestamp": 1772677614.2345679
-  },
-  {
     "strategy": "Aggressive first-strike at market open \u2014 deploy 2-3 positions within first hour to establish momentum and activate capital velocity",
     "position_advice": [],
     "sector_bias": {
@@ -1845,5 +1782,73 @@
     ],
     "key_insight": "You're sitting on $500+ of unrealized gains (PDYN +$58, SOC +$86 visible in peaks) but risk giving it all back. Historical edge on PDYN is PROVEN \u2014 lock it. SOC is unproven \u2014 take profit. Dead capital in AMPX ($3.2K flat) is a $3.2K opportunity cost. Trim winners, exit laggards, redeploy into fresh momentum by 11:30 ET. Capital velocity wins the long game \u2014 idle cash watching flat positions is how you stay at $25K instead of compounding to $50K.",
     "timestamp": 1772724531.1770391
+  },
+  {
+    "strategy": "CRITICAL FIX THEN REDEPLOY: Immediately protect AMPX, then aggressively hunt capital velocity opportunities \u2014 62% idle cash is killing compounding momentum.",
+    "position_advice": [
+      {
+        "symbol": "AMPX",
+        "action": "exit",
+        "reason": "Unprotected biotech in volatile sector, no trailing stop = unacceptable risk. $1,644 exposed with zero discipline. Exit now or place emergency 1% trailing stop within 60 seconds."
+      },
+      {
+        "symbol": "SOC",
+        "action": "hold",
+        "reason": "Best performer at +4.7% from entry ($12.32\u2192$12.90 peak), trailing stop protecting gains, let it run."
+      },
+      {
+        "symbol": "PDYN",
+        "action": "hold",
+        "reason": "100% win rate across 3 historical trades, currently +1.8%, trailing stop active, proven winner."
+      },
+      {
+        "symbol": "AVGO",
+        "action": "hold",
+        "reason": "Large-cap stability, trailing stop active, no reason to disturb."
+      },
+      {
+        "symbol": "CRMD",
+        "action": "hold",
+        "reason": "Trailing stop protecting downside, let it prove itself or stop out."
+      },
+      {
+        "symbol": "OKTA",
+        "action": "hold",
+        "reason": "Enterprise software, protected position, wait for move."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "momentum_runners",
+        "large_cap_tech"
+      ],
+      "avoid": [
+        "unprotected_biotech",
+        "stale_setups"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Scanner returning ZERO candidates is unacceptable. Double scan frequency to catch fleeting setups. Capital velocity is dead \u2014 we need flow."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Neutral sentiment (0) on all entries suggests low-conviction scanning. Require positive bias to filter noise and improve hit rate."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "SOC hit +4.7%, PDYN +1.8% \u2014 winners are running past TP1. Let momentum breathe, especially in morning hours (08:00 = 60% win rate, $412 PnL)."
+      }
+    ],
+    "key_insight": "You have a BROKEN CAPITAL VELOCITY PROBLEM masquerading as a risk management success. Yes, 5/6 positions are protected \u2014 great. But ZERO trades today + 62% idle cash + dry scanner pipeline = compounding has STOPPED. The math is brutal: at 2.5% position size, you need 4 positions working simultaneously to stay in the game. Right now you're sitting on $15.8K doing NOTHING while the market moves. Fix AMPX immediately (unprotected biotech is unacceptable), then get aggressive on deployment. The data shows you print money in the 08:00 hour (60% win rate, $412 PnL) and PDYN is your money printer (100% win rate, $443 total). Stop being passive. The family's future isn't built on idle cash \u2014 it's built on disciplined, relentless capital velocity. Every hour you sit on dead money is an hour you're NOT compounding toward $5M.",
+    "timestamp": 1772724726.4266
   }
 ]

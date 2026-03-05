@@ -1,1 +1,56 @@
-{}
+{
+  "AMPX": {
+    "symbol": "AMPX",
+    "entry_price": 14.671475,
+    "quantity": 112.058182781,
+    "entry_time": 1772724677.726093,
+    "sentiment_at_entry": 0,
+    "peak_price": 14.671475,
+    "order_id": "",
+    "partial_exit": false,
+    "from_brokerage": true,
+    "has_trailing_stop": true,
+    "trailing_stop_order_id": "3d8827de-149e-4c5f-ace1-2e591e61f04f",
+    "trail_pct": 2.0
+  },
+  "AVGO": {
+    "symbol": "AVGO",
+    "entry_price": 330.891797,
+    "quantity": 5.501586965,
+    "entry_time": 1772724677.726219,
+    "sentiment_at_entry": 0,
+    "peak_price": 330.891797,
+    "order_id": "",
+    "partial_exit": false,
+    "from_brokerage": true,
+    "has_trailing_stop": true,
+    "trailing_stop_order_id": "6408878c-4395-4244-8102-32b88cccaadf"
+  },
+  "CRMD": {
+    "symbol": "CRMD",
+    "entry_price": 6.343848,
+    "quantity": 217.147625097,
+    "entry_time": 1772724677.726259,
+    "sentiment_at_entry": 0,
+    "peak_price": 6.343848,
+    "order_id": "",
+    "partial_exit": false,
+    "from_brokerage": true,
+    "has_trailing_stop": true,
+    "trailing_stop_order_id": "5e3fe536-52b4-489d-b9a7-0aad11124f49"
+  },
+  "SOC": {
+    "symbol": "SOC",
+    "entry_price": 12.324999,
+    "quantity": 131.457205659,
+    "entry_time": 1772724677.726348,
+    "sentiment_at_entry": 0,
+    "peak_price": 12.9,
+    "order_id": "",
+    "partial_exit": false,
+    "from_brokerage": true,
+    "has_trailing_stop": true,
+    "trailing_stop_order_id": "25ee19f6-a551-4b45-abba-58dac9d78902",
+    "trail_pct": 1.2
+  }
+}

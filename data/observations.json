@@ -1,29 +1,5 @@
 [
   {
-    "market_assessment": "After-hours (19:08 ET) - market is closed, no live price action available for assessment.",
-    "position_health": [],
-    "risk_flags": [
-      "Market is closed - no trading opportunities until 9:30 ET tomorrow",
-      "Zero positions = 100% dead capital sitting idle",
-      "No scanner candidates available - need market open data to identify setups",
-      "Starting from absolute zero - no trade history to learn from yet"
-    ],
-    "what_working": [
-      "Clean slate - no baggage from losing positions",
-      "Full buying power available ($1,000)",
-      "GROWTH tier allows 5 positions at 7% size each = $350 max deployed",
-      "PDT-safe account (not flagged, 0 daytrades used)"
-    ],
-    "what_not_working": [
-      "Cannot execute - market closed for 14+ hours",
-      "No momentum data - scanner is empty",
-      "Zero velocity - capital is stagnant"
-    ],
-    "overall_sentiment": "neutral",
-    "urgency": "none",
-    "timestamp": 1772672927.214813
-  },
-  {
     "market_assessment": "After hours (19:16 ET) - markets closed, no active trading opportunities until 9:30 ET open tomorrow",
     "position_health": [],
     "risk_flags": [
@@ -2923,5 +2899,62 @@
     "overall_sentiment": "neutral",
     "urgency": "medium",
     "timestamp": 1772724506.837104
+  },
+  {
+    "market_assessment": "Market open 1 hour, early session \u2014 positions inherited from prior session, no new trades today, all appear to be overnight holds now being monitored.",
+    "position_health": [
+      {
+        "symbol": "AMPX",
+        "status": "at_risk",
+        "note": "No trailing stop protection, biotech volatility, needs immediate stop placement or exit evaluation"
+      },
+      {
+        "symbol": "AVGO",
+        "status": "healthy",
+        "note": "Large cap with trailing stop active, stable tech name, proper protection in place"
+      },
+      {
+        "symbol": "CRMD",
+        "status": "healthy",
+        "note": "Trailing stop active, small biotech but protected, largest position by share count"
+      },
+      {
+        "symbol": "OKTA",
+        "status": "healthy",
+        "note": "Trailing stop active, enterprise software, reasonable position size"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Peak at $9.61 from entry $9.44 (+1.8%), trailing stop protecting gains"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Peak at $12.90 from entry $12.32 (+4.7%), trailing stop protecting strong gains"
+      }
+    ],
+    "risk_flags": [
+      "AMPX has NO trailing stop \u2014 unprotected $1,644 position in volatile biotech",
+      "Heat at 10.1% \u2014 approaching warning zone, need disciplined deployment",
+      "5 of 6 positions show peak_price = entry_price (stale data or flat performance except PDYN/SOC)",
+      "62% cash position ($15.8K) \u2014 capital underutilized, missing velocity opportunities",
+      "Scanner returning ZERO candidates \u2014 signal pipeline may be broken or market lacking setups",
+      "All positions from brokerage sync (from_brokerage: true) \u2014 no fresh trades today, dead capital velocity"
+    ],
+    "what_working": [
+      "SOC showing +4.7% from entry, strongest mover",
+      "PDYN showing +1.8% from entry, working directionally",
+      "Trailing stops on 5/6 positions \u2014 discipline in place for most holdings"
+    ],
+    "what_not_working": [
+      "Capital velocity ZERO today \u2014 no trades executed, compounding stalled",
+      "Scanner pipeline dry \u2014 no actionable opportunities identified",
+      "AMPX unprotected \u2014 risk management gap on volatile biotech",
+      "Portfolio Return: +2,448% total but flat today \u2014 momentum paused"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1772724702.5129979
   }
 ]

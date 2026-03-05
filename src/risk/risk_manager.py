@@ -516,7 +516,8 @@ class RiskManager:
         if state_file.exists():
             try:
                 state = json.loads(state_file.read_text())
-                self._starting_equity = state.get("starting_equity", self._starting_equity)
+                # Always use configured TOTAL_CAPITAL — don't load stale starting_equity from state
+                # self._starting_equity is already set from settings.TOTAL_CAPITAL in __init__
                 self._ath_equity = state.get("ath_equity", self._ath_equity)
                 self._start_date = state.get("start_date", self._start_date)
                 self._wash_sale_list = state.get("wash_sale_list", {})

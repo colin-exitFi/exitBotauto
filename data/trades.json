@@ -164,5 +164,33 @@
     "entry_time": 1772724481.57581,
     "exit_time": 1772724544.293011,
     "recorded_at": 1772724544.29307
+  },
+  {
+    "symbol": "OKTA",
+    "side": "sell",
+    "entry_price": 79.588638,
+    "exit_price": 77.68,
+    "quantity": 10.0,
+    "pnl": -19.086379999999963,
+    "pnl_pct": -2.398128737923617,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 58.51026105880737,
+    "entry_time": 1772724677.726291,
+    "exit_time": 1772724736.236552,
+    "recorded_at": 1772724736.236618
+  },
+  {
+    "symbol": "PDYN",
+    "side": "sell",
+    "entry_price": 9.442428,
+    "exit_price": 9.374727,
+    "quantity": 256.0,
+    "pnl": -17.33145599999989,
+    "pnl_pct": -0.7169871986315339,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 223.90992498397827,
+    "entry_time": 1772724677.726321,
+    "exit_time": 1772724901.636246,
+    "recorded_at": 1772724901.636419
   }
 ]

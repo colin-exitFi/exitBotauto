@@ -1,16 +1,16 @@
 {
-  "last_observation": "First scan of the day at 10:28 ET \u2014 positions inherited from overnight hold, no intraday price action visible yet, scanner empty suggesting either pre-market quiet or waiting for volatility.",
-  "last_advice": "Lock profits on momentum runners (PDYN/SOC) before giveback, rotate capital into fresh setups, validate or exit flat inherited positions by 11:30 ET.",
+  "last_observation": "Market open 1 hour, early session \u2014 positions inherited from prior session, no new trades today, all appear to be overnight holds now being monitored.",
+  "last_advice": "CRITICAL FIX THEN REDEPLOY: Immediately protect AMPX, then aggressively hunt capital velocity opportunities \u2014 62% idle cash is killing compounding momentum.",
   "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.15\u21920.5, MAX_CONCURRENT_POSITIONS:12\u21928, POSITION_SIZE_PCT:2.5\u21922.0",
-  "last_game_film_summary": "6 trades, 66.7% WR, $420.22",
+  "last_game_film_summary": "7 trades, 57.1% WR, $415.10",
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
     "symbol": "OKTA",
     "decision": "SKIP",
     "size_pct": 0,
-    "trail_pct": 3.0,
-    "reasoning": "Skip cooldown (2 min)",
-    "confidence": 0.0,
-    "timestamp": 1772724597.1739478
+    "trail_pct": 1.0,
+    "reasoning": "Strong earnings catalyst (mag 8) conflicts with challenging setup: Technical is weak HOLD (35% confidence), macro is risk-off with broad de-risking, and price near resistance at $80. While Risk approves and fundamentals are solid, the combination of weak technicals, defensive market regime, and lack",
+    "confidence": 65.0,
+    "timestamp": 1772724792.3997009
   }
 }
