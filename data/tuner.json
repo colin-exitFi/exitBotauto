@@ -1095,5 +1095,50 @@
       }
     ],
     "timestamp": 1772722518.106734
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "CRMD entered at 0.33 sentiment = mistake that violated evidence-over-opinion rule. 66.7% win rate with +$420 P&L proves system works when selective. Raise floor to 0.5 to eliminate low-conviction entries."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 8,
+        "reason": "6 positions entered in 11 minutes (10:49-11:00 ET) = FOMO clustering. Current 12 max enables overtrading. Drop to 8 to enforce quality over quantity while still allowing deployment of 20% capital ($5,100)."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.0,
+        "reason": "At 6 positions with 2.5% size = 15% deployed heat. Reducing to 2.0% allows 8 positions at 16% total heat, improving diversification while lowering per-position risk after PDYN concentration scare."
+      }
+    ],
+    "reasoning": "Up +1.72% ($437) today with 75% win rate \u2014 shift from offense to defense by raising quality bar and capping position count to prevent momentum chasing",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.15,
+        "new": 0.5,
+        "reason": "CRMD entered at 0.33 sentiment = mistake that violated evidence-over-opinion rule. 66.7% win rate with +$420 P&L proves system works when selective. Raise floor to 0.5 to eliminate low-conviction entries.",
+        "timestamp": 1772724331.6182652
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "old": 12,
+        "new": 8,
+        "reason": "6 positions entered in 11 minutes (10:49-11:00 ET) = FOMO clustering. Current 12 max enables overtrading. Drop to 8 to enforce quality over quantity while still allowing deployment of 20% capital ($5,100).",
+        "timestamp": 1772724331.618594
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 2.5,
+        "new": 2.0,
+        "reason": "At 6 positions with 2.5% size = 15% deployed heat. Reducing to 2.0% allows 8 positions at 16% total heat, improving diversification while lowering per-position risk after PDYN concentration scare.",
+        "timestamp": 1772724331.618634
+      }
+    ],
+    "timestamp": 1772724331.619502
   }
 ]

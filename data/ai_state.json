@@ -1,7 +1,7 @@
 {
   "last_observation": "Strong bullish momentum in tech/semiconductors (AVGO +5%, PDYN +26%), volume spikes on hype-driven names suggest momentum chase environment with elevated risk of fast reversals.",
-  "last_advice": "EMERGENCY TRIAGE: Immediately trim PDYN to 25% portfolio max at open, exit all dead capital (CRMD/OKTA/AVGO), hold only AMPX, then wait for proper setups with live volatility.",
-  "last_tuner_changes": "POSITION_SIZE_PCT:3.0\u21922.5, MAX_HOLD_HOURS:24\u21924.0, TRAILING_STOP_PCT:1.5\u21921.0",
+  "last_advice": "Lock profits and eliminate dead weight \u2014 trim winners taking heat, exit CRMD immediately, freeze new entries until portfolio drops to 4 positions max.",
+  "last_tuner_changes": "MIN_ENTRY_SENTIMENT:0.15\u21920.5, MAX_CONCURRENT_POSITIONS:12\u21928, POSITION_SIZE_PCT:2.5\u21922.0",
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {

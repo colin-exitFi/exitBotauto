@@ -136,5 +136,19 @@
     "entry_time": 1772722739.780947,
     "exit_time": 1772723507.2065349,
     "recorded_at": 1772723507.20669
+  },
+  {
+    "symbol": "PDYN",
+    "side": "sell",
+    "entry_price": 9.38,
+    "exit_price": 9.47,
+    "quantity": 86.0,
+    "pnl": 7.739999999999988,
+    "pnl_pct": 0.959488272921107,
+    "reason": "trailing_stop_ws",
+    "hold_seconds": 725.4666340351105,
+    "entry_time": 1772723552.128285,
+    "exit_time": 1772724277.594919,
+    "recorded_at": 1772724277.5949728
   }
 ]
