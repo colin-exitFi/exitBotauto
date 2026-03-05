@@ -1,16 +1,20 @@
 {
-  "last_observation": "After-hours momentum play with strong runners (PDYN +33.87%, VG +9.66%, MRVL +7.85%) - classic late-day continuation setup into extended hours",
+  "last_observation": "After-hours session (5:47pm ET) with mixed regime (-0.92% index avg); momentum plays still active in extended hours with strong social sentiment driving volume.",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": "6 trades, 16.7% WR, $-44.20",
-  "last_position_manager": "healthy | 1 exits | 0 vetoes",
+  "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "MRVL",
+    "symbol": "PMTS",
     "decision": "BUY",
     "size_pct": 2.5,
     "trail_pct": 3.0,
-    "reasoning": "Strong alignment across all signals. MRVL posted massive earnings beat with +37% YoY revenue growth to $2.075B, Q4 guidance of $2.2B (+21%), and strategic Celestial AI acquisition - all fueling AI/datacenter narrative. Technical shows 92% confidence BUY with accelerating momentum in hours timeframe,",
-    "confidence": 88.0,
-    "timestamp": 1772745271.77896
-  }
+    "reasoning": "Strong earnings catalyst (magnitude 9) with +22% revenue beat and forward guidance. Technical shows BUY at 92% confidence with accelerating momentum in hours timeframe. Sentiment bullish with rising social velocity. Risk explicitly approved at 2.5% max size with low portfolio heat. Macro is choppy b",
+    "confidence": 85.0,
+    "provider_used": "claude",
+    "timestamp": 1772748462.0762181
+  },
+  "scan_regime": "mixed",
+  "scan_regime_raw": "mixed",
+  "scan_interval_seconds": 60
 }

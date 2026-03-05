@@ -3,7 +3,10 @@ Alpaca Client - Trading and market data via alpaca-py SDK.
 Supports paper/live trading, fractional shares, extended hours.
 """
 
+import json
+import time
 import uuid
+from pathlib import Path
 import requests
 from typing import Dict, List, Optional, Union
 from loguru import logger
@@ -63,6 +66,19 @@ class AlpacaClient:
         if not self._initialized:
             raise RuntimeError("Alpaca client not initialized. Call initialize() first.")
 
+    def _capture_payload(self, label: str, data):
+        """Write a raw payload to data/alpaca_capture/ when capture mode is on."""
+        if not getattr(settings, "CAPTURE_ALPACA_PAYLOADS", False):
+            return
+        try:
+            capture_dir = Path(__file__).resolve().parent.parent.parent / "data" / "alpaca_capture"
+            capture_dir.mkdir(parents=True, exist_ok=True)
+            ts = int(time.time() * 1000)
+            filepath = capture_dir / f"rest_{label}_{ts}.json"
+            filepath.write_text(json.dumps(data, indent=2, default=str))
+        except Exception as e:
+            logger.debug(f"Payload capture failed ({label}): {e}")
+
     # ── Account ────────────────────────────────────────────────────
 
     def get_account(self) -> Dict:
@@ -118,6 +134,7 @@ class AlpacaClient:
                     "unrealized_pnl_pct": float(p.unrealized_plpc) * 100,
                     "open_pnl": float(p.unrealized_pl),
                 })
+            self._capture_payload("positions", result)
             return result
         except Exception as e:
             logger.error(f"Get positions failed: {e}")
@@ -268,7 +285,9 @@ class AlpacaClient:
                 nested=True,
             )
             orders = self._trading_client.get_orders(req)
-            return [self._order_to_dict(o) for o in orders]
+            result = [self._order_to_dict(o) for o in orders]
+            self._capture_payload(f"orders_{status}", result)
+            return result
         except Exception as e:
             logger.error(f"Get orders failed: {e}")
             return []

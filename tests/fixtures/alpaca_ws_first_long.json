@@ -1,0 +1,68 @@
+{
+  "name": "ws_first_long_trailing_stop",
+  "default_quantity": 10.0,
+  "entry_quantities": {
+    "AAPL": 10.0
+  },
+  "verdicts": {
+    "AAPL": {
+      "decision": "BUY",
+      "confidence": 90,
+      "size_pct": 2.0,
+      "trail_pct": 3.0,
+      "provider_used": "claude",
+      "reasoning": "Transcript: long setup"
+    }
+  },
+  "events": [
+    {
+      "type": "scan",
+      "candidates": [
+        {
+          "symbol": "AAPL",
+          "price": 100.0,
+          "change_pct": 4.1,
+          "volume": 2500000,
+          "volume_spike": 3.0,
+          "sentiment_score": 0.7,
+          "stocktwits_trending_score": 15,
+          "source": "polygon+grok_x",
+          "grok_x_reason": "High social momentum",
+          "score": 0.9
+        }
+      ]
+    },
+    {
+      "type": "alpaca_rest",
+      "positions": [],
+      "closed_orders": [
+        {
+          "symbol": "AAPL",
+          "type": "trailing_stop",
+          "side": "sell",
+          "filled_avg_price": "105.0",
+          "filled_at": "2026-03-05T10:01:00Z"
+        }
+      ]
+    },
+    {
+      "type": "alpaca_ws_trade_update",
+      "payload": {
+        "stream": "trade_updates",
+        "data": {
+          "event": "fill",
+          "order": {
+            "symbol": "AAPL",
+            "type": "trailing_stop",
+            "side": "sell",
+            "filled_avg_price": "105.0",
+            "filled_qty": "10"
+          }
+        }
+      }
+    },
+    {
+      "type": "monitor_positions"
+    }
+  ]
+}

@@ -66,10 +66,19 @@ P0/P1 fixes implemented:
 22. Adaptive-cadence hysteresis added:
     - Scan regime now uses confirmation-based smoothing to avoid frequent interval flapping on noisy transitions.
     - Raw regime and smoothed regime are both surfaced for observability.
+23. Broker-event replay harness added:
+    - Deterministic replay framework now exercises end-to-end lifecycle sequences (`scan -> entry -> fill -> trailing-stop exit`).
+    - Coverage includes both websocket-first and monitor-first exit ordering to enforce one-exit-one-record invariant.
+24. Replay harness expanded for broader lifecycle realism:
+    - Configurable entry quantity support added for quantity-sensitive P&L verification.
+    - Short-entry replay support added and validated with short lifecycle tests.
+25. Transcript-driven replay support added:
+    - Harness now accepts Alpaca-style REST snapshots + raw `trade_updates` payload fixtures.
+    - Fixture-based replay tests now validate lifecycle correctness from transcript JSON artifacts.
 
 ### 0.2 Remaining high-risk debt (must be tracked)
 
-- Test coverage is still limited (no full broker-event e2e replay harness; concurrency coverage is currently unit/integration-style only).
+- Test coverage is still limited (transcript replay infrastructure is in place, but fixtures are synthetic; no production-captured Alpaca payload tapes replayed yet).
 - Large use of `except Exception: pass` can suppress production failures.
 
 ---

@@ -14,6 +14,7 @@ Message format:
 import asyncio
 import json
 import time
+from pathlib import Path
 from typing import Callable, Dict, List, Optional
 from loguru import logger
 
@@ -75,6 +76,21 @@ class TradeStream:
             "last_message_age": round(time.time() - self._last_message_time, 1) if self._last_message_time else None,
         }
 
+    def _capture_ws_payload(self, msg: Dict):
+        """Write a raw WS payload to data/alpaca_capture/ when capture mode is on."""
+        if not getattr(settings, "CAPTURE_ALPACA_PAYLOADS", False):
+            return
+        try:
+            capture_dir = Path(__file__).resolve().parent.parent.parent / "data" / "alpaca_capture"
+            capture_dir.mkdir(parents=True, exist_ok=True)
+            ts = int(time.time() * 1000)
+            symbol = msg.get("data", {}).get("order", {}).get("symbol", "unknown")
+            event = msg.get("data", {}).get("event", "unknown")
+            filepath = capture_dir / f"ws_{event}_{symbol}_{ts}.json"
+            filepath.write_text(json.dumps(msg, indent=2, default=str))
+        except Exception as e:
+            logger.debug(f"WS payload capture failed: {e}")
+
     async def _run_forever(self):
         url = self.PAPER_URL if settings.ALPACA_PAPER else self.LIVE_URL
 
@@ -130,6 +146,8 @@ class TradeStream:
         stream = msg.get("stream")
         if stream != "trade_updates":
             return
+
+        self._capture_ws_payload(msg)
 
         data = msg.get("data", {})
         event = data.get("event", "")

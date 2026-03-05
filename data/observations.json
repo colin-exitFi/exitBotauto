@@ -1231,5 +1231,400 @@
     "overall_sentiment": "bullish",
     "urgency": "high",
     "timestamp": 1772748296.1413782
+  },
+  {
+    "market_assessment": "Market closed (5:06 PM ET) - assessing overnight positions and setup for tomorrow's open.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "SHORT position with no stop protection visible - naked short risk overnight"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Has trailing stop, slight gain from 250.59\u2192251.25 peak (+0.26%)"
+      },
+      {
+        "symbol": "NCI",
+        "status": "dying",
+        "note": "No movement from entry (10.8), no stop protection, dead capital"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Has trailing stop, the runner we wanted - needs to be sized bigger"
+      },
+      {
+        "symbol": "SOC",
+        "status": "at_risk",
+        "note": "No stop protection, small position, no movement"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "healthy",
+        "note": "Strong move! 16.3\u219217.24 peak (+5.77%) but NO TRAILING STOP despite gain"
+      },
+      {
+        "symbol": "TTD",
+        "status": "at_risk",
+        "note": "Has trailing stop but no movement from entry - flat"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Has trailing stop but no movement from entry - flat"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Good move! 12.0\u219212.40 (+3.3%) with trailing stop"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry, order PENDING - may not have filled"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry, order PENDING - may not have filled"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 11 positions but only 10 max allowed per risk tier",
+      "CRITICAL: AAL short position has no stop loss protection overnight",
+      "CRITICAL: TNGX up 5.77% but no trailing stop installed - unprotected gain",
+      "Portfolio concentration: 24% in dead/flat positions (NCI, SOC, TTD, TTDU)",
+      "Two pending orders (IOT, MRVL) may not have filled in extended hours - unclear status",
+      "Only $19.4K cash vs $24.7K equity = 78% deployed but in too many positions",
+      "Multiple positions without stops: NCI, SOC need protection",
+      "Heat at 8.3% suggests open risk but only 2 clear winners (TNGX, VG)"
+    ],
+    "what_working": [
+      "TNGX momentum: +5.77% - this is the pattern we want",
+      "VG momentum: +3.3% with proper trailing stop",
+      "Small-cap runners with volume (TNGX $16\u2192$17 is textbook)"
+    ],
+    "what_not_working": [
+      "Dead positions sitting flat (NCI, TTD, TTDU, SOC) - opportunity cost bleeding",
+      "Diversification for diversification's sake - 11 tiny positions vs concentrated bets",
+      "Mixed position management: some have stops, some don't",
+      "Extended hours entries without confirmation of fills"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772748397.091586
+  },
+  {
+    "market_assessment": "After-hours session (5:16 PM ET) with extended hours positions pending fill - market mixed regime with -0.96% index average, momentum plays show 7-40% gains suggesting volatile but tradeable conditions",
+    "position_health": [
+      {
+        "symbol": "PMTS",
+        "status": "healthy",
+        "note": "+40% runner, just entered at $17.54, no trailing stop yet - needs immediate protection"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "+37% momentum play, already protected with trailing stop, holding strong"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "+9.66% move from $12 entry, trailing stop active, peaked at $12.39"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "+7.85% but PENDING fill status in after-hours, needs confirmation"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "+3.15% but PENDING fill status in after-hours, needs confirmation"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Small gain, trailing stop active, stable position"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Flat, trailing stop active, stable"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Flat, trailing stop active, stable"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "at_risk",
+        "note": "CRITICAL MISS - this was the +32% runner mentioned in mission brief, we're flat at entry $9.865"
+      },
+      {
+        "symbol": "AAL",
+        "status": "dying",
+        "note": "SHORT position with NO trailing stop protection - exposed and unprotected"
+      }
+    ],
+    "risk_flags": [
+      "AAL short position (64 shares @ $11.64) has ZERO protection - naked short exposure",
+      "Three positions (IOT, MRVL, PMTS) show 'pending' order status in after-hours - execution risk",
+      "PDYN sitting at entry while it's a known +32% runner - we're missing the move",
+      "Portfolio is 10/10 positions (max capacity) with $19.4K cash sitting idle (78% cash)",
+      "Only $5,972 deployed vs $39.7K buying power = 15% capital utilization",
+      "Heat at 7.5% but open risk only $74.20 - extremely conservative positioning contradicts mission"
+    ],
+    "what_working": [
+      "PMTS (+40.54%) - social momentum + volume spike strategy crushing it",
+      "SOC (+37.41%) - already held, social momentum play working perfectly",
+      "VG (+9.66%) - trending social play with good follow-through",
+      "Extended hours trading capturing big moves (PMTS entered after-hours)"
+    ],
+    "what_not_working": [
+      "Position sizing - way too small, only $5,972 deployed vs $24.6K equity",
+      "Capital velocity - $19.4K sitting in cash doing NOTHING",
+      "PDYN entry - flat at cost while it's running +32%, timing or execution issue",
+      "Unprotected short (AAL) - violates core risk management principle"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "action_bias_notes": "CRITICAL: We have 78% cash ($19.4K) sitting dead while PMTS just delivered +40% and SOC +37%. Scanner shows multiple momentum candidates. Three pending orders need monitoring. AAL short needs immediate stop protection. Capital velocity is FAILING - we should be rotating winners into new runners IMMEDIATELY. The mission is right: dead capital = losing. Every scanner candidate is an opportunity we're missing while sitting on cash.",
+    "timestamp": 1772748996.907809
+  },
+  {
+    "market_assessment": "After-hours session (5:26 PM ET) with mixed market regime (-0.97% indexes), but momentum runners are RIPPING \u2014 PDYN +33.87%, PMTS +40.54%, SOC +37.41%, MRVL +7.85%.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "Short position in after-hours with no stop visible - risky overnight hold"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Has trailing stop, slight profit from 250.586 entry"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "EXTREMELY_HEALTHY",
+        "note": "Entry 9.865, now 9.96 - this is the +33.87% runner we're supposed to be riding hard. Has trailing stop but only 1% gain captured so far"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Entry 13.853, now 13.85 - flat but this was +37.41% today. Has trailing stop"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Has trailing stop, flat position"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Has trailing stop, flat position"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Entry 12.0, peak 12.3979 (+3.3%), now 12.26 - good runner with +9.66% day. Has trailing stop"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Entry 29.6, pending order status - NO TRAILING STOP SET YET"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Entry 81.56, now 84.22 (+3.3%) - STRONG +7.85% runner but pending order, NO TRAILING STOP YET"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Entry 17.54, now 17.6 - +40.54% MONSTER runner but pending order, NO TRAILING STOP SET"
+      }
+    ],
+    "risk_flags": [
+      "10/10 max positions = FULLY DEPLOYED - cannot add new runners without closing something",
+      "AAL short position has no visible stop protection in volatile after-hours",
+      "3 newest positions (IOT, MRVL, PMTS) show 'pending' order status with NO TRAILING STOPS - critical gap",
+      "79% of capital deployed ($19.5K of $24.6K equity) but heat_pct shows only 7.5% - accounting mismatch?",
+      "3 of top 5 scanner candidates (PDYN, PMTS, SOC) are ALREADY held - we're correctly positioned but missing execution on maximizing gains",
+      "PMTS entered at 17.54, now 17.6 on a +40.54% day - if this is after-hours, gaps down could hurt without stop protection"
+    ],
+    "what_working": [
+      "Social momentum scanner is CRUSHING IT - PDYN +33.87%, PMTS +40.54%, SOC +37.41% all flagged correctly",
+      "Position sizing appropriate (~$500-750 per position in COMPOUND tier)",
+      "We're in the RIGHT stocks - VG +9.66%, MRVL +7.85% also showing strength",
+      "Trailing stops on 7/10 positions providing downside protection"
+    ],
+    "what_not_working": [
+      "Order execution lag - 3 positions stuck in 'pending' status without trailing stops = unprotected risk",
+      "AAL short position - going short in momentum market is counter-strategy",
+      "Position entry timing - entered PDYN at 9.865 when it's now done most of +33.87% move, not capturing full runner",
+      "Max position constraint blocking new entries when PDYN/PMTS/SOC continue showing strength in scanner"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "HIGH - Three positions (IOT, MRVL, PMTS) lack trailing stop protection going into overnight session. AAL short needs review. Max positions blocking capital redeployment into fresh runners.",
+    "timestamp": 1772749622.2010398
+  },
+  {
+    "market_assessment": "Market closed (17:36 ET Thursday) - Extended hours active with mixed regime signals (avg -0.92% on indices), but clear momentum plays running in after-hours",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "Short position with no trailing stop protection - counter to momentum bias, exposed overnight"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Up +0.26%, trailing stop active, large position ($498) but protected"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "dying",
+        "note": "Flat at entry, trailing stop active but no movement - dead capital ($1,479)"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Monster +37% today, trailing stop active, still in scanner top 5 - winner"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Flat at entry, trailing stop active, small position ($748)"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Flat at entry, trailing stop active, small position ($743)"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Up +3.3% from entry, trailing stop active, climbing in after-hours - winner"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Pending order from 2+ hours ago, no trailing stop yet, extended hours entry - needs execution confirmation"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Pending order from 2+ hours ago, no trailing stop yet, extended hours entry - needs execution confirmation"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "healthy",
+        "note": "Just entered minutes ago at +40% momentum, pending order but fresh entry on massive volume spike (20x)"
+      }
+    ],
+    "risk_flags": [
+      "Heat at 7.5% with 10 positions - AT MAX POSITION COUNT",
+      "Three pending orders (IOT, MRVL, PMTS) without trailing stops - execution uncertainty",
+      "AAL short position counter to momentum strategy - philosophical conflict",
+      "PDYN dead capital $1,479 sitting flat - opportunity cost mounting",
+      "Only $19,454 cash but $39,729 buying power - PDT false (15 daytrades used but not flagged?)",
+      "Multiple 'carryover' positions from broker sync - unclear original strategy/thesis"
+    ],
+    "what_working": [
+      "Social momentum longs: SOC +37%, VG +3.3%, PMTS +40% entry",
+      "Volume spike plays: PMTS 20x volume, SOC 3.6x volume",
+      "Trailing stops on active positions providing protection",
+      "After-hours momentum continuation (VG, PMTS still running)"
+    ],
+    "what_not_working": [
+      "Flat entries going nowhere: PDYN, TTD, TTDU - capital velocity ZERO",
+      "Pending orders sitting unfilled for 2+ hours - execution lag",
+      "Short bias (AAL) - counter to momentum engine mandate"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772750234.5064478
+  },
+  {
+    "market_assessment": "After-hours session (5:47pm ET) with mixed regime (-0.92% index avg); momentum plays still active in extended hours with strong social sentiment driving volume.",
+    "position_health": [
+      {
+        "symbol": "AAL",
+        "status": "at_risk",
+        "note": "Short position with no trailing stop protection - needs immediate attention"
+      },
+      {
+        "symbol": "EXPE",
+        "status": "healthy",
+        "note": "Long with trailing stop active, slight gain from entry"
+      },
+      {
+        "symbol": "PDYN",
+        "status": "healthy",
+        "note": "Long with trailing stop, at entry - this was the missed +32% runner, now protected"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Long with trailing stop, at entry - strong +37% day move, protected"
+      },
+      {
+        "symbol": "TTD",
+        "status": "healthy",
+        "note": "Long with trailing stop, at entry"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Long with trailing stop, at entry"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Long with trailing stop, up +3.3% from entry (12.00\u219212.26), trail at 0.6%"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry PENDING - no trailing stop yet, needs confirmation"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry PENDING - no trailing stop yet, +3.3% move today"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Just entered PENDING - massive +40.5% runner, no trailing stop yet, extended hours risk"
+      }
+    ],
+    "risk_flags": [
+      "10 positions open = AT MAX CAPACITY - cannot add more until something closes",
+      "3 positions PENDING without trailing stops (IOT, MRVL, PMTS) = unprotected risk",
+      "AAL short position has NO trailing stop protection - naked short exposure",
+      "Extended hours trading on 3 new positions = gapping risk overnight",
+      "78% of capital deployed ($19.4K cash vs $24.7K equity) - highly concentrated",
+      "PMTS entered after +40% move - extreme chase risk but also extreme momentum"
+    ],
+    "what_working": [
+      "Social momentum plays with high sentiment (VG +9.66%, SOC +37.41%, PMTS +40.54%)",
+      "Volume spike + StockTwits trending combo identifying runners",
+      "Extended hours aggression capturing after-hours momentum",
+      "Trailing stops protecting winners (VG already building cushion)"
+    ],
+    "what_not_working": [
+      "Short AAL position without protection - goes against momentum bias",
+      "Pending orders without immediate trailing stop setup = execution gap risk",
+      "Max position count blocking new opportunities - need faster rotation"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772750847.5353549
   }
 ]

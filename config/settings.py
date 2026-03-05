@@ -102,5 +102,8 @@ XAI_API_KEY = _env("XAI_API_KEY", "")
 XAI_MODEL = _env("XAI_MODEL", "grok-4-fast-reasoning")
 PERPLEXITY_MODEL = _env("PERPLEXITY_MODEL", "sonar-pro")
 
+# ── Payload Capture (paper trading diagnostics) ───────────────────
+CAPTURE_ALPACA_PAYLOADS = _env("CAPTURE_ALPACA_PAYLOADS", "false").lower() in ("true", "1", "yes")
+
 # ── Notifications ─────────────────────────────────────────────────
 SLACK_WEBHOOK_URL = _env("SLACK_WEBHOOK_URL", "")
