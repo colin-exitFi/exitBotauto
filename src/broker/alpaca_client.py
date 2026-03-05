@@ -203,6 +203,24 @@ class AlpacaClient:
             logger.error(f"Limit buy failed ({symbol}): {e}")
             return None
 
+    def replace_order(self, order_id: str, limit_price: float) -> Optional[Dict]:
+        """Replace an open limit order with a new limit price."""
+        self._ensure_init()
+        try:
+            import requests
+            resp = requests.patch(
+                f"{self._base_url}/v2/orders/{order_id}",
+                headers=self._rest_headers(),
+                json={"limit_price": str(round(limit_price, 2))},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            logger.info(f"Order replaced: {order_id} → new limit ${limit_price:.2f}")
+            return data
+        except Exception as e:
+            logger.error(f"Replace order failed ({order_id}): {e}")
+            return None
+
     def cancel_order(self, order_id: str) -> bool:
         """Cancel an open order by ID."""
         self._ensure_init()
@@ -546,6 +564,21 @@ class AlpacaClient:
                 pass
         
         return self.place_trailing_stop(symbol, qty, trail_percent)
+
+    def get_latest_price(self, symbol: str) -> float:
+        """Get latest trade price for a symbol."""
+        self._ensure_init()
+        try:
+            import requests
+            resp = requests.get(
+                f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest",
+                headers=self._rest_headers(),
+            )
+            resp.raise_for_status()
+            return float(resp.json().get("trade", {}).get("p", 0))
+        except Exception as e:
+            logger.debug(f"Latest price failed for {symbol}: {e}")
+            return 0
 
     def _rest_headers(self) -> Dict:
         """REST API headers for direct requests."""

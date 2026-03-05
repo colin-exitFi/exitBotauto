@@ -340,6 +340,12 @@ class TradingBot:
                     except Exception as e:
                         logger.error(f"Scan error: {e}")
 
+                # ── MONITOR pending orders (adjust stale limits) ──
+                try:
+                    await self._monitor_pending_orders()
+                except Exception as e:
+                    logger.debug(f"Pending order monitor error: {e}")
+
                 # ── MONITOR positions ──────────────────────────────
                 try:
                     await self._monitor_positions()
@@ -854,6 +860,87 @@ class TradingBot:
                     pos = await self.entry_manager.enter_position(symbol, sentiment_data)
                 if pos:
                     positions = self.entry_manager.get_positions()
+
+    async def _monitor_pending_orders(self):
+        """Monitor unfilled limit orders and adjust price if stale."""
+        try:
+            open_orders = await asyncio.get_event_loop().run_in_executor(
+                None, self.alpaca_client.get_orders
+            )
+        except Exception as e:
+            logger.debug(f"Pending order check failed: {e}")
+            return
+
+        for order in open_orders:
+            if order.get("type") != "limit" or order.get("side") != "buy":
+                continue
+            if order.get("status") not in ("new", "accepted"):
+                continue
+
+            symbol = order.get("symbol", "")
+            order_id = order.get("id", "")
+            limit_price = float(order.get("limit_price", 0))
+            created = order.get("created_at", "")
+
+            # Check age — only adjust after 2 minutes
+            try:
+                from datetime import datetime, timezone
+                if "T" in str(created):
+                    created_dt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                    age_seconds = (datetime.now(timezone.utc) - created_dt).total_seconds()
+                else:
+                    age_seconds = 0
+            except Exception:
+                age_seconds = 0
+
+            if age_seconds < 120:
+                continue  # Give it 2 minutes to fill
+
+            # Get current price
+            try:
+                snapshot = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self.alpaca_client.get_latest_price(symbol)
+                )
+                current_price = snapshot if isinstance(snapshot, (int, float)) else 0
+            except Exception:
+                continue
+
+            if current_price <= 0:
+                continue
+
+            # If price moved more than 0.3% from our limit, adjust
+            price_diff_pct = abs(current_price - limit_price) / limit_price * 100
+            if price_diff_pct > 0.3:
+                # Set new limit slightly above current ask (0.15% above for buys)
+                new_limit = round(current_price * 1.0015, 2)
+                logger.info(f"📝 Adjusting stale order for {symbol}: ${limit_price:.2f} → ${new_limit:.2f} (price moved {price_diff_pct:.1f}%, age={int(age_seconds)}s)")
+                log_activity("trade", f"📝 {symbol}: limit ${limit_price:.2f} → ${new_limit:.2f} (stale {int(age_seconds)}s)")
+
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self.alpaca_client.replace_order(order_id, new_limit)
+                )
+                if result:
+                    # Update our tracked position entry price
+                    if symbol in self.entry_manager.positions:
+                        self.entry_manager.positions[symbol]["entry_price"] = new_limit
+                else:
+                    # If replace fails (e.g. order already filled), cancel and let next cycle re-enter
+                    logger.warning(f"Replace failed for {symbol} — cancelling stale order")
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: self.alpaca_client.cancel_order(order_id)
+                    )
+                    if symbol in self.entry_manager.positions:
+                        self.entry_manager.remove_position(symbol)
+
+            elif age_seconds > 600:
+                # 10 minutes stale and price hasn't moved much — cancel, thesis may be dead
+                logger.info(f"⏰ Cancelling stale order for {symbol} — {int(age_seconds)}s old, price near limit but no fill")
+                log_activity("trade", f"⏰ {symbol}: cancelled stale order after {int(age_seconds//60)}min")
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self.alpaca_client.cancel_order(order_id)
+                )
+                if symbol in self.entry_manager.positions:
+                    self.entry_manager.remove_position(symbol)
 
     async def _monitor_positions(self):
         """
