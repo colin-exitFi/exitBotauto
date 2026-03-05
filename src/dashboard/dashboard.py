@@ -249,7 +249,7 @@ async def get_pnl():
 
     # Account equity from Alpaca
     equity = 1000.0
-    starting = pnl.get("starting_equity", 1000.0)
+    starting = pnl.get("starting_equity", 25000.0)
     peak = pnl.get("peak_equity", 1000.0)
     if _bot.alpaca_client:
         try:
