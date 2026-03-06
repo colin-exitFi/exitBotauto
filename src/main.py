@@ -195,6 +195,20 @@ class TradingBot:
         # Consensus engine (legacy — kept for fallback/dashboard compat)
         self.consensus_engine = ConsensusEngine()
 
+        # Options engine
+        from src.options.options_engine import OptionsEngine
+        self.options_engine = None
+        options_enabled = getattr(settings, "OPTIONS_ENABLED", False)
+        if options_enabled and self.alpaca_client:
+            self.options_engine = OptionsEngine(
+                api_key=settings.ALPACA_API_KEY,
+                secret_key=settings.ALPACA_SECRET_KEY,
+                base_url=getattr(settings, "ALPACA_BASE_URL", "https://paper-api.alpaca.markets"),
+            )
+            logger.info("🎯 Options trading ENABLED")
+        else:
+            logger.info("Options trading disabled (set OPTIONS_ENABLED=true to enable)")
+
         # Specialized Agent Orchestrator (new architecture)
         self.orchestrator = Orchestrator(
             broker=self.alpaca_client,
@@ -1041,6 +1055,36 @@ class TradingBot:
             logger.info(f"🔑 {symbol} can_enter={can} (check_sent={check_sentiment:.2f})")
             if can:
                 logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
+                
+                # ── OPTIONS TRADE (if enabled) ──
+                if self.options_engine:
+                    confidence = sentiment_data.get("consensus_confidence", 0)
+                    # High confidence trades (80%+) → options for leverage
+                    # Lower confidence → shares (safer)
+                    if confidence >= 80:
+                        options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50))
+                    elif confidence >= 70:
+                        options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)) * 0.5
+                    else:
+                        options_pct = 0  # Shares only for low confidence
+                    
+                    if options_pct > 0:
+                        tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
+                        equity = self.risk_manager.equity if self.risk_manager else 25000
+                        total_budget = equity * tier.get("size_pct", 2.5) / 100
+                        options_budget = total_budget * (options_pct / 100)
+                        
+                        opt_pos = await self.options_engine.execute_option_trade(
+                            symbol=symbol,
+                            price=candidate.get("price", 0),
+                            direction=direction,
+                            budget=options_budget,
+                            sentiment_data=sentiment_data,
+                        )
+                        if opt_pos:
+                            log_activity("trade", f"🎯 OPTIONS: {opt_pos['qty']}x {opt_pos['contract_symbol']} ({opt_pos['option_type']}) @ ${opt_pos['entry_premium']:.2f}")
+
+                # ── SHARES TRADE (always, reduced size if options took some) ──
                 if direction == "SHORT":
                     pos = await self.entry_manager.enter_short(symbol, sentiment_data)
                 else:

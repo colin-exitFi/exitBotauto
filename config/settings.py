@@ -107,3 +107,8 @@ CAPTURE_ALPACA_PAYLOADS = _env("CAPTURE_ALPACA_PAYLOADS", "false").lower() in ("
 
 # ── Notifications ─────────────────────────────────────────────────
 SLACK_WEBHOOK_URL = _env("SLACK_WEBHOOK_URL", "")
+
+# Options Trading
+OPTIONS_ENABLED = _env("OPTIONS_ENABLED", "false").lower() in ("true", "1", "yes")
+OPTIONS_ALLOCATION_PCT = float(_env("OPTIONS_ALLOCATION_PCT", "50"))  # % of position size to allocate to options
+
