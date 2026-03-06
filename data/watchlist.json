@@ -1,44 +1,14 @@
 {
   "items": [
     {
-      "ticker": "C",
-      "conviction": 0.6000000000000001,
-      "side": "long",
-      "reason": "2 congress members buying",
-      "sources": "congress",
-      "added_at": 1772679842.524435,
-      "last_refreshed": 1772681220.796344,
-      "expires_at": 1772940420.796344
-    },
-    {
       "ticker": "AVGO",
       "conviction": 0.92332,
       "side": "long",
       "reason": "1 congress members buying | StockTwits #29 trending | Reports after close today \u2014 potential gap tomorrow | StockTwits #28 trending | Up +1.18%, broad semiconductor interest[4]",
       "sources": "congress + stocktwits + earnings + perplexity",
       "added_at": 1772679842.52475,
-      "last_refreshed": 1772681224.671718,
-      "expires_at": 1772854024.671718
-    },
-    {
-      "ticker": "BULL",
-      "conviction": 0.947,
-      "side": "long",
-      "reason": "StockTwits #30 trending | Reports after close today \u2014 potential gap tomorrow",
-      "sources": "stocktwits + earnings",
-      "added_at": 1772679846.469482,
-      "last_refreshed": 1772681224.6656342,
-      "expires_at": 1772767624.6656342
-    },
-    {
-      "ticker": "HOOD",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #28 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.4701838,
-      "last_refreshed": 1772679846.4701838,
-      "expires_at": 1772766246.4701838
+      "last_refreshed": 1772766814.0390248,
+      "expires_at": 1773026014.0390248
     },
     {
       "ticker": "TTD",
@@ -51,126 +21,6 @@
       "expires_at": 1772767624.6660638
     },
     {
-      "ticker": "RGTI",
-      "conviction": 0.5700000000000001,
-      "side": "short",
-      "reason": "StockTwits #26 trending | Reports after close today \u2014 potential gap tomorrow | StockTwits #27 trending",
-      "sources": "stocktwits + earnings",
-      "added_at": 1772679846.4708412,
-      "last_refreshed": 1772681224.666528,
-      "expires_at": 1772767624.666528
-    },
-    {
-      "ticker": "IREN",
-      "conviction": 0.8569000000000001,
-      "side": "long",
-      "reason": "StockTwits #25 trending | StockTwits #24 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.471128,
-      "last_refreshed": 1772681224.6685472,
-      "expires_at": 1772767624.6685472
-    },
-    {
-      "ticker": "BABA",
-      "conviction": 0.41334000000000004,
-      "side": "long",
-      "reason": "StockTwits #24 trending | StockTwits #26 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.472734,
-      "last_refreshed": 1772681224.666752,
-      "expires_at": 1772767624.666752
-    },
-    {
-      "ticker": "GLXY",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #22 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.472984,
-      "last_refreshed": 1772679846.472984,
-      "expires_at": 1772766246.472984
-    },
-    {
-      "ticker": "UAMY",
-      "conviction": 0.9,
-      "side": "long",
-      "reason": "StockTwits #20 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.473231,
-      "last_refreshed": 1772679846.473231,
-      "expires_at": 1772766246.473231
-    },
-    {
-      "ticker": "VEEV",
-      "conviction": 0.67,
-      "side": "long",
-      "reason": "StockTwits #17 trending | Reports after close today \u2014 potential gap tomorrow",
-      "sources": "stocktwits + earnings",
-      "added_at": 1772679846.474077,
-      "last_refreshed": 1772681215.225713,
-      "expires_at": 1772940415.225713
-    },
-    {
-      "ticker": "SCO",
-      "conviction": 0.73224,
-      "side": "long",
-      "reason": "StockTwits #16 trending | StockTwits #21 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.474484,
-      "last_refreshed": 1772681224.669316,
-      "expires_at": 1772767624.669316
-    },
-    {
-      "ticker": "AEO",
-      "conviction": 0.705,
-      "side": "long",
-      "reason": "StockTwits #15 trending | Reports after close today \u2014 potential gap tomorrow",
-      "sources": "stocktwits + earnings",
-      "added_at": 1772679846.474863,
-      "last_refreshed": 1772681215.226975,
-      "expires_at": 1772940415.226975
-    },
-    {
-      "ticker": "COST",
-      "conviction": 0.84,
-      "side": "long",
-      "reason": "StockTwits #14 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.475165,
-      "last_refreshed": 1772679846.475165,
-      "expires_at": 1772766246.475165
-    },
-    {
-      "ticker": "MSTR",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "Top gainer at +10.37%, crypto exposure driving momentum.[2] | Up +10.37%, leading crypto-related gains amid Bitcoin exposure[4]",
-      "sources": "perplexity",
-      "added_at": 1772679846.475429,
-      "last_refreshed": 1772681224.670538,
-      "expires_at": 1772854024.670538
-    },
-    {
-      "ticker": "MARA",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "Strong +7.27% move, tied to crypto sector surge.[2]",
-      "sources": "perplexity",
-      "added_at": 1772679846.475681,
-      "last_refreshed": 1772679846.475681,
-      "expires_at": 1772852646.475681
-    },
-    {
-      "ticker": "AMAT",
-      "conviction": 0.9,
-      "side": "long",
-      "reason": "Semiconductor leader up +1.83%, sector rotation interest.[2] | Up +1.83%, chip equipment strength tied to tech rally[4]",
-      "sources": "perplexity",
-      "added_at": 1772679846.475928,
-      "last_refreshed": 1772681224.671411,
-      "expires_at": 1772854024.671411
-    },
-    {
       "ticker": "MU",
       "conviction": 0.98,
       "side": "long",
@@ -179,16 +29,6 @@
       "added_at": 1772679846.476177,
       "last_refreshed": 1772681224.671028,
       "expires_at": 1772854024.671028
-    },
-    {
-      "ticker": "VELO",
-      "conviction": 0.834,
-      "side": "long",
-      "reason": "StockTwits #23 trending",
-      "sources": "stocktwits",
-      "added_at": 1772681224.668781,
-      "last_refreshed": 1772681224.668781,
-      "expires_at": 1772767624.668781
     },
     {
       "ticker": "AMPX",
@@ -201,16 +41,6 @@
       "expires_at": 1772767624.669065
     },
     {
-      "ticker": "TNXP",
-      "conviction": 0.845,
-      "side": "long",
-      "reason": "StockTwits #18 trending",
-      "sources": "stocktwits",
-      "added_at": 1772681224.669801,
-      "last_refreshed": 1772681224.669801,
-      "expires_at": 1772767624.669801
-    },
-    {
       "ticker": "CEPT",
       "conviction": 0.87,
       "side": "long",
@@ -221,16 +51,6 @@
       "expires_at": 1772767624.670055
     },
     {
-      "ticker": "VSTM",
-      "conviction": 0.807,
-      "side": "long",
-      "reason": "StockTwits #16 trending",
-      "sources": "stocktwits",
-      "added_at": 1772681224.670295,
-      "last_refreshed": 1772681224.670295,
-      "expires_at": 1772767624.670295
-    },
-    {
       "ticker": "NVDA",
       "conviction": 0.9,
       "side": "long",
@@ -239,8 +59,188 @@
       "added_at": 1772681224.670775,
       "last_refreshed": 1772681224.670775,
       "expires_at": 1772854024.670775
+    },
+    {
+      "ticker": "JD",
+      "conviction": 1.0,
+      "side": "long",
+      "reason": "StockTwits #30 trending",
+      "sources": "stocktwits",
+      "added_at": 1772766466.785846,
+      "last_refreshed": 1772766817.522568,
+      "expires_at": 1772853217.522568
+    },
+    {
+      "ticker": "AKA",
+      "conviction": 0.9400000000000001,
+      "side": "long",
+      "reason": "StockTwits #22 trending | Reports after close today \u2014 potential gap tomorrow | StockTwits #24 trending",
+      "sources": "stocktwits + earnings",
+      "added_at": 1772766466.787485,
+      "last_refreshed": 1772766817.524449,
+      "expires_at": 1772853217.524449
+    },
+    {
+      "ticker": "OPRX",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "StockTwits #21 trending | Earnings beat: +17.2% AH gap up | Reports after close today \u2014 potential gap tomorrow | StockTwits #20 trending",
+      "sources": "stocktwits + earnings_reaction",
+      "added_at": 1772766466.787749,
+      "last_refreshed": 1772766832.79266,
+      "expires_at": 1773026032.79266
+    },
+    {
+      "ticker": "PTRN",
+      "conviction": 0.858,
+      "side": "long",
+      "reason": "StockTwits #20 trending | Reports after close today \u2014 potential gap tomorrow",
+      "sources": "stocktwits + earnings",
+      "added_at": 1772766466.788102,
+      "last_refreshed": 1772766809.768563,
+      "expires_at": 1773026009.768563
+    },
+    {
+      "ticker": "HGRAF",
+      "conviction": 0.87,
+      "side": "long",
+      "reason": "StockTwits #17 trending | StockTwits #13 trending",
+      "sources": "stocktwits",
+      "added_at": 1772766466.788759,
+      "last_refreshed": 1772766817.5267258,
+      "expires_at": 1772853217.5267258
+    },
+    {
+      "ticker": "MRVL",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "Earnings beat: +7.8% AH gap up | Reports after close today \u2014 potential gap tomorrow | StockTwits #29 trending",
+      "sources": "earnings_reaction + stocktwits",
+      "added_at": 1772766467.574925,
+      "last_refreshed": 1772766818.3174531,
+      "expires_at": 1773026018.3174531
+    },
+    {
+      "ticker": "RTO",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "Earnings beat: +11.2% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766468.5629609,
+      "last_refreshed": 1772766819.3223958,
+      "expires_at": 1773026019.3223958
+    },
+    {
+      "ticker": "BAK",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +16.2% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766473.307654,
+      "last_refreshed": 1772766821.932435,
+      "expires_at": 1773026021.932435
+    },
+    {
+      "ticker": "TNGX",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +36.6% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766473.580138,
+      "last_refreshed": 1772766822.2060878,
+      "expires_at": 1773026022.2060878
+    },
+    {
+      "ticker": "WLY",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +14.0% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766473.716811,
+      "last_refreshed": 1772766822.344363,
+      "expires_at": 1773026022.344363
+    },
+    {
+      "ticker": "PMTS",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +40.5% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766489.705566,
+      "last_refreshed": 1772766833.1076438,
+      "expires_at": 1773026033.1076438
+    },
+    {
+      "ticker": "HMR",
+      "conviction": 0.9603,
+      "side": "long",
+      "reason": "Earnings beat: +8.7% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766493.8793962,
+      "last_refreshed": 1772766836.7261791,
+      "expires_at": 1773026036.7261791
+    },
+    {
+      "ticker": "RBNE",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +13.3% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766498.597803,
+      "last_refreshed": 1772766839.449874,
+      "expires_at": 1773026039.449874
+    },
+    {
+      "ticker": "NVNO",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +16.6% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766498.782183,
+      "last_refreshed": 1772766839.58767,
+      "expires_at": 1773026039.58767
+    },
+    {
+      "ticker": "NMAX",
+      "conviction": 0.9317000000000001,
+      "side": "long",
+      "reason": "StockTwits #27 trending | Earnings beat: +7.1% AH gap up",
+      "sources": "stocktwits + earnings_reaction",
+      "added_at": 1772766817.5240839,
+      "last_refreshed": 1772766824.005599,
+      "expires_at": 1773026024.005599
+    },
+    {
+      "ticker": "BVS",
+      "conviction": 0.9273,
+      "side": "long",
+      "reason": "Earnings beat: +7.1% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766825.20885,
+      "last_refreshed": 1772766825.20885,
+      "expires_at": 1773026025.20885
+    },
+    {
+      "ticker": "MKTW",
+      "conviction": 0.924,
+      "side": "long",
+      "reason": "Earnings beat: +7.0% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766830.770017,
+      "last_refreshed": 1772766830.770017,
+      "expires_at": 1773026030.770017
+    },
+    {
+      "ticker": "RAIN",
+      "conviction": 0.9262,
+      "side": "long",
+      "reason": "Earnings beat: +7.1% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772766838.2943501,
+      "last_refreshed": 1772766838.2943501,
+      "expires_at": 1773026038.2943501
     }
   ],
-  "updated_at": "2026-03-05T00:24:19.798377",
+  "updated_at": "2026-03-05T21:14:00.218386",
   "count": 24
 }

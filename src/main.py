@@ -50,6 +50,7 @@ from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
 from src.data.trade_schema import normalize_trade_record
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
+from src.options.options_monitor import OptionsMonitor
 
 
 class TradingBot:
@@ -71,6 +72,7 @@ class TradingBot:
         self.entry_manager: EntryManager = None
         self.exit_manager: ExitManager = None
         self.risk_manager: RiskManager = None
+        self.options_monitor: OptionsMonitor = None
 
         # AI layers
         self.observer: Observer = None
@@ -198,6 +200,7 @@ class TradingBot:
         # Options engine
         from src.options.options_engine import OptionsEngine
         self.options_engine = None
+        self.options_monitor = None
         options_enabled = getattr(settings, "OPTIONS_ENABLED", False)
         if options_enabled and self.alpaca_client:
             self.options_engine = OptionsEngine(
@@ -205,6 +208,7 @@ class TradingBot:
                 secret_key=settings.ALPACA_SECRET_KEY,
                 base_url=getattr(settings, "ALPACA_BASE_URL", "https://paper-api.alpaca.markets"),
             )
+            self.options_monitor = OptionsMonitor(self)
             logger.info("🎯 Options trading ENABLED")
         else:
             logger.info("Options trading disabled (set OPTIONS_ENABLED=true to enable)")
@@ -240,8 +244,31 @@ class TradingBot:
                     self.entry_manager.positions[sym] = pos
             logger.info(f"📦 Merged {len(saved_positions)} persisted positions")
 
+        # Options positions: restore + reconcile with broker snapshot
+        if self.options_engine:
+            saved_options = persistence.load_options_positions()
+            if saved_options:
+                self.options_engine.load_positions(saved_options)
+                logger.info(f"📦 Restored {len(saved_options)} options positions")
+            try:
+                recon = await asyncio.get_event_loop().run_in_executor(
+                    None, self.options_engine.reconcile_with_broker
+                )
+                if recon.get("removed", 0) or recon.get("added", 0):
+                    logger.info(
+                        f"🔄 Options reconcile: removed={recon.get('removed', 0)} added={recon.get('added', 0)}"
+                    )
+            except Exception as e:
+                logger.debug(f"Options reconcile failed: {e}")
+            if self.risk_manager:
+                self.risk_manager.update_options_exposure(self.options_engine.get_options_positions())
+
         # P&L state
         self.pnl_state = persistence.load_pnl_state()
+        self.pnl_state.setdefault("options_total_realized_pnl", 0.0)
+        self.pnl_state.setdefault("options_total_trades", 0)
+        self.pnl_state.setdefault("options_winning_trades", 0)
+        self.pnl_state.setdefault("options_losing_trades", 0)
         from datetime import datetime
         today = datetime.now().strftime("%Y-%m-%d")
         if self.pnl_state.get("today_date") != today:
@@ -286,6 +313,7 @@ class TradingBot:
 
         # Launch AI layers as background tasks
         ai_task = asyncio.create_task(self._ai_loop())
+        options_task = asyncio.create_task(self._options_monitor_loop()) if self.options_engine else None
 
         # Start Exit Agent monitoring loop
         await self.orchestrator.start_exit_agent()
@@ -305,6 +333,7 @@ class TradingBot:
         try:
             while self.running:
                 now = time.time()
+                session_type = "regular"
 
                 # Sync equity from Alpaca every 60s
                 if now - last_equity_sync >= 60 and self.alpaca_client:
@@ -315,6 +344,8 @@ class TradingBot:
                         # Update open risk
                         positions = self.entry_manager.get_positions() if self.entry_manager else []
                         self.risk_manager.update_open_risk(positions)
+                        if self.options_engine:
+                            self.risk_manager.update_options_exposure(self.options_engine.get_options_positions())
                     except Exception as e:
                         logger.debug(f"Equity sync error: {e}")
 
@@ -327,6 +358,7 @@ class TradingBot:
                     et = dt.now(pytz.timezone('US/Eastern'))
                     extended_hours = (4 <= et.hour < 9) or (et.hour == 9 and et.minute < 30) or (16 <= et.hour < 21)
                     if not extended_hours:
+                        session_type = "overnight"
                         # OVERNIGHT STRATEGY SESSION — formulate next day's plan
                         # But STILL monitor positions for protection
                         positions = self.entry_manager.get_positions()
@@ -336,9 +368,11 @@ class TradingBot:
                             except Exception as e:
                                 logger.debug(f"Overnight monitor error: {e}")
                         await self._overnight_session(et)
-                        await asyncio.sleep(300)  # 5 min between overnight cycles
+                        overnight_sleep = max(60, int(getattr(settings, "SCAN_INTERVAL_OVERNIGHT_SECONDS", 600)))
+                        await asyncio.sleep(overnight_sleep)
                         continue
                     # Extended hours: scan AND trade (earnings, FDA, filings drop in AH/PM)
+                    session_type = "extended"
                     logger.debug(f"📡 Extended hours active ({et.strftime('%H:%M')} ET) — scanning + trading")
 
                 if self.paused:
@@ -349,6 +383,8 @@ class TradingBot:
                 if now - last_state_save >= 30:
                     last_state_save = now
                     persistence.save_positions(self.entry_manager.positions)
+                    if self.options_engine:
+                        persistence.save_options_positions(self.options_engine.positions)
                     persistence.save_ai_state(self.ai_layers)
                     persistence.save_pnl_state(self.pnl_state)
 
@@ -373,18 +409,18 @@ class TradingBot:
 
                         raw_regime = self.scanner.get_last_market_regime() if self.scanner else "mixed"
                         effective_regime = self._smooth_scan_regime(raw_regime)
-                        new_scan_interval = self._determine_scan_interval(effective_regime)
+                        new_scan_interval = self._determine_scan_interval(effective_regime, session=session_type)
                         if (
                             raw_regime != self.scan_regime_raw
                             or effective_regime != self.scan_regime
                             or new_scan_interval != scan_interval
                         ):
                             logger.info(
-                                f"⏱️ Adaptive scan cadence: raw={raw_regime}, regime={effective_regime}, interval={new_scan_interval}s"
+                                f"⏱️ Adaptive scan cadence: session={session_type}, raw={raw_regime}, regime={effective_regime}, interval={new_scan_interval}s"
                             )
                             log_activity(
                                 "scan",
-                                f"Adaptive cadence: raw={raw_regime}, regime={effective_regime}, interval={new_scan_interval}s",
+                                f"Adaptive cadence: session={session_type}, raw={raw_regime}, regime={effective_regime}, interval={new_scan_interval}s",
                             )
                         self.scan_regime_raw = raw_regime
                         self.scan_regime = effective_regime
@@ -432,6 +468,8 @@ class TradingBot:
             raise
         finally:
             ai_task.cancel()
+            if options_task:
+                options_task.cancel()
             await self.shutdown()
 
     async def _overnight_session(self, et):
@@ -873,39 +911,31 @@ class TradingBot:
         return derive_strategy_tag(candidate, direction)
 
     @staticmethod
-    def _determine_scan_interval(self, regime: str) -> int:
+    def _determine_scan_interval(regime: str, session: str = "regular") -> int:
         """
-        Adaptive scan cadence:
-          market hours + high-vol -> fast scans (60s)
-          market hours + choppy   -> slow scans (300s)
-          extended hours (4-9:30 AM, 4-8 PM ET) -> 300s
-          overnight (8 PM - 4 AM ET) -> 600s
+        Adaptive scan cadence by regime:
+          risk_on / risk_off -> fast
+          choppy             -> slow
+          mixed              -> baseline
         """
-        from datetime import datetime
-        try:
-            import zoneinfo
-            et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
-        except Exception:
-            et_hour = 12
-
-        # Overnight: minimal scanning (thesis building only)
-        if et_hour >= 20 or et_hour < 4:
-            return 600  # 10 min
-
-        # Extended hours: slow scanning
-        if et_hour < 9 or (et_hour == 9 and datetime.now(zoneinfo.ZoneInfo("US/Eastern")).minute < 30) or et_hour >= 16:
-            return 300  # 5 min
-
-        # Market hours: adaptive by regime
         fast = max(15, int(getattr(settings, "SCAN_INTERVAL_FAST_SECONDS", 60)))
         slow = max(fast, int(getattr(settings, "SCAN_INTERVAL_SLOW_SECONDS", 300)))
         baseline = max(fast, int(settings.SCAN_INTERVAL_SECONDS))
 
+        interval = baseline
         if regime in ("risk_on", "risk_off"):
-            return fast
-        if regime == "choppy":
-            return slow
-        return baseline
+            interval = fast
+        elif regime == "choppy":
+            interval = slow
+
+        session_name = (session or "regular").lower()
+        if session_name == "extended":
+            extended_floor = max(fast, int(getattr(settings, "SCAN_INTERVAL_EXTENDED_SECONDS", 300)))
+            return max(interval, extended_floor)
+        if session_name == "overnight":
+            overnight_floor = max(fast, int(getattr(settings, "SCAN_INTERVAL_OVERNIGHT_SECONDS", 600)))
+            return max(interval, overnight_floor)
+        return interval
 
     def _smooth_scan_regime(self, raw_regime: str) -> str:
         """
@@ -1048,6 +1078,7 @@ class TradingBot:
             sentiment_data.setdefault("provider_used", "")
             sentiment_data.setdefault("consensus_confidence", 0)
             sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
+            sentiment_data.setdefault("share_notional_multiplier", 1.0)
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -sentiment_score if direction == "SHORT" else sentiment_score
@@ -1055,9 +1086,12 @@ class TradingBot:
             logger.info(f"🔑 {symbol} can_enter={can} (check_sent={check_sentiment:.2f})")
             if can:
                 logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
-                
+
                 # ── OPTIONS TRADE (if enabled) ──
-                if self.options_engine:
+                options_budget = 0.0
+                options_pct = 0.0
+                options_engine = getattr(self, "options_engine", None)
+                if options_engine:
                     confidence = sentiment_data.get("consensus_confidence", 0)
                     # High confidence trades (80%+) → options for leverage
                     # Lower confidence → shares (safer)
@@ -1067,22 +1101,46 @@ class TradingBot:
                         options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)) * 0.5
                     else:
                         options_pct = 0  # Shares only for low confidence
-                    
+
                     if options_pct > 0:
                         tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
                         equity = self.risk_manager.equity if self.risk_manager else 25000
                         total_budget = equity * tier.get("size_pct", 2.5) / 100
                         options_budget = total_budget * (options_pct / 100)
-                        
-                        opt_pos = await self.options_engine.execute_option_trade(
-                            symbol=symbol,
-                            price=candidate.get("price", 0),
-                            direction=direction,
-                            budget=options_budget,
-                            sentiment_data=sentiment_data,
-                        )
-                        if opt_pos:
-                            log_activity("trade", f"🎯 OPTIONS: {opt_pos['qty']}x {opt_pos['contract_symbol']} ({opt_pos['option_type']}) @ ${opt_pos['entry_premium']:.2f}")
+
+                        can_open_options = True
+                        if self.risk_manager:
+                            can_open_options = self.risk_manager.can_open_options(options_budget)
+                        if can_open_options:
+                            sentiment_data["change_pct"] = candidate.get("change_pct", 0)
+                            sentiment_data["volume_spike"] = candidate.get("volume_spike", 1.0)
+                            opt_pos = await options_engine.execute_option_trade(
+                                symbol=symbol,
+                                price=candidate.get("price", 0),
+                                direction=direction,
+                                budget=options_budget,
+                                sentiment_data=sentiment_data,
+                            )
+                            if opt_pos:
+                                options_cost = float(opt_pos.get("total_cost", 0) or 0)
+                                share_mult = 1.0
+                                if total_budget > 0:
+                                    share_mult = max(0.0, 1.0 - (options_cost / total_budget))
+                                sentiment_data["share_notional_multiplier"] = share_mult
+                                sentiment_data["options_budget_used"] = options_cost
+                                if self.risk_manager:
+                                    self.risk_manager.update_options_exposure(options_engine.get_options_positions())
+                                log_activity(
+                                    "options",
+                                    f"🎯 OPTIONS ENTRY: {opt_pos['qty']}x {opt_pos['contract_symbol']} @ ${opt_pos['entry_premium']:.2f}",
+                                )
+                            else:
+                                sentiment_data["share_notional_multiplier"] = 1.0
+                        else:
+                            log_activity(
+                                "options",
+                                f"⛔ OPTIONS BLOCKED: {symbol} would exceed portfolio premium cap",
+                            )
 
                 # ── SHARES TRADE (always, reduced size if options took some) ──
                 if direction == "SHORT":
@@ -1184,9 +1242,10 @@ class TradingBot:
 
         pnl = float(trade_record.get("pnl", 0))
         symbol = trade_record.get("symbol", "")
+        asset_type = str(trade_record.get("asset_type", "equity") or "equity").lower()
 
         trade_history.record_trade(trade_record)
-        if self.entry_manager and symbol:
+        if self.entry_manager and symbol and asset_type != "option":
             self.entry_manager.remove_position(symbol)
         if self.risk_manager:
             self.risk_manager.record_trade(trade_record)
@@ -1201,8 +1260,21 @@ class TradingBot:
         self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
         self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
 
+        if asset_type == "option":
+            self.pnl_state["options_total_realized_pnl"] = self.pnl_state.get("options_total_realized_pnl", 0) + pnl
+            self.pnl_state["options_total_trades"] = self.pnl_state.get("options_total_trades", 0) + 1
+            if pnl >= 0:
+                self.pnl_state["options_winning_trades"] = self.pnl_state.get("options_winning_trades", 0) + 1
+            else:
+                self.pnl_state["options_losing_trades"] = self.pnl_state.get("options_losing_trades", 0) + 1
+
         persistence.save_pnl_state(self.pnl_state)
         persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
+        options_engine = getattr(self, "options_engine", None)
+        if options_engine:
+            persistence.save_options_positions(options_engine.positions)
+            if self.risk_manager:
+                self.risk_manager.update_options_exposure(options_engine.get_options_positions())
         persistence.save_trades([trade_record])
 
     async def _monitor_positions(self):
@@ -1324,6 +1396,7 @@ class TradingBot:
                         emoji = "✅" if pnl >= 0 else "❌"
                         logger.info(f"{emoji} TRAILING STOP EXIT: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
                         log_activity("trade", f"{emoji} {symbol} stopped out: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                        await self._close_paired_options(symbol, reason="underlying_trailing_stop")
                     finally:
                         pos.pop("_exit_recording", None)
                     continue
@@ -1418,8 +1491,8 @@ class TradingBot:
                 return
 
         # Queue for async evaluation (can't await from sync callback)
-        if not hasattr(self, '_breakout_queue'):
-            self._breakout_queue = asyncio.Queue()
+        if not hasattr(self, "_breakout_queue"):
+            self._breakout_queue = asyncio.Queue(maxsize=20)
         candidate = {
             "symbol": symbol,
             "price": price,
@@ -1482,8 +1555,50 @@ class TradingBot:
             emoji = "✅" if pnl >= 0 else "❌"
             logger.info(f"{emoji} WS TRAILING STOP: {symbol} @ ${fill_price:.2f} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
             log_activity("trade", f"{emoji} {symbol} stopped out (WS): ${pnl:.2f} ({pnl_pct:+.1f}%)")
+            options_engine = getattr(self, "options_engine", None)
+            if options_engine:
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self._close_paired_options(symbol, reason="underlying_trailing_stop_ws"))
+                except RuntimeError:
+                    pass
         finally:
             pos.pop("_exit_recording", None)
+
+    def _get_options_monitor(self):
+        monitor = getattr(self, "options_monitor", None)
+        if not monitor and getattr(self, "options_engine", None):
+            monitor = OptionsMonitor(self)
+            self.options_monitor = monitor
+        return monitor
+
+    @staticmethod
+    def _is_regular_market_hours() -> bool:
+        return OptionsMonitor.is_regular_market_hours()
+
+    async def _close_paired_options(self, underlying_symbol: str, reason: str = "underlying_exit"):
+        monitor = self._get_options_monitor()
+        if not monitor:
+            return
+        await monitor.close_paired_options(underlying_symbol, reason=reason)
+
+    async def _execute_option_exit_action(self, contract_symbol: str, action: dict) -> bool:
+        monitor = self._get_options_monitor()
+        if not monitor:
+            return False
+        return await monitor.execute_exit_action(contract_symbol, action)
+
+    async def _monitor_options_once(self):
+        monitor = self._get_options_monitor()
+        if not monitor:
+            return
+        await monitor.monitor_once()
+
+    async def _options_monitor_loop(self):
+        monitor = self._get_options_monitor()
+        if not monitor:
+            return
+        await monitor.monitor_loop()
 
     def _send_trade_alert(self, pos: dict, direction: str):
         """Send Slack webhook alert on trade entry."""
@@ -1536,6 +1651,8 @@ class TradingBot:
             await self.trade_stream.stop()
         # Save final state
         persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
+        if getattr(self, "options_engine", None):
+            persistence.save_options_positions(self.options_engine.positions)
         persistence.save_pnl_state(getattr(self, 'pnl_state', {}))
         persistence.save_ai_state(self.ai_layers)
         positions = self.entry_manager.get_positions() if self.entry_manager else []

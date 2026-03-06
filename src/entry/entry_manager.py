@@ -150,6 +150,9 @@ class EntryManager:
         notional = self.risk.get_position_size(price, buying_power, conviction) if self.risk else 0
         # Apply consensus size modifier
         notional *= consensus_size_modifier
+        # If options were placed, reduce share notional to keep total risk inside tier budget.
+        share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
+        notional *= max(0.0, min(1.0, share_mult))
         # Reduce size during extended hours
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
@@ -361,6 +364,8 @@ class EntryManager:
 
         notional = self.risk.get_position_size(price, buying_power, conviction) if self.risk else 0
         notional *= consensus_size_modifier
+        share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
+        notional *= max(0.0, min(1.0, share_mult))
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
         shares = int(notional / price) if price > 0 else 0

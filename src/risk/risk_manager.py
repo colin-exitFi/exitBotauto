@@ -92,6 +92,7 @@ class RiskManager:
 
         # Heat tracking (total open risk in dollars)
         self._open_risk = 0.0  # sum of (entry_price * qty * stop_pct/100) for all positions
+        self._total_options_premium = 0.0  # total premium at risk across open option positions
 
         # Wash sale tracking: {symbol: {"loss": float, "exit_time": float}}
         # If sold at a loss, can't rebuy within 30 days or loss is disallowed for taxes
@@ -204,6 +205,35 @@ class RiskManager:
             p.get("entry_price", 0) * p.get("quantity", 0) * (stop_pct / 100.0)
             for p in positions
         )
+
+    def update_options_exposure(self, options_positions: List[Dict]):
+        """Recalculate open options premium exposure from tracked option positions."""
+        exposure = 0.0
+        for pos in options_positions or []:
+            qty = int(pos.get("qty", pos.get("quantity", 0)) or 0)
+            if qty < 1:
+                continue
+            premium = float(pos.get("current_premium", pos.get("entry_premium", 0)) or 0)
+            if premium <= 0:
+                premium = float(pos.get("entry_premium", 0) or 0)
+            exposure += qty * premium * 100.0
+        self._total_options_premium = round(exposure, 2)
+
+    def can_open_options(self, premium_cost: float) -> bool:
+        """Check portfolio-level cap for total options premium at risk."""
+        premium_cost = float(premium_cost or 0)
+        if premium_cost <= 0:
+            return False
+        cap_pct = float(getattr(settings, "OPTIONS_MAX_PORTFOLIO_PCT", 10.0))
+        cap_dollars = self._equity * (cap_pct / 100.0)
+        projected = self._total_options_premium + premium_cost
+        if projected > cap_dollars:
+            logger.warning(
+                f"Options cap blocked: projected ${projected:,.2f} > cap ${cap_dollars:,.2f} "
+                f"({cap_pct:.1f}% of equity)"
+            )
+            return False
+        return True
 
     def should_reduce_size(self) -> bool:
         """Check if conditions warrant reducing size. Placeholder for VIX integration."""
@@ -396,6 +426,12 @@ class RiskManager:
             # Heat
             "heat_pct": round(heat_pct, 1),
             "open_risk": round(self._open_risk, 2),
+            "options_premium_exposure": round(self._total_options_premium, 2),
+            "options_premium_cap": round(self._equity * (float(getattr(settings, "OPTIONS_MAX_PORTFOLIO_PCT", 10.0)) / 100.0), 2),
+            "options_premium_utilization_pct": round(
+                (self._total_options_premium / max(1.0, self._equity * (float(getattr(settings, "OPTIONS_MAX_PORTFOLIO_PCT", 10.0)) / 100.0))) * 100.0,
+                1,
+            ),
             # Legacy compat
             "max_positions": tier["max_positions"],
             "max_deployed": self._equity * (tier["size_pct"] / 100.0) * tier["max_positions"],

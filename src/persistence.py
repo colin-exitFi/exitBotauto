@@ -16,6 +16,7 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 POSITIONS_FILE = DATA_DIR / "positions.json"
+OPTIONS_POSITIONS_FILE = DATA_DIR / "options_positions.json"
 TRADES_FILE = DATA_DIR / "trades.json"
 PNL_FILE = DATA_DIR / "pnl_state.json"
 AI_STATE_FILE = DATA_DIR / "ai_state.json"
@@ -31,6 +32,15 @@ def save_positions(positions: Dict[str, Dict]):
         logger.error(f"Failed to save positions: {e}")
 
 
+def save_options_positions(positions: Dict[str, Dict]):
+    """Save active options positions to disk."""
+    try:
+        with open(OPTIONS_POSITIONS_FILE, "w") as f:
+            json.dump(positions, f, indent=2, default=str)
+    except Exception as e:
+        logger.error(f"Failed to save options positions: {e}")
+
+
 def load_positions() -> Dict[str, Dict]:
     """Load positions from disk."""
     try:
@@ -42,6 +52,20 @@ def load_positions() -> Dict[str, Dict]:
                     return data
     except Exception as e:
         logger.error(f"Failed to load positions: {e}")
+    return {}
+
+
+def load_options_positions() -> Dict[str, Dict]:
+    """Load options positions from disk."""
+    try:
+        if OPTIONS_POSITIONS_FILE.exists():
+            with open(OPTIONS_POSITIONS_FILE) as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    logger.info(f"📦 Restored {len(data)} options positions from disk")
+                    return data
+    except Exception as e:
+        logger.error(f"Failed to load options positions: {e}")
     return {}
 
 
@@ -104,6 +128,10 @@ def load_pnl_state() -> Dict:
         "total_fees": 0.0,
         "starting_equity": 1000.0,
         "peak_equity": 1000.0,
+        "options_total_realized_pnl": 0.0,
+        "options_total_trades": 0,
+        "options_winning_trades": 0,
+        "options_losing_trades": 0,
     }
 
 

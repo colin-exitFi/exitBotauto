@@ -9,6 +9,7 @@ from typing import Dict, List
 def normalize_trade_record(trade: Dict) -> Dict:
     """Backfill attribution fields for analytics compatibility."""
     t = dict(trade)
+    t.setdefault("asset_type", "equity")
     t.setdefault("strategy_tag", "unknown")
 
     sources = t.get("signal_sources", [])
@@ -24,5 +25,11 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t.setdefault("decision_price", t.get("entry_price", 0))
     t.setdefault("fill_price", t.get("exit_price", 0))
     t.setdefault("slippage_bps", 0.0)
+    if t.get("asset_type") == "option":
+        t.setdefault("contract_symbol", t.get("symbol", ""))
+        t.setdefault("entry_premium", t.get("entry_price", 0))
+        t.setdefault("exit_premium", t.get("exit_price", 0))
+        t.setdefault("underlying", "")
+        t.setdefault("delta_at_entry", 0.0)
+        t.setdefault("underlying_move_pct", 0.0)
     return t
-

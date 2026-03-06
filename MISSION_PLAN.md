@@ -75,6 +75,26 @@ P0/P1 fixes implemented:
 25. Transcript-driven replay support added:
     - Harness now accepts Alpaca-style REST snapshots + raw `trade_updates` payload fixtures.
     - Fixture-based replay tests now validate lifecycle correctness from transcript JSON artifacts.
+26. Options monitor extraction completed:
+    - Dedicated `OptionsMonitor` class now owns options lifecycle loop/execution logic in `src/options/options_monitor.py`.
+    - `TradingBot` delegates monitor behaviors through compatibility wrappers, keeping integration surfaces stable.
+27. Options exit rule hardening completed:
+    - Added explicit Friday 3:30 PM ET expiry-day forced cleanup rule.
+    - Added explicit 3x premium half-sell rule after the initial 2x target event.
+28. Options test coverage expanded:
+    - Added explicit tests for quote-unavailable skip behavior, Friday expiry cleanup, and 3x partial-take-profit rule.
+    - Added options persistence round-trip coverage (save -> load -> restore into engine state).
+29. Options async entry-path hardening:
+    - `OptionsEngine.execute_option_trade()` now offloads contract selection, quote fallback, and order placement to executor workers.
+    - Prevents blocking the main event loop during synchronous REST calls.
+30. Session-aware scan cadence restored:
+    - Main loop now tags scan session as `regular` / `extended` / `overnight`.
+    - Adaptive interval function now enforces extended-hours and overnight floor intervals.
+31. Share-size reduction verification locked in:
+    - Added direct `EntryManager` sizing test proving `share_notional_multiplier` reduces share notional and quantity.
+32. Options exit price hardening:
+    - Option exits now use bid-aware limit orders by default (with configurable discount and market fallback).
+    - Added unit coverage for limit-first exits and market-fallback behavior when quote liquidity is unavailable.
 
 ### 0.2 Remaining high-risk debt (must be tracked)
 

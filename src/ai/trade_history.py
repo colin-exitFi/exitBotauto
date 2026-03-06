@@ -145,6 +145,20 @@ def get_analytics() -> Dict:
         v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
         v["pnl"] = round(v["pnl"], 2)
 
+    # By asset type (equity vs option)
+    by_asset_type = {}
+    for t in history:
+        asset_type = (t.get("asset_type", "equity") or "equity").lower()
+        if asset_type not in by_asset_type:
+            by_asset_type[asset_type] = {"trades": 0, "wins": 0, "pnl": 0.0}
+        by_asset_type[asset_type]["trades"] += 1
+        by_asset_type[asset_type]["pnl"] += t.get("pnl", 0)
+        if t.get("pnl", 0) > 0:
+            by_asset_type[asset_type]["wins"] += 1
+    for v in by_asset_type.values():
+        v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
+        v["pnl"] = round(v["pnl"], 2)
+
     # Equity curve (realized P&L accumulation over time)
     equity_curve = []
     running_pnl = 0.0
@@ -198,6 +212,7 @@ def get_analytics() -> Dict:
         "by_exit_reason": by_reason,
         "by_strategy_tag": dict(sorted(by_strategy.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_signal_source": dict(sorted(by_signal_source.items(), key=lambda x: x[1]["pnl"], reverse=True)),
+        "by_asset_type": dict(sorted(by_asset_type.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_hold_duration": by_hold,
         "equity_curve": equity_curve[-500:],
         "recent_50": {

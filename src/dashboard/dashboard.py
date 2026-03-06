@@ -168,6 +168,18 @@ async def get_positions():
     return enriched
 
 
+@app.get("/api/options")
+async def get_options():
+    """Get active options positions and premium-level metrics."""
+    if not _bot or not getattr(_bot, "options_engine", None):
+        return []
+    try:
+        return _bot.options_engine.get_positions_snapshot(refresh_quotes=True)
+    except Exception as e:
+        logger.error(f"Options positions fetch error: {e}")
+        return []
+
+
 @app.get("/api/portfolio")
 async def get_portfolio():
     """Get brokerage portfolio (positions + balances from Alpaca)."""
@@ -322,6 +334,7 @@ async def get_pnl():
     pnl = getattr(_bot, 'pnl_state', {})
     total_realized = pnl.get("total_realized_pnl", 0)
     today_realized = pnl.get("today_realized_pnl", 0)
+    options_realized = pnl.get("options_total_realized_pnl", 0)
     total_trades = pnl.get("total_trades", 0)
     wins = pnl.get("winning_trades", 0)
     losses = pnl.get("losing_trades", 0)
@@ -331,6 +344,7 @@ async def get_pnl():
     # Account equity + unrealized from Alpaca (source of truth)
     equity = 25000.0
     unrealized = 0
+    options_unrealized = 0.0
     starting = pnl.get("starting_equity", 25000.0)
     peak = pnl.get("peak_equity", 25000.0)
     if _bot.alpaca_client:
@@ -346,6 +360,13 @@ async def get_pnl():
         except Exception:
             pass
 
+    if _bot and getattr(_bot, "options_engine", None):
+        try:
+            opt_positions = _bot.options_engine.get_positions_snapshot(refresh_quotes=False)
+            options_unrealized = sum(float(p.get("pnl", 0) or 0) for p in opt_positions)
+        except Exception:
+            options_unrealized = 0.0
+
     # Total P&L = equity - starting (the only truth that matters)
     total_pnl = equity - starting
     today_pnl = total_pnl - total_realized + today_realized  # approximate today
@@ -360,6 +381,8 @@ async def get_pnl():
         "total_pnl": round(total_pnl, 2),
         "total_realized": round(total_realized, 2),
         "unrealized": round(unrealized, 2),
+        "options_realized_pnl": round(options_realized, 2),
+        "options_unrealized_pnl": round(options_unrealized, 2),
         "today_realized": round(total_pnl, 2),  # On day 1, today = total
         "total_trades": total_trades,
         "winning_trades": wins,
@@ -653,6 +676,13 @@ tr:hover td{background:#161b2288}
     <tbody id="portfolio"></tbody></table>
   </div>
 
+  <!-- Options Positions -->
+  <div class="card full">
+    <h2><span class="icon">🧩</span> Options Positions <span id="optionsValue" style="margin-left:auto;color:#58a6ff;font-size:12px"></span></h2>
+    <table><thead><tr><th>Underlying</th><th>Contract</th><th>Type</th><th>Strike</th><th>Expiry</th><th>Qty</th><th>Entry</th><th>Current</th><th>Bid</th><th>Ask</th><th>P&L%</th><th>DTE</th><th>Status</th></tr></thead>
+    <tbody id="optionsPositions"></tbody></table>
+  </div>
+
   <!-- Activity Feed + Watchlist side by side -->
   <div class="card">
     <h2><span class="icon">🧠</span> Bot Activity Feed</h2>
@@ -771,7 +801,8 @@ async function refresh() {
     $('bestTrade').className = 'value positive';
     $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
     $('worstTrade').className = 'value negative';
-    $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString()
+      + ` | Opt R/U: $${(pnl.options_realized_pnl||0).toFixed(2)} / $${(pnl.options_unrealized_pnl||0).toFixed(2)}`;
   }
   // Equity curve
   const ec = await api('/api/equity-curve?limit=120');
@@ -883,6 +914,27 @@ async function refresh() {
         <td>$${(p.average_price||0).toFixed(2)}</td><td>$${(p.current_price||0).toFixed(2)}</td>
         <td>$${val}</td><td class="${cls(pnl)}">${fmt(pnl)} (${fmt(pnlPct)}%)</td></tr>`;
     }).join('') : '<tr><td colspan="6" class="empty">No holdings</td></tr>';
+  }
+  // Options positions
+  const ops = await api('/api/options');
+  if (ops) {
+    const totalOptPnl = ops.reduce((acc, p) => acc + (p.pnl || 0), 0);
+    $('optionsValue').textContent = `${ops.length||0} contracts | Unrealized $${totalOptPnl.toFixed(2)}`;
+    $('optionsPositions').innerHTML = ops.length ? ops.map(p => `<tr>
+      <td><strong>${p.underlying||'?'}</strong></td>
+      <td>${p.contract_symbol||'?'}</td>
+      <td>${(p.option_type||'').toUpperCase()}</td>
+      <td>$${(p.strike||0).toFixed(2)}</td>
+      <td>${p.expiry||'—'}</td>
+      <td>${p.qty||0}</td>
+      <td>$${(p.entry_premium||0).toFixed(2)}</td>
+      <td>$${(p.current_premium||0).toFixed(2)}</td>
+      <td>$${(p.bid||0).toFixed(2)}</td>
+      <td>$${(p.ask||0).toFixed(2)}</td>
+      <td class="${cls(p.pnl_pct||0)}">${fmt(p.pnl_pct||0)}%</td>
+      <td>${p.days_to_expiry ?? '—'}</td>
+      <td>${p.status||'open'}</td>
+    </tr>`).join('') : '<tr><td colspan="13" class="empty">No open options positions</td></tr>';
   }
   // Bot Positions
   const pos = await api('/api/positions');

@@ -1,28 +1,5 @@
 {
-  "sp500_futures": "Slightly up +0.38% overnight at around 6888 for March 2026 contract. Key levels: Support at 6462, 6453, 6429, 6390; Resistance at 6472, 6522, 6540, 6562, 6588[1][2][6].",
-  "overnight_news": "Futures giving up earlier gains amid building inflation fears and tanker insurance issues in the Strait; investors digesting U.S. ADP Jobs Report[2].",
-  "hot_sectors": "Technology (strong Nasdaq futures +0.58%, movers like NVDA, MU); Crypto-related (MSTR +10.37%, GLXY +17.70%); Semiconductors/Energy (AMAT, AVGO, FRO)[2][4].",
-  "watchlist": [
-    {
-      "ticker": "MSTR",
-      "reason": "Up +10.37%, leading crypto-related gains amid Bitcoin exposure[4]"
-    },
-    {
-      "ticker": "NVDA",
-      "reason": "Up +1.66% overnight, key AI/tech mover with Nasdaq strength[4]"
-    },
-    {
-      "ticker": "MU",
-      "reason": "Up +5.55%, semiconductor momentum in volatile session[4]"
-    },
-    {
-      "ticker": "AMAT",
-      "reason": "Up +1.83%, chip equipment strength tied to tech rally[4]"
-    },
-    {
-      "ticker": "AVGO",
-      "reason": "Up +1.18%, broad semiconductor interest[4]"
-    }
-  ],
-  "market_bias": "neutral"
+  "raw_thesis": "I appreciate your detailed request, but I cannot provide the comprehensive overnight market analysis you've asked for based on the available search results.\n\n**Limitations:**\n\nThe search results contain S&P 500 futures pricing data from March 3-5, 2026, but lack the critical information needed for a complete analysis:\n\n- **Overnight news:** No earnings announcements, geopolitical developments, or Federal Reserve statements are included in the search results.\n- **Sector momentum:** The results show individual stock tickers with price changes, but no sector-level analysis or forward-looking commentary.\n- **Market catalysts:** There is no information about what might drive tomorrow's session.\n\n**What the data shows:**\n\nS&P 500 E-mini futures (ESH26) closed at **6,884.75, up +0.88%** on March 4, 2026.[5] The 52-week performance shows a **+12.84% gain since March 5, 2025**, with a recent 3-month decline of **-1.57% since December 5, 2025**.[2] Key support levels mentioned include 6,453 and 6,429, with resistance around 6,522-6,588.[3]\n\n**To obtain the analysis you need:**\n\nYou would need to check current financial news sources (Bloomberg, CNBC, MarketWatch, CME Group), earnings calendars, and Fed communications for overnight developments that would inform tomorrow's trading session.",
+  "market_bias": "unknown",
+  "watchlist": []
 }

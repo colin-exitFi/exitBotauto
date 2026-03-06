@@ -1251,5 +1251,127 @@
       "psychological_trap": "We're holding 'carryover' positions like they're sacred - they're not. Cut losers fast, redeploy to Friday runners"
     },
     "timestamp": 1772763762.682122
+  },
+  {
+    "market_assessment": "After-hours Thursday night - markets closed, all positions are overnight holds from previous session with no new price discovery happening.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "unknown",
+        "note": "No movement since entry at $13.32, trailing stop active but no price update to evaluate"
+      },
+      {
+        "symbol": "KR",
+        "status": "unknown",
+        "note": "Flat at entry $71.64, no trailing stop set - vulnerability during market hours"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Best performer - peaked at $22.50 vs entry $21.45 (+4.9%), but no trailing stop means gains unprotected"
+      },
+      {
+        "symbol": "SOC",
+        "status": "unknown",
+        "note": "Flat at $13.85, trailing stop active"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "unknown",
+        "note": "Flat at $8.78, trailing stop active"
+      },
+      {
+        "symbol": "UCO",
+        "status": "unknown",
+        "note": "Oil ETF flat at $30.63, trailing stop active"
+      },
+      {
+        "symbol": "VG",
+        "status": "at_risk",
+        "note": "Tiny gain to $12.32 from $12.28 (+0.3%), but trailing stop may be too tight for such small movement"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 89% of capital sitting idle ($22,278 cash vs $2,717 deployed) - massive opportunity cost",
+      "KR and NPT have NO trailing stops despite being in profit - unprotected gains",
+      "All 7 positions are 'carryover' unknowns - no fresh conviction, no recent price validation",
+      "Portfolio is completely static - zero trades today means zero velocity",
+      "Scanner shows ZERO candidates - we're blind to momentum opportunities",
+      "Only $27 at risk (2.7% heat) when we could deploy up to $6,248 - massively under-deployed"
+    ],
+    "what_working": [
+      "NPT showing 4.9% unrealized gain - this pattern worked",
+      "Trailing stops are set on 5 of 7 positions - good discipline"
+    ],
+    "what_not_working": [
+      "Dead capital velocity - no deployment, no compounding, no momentum chasing",
+      "Missing trailing stops on winning positions (KR, NPT)",
+      "Zero scanner activity means we're not hunting new opportunities",
+      "Portfolio composition unknown - these are inherited positions with no strategy context"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772768222.409875
+  },
+  {
+    "market_assessment": "After-hours Thursday night - markets closed, all positions are overnight holds awaiting Friday open with no fresh momentum data available",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "At entry $13.32, has trailing stop protection, $466.20 deployed"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "At entry $71.64, NO trailing stop (needs one), $358.20 deployed"
+      },
+      {
+        "symbol": "NPT",
+        "status": "at_risk",
+        "note": "Peak was $22.50, now $21.45 = gave back 4.7% from highs, NO trailing stop protection"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "At entry $13.85, has trailing stop, $457.05 deployed"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "At entry $8.78, has trailing stop, $368.76 deployed"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "At entry $30.63, has trailing stop, $367.56 deployed"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Peak $12.32 vs entry $12.28 = micro-gain, has trailing stop, $466.64 deployed"
+      }
+    ],
+    "risk_flags": [
+      "KR and NPT lack trailing stop protection - vulnerable to gap downs",
+      "Only 10.9% capital deployed ($2,719.68 / $24,997.50) - MASSIVE opportunity cost",
+      "89% cash sitting dead overnight while positions could be working",
+      "7 positions averages only $388 each - position sizing too timid for velocity strategy",
+      "Zero scanner candidates = not hunting for Friday momentum setups"
+    ],
+    "what_working": [
+      "Trailing stops deployed on 5/7 positions shows risk discipline",
+      "Diversified across sectors (retail, oil, small caps)",
+      "NPT showed it CAN move (hit $22.50 from $21.45 = 4.9% runner potential)"
+    ],
+    "what_not_working": [
+      "Capital deployment rate is ANEMIC - dead money earns nothing",
+      "Position sizing way under 2.5% tier allocation ($625/position available but using ~$388)",
+      "No active scanning for Friday gap-up candidates or premarket movers",
+      "Reactive posture instead of aggressive hunting mode"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772770056.497303
   }
 ]

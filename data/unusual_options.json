@@ -1,85 +1,85 @@
 {
   "options": [
     {
-      "ticker": "TSLA",
-      "type": "call",
+      "ticker": "NFLX",
+      "type": "put",
       "bias": "bullish",
-      "reason": "Large diagonal call spread (Dec 2026 $600 call bought, Dec 2027 $900 call sold) signals trader expectation of major stock breakout amid low IV rank[1].",
+      "reason": "High volume (726) on Mar 6 '26 95.00 put with bullish sentiment indicated[2]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "UNP",
+      "ticker": "SHEL",
       "type": "call",
       "bias": "bullish",
-      "reason": "Heavy call volume (put/call ratio 0.00) from dividend capture buy-write spreads ahead of ex-dividend date[1].",
+      "reason": "High volume (700) on Mar 6 '26 86.00 call with bullish sentiment[2]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "SPY",
-      "type": "call",
+      "ticker": "LBRT",
+      "type": "put",
       "bias": "bullish",
-      "reason": "Top-ranked by volume-to-open-interest ratio among all contracts[4].",
+      "reason": "High volume (726) on Jan 21 '28 5.00 put with bullish sentiment[2]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "SPX",
-      "type": "call",
+      "ticker": "VFC",
+      "type": "put",
       "bias": "bullish",
-      "reason": "Top-ranked by volume-to-open-interest ratio among all contracts[4].",
+      "reason": "ATM put activity in turnaround stock, suggesting married put strategy for upside protection[1]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "NVDA",
+      "ticker": "ETSY",
       "type": "call",
       "bias": "bullish",
-      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "reason": "ATM call volume with cash-secured strategy, share price up 6.5%[1]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "AAPL",
-      "type": "call",
+      "ticker": "PFE",
+      "type": "put",
       "bias": "bullish",
-      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "reason": "High Vol/OI on March 6 $25.50 put, double bull spread strategy for gains above $28.50[1]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "GOOG",
-      "type": "call",
-      "bias": "bullish",
-      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "MSFT",
-      "type": "call",
-      "bias": "bullish",
-      "reason": "High unusual activity ranking by volume-to-open-interest ratio[4].",
+      "ticker": "PSTG",
+      "type": "put",
+      "bias": "",
+      "reason": "High volume (4,146) on Mar 06, 2026 20.50 put[4]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
       "ticker": "ZD",
-      "type": "call",
-      "bias": "bullish",
-      "reason": "Noteworthy high options volume noted for the recent trading session[5].",
+      "type": "",
+      "bias": "",
+      "reason": "Noteworthy option activity reported[5]",
       "source": "perplexity",
       "conviction": 0.5
     },
     {
-      "ticker": "CORZ",
-      "type": "call",
-      "bias": "bullish",
-      "reason": "Notable high options volume noted for the recent trading session[9].",
+      "ticker": "ULTA",
+      "type": "",
+      "bias": "",
+      "reason": "Noteworthy option activity reported[5]",
+      "source": "perplexity",
+      "conviction": 0.5
+    },
+    {
+      "ticker": "GAP",
+      "type": "",
+      "bias": "",
+      "reason": "Noteworthy option activity reported[5]",
       "source": "perplexity",
       "conviction": 0.5
     }
   ],
-  "fetched_at": 1772681220.79439
+  "fetched_at": 1772766814.01215
 }
