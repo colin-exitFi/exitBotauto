@@ -1373,5 +1373,191 @@
     "overall_sentiment": "neutral",
     "urgency": "high",
     "timestamp": 1772770056.497303
+  },
+  {
+    "market_assessment": "After-hours on Thursday - markets closed, holding 7 overnight positions from previous session with minimal movement detected.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Flat at entry ($13.32), trailing stop active, $466 position"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Flat at entry ($71.64), NO trailing stop, $358 position - stable large-cap"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Peak shows $22.50 vs entry $21.45 (+4.9% gain), NO trailing stop, $236 position"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Flat at entry ($13.85), trailing stop active, $457 position"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Flat at entry ($8.78), trailing stop active, $369 position"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Flat at entry ($30.63), trailing stop active, $368 position - oil leverage ETF"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Peak shows $12.32 vs entry $12.28 (+0.3% gain), trailing stop active, $467 position"
+      }
+    ],
+    "risk_flags": [
+      "KR and NPT missing trailing stops - NPT showing +4.9% unrealized gain unprotected",
+      "Only 10.8% capital deployed ($2,709 of $24,986) - massive opportunity cost",
+      "89% cash sitting idle ($22,278) earning nothing while momentum runs elsewhere",
+      "Heat at 2.7% is extremely conservative - we have 1.3% room before 4% daily loss limit",
+      "7 small positions averaging $387 each - position sizing too timid for velocity strategy",
+      "Zero trades today - complete inaction despite mission to compound aggressively"
+    ],
+    "what_working": [
+      "Trailing stops are active on 5/7 positions providing downside protection",
+      "NPT showing +4.9% gain - small caps with momentum working",
+      "Positions are diversified across sectors (retail, oil, small-caps)"
+    ],
+    "what_not_working": [
+      "EXTREME capital underutilization - only 10.8% deployed violates core velocity principle",
+      "Position sizes too small to move the needle - $387 average means even 10% gains = $39",
+      "Zero trading activity today = zero compounding = mission failure",
+      "Missing trailing stops on KR/NPT leaves gains unprotected",
+      "No scanner candidates after hours - need pipeline ready for Friday open"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772771878.241961
+  },
+  {
+    "market_assessment": "Markets closed (Friday 00:07 ET) - positions carried overnight into weekend, no active price discovery until Monday open.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop protection, flat at entry ($466.20 position)"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "NO trailing stop on $358.20 position - unprotected grocery stock heading into weekend"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Peak shows $22.50 vs entry $21.45 (+4.9% gain) - was working, needs stop update Monday"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Has trailing stop, flat at entry ($457.05 position)"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Has trailing stop protection ($368.76 position)"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Has trailing stop, oil leverage into weekend ($367.56 position)"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Peak $12.32 vs entry $12.28 (+0.3%), has trailing stop ($466.64 position)"
+      }
+    ],
+    "risk_flags": [
+      "KR position ($358) has NO trailing stop - unprotected downside exposure",
+      "Weekend gap risk on 7 positions totaling $2,709 (10.8% of portfolio)",
+      "Heat at 2.7% with $27.20 open risk - acceptable but all 7 positions are small legacy holds",
+      "89% cash ($22,277) sitting idle - massive opportunity cost",
+      "Zero trades executed today - capital velocity is ZERO",
+      "All positions are 'carryover' strategy tags from broker sync - no fresh momentum plays"
+    ],
+    "what_working": [
+      "NPT showed +4.9% momentum (peaked $22.50 from $21.45 entry)",
+      "Trailing stops protecting 6 of 7 positions automatically"
+    ],
+    "what_not_working": [
+      "Capital deployment at 10.8% - we're sitting on 89% CASH doing NOTHING",
+      "Portfolio is frozen - these are stale positions, not active momentum runners",
+      "No scanner candidates available (likely weekend/after-hours)",
+      "Zero new entries today = zero compounding = losing ground"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772773695.2036731
+  },
+  {
+    "market_assessment": "Pre-market Friday at 00:38 ET - markets closed, positions are overnight holds from Thursday's session awaiting Friday open.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Holding at entry $13.32, trailing stop active, neutral overnight"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Holding at entry $71.64, NO trailing stop - needs one at open"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Peak $22.50 from entry $21.45 (+4.9%), NO trailing stop - this is a WINNER needs protection"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Holding at entry $13.85, trailing stop active"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Holding at entry $8.78, trailing stop active"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Holding at entry $30.63, trailing stop active"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Slight gain to peak $12.32 from $12.28 (+0.3%), trailing stop active"
+      }
+    ],
+    "risk_flags": [
+      "NPT has NO trailing stop despite being +4.9% - unrealized gain at risk",
+      "KR has NO trailing stop - $358 position exposed",
+      "89% of capital ($22,278) sitting in CASH doing nothing - massive opportunity cost",
+      "Only $2,709 deployed (10.8% of equity) - extreme under-deployment",
+      "Heat at 2.7% but we're in COMPOUND tier - we should be at 25%+ deployed",
+      "7 positions but total exposure minuscule - position sizing too conservative",
+      "No scanner candidates = no pipeline for Friday morning momentum plays"
+    ],
+    "what_working": [
+      "NPT showing +4.9% momentum - carryover positions CAN work",
+      "Trailing stops on 5 of 7 positions shows risk discipline"
+    ],
+    "what_not_working": [
+      "Dead capital syndrome - $22K cash earning 0% while markets move",
+      "Position sizing far too small - $300-400 positions won't move the needle",
+      "Missing trailing stops on 2 positions including our winner",
+      "Zero new setups identified for Friday open - no hunting"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772775527.034136
   }
 ]

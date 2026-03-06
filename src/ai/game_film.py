@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from loguru import logger
 
 from .trade_history import load_all, get_analytics
+from src.data import strategy_controls
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 GAME_FILM_FILE = DATA_DIR / "game_film.json"
@@ -46,6 +47,11 @@ class GameFilm:
                 return None
 
             insights = self._analyze(history)
+            controls = strategy_controls.load_controls()
+            auto_disable_recs = (insights.get("recommendations", {}) or {}).get("disable_strategies", [])
+            if auto_disable_recs:
+                controls = strategy_controls.apply_auto_disables(auto_disable_recs, controls)
+                strategy_controls.save_controls(controls)
             self._last_output = insights
             self._save(insights)
             logger.info(
@@ -81,6 +87,7 @@ class GameFilm:
 
         # By symbol
         insights["by_symbol"] = self._aggregate(history, lambda t: t.get("symbol", "?"))
+        insights["by_strategy_tag"] = self._aggregate(history, lambda t: t.get("strategy_tag", "unknown"))
 
         # By hour of day (entry time)
         def _hour(t):
@@ -199,6 +206,31 @@ class GameFilm:
         profitable_reasons = [(k, v) for k, v in by_reason.items() if v["avg_pnl"] > 0]
         if profitable_reasons:
             recs["best_exit_reasons"] = [r[0] for r in sorted(profitable_reasons, key=lambda x: x[1]["avg_pnl"], reverse=True)[:3]]
+
+        # Hard-disable candidates (no auto re-enable in v1).
+        by_strategy = insights.get("by_strategy_tag", {}) or {}
+        disable_strategies = []
+        for tag, bucket in by_strategy.items():
+            trades = int(bucket.get("trades", 0) or 0)
+            win_rate = float(bucket.get("win_rate_pct", 0) or 0)
+            pnl = float(bucket.get("pnl", 0) or 0)
+            if trades < 30:
+                continue
+            if win_rate >= 40.0:
+                continue
+            if pnl >= 0:
+                continue
+            disable_strategies.append(
+                {
+                    "strategy_tag": tag,
+                    "trades": trades,
+                    "win_rate_pct": round(win_rate, 2),
+                    "pnl": round(pnl, 2),
+                    "reason": f"win_rate={win_rate:.1f}%, pnl=${pnl:.2f}, trades={trades}",
+                }
+            )
+        if disable_strategies:
+            recs["disable_strategies"] = disable_strategies
 
         return recs
 

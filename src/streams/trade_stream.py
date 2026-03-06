@@ -165,6 +165,7 @@ class TradeStream:
             "qty": order.get("qty"),
             "filled_qty": order.get("filled_qty"),
             "filled_avg_price": order.get("filled_avg_price"),
+            "filled_at": order.get("filled_at"),
         }
         self.recent_events.append(event_record)
         if len(self.recent_events) > self._max_events:
@@ -176,7 +177,7 @@ class TradeStream:
 
             logger.info(
                 f"📡 ORDER FILLED: {event} {order.get('side')} {filled_qty} {symbol} "
-                f"@ ${fill_price:.2f} (type={order_type})"
+                f"@ ${fill_price:.2f} (type={order_type}, filled_at={order.get('filled_at', '')})"
             )
 
             # Detect trailing stop fill (longs: sell, shorts: buy-to-cover)

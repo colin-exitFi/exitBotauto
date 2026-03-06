@@ -68,6 +68,15 @@ class EntryManager:
         market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
         return now < market_open or now >= market_close
 
+    @staticmethod
+    def _parse_iso_ts(value) -> Optional[float]:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return None
+
     async def can_enter(self, symbol: str, sentiment_score: float, current_positions: List[Dict]) -> bool:
         """Check all entry conditions."""
         if not self.is_market_open():
@@ -119,6 +128,7 @@ class EntryManager:
         if price <= 0:
             logger.warning(f"Could not get price for {symbol}")
             return None
+        signal_timestamp = float(sentiment_data.get("signal_timestamp", time.time()) or time.time())
 
         # Consensus already ran in main loop — use the modifier passed in sentiment_data
         consensus_size_modifier = sentiment_data.get("consensus_size_modifier", 1.0)
@@ -211,8 +221,10 @@ class EntryManager:
 
         # ── STEP 1: BUY the stock ─────────────────────────────────
         order = None
+        entry_order_timestamp = None
         for attempt in range(1, self.max_retries + 1):
             limit_price = round(price * 1.002, 2)  # 0.2% slippage buffer
+            attempt_order_ts = time.time()
 
             if extended:
                 if hasattr(self.broker, 'place_limit_buy_extended'):
@@ -237,6 +249,7 @@ class EntryManager:
                     None, self.broker.place_limit_buy, symbol, int(shares), limit_price
                 )
             if order:
+                entry_order_timestamp = attempt_order_ts
                 break
 
             price = await asyncio.get_event_loop().run_in_executor(
@@ -275,6 +288,7 @@ class EntryManager:
                             shares = actual_qty
                             price = actual_price
                             order = {"id": "recovered", "filled_qty": str(actual_qty)}
+                            entry_order_timestamp = time.time()
                             break
             except Exception:
                 pass
@@ -282,6 +296,14 @@ class EntryManager:
         if not order:
             logger.error(f"Failed to enter {symbol} after {self.max_retries} attempts")
             return None
+
+        fill_timestamp = self._parse_iso_ts(order.get("filled_at")) if isinstance(order, dict) else None
+        fill_timestamp_source = "order_response" if fill_timestamp is not None else "unknown"
+        try:
+            fill_price = float(order.get("filled_avg_price", price) or price)
+        except Exception:
+            fill_price = price
+        entry_price = fill_price if fill_price > 0 else price
 
         # Record position
         signal_sources = sentiment_data.get("signal_sources", ["unknown"])
@@ -293,12 +315,16 @@ class EntryManager:
             signal_sources = ["unknown"]
         position = {
             "symbol": symbol,
-            "entry_price": price,
-            "fill_price": price,
+            "entry_price": entry_price,
+            "fill_price": fill_price,
             "quantity": shares,
             "entry_time": time.time(),
+            "signal_timestamp": signal_timestamp,
+            "entry_order_timestamp": entry_order_timestamp,
+            "fill_timestamp": fill_timestamp,
+            "fill_timestamp_source": fill_timestamp_source,
             "sentiment_at_entry": sentiment_data.get("score", 0),
-            "peak_price": price,
+            "peak_price": entry_price,
             "side": "long",
             "order_id": order.get("id", order.get("brokerage_order_id", "")),
             "partial_exit": False,
@@ -317,6 +343,7 @@ class EntryManager:
             "provider_used": sentiment_data.get("provider_used", ""),
             "signal_price": sentiment_data.get("signal_price", price),
             "decision_price": sentiment_data.get("decision_price", price),
+            "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
             "_exit_recorded": False,
         }
         self.positions[symbol] = position
@@ -342,6 +369,7 @@ class EntryManager:
         if price <= 0:
             logger.warning(f"Could not get price for {symbol}")
             return None
+        signal_timestamp = float(sentiment_data.get("signal_timestamp", time.time()) or time.time())
 
         # Get buying power
         balances = await asyncio.get_event_loop().run_in_executor(
@@ -390,6 +418,7 @@ class EntryManager:
 
         # Place short sell order via REST API
         order = None
+        entry_order_timestamp = time.time()
         try:
             import requests as req_lib
             order_data = {
@@ -456,15 +485,27 @@ class EntryManager:
         if not signal_sources:
             signal_sources = ["unknown"]
 
+        fill_timestamp = self._parse_iso_ts(order.get("filled_at")) if isinstance(order, dict) else None
+        fill_timestamp_source = "order_response" if fill_timestamp is not None else "unknown"
+        try:
+            fill_price = float(order.get("filled_avg_price", price) or price)
+        except Exception:
+            fill_price = price
+        entry_price = fill_price if fill_price > 0 else price
+
         position = {
             "symbol": symbol,
             "side": "short",
-            "entry_price": price,
-            "fill_price": price,
+            "entry_price": entry_price,
+            "fill_price": fill_price,
             "quantity": shares,
             "entry_time": time.time(),
+            "signal_timestamp": signal_timestamp,
+            "entry_order_timestamp": entry_order_timestamp,
+            "fill_timestamp": fill_timestamp,
+            "fill_timestamp_source": fill_timestamp_source,
             "sentiment_at_entry": sentiment_data.get("score", 0),
-            "peak_price": price,
+            "peak_price": entry_price,
             "order_id": order.get("id", ""),
             "partial_exit": False,
             "extended_hours_entry": extended,
@@ -480,12 +521,153 @@ class EntryManager:
             "provider_used": sentiment_data.get("provider_used", ""),
             "signal_price": sentiment_data.get("signal_price", price),
             "decision_price": sentiment_data.get("decision_price", price),
+            "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
             "_exit_recorded": False,
         }
         self.positions[symbol] = position
         trail_info = f" 📉 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
         logger.success(f"🩳 SHORTED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f}){trail_info}")
         return position
+
+    async def add_to_scout(self, symbol: str, sentiment_data: Dict) -> Optional[Dict]:
+        """
+        Escalate a fast-path scout position to full size.
+        Only valid for breakout_fast_path positions and only once.
+        """
+        pos = self.positions.get(symbol)
+        if not pos:
+            return None
+        if pos.get("strategy_tag") != "breakout_fast_path":
+            return None
+        if pos.get("scout_escalated"):
+            return None
+        if pos.get("side", "long") != "long":
+            return None
+        if not self.broker or not self.polygon:
+            return None
+
+        current_positions = self.get_positions()
+        if self.risk and hasattr(self.risk, "can_trade") and not self.risk.can_trade():
+            return None
+        if self.risk and not self.risk.can_enter_sector(symbol, current_positions):
+            return None
+
+        price = await asyncio.get_event_loop().run_in_executor(None, self.polygon.get_price, symbol)
+        if price <= 0:
+            return None
+
+        balances = await asyncio.get_event_loop().run_in_executor(None, self.broker.get_balances)
+        buying_power = self.risk.get_buying_power_field(balances) if self.risk else balances.get("buying_power", 0)
+
+        sent_score = float(sentiment_data.get("score", pos.get("sentiment_at_entry", 0)) or 0)
+        if sent_score > 0.6:
+            conviction = "high"
+        elif sent_score < 0.1:
+            conviction = "speculative"
+        else:
+            conviction = "normal"
+
+        consensus_size_modifier = float(sentiment_data.get("consensus_size_modifier", 1.0) or 1.0)
+        if self.risk:
+            target_notional = self.risk.get_position_size(price, buying_power, conviction) * consensus_size_modifier
+        else:
+            target_notional = float(pos.get("notional", 0) or 0)
+
+        current_qty = float(pos.get("quantity", 0) or 0)
+        current_notional = float(pos.get("entry_price", price) or price) * current_qty
+        add_notional = max(0.0, target_notional - current_notional)
+        if add_notional <= 0:
+            return None
+
+        if self.risk:
+            add_shares = self.risk.get_shares(price, add_notional)
+        else:
+            add_shares = add_notional / price
+        add_qty = int(add_shares)
+        if add_qty < 1:
+            return None
+
+        extended = self.is_extended_hours()
+        entry_order_timestamp = time.time()
+        order = None
+        if extended:
+            limit_price = round(price * 1.002, 2)
+            if hasattr(self.broker, "place_limit_buy_extended"):
+                order = await asyncio.get_event_loop().run_in_executor(
+                    None, self.broker.place_limit_buy_extended, symbol, add_qty, limit_price
+                )
+            else:
+                order = await asyncio.get_event_loop().run_in_executor(
+                    None, self.broker.place_limit_buy, symbol, add_qty, limit_price, True
+                )
+        elif hasattr(self.broker, "smart_buy"):
+            order = await asyncio.get_event_loop().run_in_executor(None, self.broker.smart_buy, symbol, add_notional)
+        else:
+            limit_price = round(price * 1.002, 2)
+            order = await asyncio.get_event_loop().run_in_executor(
+                None, self.broker.place_limit_buy, symbol, add_qty, limit_price
+            )
+        if not order:
+            return None
+
+        try:
+            filled_qty = float(order.get("filled_qty", order.get("qty", add_qty)) or add_qty)
+        except Exception:
+            filled_qty = float(add_qty)
+        if filled_qty <= 0:
+            filled_qty = float(add_qty)
+        try:
+            add_fill_price = float(order.get("filled_avg_price", price) or price)
+        except Exception:
+            add_fill_price = price
+
+        new_qty = current_qty + filled_qty
+        if new_qty <= 0:
+            return None
+        old_cost = float(pos.get("entry_price", price) or price) * current_qty
+        add_cost = add_fill_price * filled_qty
+        new_entry_price = (old_cost + add_cost) / new_qty
+
+        pos["quantity"] = new_qty
+        pos["entry_price"] = new_entry_price
+        pos["fill_price"] = add_fill_price
+        pos["notional"] = new_entry_price * new_qty
+        pos["order_id"] = order.get("id", pos.get("order_id", ""))
+        pos["entry_order_timestamp"] = entry_order_timestamp
+        pos["signal_timestamp"] = pos.get("signal_timestamp", sentiment_data.get("signal_timestamp"))
+
+        fill_timestamp = self._parse_iso_ts(order.get("filled_at"))
+        if fill_timestamp is not None:
+            pos["fill_timestamp"] = fill_timestamp
+            pos["fill_timestamp_source"] = "order_response"
+        else:
+            pos.setdefault("fill_timestamp", None)
+            pos.setdefault("fill_timestamp_source", "unknown")
+
+        pos["decision_confidence"] = sentiment_data.get("consensus_confidence", pos.get("decision_confidence", 0))
+        pos["provider_used"] = sentiment_data.get("provider_used", pos.get("provider_used", ""))
+        pos["scout_escalated"] = True
+
+        trail_pct = sentiment_data.get("jury_trail_pct", pos.get("trail_pct", 3.0))
+        trail_pct = max(1.0, min(5.0, float(trail_pct)))
+        pos["trail_pct"] = trail_pct
+        if hasattr(self.broker, "place_trailing_stop"):
+            try:
+                trail_order = await asyncio.get_event_loop().run_in_executor(
+                    None, self.broker.place_trailing_stop, symbol, int(new_qty), trail_pct
+                )
+                if trail_order:
+                    pos["has_trailing_stop"] = True
+                    pos["trailing_stop_order_id"] = trail_order.get(
+                        "id", pos.get("trailing_stop_order_id")
+                    )
+            except Exception as e:
+                logger.warning(f"Could not refresh trailing stop after scout add for {symbol}: {e}")
+
+        logger.success(
+            f"⚡ Scout escalated: {symbol} +{filled_qty:.2f} -> {new_qty:.2f} shares @ avg ${new_entry_price:.2f}"
+        )
+        return pos
 
     def _load_brokerage_positions(self):
         """Load existing positions from brokerage into tracking."""
@@ -513,6 +695,10 @@ class EntryManager:
                     "entry_price": avg_price,
                     "quantity": qty,
                     "entry_time": time.time(),  # approximate — we don't know real entry time
+                    "signal_timestamp": None,
+                    "entry_order_timestamp": None,
+                    "fill_timestamp": None,
+                    "fill_timestamp_source": "unknown",
                     "sentiment_at_entry": 0,
                     "peak_price": max(avg_price, cur_price) if side == "long" else min(avg_price, cur_price),
                     "order_id": "",
@@ -524,6 +710,7 @@ class EntryManager:
                     "provider_used": "",
                     "signal_price": avg_price,
                     "decision_price": avg_price,
+                    "scout_escalated": False,
                     "_exit_recorded": False,
                 }
                 side_tag = "SHORT" if side == "short" else "LONG"

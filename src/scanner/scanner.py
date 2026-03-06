@@ -5,13 +5,15 @@ Sources: Polygon gainers + StockTwits trending + enrichment via Polygon snapshot
 
 import asyncio
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from loguru import logger
 
 import httpx
 
 from config import settings
+from src.data import strategy_controls
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
+from src.data.technicals import compute_technicals
 
 
 class Scanner:
@@ -47,12 +49,22 @@ class Scanner:
         self._index_context_cache: Dict = {}
         self._index_context_cache_at = 0.0
         self._index_context_cache_ttl = 60  # 1 min
+        self._disabled_strategies_cache: Set[str] = set()
+        self._disabled_strategies_cache_at = 0.0
+        self._disabled_strategies_cache_ttl = 60  # 1 min
+        self._signal_first_seen: Dict[str, float] = {}
+        self._signal_first_seen_ttl = max(
+            300,
+            int(getattr(settings, "SCANNER_SIGNAL_FIRST_SEEN_TTL_SECONDS", 3600)),
+        )
         self._last_market_regime = "mixed"
         logger.info("Scanner initialized")
 
     async def scan(self) -> List[Dict]:
         """Run a full scan cycle. Returns ranked candidate list."""
         logger.info("🔍 Running stock scan...")
+        cutoff = time.time() - self._signal_first_seen_ttl
+        self._signal_first_seen = {s: ts for s, ts in self._signal_first_seen.items() if ts >= cutoff}
 
         # ── SOURCE 1: Polygon gainers ──────────────────────────────
         polygon_candidates = []
@@ -207,9 +219,45 @@ class Scanner:
         filtered = [c for c in candidates if self._passes_filter(c)]
         logger.info(f"After filter: {len(filtered)} candidates (from {len(candidates)} enriched)")
 
+        # Derive strategy metadata before expensive technical calls.
+        for c in filtered:
+            c["strategy_tag"] = self._derive_strategy_tag(c)
+            c["signal_sources"] = self._extract_signal_sources(c)
+
+        # Hard disable losing strategies before bar fetches.
+        disabled_strategies = self._load_disabled_strategies()
+        active_candidates: List[Dict] = []
+        disabled_count = 0
+        for c in filtered:
+            if c["strategy_tag"] in disabled_strategies:
+                disabled_count += 1
+                c["score"] = 0.0
+                continue
+            active_candidates.append(c)
+        if disabled_count:
+            logger.info(f"🚫 Strategy controls skipped {disabled_count} candidates this cycle")
+
+        # Compute technicals only for post-filter survivors.
+        for idx, c in enumerate(active_candidates):
+            snapshot = {
+                "day_high": c.get("day_high", c.get("high", 0)),
+                "day_low": c.get("day_low", c.get("low", 0)),
+            }
+            technicals = await compute_technicals(
+                symbol=c.get("symbol", ""),
+                price=float(c.get("price", 0) or 0),
+                polygon_client=self.polygon,
+                snapshot=snapshot,
+            )
+            if technicals:
+                c.update(technicals)
+            # Keep minute-bar fetches under free-tier rate limits.
+            if idx < (len(active_candidates) - 1):
+                await asyncio.sleep(0.21)
+
         # ── SCORE & RANK (adaptive by regime + recent hit-rate) ───
         index_context = await self._load_index_context()
-        regime = self._detect_market_regime(filtered, index_context=index_context)
+        regime = self._detect_market_regime(active_candidates, index_context=index_context)
         self._last_market_regime = regime
         performance = self._load_performance_snapshot()
         if index_context.get("count", 0) >= 2:
@@ -221,9 +269,7 @@ class Scanner:
             )
         else:
             logger.info(f"Market regime: {regime}")
-        for c in filtered:
-            c["strategy_tag"] = self._derive_strategy_tag(c)
-            c["signal_sources"] = self._extract_signal_sources(c)
+        for c in active_candidates:
             c["market_regime"] = regime
             c["index_avg_change_pct"] = round(float(index_context.get("avg_change_pct", 0.0) or 0.0), 2)
             c["strategy_win_rate_pct"] = round(
@@ -234,14 +280,14 @@ class Scanner:
             )
             c["score_multiplier"] = round(self._performance_multiplier(c, performance), 3)
             c["score"] = self._calculate_score(c, regime=regime, performance=performance)
-        filtered.sort(key=lambda x: x["score"], reverse=True)
+        active_candidates.sort(key=lambda x: x["score"], reverse=True)
 
-        self._cache = filtered[:20]  # Keep more candidates for orchestrator diversity
+        self._cache = active_candidates[:20]  # Keep more candidates for orchestrator diversity
 
         # Record today's big runners for tomorrow's fade watchlist
         if self.fade:
             try:
-                self.fade.record_todays_runners(filtered)
+                self.fade.record_todays_runners(active_candidates)
             except Exception:
                 pass
 
@@ -333,6 +379,10 @@ class Scanner:
                 if stock.get("prev_volume", 0) == 0:
                     stock["prev_volume"] = alpaca_snap.get("prev_volume", 0)
                 stock["prev_close"] = alpaca_snap.get("prev_close", 0)
+                stock["high"] = alpaca_snap.get("high", stock.get("high", 0))
+                stock["low"] = alpaca_snap.get("low", stock.get("low", 0))
+                stock["day_high"] = alpaca_snap.get("day_high", stock.get("day_high", 0))
+                stock["day_low"] = alpaca_snap.get("day_low", stock.get("day_low", 0))
 
             # Fallback to Polygon if Alpaca didn't fill
             if stock.get("price", 0) <= 0 and self.polygon:
@@ -346,10 +396,18 @@ class Scanner:
                         stock["change_pct"] = snapshot.get("change_pct", 0)
                     if stock.get("volume", 0) == 0:
                         stock["volume"] = snapshot.get("volume", 0)
+                    stock["high"] = snapshot.get("high", stock.get("high", 0))
+                    stock["low"] = snapshot.get("low", stock.get("low", 0))
+                    stock["day_high"] = snapshot.get("high", stock.get("day_high", 0))
+                    stock["day_low"] = snapshot.get("low", stock.get("day_low", 0))
 
             # Skip if no price
             if stock.get("price", 0) <= 0:
                 return None
+
+            # Preserve earliest first-seen timestamp across scan cycles.
+            first_seen = self._signal_first_seen.setdefault(symbol, stock.get("signal_timestamp", time.time()))
+            stock["signal_timestamp"] = first_seen
 
             # Volume spike vs previous day volume (Alpaca) or 20-day avg (Polygon fallback)
             prev_vol = stock.get("prev_volume", 0)
@@ -421,6 +479,10 @@ class Scanner:
                     "volume": today_vol,
                     "prev_close": prev_close,
                     "prev_volume": prev_vol,
+                    "high": db.get("h", 0),
+                    "low": db.get("l", 0),
+                    "day_high": db.get("h", 0),
+                    "day_low": db.get("l", 0),
                     "bid": lq.get('bp', 0),
                     "ask": lq.get('ap', 0),
                     "spread_pct": round((lq.get('ap', 0) - lq.get('bp', 0)) / cur_price * 100, 2) if cur_price > 0 else 0,
@@ -614,6 +676,20 @@ class Scanner:
         self._performance_cache = snapshot
         self._performance_cache_at = now
         return snapshot
+
+    def _load_disabled_strategies(self) -> Set[str]:
+        """Load persistent strategy controls with a short in-memory cache."""
+        now = time.time()
+        if (now - self._disabled_strategies_cache_at) < self._disabled_strategies_cache_ttl:
+            return set(self._disabled_strategies_cache)
+        try:
+            controls = strategy_controls.load_controls()
+            disabled = strategy_controls.get_effective_disabled(controls)
+        except Exception:
+            disabled = set()
+        self._disabled_strategies_cache = set(disabled)
+        self._disabled_strategies_cache_at = now
+        return set(disabled)
 
     def _normalize_perf_bucket(self, bucket: Dict) -> Dict:
         trades = int(bucket.get("trades", 0) or 0)

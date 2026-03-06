@@ -15,6 +15,7 @@ import uvicorn
 from loguru import logger
 
 from config import settings
+from src.data import strategy_controls
 
 app = FastAPI(title="Velox", version="2.0.0")
 
@@ -302,6 +303,42 @@ async def get_trade_history(limit: int = 20):
     }
 
 
+@app.get("/api/strategy-controls")
+async def get_strategy_controls():
+    """Get persisted strategy control state and effective disable list."""
+    controls = strategy_controls.load_controls()
+    return {
+        "controls": controls,
+        "effective_disabled": sorted(strategy_controls.get_effective_disabled(controls)),
+    }
+
+
+@app.post("/api/strategy/disable")
+async def disable_strategy(tag: str, reason: str = ""):
+    """Manually disable a strategy tag."""
+    controls = strategy_controls.load_controls()
+    controls = strategy_controls.manual_disable(tag, reason, controls)
+    strategy_controls.save_controls(controls)
+    return {
+        "ok": True,
+        "controls": controls,
+        "effective_disabled": sorted(strategy_controls.get_effective_disabled(controls)),
+    }
+
+
+@app.post("/api/strategy/enable")
+async def enable_strategy(tag: str, reason: str = ""):
+    """Manually enable (override) a strategy tag."""
+    controls = strategy_controls.load_controls()
+    controls = strategy_controls.manual_enable(tag, reason, controls)
+    strategy_controls.save_controls(controls)
+    return {
+        "ok": True,
+        "controls": controls,
+        "effective_disabled": sorted(strategy_controls.get_effective_disabled(controls)),
+    }
+
+
 @app.get("/api/equity-curve")
 async def get_equity_curve(limit: int = 120):
     """Return realized-equity curve points derived from trade history."""
@@ -380,6 +417,13 @@ async def get_pnl():
     win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     drawdown = ((peak - equity) / peak * 100) if peak > 0 else 0
     roi = ((equity - starting) / starting * 100) if starting > 0 else 0
+    avg_signal_to_fill_ms = None
+    try:
+        from src.ai import trade_history
+        analytics = trade_history.get_analytics()
+        avg_signal_to_fill_ms = (analytics.get("overall", {}) or {}).get("avg_signal_to_fill_ms")
+    except Exception:
+        avg_signal_to_fill_ms = None
 
     return {
         "equity": round(equity, 2),
@@ -397,6 +441,7 @@ async def get_pnl():
         "win_rate": round(win_rate, 1),
         "best_trade": round(best, 2),
         "worst_trade": round(worst, 2),
+        "avg_signal_to_fill_ms": avg_signal_to_fill_ms,
         "drawdown_pct": round(drawdown, 2),
         "roi_pct": round(roi, 2),
         "open_positions": len(_bot.entry_manager.get_positions()) if _bot and _bot.entry_manager else 0,
@@ -638,6 +683,7 @@ tr:hover td{background:#161b2288}
       <div class="metric"><div class="value" id="drawdown">0%</div><div class="label">Drawdown</div></div>
       <div class="metric"><div class="value positive" id="bestTrade">$0</div><div class="label">Best Trade</div></div>
       <div class="metric"><div class="value negative" id="worstTrade">$0</div><div class="label">Worst Trade</div></div>
+      <div class="metric"><div class="value info" id="avgLatency">—</div><div class="label">Signal→Fill</div></div>
     </div>
   </div>
 
@@ -672,8 +718,15 @@ tr:hover td{background:#161b2288}
   <div class="card full">
     <h2><span class="icon">💰</span> Trade History <span id="tradeStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="tradeSummary"></div>
-    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L $</th><th>P&L %</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Sources</th><th>Slip(bps)</th></tr></thead>
+    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L $</th><th>P&L %</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Sources</th><th>Slip(bps)</th><th>Latency(ms)</th></tr></thead>
     <tbody id="tradeHistory"></tbody></table>
+  </div>
+
+  <!-- Strategy Controls -->
+  <div class="card full">
+    <h2><span class="icon">🧩</span> Strategy Controls <span id="strategyControlsStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <table><thead><tr><th>Strategy Tag</th><th>Status</th><th>Reason</th><th>Timestamp</th><th>Source</th></tr></thead>
+    <tbody id="strategyControls"></tbody></table>
   </div>
 
   <!-- Portfolio -->
@@ -808,6 +861,10 @@ async function refresh() {
     $('bestTrade').className = 'value positive';
     $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
     $('worstTrade').className = 'value negative';
+    $('avgLatency').textContent = (typeof pnl.avg_signal_to_fill_ms === 'number')
+      ? `${Math.round(pnl.avg_signal_to_fill_ms)}ms`
+      : '—';
+    $('avgLatency').className = 'value info';
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString()
       + ` | Opt R/U: $${(pnl.options_realized_pnl||0).toFixed(2)} / $${(pnl.options_unrealized_pnl||0).toFixed(2)}`;
   }
@@ -897,6 +954,7 @@ async function refresh() {
       <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">Worst Trade ${worst?worst.symbol:''}</div></div>
       <div class="summary-item"><div class="val ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name:'—'}</div><div class="lbl">Top Strategy</div></div>
       <div class="summary-item"><div class="val ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?bestSource.name:'—'}</div><div class="lbl">Top Source</div></div>
+      <div class="summary-item"><div class="val info">${typeof s.avg_signal_to_fill_ms==='number'?Math.round(s.avg_signal_to_fill_ms)+'ms':'—'}</div><div class="lbl">Avg Signal→Fill</div></div>
     ` : '';
     $('tradeHistory').innerHTML = th.trades.length ? th.trades.slice().reverse().map(t => `<tr>
       <td><strong>${t.symbol||'?'}</strong></td>
@@ -907,7 +965,62 @@ async function refresh() {
       <td>${t.strategy_tag||'—'}</td>
       <td style="font-size:11px;color:#8b949e">${Array.isArray(t.signal_sources)?t.signal_sources.join(', '):(t.signal_sources||'—')}</td>
       <td class="${(t.slippage_bps||0) > 0 ? 'negative' : 'positive'}">${fmt(t.slippage_bps||0, 1)}</td>
-    </tr>`).join('') : '<tr><td colspan="10" class="empty">No completed trades yet</td></tr>';
+      <td class="info">${typeof t.signal_to_fill_ms==='number'?Math.round(t.signal_to_fill_ms):'—'}</td>
+    </tr>`).join('') : '<tr><td colspan="11" class="empty">No completed trades yet</td></tr>';
+  }
+  // Strategy controls
+  const sc = await api('/api/strategy-controls');
+  if (sc) {
+    const controls = sc.controls || {};
+    const hard = controls.hard_disabled || {};
+    const manualEnabled = controls.manual_enabled || {};
+    const manualDisabled = controls.manual_disabled || {};
+    const effectiveSet = new Set(sc.effective_disabled || []);
+    const tags = Array.from(new Set([
+      ...Object.keys(hard),
+      ...Object.keys(manualEnabled),
+      ...Object.keys(manualDisabled),
+    ])).sort();
+    $('strategyControlsStats').textContent = `${effectiveSet.size} effective disabled`;
+    if (!tags.length) {
+      $('strategyControls').innerHTML = '<tr><td colspan="5" class="empty">No strategy controls yet</td></tr>';
+    } else {
+      $('strategyControls').innerHTML = tags.map(tag => {
+        const h = hard[tag];
+        const me = manualEnabled[tag];
+        const md = manualDisabled[tag];
+        let status = effectiveSet.has(tag) ? 'DISABLED' : 'ENABLED';
+        let reason = '—';
+        let timestamp = '—';
+        let source = '—';
+
+        if (md) {
+          status = 'MANUAL DISABLE';
+          reason = md.reason || reason;
+          timestamp = md.disabled_at || timestamp;
+          source = md.disabled_by || 'dashboard';
+        } else if (me) {
+          status = effectiveSet.has(tag) ? 'ENABLED OVERRIDE' : 'MANUAL ENABLE';
+          reason = me.reason || reason;
+          timestamp = me.enabled_at || timestamp;
+          source = me.enabled_by || 'dashboard';
+        } else if (h) {
+          status = effectiveSet.has(tag) ? 'AUTO DISABLED' : 'AUTO DISABLED (OVERRIDE)';
+          reason = h.reason || reason;
+          timestamp = h.disabled_at || timestamp;
+          source = h.disabled_by || 'game_film';
+        }
+
+        const statusClass = status.includes('DISABLE') ? 'negative' : 'positive';
+        return `<tr>
+          <td><strong>${tag}</strong></td>
+          <td class="${statusClass}">${status}</td>
+          <td style="font-size:11px;color:#8b949e">${reason}</td>
+          <td>${timestamp === '—' ? '—' : timestamp.replace('T', ' ').replace('Z', ' UTC')}</td>
+          <td>${source}</td>
+        </tr>`;
+      }).join('');
+    }
   }
   // Portfolio
   const pf = await api('/api/portfolio');

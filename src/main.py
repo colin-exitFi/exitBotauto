@@ -11,6 +11,7 @@ import signal
 import sys
 import time
 from pathlib import Path
+from datetime import datetime
 
 from loguru import logger
 from dotenv import load_dotenv
@@ -50,6 +51,7 @@ from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
 from src.data.trade_schema import normalize_trade_record
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
+from src.data.technicals import get_cached_rsi
 from src.options.options_monitor import OptionsMonitor
 
 
@@ -61,6 +63,8 @@ class TradingBot:
         self.paused = False
         self.start_time = time.time()
         self._breakout_queue = asyncio.Queue(maxsize=20)
+        self._fast_path_pending = set()
+        self._fast_path_eval_queue = asyncio.Queue(maxsize=50)
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -289,6 +293,7 @@ class TradingBot:
         await self.market_stream.start()
 
         # Trade updates stream: instant order fill detection
+        self.trade_stream.set_fill_callback(self._on_trade_update_fill)
         self.trade_stream.set_stop_callback(self._on_trailing_stop_filled)
         await self.trade_stream.start()
 
@@ -454,12 +459,12 @@ class TradingBot:
                 except Exception as e:
                     logger.error(f"Extended guard error: {e}")
 
-                # ── FAST-PATH BREAKOUT EVALUATION ─────────────────
-                # Process any breakouts queued by WebSocket stream
+                # ── FAST-PATH SCOUT EVALUATION ────────────────────
+                # Evaluate held scout positions on 5-second cadence.
                 try:
-                    await self._process_breakout_queue()
+                    await self._evaluate_fast_path_scouts()
                 except Exception as e:
-                    logger.error(f"Breakout queue error: {e}")
+                    logger.error(f"Fast-path scout eval error: {e}")
 
                 await asyncio.sleep(monitor_interval)
 
@@ -1006,6 +1011,327 @@ class TradingBot:
             await self._process_candidates([candidate])
             processed += 1
 
+    @staticmethod
+    def _parse_iso_ts(value):
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _compute_signal_latency_fields(position: dict) -> dict:
+        signal_ts = position.get("signal_timestamp")
+        order_ts = position.get("entry_order_timestamp")
+        fill_ts = position.get("fill_timestamp")
+        signal_to_order_ms = None
+        signal_to_fill_ms = None
+        try:
+            if signal_ts is not None and order_ts is not None:
+                signal_to_order_ms = max(0, int((float(order_ts) - float(signal_ts)) * 1000))
+        except Exception:
+            signal_to_order_ms = None
+        try:
+            if signal_ts is not None and fill_ts is not None:
+                signal_to_fill_ms = max(0, int((float(fill_ts) - float(signal_ts)) * 1000))
+        except Exception:
+            signal_to_fill_ms = None
+        return {
+            "signal_timestamp": signal_ts,
+            "entry_order_timestamp": order_ts,
+            "fill_timestamp": fill_ts,
+            "fill_timestamp_source": position.get("fill_timestamp_source", "unknown"),
+            "signal_to_order_ms": signal_to_order_ms,
+            "signal_to_fill_ms": signal_to_fill_ms,
+        }
+
+    def _passes_fast_path_deterministic_screen(self, symbol: str, price: float, pct_change: float, volume_spike: float):
+        if not getattr(settings, "FAST_PATH_ENABLED", True):
+            return False, "disabled"
+        if symbol in self._fast_path_pending:
+            return False, "already_pending"
+        if price <= 0 or price < 5 or price > 500:
+            return False, "price_out_of_range"
+        min_change = float(getattr(settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0))
+        if pct_change < min_change:
+            return False, "insufficient_change"
+        min_vol_spike = float(getattr(settings, "FAST_PATH_MIN_VOLUME_SPIKE", 2.0))
+        if volume_spike < min_vol_spike:
+            return False, "insufficient_volume"
+
+        positions = self.entry_manager.get_positions() if self.entry_manager else []
+        held_symbols = {p.get("symbol") for p in positions}
+        if symbol in held_symbols:
+            return False, "already_held"
+
+        if self.risk_manager:
+            if self.risk_manager.is_wash_sale(symbol):
+                return False, "wash_sale"
+            if not self.risk_manager.can_open_position(positions, symbol=symbol):
+                return False, "risk_open_position_block"
+            if not self.risk_manager.can_enter_sector(symbol, positions):
+                return False, "sector_block"
+
+        cached_rsi = get_cached_rsi(symbol)
+        if cached_rsi is not None:
+            rsi_min = float(getattr(settings, "FAST_PATH_RSI_MIN", 40))
+            rsi_max = float(getattr(settings, "FAST_PATH_RSI_MAX", 85))
+            if cached_rsi < rsi_min or cached_rsi > rsi_max:
+                return False, f"rsi_block_{cached_rsi:.1f}"
+
+        return True, "ok"
+
+    def _handle_fast_path_breakout(self, symbol: str, price: float, pct_change: float, volume_spike: float):
+        """Synchronous callback-safe breakout handler (zero network, in-memory checks only)."""
+        passes, reason = self._passes_fast_path_deterministic_screen(symbol, price, pct_change, volume_spike)
+        if not passes:
+            logger.debug(f"⚡ FAST-PATH reject {symbol}: {reason}")
+            return
+
+        signal_timestamp = time.time()
+        candidate = {
+            "symbol": symbol,
+            "price": price,
+            "change_pct": pct_change,
+            "volume_spike": volume_spike,
+            "source": "breakout_stream",
+            "score": abs(pct_change) / 100 + volume_spike / 10,
+            "signal_timestamp": signal_timestamp,
+            "strategy_tag": "breakout_fast_path",
+        }
+
+        self._fast_path_pending.add(symbol)
+        log_activity(
+            "scan",
+            f"⚡ Fast-path scout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x (signal)",
+            {"signal_timestamp": signal_timestamp},
+        )
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._execute_fast_path_scout_entry(candidate))
+        except RuntimeError:
+            self._fast_path_pending.discard(symbol)
+
+    async def _execute_fast_path_scout_entry(self, candidate: dict):
+        """Async scout entry path (can use network; launched from sync callback via create_task)."""
+        symbol = candidate["symbol"]
+        price = float(candidate.get("price", 0) or 0)
+        pct_change = float(candidate.get("change_pct", 0) or 0)
+        volume_spike = float(candidate.get("volume_spike", 0) or 0)
+        signal_timestamp = float(candidate.get("signal_timestamp", time.time()) or time.time())
+        try:
+            min_entry_sent = float(getattr(settings, "MIN_ENTRY_SENTIMENT", 0.3) or 0.3)
+            scout_score = max(0.75, min(1.0, min_entry_sent + 0.05))
+            positions = self.entry_manager.get_positions()
+            can = await self.entry_manager.can_enter(symbol, scout_score, positions)
+            if not can:
+                logger.info(f"⚡ FAST-PATH blocked by entry checks: {symbol}")
+                return
+
+            scout_mult = float(getattr(settings, "FAST_PATH_SIZE_MULTIPLIER", 0.4))
+            sentiment_data = {
+                "score": scout_score,
+                "consensus_direction": "BUY",
+                "consensus_confidence": 0,
+                "consensus_size_modifier": 1.0,
+                "share_notional_multiplier": scout_mult,
+                "strategy_tag": "breakout_fast_path",
+                "signal_sources": ["breakout_stream"],
+                "provider_used": "fast_path_v1",
+                "signal_price": price,
+                "decision_price": price,
+                "signal_timestamp": signal_timestamp,
+                "change_pct": pct_change,
+                "volume_spike": volume_spike,
+            }
+            pos = await self.entry_manager.enter_position(symbol, sentiment_data)
+            if not pos:
+                logger.info(f"⚡ FAST-PATH scout rejected by broker/size: {symbol}")
+                return
+
+            pos["strategy_tag"] = "breakout_fast_path"
+            pos["scout_escalated"] = False
+            pos["signal_timestamp"] = signal_timestamp
+
+            eval_payload = dict(candidate)
+            eval_payload["attempts"] = 0
+            eval_payload["first_enqueued_at"] = time.time()
+            eval_payload["last_eval_at"] = 0.0
+            try:
+                self._fast_path_eval_queue.put_nowait(eval_payload)
+            except asyncio.QueueFull:
+                logger.warning(f"⚡ FAST-PATH eval queue full, dropping scout eval for {symbol}")
+            log_activity(
+                "trade",
+                f"⚡ FAST-PATH scout entered: {symbol} @ ${pos.get('entry_price', price):.2f}",
+                {"signal_timestamp": signal_timestamp},
+            )
+        finally:
+            self._fast_path_pending.discard(symbol)
+
+    @staticmethod
+    def _get_fast_path_eval_limits():
+        max_cycles = max(1, int(getattr(settings, "FAST_PATH_EVAL_MAX_CYCLES", 6)))
+        max_age_s = max(10, int(getattr(settings, "FAST_PATH_EVAL_MAX_AGE_SECONDS", 90)))
+        return max_cycles, max_age_s
+
+    def _requeue_fast_path_scout(self, scout_candidate: dict, attempts: int):
+        scout_candidate = dict(scout_candidate)
+        scout_candidate["attempts"] = attempts
+        scout_candidate["last_eval_at"] = time.time()
+        try:
+            self._fast_path_eval_queue.put_nowait(scout_candidate)
+            return True
+        except asyncio.QueueFull:
+            logger.warning(
+                f"⚡ FAST-PATH eval queue full; dropping requeue for {scout_candidate.get('symbol', '?')}"
+            )
+            return False
+
+    async def _evaluate_fast_path_scouts(self):
+        """Tier-2 AI evaluation for held fast-path scouts (runs every ~5s)."""
+        if not hasattr(self, "_fast_path_eval_queue") or self._fast_path_eval_queue.empty():
+            return
+        if not self.orchestrator:
+            return
+
+        max_cycles, max_age_s = self._get_fast_path_eval_limits()
+        processed = 0
+        seen_symbols = set()
+        while not self._fast_path_eval_queue.empty() and processed < 5:
+            try:
+                scout_candidate = self._fast_path_eval_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+            symbol = scout_candidate.get("symbol", "")
+            if symbol in seen_symbols:
+                # Preserve 5-second cadence: never evaluate same symbol twice in one loop tick.
+                self._requeue_fast_path_scout(
+                    scout_candidate, int(scout_candidate.get("attempts", 0) or 0)
+                )
+                break
+            seen_symbols.add(symbol)
+            pos = self.entry_manager.positions.get(symbol)
+            if not pos:
+                continue
+            if pos.get("strategy_tag") != "breakout_fast_path":
+                continue
+            if pos.get("scout_escalated"):
+                continue
+            attempts = int(scout_candidate.get("attempts", 0) or 0)
+            first_enqueued_at = float(
+                scout_candidate.get("first_enqueued_at", scout_candidate.get("signal_timestamp", time.time()))
+                or time.time()
+            )
+            age_s = max(0.0, time.time() - first_enqueued_at)
+            if attempts >= max_cycles or age_s > max_age_s:
+                log_activity(
+                    "trade",
+                    f"⚡ FAST-PATH timeout hold: {symbol} (attempts={attempts}, age={int(age_s)}s)",
+                )
+                processed += 1
+                continue
+            if pos.get("order_status") != "filled":
+                next_attempt = attempts + 1
+                self._requeue_fast_path_scout(scout_candidate, next_attempt)
+                processed += 1
+                continue
+
+            try:
+                verdict = await self.orchestrator.evaluate(
+                    symbol=symbol,
+                    price=float(pos.get("entry_price", scout_candidate.get("price", 0)) or 0),
+                    signals_data=scout_candidate,
+                )
+                self.ai_layers["last_consensus"] = verdict.to_dict()
+            except Exception as e:
+                logger.error(f"Fast-path scout jury error for {symbol}: {e}")
+                continue
+
+            if verdict.decision == "BUY":
+                tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
+                tier_size = tier.get("size_pct", 2.0)
+                size_modifier = min(1.0, verdict.size_pct / tier_size) if tier_size > 0 else 1.0
+                sentiment_data = {
+                    "score": pos.get("sentiment_at_entry", 0),
+                    "consensus_size_modifier": size_modifier,
+                    "consensus_confidence": verdict.confidence,
+                    "provider_used": getattr(verdict, "provider_used", ""),
+                    "jury_trail_pct": verdict.trail_pct,
+                    "signal_timestamp": pos.get("signal_timestamp"),
+                }
+                added = await self.entry_manager.add_to_scout(symbol, sentiment_data)
+                if added:
+                    log_activity("trade", f"⚡ FAST-PATH escalate: {symbol} scout -> full")
+                else:
+                    next_attempt = attempts + 1
+                    requeued = self._requeue_fast_path_scout(scout_candidate, next_attempt)
+                    status = "recheck queued" if requeued else "recheck dropped"
+                    log_activity("trade", f"⚡ FAST-PATH hold scout: {symbol} (add blocked, {status})")
+            elif verdict.decision == "SHORT":
+                await self._exit_fast_path_scout(symbol, reason="fast_path_thesis_rejected")
+                log_activity("trade", f"⚡ FAST-PATH exit: {symbol} thesis rejected")
+            else:
+                # SKIP maps to HOLD for scout positions.
+                current_trail = float(pos.get("trail_pct", 3.0) or 3.0)
+                advised = float(getattr(verdict, "trail_pct", current_trail) or current_trail)
+                tightened = max(1.0, min(current_trail, advised))
+                pos["trail_pct"] = tightened
+                next_attempt = attempts + 1
+                requeued = self._requeue_fast_path_scout(scout_candidate, next_attempt)
+                status = "recheck queued" if requeued else "recheck dropped"
+                log_activity(
+                    "trade",
+                    f"⚡ FAST-PATH hold: {symbol} scout maintained (trail={tightened:.1f}%, {status})",
+                )
+            processed += 1
+
+    async def _exit_fast_path_scout(self, symbol: str, reason: str = "fast_path_exit"):
+        pos = self.entry_manager.positions.get(symbol)
+        if not pos:
+            return
+        qty = int(float(pos.get("quantity", 0) or 0))
+        if qty < 1:
+            return
+        side = pos.get("side", "long")
+        close_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
+        order = await asyncio.get_event_loop().run_in_executor(None, close_fn, symbol, qty)
+        if not order:
+            return
+        exit_price = float(order.get("filled_avg_price", pos.get("entry_price", 0)) or pos.get("entry_price", 0))
+        entry_price = float(pos.get("entry_price", exit_price) or exit_price)
+        pnl = (entry_price - exit_price) * qty if side == "short" else (exit_price - entry_price) * qty
+        pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
+        if side == "short":
+            pnl_pct = -pnl_pct
+        trade_record = {
+            "symbol": symbol,
+            "side": "buy_to_cover" if side == "short" else "sell",
+            "entry_price": entry_price,
+            "exit_price": exit_price,
+            "quantity": qty,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "reason": reason,
+            "hold_seconds": time.time() - pos.get("entry_time", time.time()),
+            "entry_time": pos.get("entry_time", 0),
+            "exit_time": time.time(),
+            "strategy_tag": pos.get("strategy_tag", "unknown"),
+            "signal_sources": pos.get("signal_sources", ["unknown"]),
+            "decision_confidence": pos.get("decision_confidence", 0),
+            "provider_used": pos.get("provider_used", ""),
+            "signal_price": pos.get("signal_price", entry_price),
+            "decision_price": pos.get("decision_price", entry_price),
+            "fill_price": exit_price,
+            "slippage_bps": self._compute_entry_slippage_bps(
+                entry_price, pos.get("signal_price", entry_price), side
+            ),
+            **self._compute_signal_latency_fields(pos),
+        }
+        self._record_realized_exit(trade_record)
+
     async def _process_candidates(self, candidates):
         """Evaluate scanner candidates for entry with position manager veto."""
         if not self.risk_manager.can_trade():
@@ -1028,10 +1354,12 @@ class TradingBot:
             sentiment_score = candidate.get("sentiment_score", 0)
             sentiment_data = dict(self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score})
             signal_price = float(candidate.get("price", 0) or 0)
+            signal_timestamp = float(candidate.get("signal_timestamp", time.time()) or time.time())
             signal_sources = self._extract_signal_sources(candidate)
             sentiment_data["signal_price"] = signal_price
             sentiment_data["decision_price"] = signal_price
             sentiment_data["signal_sources"] = signal_sources
+            sentiment_data["signal_timestamp"] = signal_timestamp
 
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
@@ -1079,6 +1407,7 @@ class TradingBot:
             sentiment_data.setdefault("consensus_confidence", 0)
             sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
             sentiment_data.setdefault("share_notional_multiplier", 1.0)
+            sentiment_data.setdefault("signal_timestamp", signal_timestamp)
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -sentiment_score if direction == "SHORT" else sentiment_score
@@ -1311,6 +1640,51 @@ class TradingBot:
         except Exception:
             pending_buy_symbols = set()
 
+        # Reconciliation path: backfill entry fill timestamps when WS callbacks were missed.
+        needs_fill_backfill = any(not p.get("fill_timestamp") for p in positions)
+        closed_orders_for_fill = []
+        if needs_fill_backfill:
+            try:
+                closed_orders_for_fill = await asyncio.get_event_loop().run_in_executor(
+                    None, self.alpaca_client.get_orders, "closed"
+                )
+            except Exception:
+                closed_orders_for_fill = []
+
+        for pos in positions:
+            if pos.get("fill_timestamp"):
+                continue
+            symbol = pos.get("symbol", "")
+            if not symbol:
+                continue
+            side = pos.get("side", "long")
+            expected_entry_side = "sell" if side == "short" else "buy"
+            order_id = str(pos.get("order_id", "") or "")
+            best_fill_ts = None
+            best_fill_price = None
+            for order in closed_orders_for_fill:
+                if order.get("symbol") != symbol:
+                    continue
+                if order.get("side") and order.get("side") != expected_entry_side:
+                    continue
+                if order_id and order.get("id") and str(order.get("id")) != order_id:
+                    continue
+                fill_ts = self._parse_iso_ts(order.get("filled_at"))
+                if fill_ts is None:
+                    continue
+                if best_fill_ts is None or fill_ts > best_fill_ts:
+                    best_fill_ts = fill_ts
+                    try:
+                        best_fill_price = float(order.get("filled_avg_price", 0) or 0)
+                    except Exception:
+                        best_fill_price = None
+            if best_fill_ts is not None:
+                pos["fill_timestamp"] = best_fill_ts
+                pos["fill_timestamp_source"] = "reconciliation"
+                if best_fill_price and best_fill_price > 0:
+                    pos["fill_price"] = best_fill_price
+                pos["order_status"] = "filled"
+
         for pos in list(positions):
             symbol = pos["symbol"]
             try:
@@ -1392,6 +1766,7 @@ class TradingBot:
                             "slippage_bps": self._compute_entry_slippage_bps(
                                 entry_price, pos.get("signal_price", entry_price), side
                             ),
+                            **self._compute_signal_latency_fields(pos),
                         }
                         self._record_realized_exit(trade_record)
 
@@ -1478,40 +1853,38 @@ class TradingBot:
         logger.info(f"{direction} BREAKOUT: {symbol} {pct_change:+.1f}% @ ${price:.2f} (vol {volume_spike:.1f}x)")
         log_activity("scan", f"{direction} Breakout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x")
 
-        # ── FAST-PATH: Queue breakout for immediate evaluation ──
-        # Only if: significant move, not already held, not recently evaluated
-        if abs(pct_change) < 5.0 or volume_spike < 1.5:
-            return  # Too small — let normal scan handle it
+        # v1 fast-path is long-only deterministic scout entry.
+        if pct_change <= 0:
+            return
+        self._handle_fast_path_breakout(
+            symbol=symbol,
+            price=price,
+            pct_change=pct_change,
+            volume_spike=volume_spike,
+        )
 
-        held_symbols = {p.get("symbol") for p in self.entry_manager.get_positions()}
-        if symbol in held_symbols:
-            return  # Already in this one
+    async def _on_trade_update_fill(self, data: dict, event: str):
+        """Capture entry fill timestamps from trade-update events."""
+        if event != "fill":
+            return
+        order = data.get("order", {})
+        symbol = order.get("symbol", "")
+        if not symbol or order.get("type") == "trailing_stop":
+            return
+        if not self.entry_manager:
+            return
+        pos = self.entry_manager.positions.get(symbol)
+        if not pos:
+            return
 
-        # Check orchestrator skip cache (don't re-evaluate SKIPs within 5 min)
-        if self.orchestrator and self.orchestrator._skip_cache.get(symbol):
-            skip_ts = self.orchestrator._skip_cache[symbol]
-            if time.time() - skip_ts < 300:
-                return
-
-        # Queue for async evaluation (can't await from sync callback)
-        if not hasattr(self, "_breakout_queue"):
-            self._breakout_queue = asyncio.Queue(maxsize=20)
-        candidate = {
-            "symbol": symbol,
-            "price": price,
-            "change_pct": pct_change,
-            "volume_spike": volume_spike,
-            "sentiment_score": 0.5,  # neutral default, agents will assess
-            "score": abs(pct_change) / 100 + volume_spike / 10,  # rough priority score
-            "source": "breakout_stream",
-            "spread_pct": 0,
-        }
-        try:
-            self._breakout_queue.put_nowait(candidate)
-            logger.info(f"⚡ FAST-PATH: {symbol} queued for immediate evaluation ({pct_change:+.1f}%, {volume_spike:.1f}x vol)")
-            log_activity("scan", f"⚡ Fast-path: {symbol} {pct_change:+.1f}% queued for immediate eval")
-        except asyncio.QueueFull:
-            pass  # Queue full, skip this one
+        filled_at = self._parse_iso_ts(order.get("filled_at"))
+        if filled_at and not pos.get("fill_timestamp"):
+            pos["fill_timestamp"] = filled_at
+            pos["fill_timestamp_source"] = "trade_update"
+        fill_price = float(order.get("filled_avg_price", 0) or 0)
+        if fill_price > 0:
+            pos["fill_price"] = fill_price
+        pos["order_status"] = "filled"
 
     def _on_trailing_stop_filled(self, symbol: str, fill_price: float, qty: float):
         """Called by trade stream when a trailing stop order fills."""
@@ -1551,6 +1924,7 @@ class TradingBot:
                 "slippage_bps": self._compute_entry_slippage_bps(
                     entry_price, pos.get("signal_price", entry_price), side
                 ),
+                **self._compute_signal_latency_fields(pos),
             }
             self._record_realized_exit(trade_record)
 

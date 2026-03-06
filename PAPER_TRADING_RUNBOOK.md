@@ -27,6 +27,7 @@ ALL of these must pass simultaneously over the trailing 100-trade window before 
 | Unprotected positions | Zero incidents | log grep for `NO TRAILING STOP` or red protection status |
 | Duplicate P&L recording | Zero incidents | log grep for `skipping duplicate` + verify `total_trades` matches trade_history count |
 | Avg entry slippage | < 15 bps | `slippage_bps` field in trade records |
+| Avg signal-to-fill latency (non-fast-path) | <= 120 seconds | trade records `signal_to_fill_ms` filtered to non-fast-path |
 | Bug-driven circuit breakers | Zero | review circuit breaker trigger logs for non-market causes |
 | Broker reconciliation | Always in sync | local position count == Alpaca position count at every 60s equity sync |
 
@@ -39,6 +40,7 @@ If any of these occur, stop paper trading immediately and investigate before res
 - Any unprotected position lasting > 60 seconds
 - Any duplicate trade recording detected in logs or persistence files
 - Local-vs-broker position count divergence persists > 2 minutes
+- Average signal-to-fill latency > 120 seconds for non-fast-path trades
 - Daily loss exceeds tier limit from a software bug (not legitimate market conditions)
 
 ---
@@ -194,7 +196,8 @@ Track these metrics on the dashboard and in game film. Report weekly.
 | Metric | Target | Source |
 |---|---|---|
 | Avg entry slippage | < 15 bps | trade records `slippage_bps` |
-| Avg time-to-fill | < 5 seconds | entry logs |
+| Avg signal-to-fill latency (non-fast-path) | <= 120 seconds | trade records `signal_to_fill_ms` |
+| Avg time-to-fill (scouts) | < 5 seconds | trade records `signal_to_fill_ms` where strategy_tag=`breakout_fast_path` |
 | Fill rate | > 90% | entries attempted vs entries filled |
 | Stale order adjustment rate | < 20% | count of stale-order adjustments / total entries |
 

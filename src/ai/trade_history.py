@@ -62,6 +62,11 @@ def get_analytics() -> Dict:
     losses = [t for t in history if t.get("pnl", 0) < 0]
     breakevens = [t for t in history if t.get("pnl", 0) == 0]
     total_pnl = sum(t.get("pnl", 0) for t in history)
+    latency_samples = [
+        float(t.get("signal_to_fill_ms"))
+        for t in history
+        if isinstance(t.get("signal_to_fill_ms"), (int, float))
+    ]
 
     # By symbol
     by_symbol = {}
@@ -126,6 +131,24 @@ def get_analytics() -> Dict:
     for v in by_strategy.values():
         v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
         v["pnl"] = round(v["pnl"], 2)
+
+    # Latency by strategy
+    strategy_latency = {}
+    for t in history:
+        strategy = t.get("strategy_tag", "unknown") or "unknown"
+        ms = t.get("signal_to_fill_ms")
+        if not isinstance(ms, (int, float)):
+            continue
+        bucket = strategy_latency.setdefault(strategy, {"sum": 0.0, "count": 0})
+        bucket["sum"] += float(ms)
+        bucket["count"] += 1
+    for strategy, bucket in by_strategy.items():
+        agg = strategy_latency.get(strategy)
+        bucket["avg_signal_to_fill_ms"] = (
+            round(agg["sum"] / agg["count"], 1)
+            if agg and agg["count"] > 0
+            else None
+        )
 
     # By signal source (participation attribution)
     by_signal_source = {}
@@ -207,6 +230,11 @@ def get_analytics() -> Dict:
             "total_pnl": round(total_pnl, 2),
             "avg_win": round(sum(t.get("pnl", 0) for t in wins) / max(1, len(wins)), 2),
             "avg_loss": round(sum(t.get("pnl", 0) for t in losses) / max(1, len(losses)), 2),
+            "avg_signal_to_fill_ms": (
+                round(sum(latency_samples) / len(latency_samples), 1)
+                if latency_samples
+                else None
+            ),
         },
         "by_symbol": dict(sorted(by_symbol.items(), key=lambda x: x[1]["pnl"], reverse=True)[:20]),
         "by_hour": by_hour,
