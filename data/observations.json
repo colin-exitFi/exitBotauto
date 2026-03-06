@@ -1121,5 +1121,135 @@
       "perfect_4-0_record": "100% win rate on 4 trades is great, but we've only made $7.57 net (0.03% return). We're playing TOO SAFE. Need to deploy more capital per the mission."
     },
     "timestamp": 1772760654.77232
+  },
+  {
+    "market_assessment": "After-hours Thursday evening - markets closed, holding 7 carryover positions from previous session with mixed performance.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "at_risk",
+        "note": "Flat at entry $13.32, no momentum post-entry, has trailing stop"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "Flat at entry $71.64, NO trailing stop on $358 position - vulnerability"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Up 4.9% ($21.45\u2192$22.50 peak), showing best momentum, NO trailing stop"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up 2.4% ($13.85\u2192$14.18 peak), positive momentum, has trailing stop"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Flat at entry $8.78, dead money, has trailing stop"
+      },
+      {
+        "symbol": "UCO",
+        "status": "at_risk",
+        "note": "Barely up 0.4% ($30.63\u2192$30.75), weak, has trailing stop"
+      },
+      {
+        "symbol": "VG",
+        "status": "at_risk",
+        "note": "Flat at entry $12.28, no movement, has trailing stop"
+      }
+    ],
+    "risk_flags": [
+      "89% capital deployed in stale positions ($2,729/$25,006) - massive opportunity cost",
+      "KR and NPT winners lack trailing stops - unprotected gains totaling $369",
+      "5 of 7 positions showing zero or minimal momentum - dead capital",
+      "After-hours = no execution capability until 9:30 AM Friday",
+      "Heat at 2.7% but actual exposure feels higher given position staleness",
+      "Only 2 daytrades used - 1 more available if needed Friday"
+    ],
+    "what_working": [
+      "NPT showing 4.9% gain - momentum continuation pattern",
+      "SOC with 2.4% gain - secondary momentum",
+      "Trailing stops on 5 positions providing downside protection"
+    ],
+    "what_not_working": [
+      "BW, TTDU, VG completely flat - momentum failed to materialize",
+      "KR and UCO minimal movement - wrong entries or market conditions shifted",
+      "No new scanner candidates visible - signal pipeline dry"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1772761951.6982908
+  },
+  {
+    "market_assessment": "After-hours Thursday night, markets closed red (SPY -0.68%, DIA -1.61%), risk-off regime confirmed - dead zone for momentum, all positions are carryovers from previous session.",
+    "position_health": [
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "+37% runner with trailing stop active, peaked at $14.18, currently protected"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "+37% runner with trailing stop active, holding entry price - locked in"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Peaked at $22.50 from $21.45 entry (+4.9%), NO trailing stop - vulnerable to overnight gap"
+      },
+      {
+        "symbol": "UCO",
+        "status": "at_risk",
+        "note": "Oil play, minimal movement ($30.63\u2192$30.75), has trailing stop but oil sector weak"
+      },
+      {
+        "symbol": "BW",
+        "status": "at_risk",
+        "note": "Flat at entry $13.32, no upside momentum captured, has trailing stop"
+      },
+      {
+        "symbol": "VG",
+        "status": "at_risk",
+        "note": "Dead flat at $12.28 entry, zero momentum, has trailing stop"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "Kroger flat at $71.64, NO trailing stop, defensive sector play in risk-off = dead money"
+      }
+    ],
+    "risk_flags": [
+      "89% cash ($22K of $25K) sitting idle overnight - massive opportunity cost",
+      "7 positions but only 2 are actual winners (SOC, TTDU) - other 5 are dead weight",
+      "NPT and KR have NO trailing stops despite being carryover positions",
+      "After-hours = zero liquidity, zero action possible until 9:30 AM Friday",
+      "Heat at 2.7% is pathetically low - we're scared money right now",
+      "Risk-off regime means tomorrow opens choppy - need aggressive Friday plan"
+    ],
+    "what_working": [
+      "Social momentum longs (SOC +37%, TTDU +37%) - StockTwits + volume spikes = gold",
+      "Trailing stops on winners protecting gains (SOC peaked $14.18, locked in profits)",
+      "Small position sizing (2.5% tier) allowing multiple shots on goal"
+    ],
+    "what_not_working": [
+      "Defensive sector plays (KR) in momentum strategy - wrong game",
+      "Oil/commodity plays (UCO) going nowhere - sector rotation against us",
+      "Positions without trailing stops (NPT, KR) = unprotected overnight risk",
+      "Holding 5 flat/losing positions instead of cutting and redeploying"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "observer_notes": {
+      "capital_efficiency": "TERRIBLE - 89% cash drag, only $2,717 deployed in 7 positions",
+      "friday_setup": "Risk-off Thursday close + after-hours scan shows SOC/TTDU still hot - Friday gap watch critical",
+      "action_bias_check": "We're being too conservative. Dead positions (BW, VG, KR, UCO) should be cut at open, cash redeployed into continuation momentum",
+      "scanner_insight": "SOC and TTDU BOTH in our portfolio AND top scanner = continuation plays for Friday, MRVL/IOT new entries if momentum holds",
+      "psychological_trap": "We're holding 'carryover' positions like they're sacred - they're not. Cut losers fast, redeploy to Friday runners"
+    },
+    "timestamp": 1772763762.682122
   }
 ]

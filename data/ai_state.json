@@ -1,5 +1,5 @@
 {
-  "last_observation": "After-hours Thursday, market closed - all 7 positions are carryover holds from previous session, currently sitting in extended hours with no intraday movement data.",
+  "last_observation": "After-hours Thursday evening - markets closed, holding 7 carryover positions from previous session with mixed performance.",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": null,
@@ -12,7 +12,7 @@
     "reasoning": "Skip cooldown (2 min)",
     "confidence": 0.0,
     "provider_used": "",
-    "timestamp": 1772761884.638342
+    "timestamp": 1772762296.7730958
   },
   "scan_regime": "mixed",
   "scan_regime_raw": "mixed",

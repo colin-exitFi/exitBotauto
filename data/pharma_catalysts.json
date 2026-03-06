@@ -14,7 +14,7 @@
       "drug": "Kresladi",
       "indication": "Danon Disease",
       "date": "2026-03-28",
-      "type": "NDA[1]"
+      "type": "NDA[1][2]"
     },
     {
       "ticker": "LNTH",
@@ -23,17 +23,9 @@
       "indication": "GEP-NETs Imaging",
       "date": "2026-03-29",
       "type": "NDA[1]"
-    },
-    {
-      "ticker": "BRKR",
-      "company": "Brakebush",
-      "drug": "Marnetegragene Autotemcel",
-      "indication": "Severe Leukocyte Adhesion Deficiency-I",
-      "date": "2026-03-28",
-      "type": "BLA[5]"
     }
   ],
   "known_approvals": [],
-  "last_pplx_refresh": 1772741207.4378262,
-  "updated_at": "2026-03-05T14:06:47.438621"
+  "last_pplx_refresh": 1772762435.9495418,
+  "updated_at": "2026-03-05T20:00:35.950521"
 }
