@@ -1,4 +1,14 @@
 {
-  "runners": [],
-  "updated_at": "2026-03-05T17:37:53.216638"
+  "runners": [
+    {
+      "symbol": "NPT",
+      "date": "2026-03-05",
+      "change_pct": 45.63,
+      "close_price": 19.15,
+      "volume": 1074035.0,
+      "volume_spike": 1.010160427159421,
+      "sentiment_at_peak": 0.4545
+    }
+  ],
+  "updated_at": "2026-03-05T19:50:24.393547"
 }

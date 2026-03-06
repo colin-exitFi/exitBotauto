@@ -1,20 +1,20 @@
 {
-  "last_observation": "After-hours Thursday, market closed - all 10 positions entered in extended hours with 'pending' order status, meaning they haven't actually filled yet and are awaiting market open Friday.",
+  "last_observation": "After-hours Thursday, market closed - all 7 positions are carryover holds from previous session, currently sitting in extended hours with no intraday movement data.",
   "last_advice": null,
   "last_tuner_changes": null,
   "last_game_film_summary": null,
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "UCO",
-    "decision": "BUY",
-    "size_pct": 2.0,
+    "symbol": "GAP",
+    "decision": "SKIP",
+    "size_pct": 0,
     "trail_pct": 3.0,
-    "reasoning": "Strong technical BUY (87% confidence) with accelerating momentum on UCO +4.7% with 1.4x volume. WTI crude rallying to $66.36 on Strait of Hormuz geopolitical tensions - clear catalyst with imminent timing. Retail showing bullish sentiment with +170% call gains momentum. Risk approves at 2.5% max. Ma",
-    "confidence": 78.0,
-    "provider_used": "claude",
-    "timestamp": 1772752089.375885
+    "reasoning": "Skip cooldown (2 min)",
+    "confidence": 0.0,
+    "provider_used": "",
+    "timestamp": 1772761767.933585
   },
-  "scan_regime": "risk_off",
-  "scan_regime_raw": "risk_off",
+  "scan_regime": "mixed",
+  "scan_regime_raw": "mixed",
   "scan_interval_seconds": 60
 }

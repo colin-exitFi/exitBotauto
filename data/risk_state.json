@@ -1,8 +1,33 @@
 {
-  "equity": 24975.63,
+  "equity": 24998.15,
   "starting_equity": 25000.0,
-  "ath_equity": 25009.62,
+  "ath_equity": 25034.81,
   "start_date": 1772751285.244927,
   "wash_sale_list": {},
-  "round_trips": []
+  "round_trips": [
+    {
+      "symbol": "TNGX",
+      "entry_time": 1772751445.749452,
+      "exit_time": 1772756765.7544472,
+      "pnl": 0.0
+    },
+    {
+      "symbol": "PMTS",
+      "entry_time": 1772751331.983597,
+      "exit_time": 1772758812.209326,
+      "pnl": 0.0
+    },
+    {
+      "symbol": "MRVL",
+      "entry_time": 1772751372.2210162,
+      "exit_time": 1772758812.25406,
+      "pnl": 0.0
+    },
+    {
+      "symbol": "IOT",
+      "entry_time": 1772751421.597347,
+      "exit_time": 1772758812.306981,
+      "pnl": 0.0
+    }
+  ]
 }

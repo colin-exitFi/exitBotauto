@@ -322,5 +322,804 @@
     "overall_sentiment": "bullish",
     "urgency": "medium",
     "timestamp": 1772753798.650207
+  },
+  {
+    "market_assessment": "After-hours on Thursday, market closed - holding 11 positions from previous session with majority being carryover positions lacking clear strategy context.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop protection, $466 position"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "No trailing stop, defensive/slow mover, $358 position - wrong profile for momentum"
+      },
+      {
+        "symbol": "NPT",
+        "status": "at_risk",
+        "note": "No trailing stop, $236 position - exposed overnight"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Has trailing stop, up 2.4% from entry ($13.85\u2192$14.19 peak), $457 position"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Has trailing stop protection, $369 position"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Has trailing stop, up 0.4% from entry, commodity lever play $368"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Has trailing stop protection, $467 position"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO trailing stop yet, $469 - needs protection ASAP"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO trailing stop yet, $469 - semiconductor exposure unprotected"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO trailing stop yet, $375 - exposed overnight"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Extended hours entry, NO trailing stop yet, $250 - weakest conviction, most exposed"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 4 recent positions (PMTS, MRVL, IOT, TNGX) have NO trailing stops despite being marked 'pending' - $1,563 unprotected",
+      "Portfolio over-diversified: 11 positions with small $25K account = $227/position average - too scattered for momentum",
+      "89% capital deployed ($22.2K cash vs $24.9K equity) but spread thin across 11 names",
+      "Multiple carryover positions lack clear entry logic or conviction signals - inherited garbage",
+      "KR (Kroger) is a defensive dividend stock - completely wrong for momentum velocity strategy",
+      "7 daytrades used - approaching PDT risk zone (3 trades left in rolling 5-day window)"
+    ],
+    "what_working": [
+      "SOC showing positive momentum (+2.4% peak) with trailing stop protection",
+      "Trailing stops ARE active on 5/11 positions (BW, SOC, TTDU, UCO, VG) - proper risk management there",
+      "Extended hours entries captured (PMTS, MRVL, IOT, TNGX) - aggressive deployment is good"
+    ],
+    "what_not_working": [
+      "Position sizing too small - need concentration for velocity, not diversification for safety",
+      "Carryover positions from unknown prior strategy diluting focus",
+      "Extended hours entries executed but trailing stops not immediately applied - execution gap",
+      "Holding slow movers like KR that will never generate velocity needed for $25K\u2192$5M mission"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772753910.521504
+  },
+  {
+    "market_assessment": "After-hours Thursday (6:48pm ET) - market closed, positions carried overnight into Friday with extended-hours entries pending fill confirmation.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "flat at entry, has trailing stop"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "flat at entry, no stop yet - needs one"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "flat at entry, no stop yet - needs one"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "+2.4% gain, trailing stop active, rode from +10.09\u219213.85 (+37%)"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "flat at entry, has trailing stop, rode +37% intraday"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "+0.4% gain, trailing stop active"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "flat at entry, has trailing stop"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "extended hours entry, order_status='pending', no trailing stop set, unconfirmed fill"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "extended hours entry, order_status='pending', no trailing stop, +7.85% runner today"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "extended hours entry, order_status='pending', no trailing stop, +3.15% today"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "extended hours entry, order_status='pending', no trailing stop, weaker conviction"
+      }
+    ],
+    "risk_flags": [
+      "11 open positions vs 10 max_positions limit - overweight by 1",
+      "4 positions with order_status='pending' - extended hours fills not confirmed, risk if they gap overnight",
+      "KR and NPT have NO trailing stops despite being carryover positions",
+      "89% of capital deployed ($22.3K cash vs $25K equity) - limited dry powder for new runners tomorrow",
+      "Heat at 4.3% with $42.83 open risk - close to 4% daily loss limit if positions move against us",
+      "4 pending orders totaling ~$1,562 notional may create concentration if all fill"
+    ],
+    "what_working": [
+      "Momentum runners: SOC +37% intraday, TTDU +37% intraday - chasing momentum IS working",
+      "Trailing stops protecting gains: SOC peaked at 14.19, now stopped at healthy level",
+      "Extended hours entries capturing post-close momentum (MRVL +7.85%, IOT +3.15%)"
+    ],
+    "what_not_working": [
+      "Risk management gaps: 2 carryover positions (KR, NPT) lack stops",
+      "Pending order tracking: 4 positions stuck in 'pending' state overnight = unconfirmed risk",
+      "Position limit discipline: holding 11 vs 10 max"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1772754525.544008
+  },
+  {
+    "market_assessment": "After-hours on Thursday, market closed down -0.71%, risk-off conditions, we're in extended hours limbo with 11 positions and most capital deployed.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop, at entry price, waiting for market open"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "At entry, no trailing stop yet but stable large-cap"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "At entry, no trailing stop, needs protection at open"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up 2.4% from entry (14.187 peak vs 13.85), has trailing stop, working"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "At entry with trailing stop, waiting"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Up 0.4% (30.75 vs 30.63), has trailing stop, slight edge"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "At entry with trailing stop, flat"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, order pending, NO trailing stop - needs immediate protection at open"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "healthy",
+        "note": "Extended hours +7.85% momentum play, order pending, NO stop yet - needs protection"
+      },
+      {
+        "symbol": "IOT",
+        "status": "healthy",
+        "note": "Extended hours +3.15% momentum, order pending, NO stop - needs protection"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Extended hours entry with weak 0.25 sentiment, order pending, NO stop - questionable setup"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 4 positions (PMTS, MRVL, IOT, TNGX) have NO trailing stops - all extended hours entries with pending orders",
+      "Position count at 11 - EXCEEDS max of 10 positions per COMPOUND tier rules",
+      "Only $2,277 cash remaining vs $24,997 portfolio = 89% deployed - very high concentration",
+      "4 positions entered in last 90 minutes during extended hours - execution quality unknown until market open",
+      "7 daytrades already used, approaching PDT threshold (need to preserve firepower)",
+      "Heat at 4.3% vs 4% daily loss limit - minimal cushion before circuit breaker"
+    ],
+    "what_working": [
+      "SOC showing positive momentum (+2.4% unrealized)",
+      "UCO slight positive (+0.4%)",
+      "Extended hours entries on MRVL (+7.85%) and IOT (+3.15%) caught momentum"
+    ],
+    "what_not_working": [
+      "Too many positions opened simultaneously in extended hours without proper stop protection",
+      "TNGX entry with weak sentiment (0.25) contradicts our bullish momentum bias",
+      "Position sizing discipline broken - 11 positions vs 10 max"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1772755143.014654
+  },
+  {
+    "market_assessment": "After-hours Thursday, markets closed - we're holding 11 positions overnight with several extended-hours entries that haven't been validated by market open yet.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop protection, neutral performance"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Stable position, no stop protection yet - need to add"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Stable position, no stop protection yet - need to add"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up +2.4% from entry (13.85\u219214.187 peak), trailing stop active"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "STRONG - up +37% today on 4.5x volume spike, already in our portfolio with trailing stop"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Slight gain +0.4%, trailing stop active"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Flat, has trailing stop protection"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, order_status='pending', NO trailing stop despite trail_pct=3.5 configured"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "healthy",
+        "note": "Extended hours entry at 84.22, up +7.85% today, strong sentiment (0.89), NO stop active yet despite pending status"
+      },
+      {
+        "symbol": "IOT",
+        "status": "healthy",
+        "note": "Extended hours entry at 29.6, up +3.15% today, perfect sentiment (1.0), NO stop active yet"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Extended hours entry, weaker sentiment (0.25), NO stop protection, smallest position ($250)"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 4 positions (PMTS, MRVL, IOT, TNGX) showing 'order_status: pending' with NO active trailing stops despite being configured",
+      "We have 11 positions but max_positions = 10 - we're over limit by 1 position",
+      "89% of capital deployed ($22.3K cash vs $25K equity) - very high exposure going into overnight",
+      "4 extended-hours entries totaling ~$1,562 not yet validated by market open",
+      "KR and NPT lack trailing stop protection entirely",
+      "Heat at 4.3% is manageable but we're near our position limit with high deployment"
+    ],
+    "what_working": [
+      "TTDU momentum play - entered at 8.78, stock ran +37% today on massive volume",
+      "SOC showing small gains with protection in place",
+      "Social momentum signals (StockTwits) identifying real movers (MRVL +7.85%, IOT +3.15%)",
+      "Extended hours positioning catching pre-market momentum"
+    ],
+    "what_not_working": [
+      "Trailing stop activation on new positions - 4 positions pending without protection",
+      "Position count discipline - we exceeded our 10 position maximum",
+      "Risk management on carryover positions - KR and NPT lack stops"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772755756.513988
+  },
+  {
+    "market_assessment": "Market closed (7:18 PM ET Thursday) - all positions are extended-hours carries with 4 new entries (PMTS, MRVL, IOT, TNGX) placed after hours showing aggressive momentum chasing.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop protection, carryover position"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Stable large-cap grocery, no stop yet - needs one"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "No stop protection - needs trailing stop"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up 2.4% from entry (peak 14.187 vs 13.85), trailing stop active at 0.6% - too tight for overnight"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Has trailing stop, flat from entry"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Oil ETF up 0.4% from entry, has trailing stop"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Has trailing stop, flat from entry but strong scanner signal (+9.66% today)"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, order status 'pending' - unclear if filled, no trailing stop active yet"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry, 'pending' status, no trailing stop - good momentum (+7.85%) but unprotected overnight"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry, 'pending' status, no trailing stop active"
+      },
+      {
+        "symbol": "TNGX",
+        "status": "at_risk",
+        "note": "Extended hours entry, 'pending' status, weakest sentiment (0.25), no trailing stop"
+      }
+    ],
+    "risk_flags": [
+      "11 positions open vs 10 max allowed - OVERCONCENTRATED by 1 position",
+      "4 new positions show 'pending' order status but have entry_time/price - unclear fill confirmation",
+      "4 new positions lack trailing stop protection overnight - exposed to gap risk",
+      "89% of capital deployed ($22.7K cash vs $25K equity) - minimal dry powder for Friday",
+      "Heat at 4.3% with only $42.83 open risk suggests stops are too tight relative to position sizes",
+      "KR and NPT lack any stop protection - pure gap risk exposure",
+      "Extended hours entries on low-liquidity tickers (PMTS, TNGX) at elevated risk overnight"
+    ],
+    "what_working": [
+      "Aggressive momentum chasing - MRVL (+7.85%), IOT (+3.15%), VG (+9.66%) all trending",
+      "Volume spike strategy - top picks showing 2-65x average volume",
+      "Social sentiment clustering - StockTwits sourced picks all trending",
+      "SOC showing early profit (+2.4% to peak) with protection"
+    ],
+    "what_not_working": [
+      "Position limit discipline - exceeded max by 1",
+      "Stop discipline - 4 positions completely unprotected overnight",
+      "Order confirmation tracking - 'pending' status on filled orders creates blind spots",
+      "Capital velocity - 89% deployed BEFORE market open = no ammunition for Friday runners"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1772756370.114579
+  },
+  {
+    "market_assessment": "After-hours session (7:29 PM ET) - market closed, positions are in extended hours limbo with 3 recent entries (PMTS, MRVL, IOT) showing 'pending' status and no trailing stops activated yet.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop active, at entry price - neutral"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "No trailing stop but stable blue-chip, minimal risk"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "At entry, no stop - needs monitoring at open"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up 2.4% from entry (peak 14.187 vs 13.85), trailing stop active - performing well"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Massive 37% runner TODAY but we're flat at entry 8.78 - trailing stop exists but position may have been entered late in the move"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Tiny gain (+0.4%), trailing stop active, oil play tracking well"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "At entry with trailing stop, stable"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry, order still PENDING, no trailing stop activated - vulnerable overnight"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry on +7.85% runner, order PENDING, no stop - could gap against us"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry, order PENDING, no trailing stop - exposed overnight"
+      }
+    ],
+    "risk_flags": [
+      "3 positions (PMTS, MRVL, IOT) with 'pending' order status and NO trailing stops - combined $1,312 exposed",
+      "We're at MAX CAPACITY: 10/10 positions held with only $625 per new position available (2.5% tier sizing)",
+      "89% cash sitting idle ($22,277) while holding max positions - capital velocity DEAD",
+      "TTDU shows as +37% mover today but we're breakeven - suggests we bought the top, not the momentum",
+      "Extended hours entries are naked without stops until market open - overnight gap risk",
+      "Only 10.9% deployed ($2,734 long market value) despite being 'max positions' - position sizing is tiny"
+    ],
+    "what_working": [
+      "SOC showing green (+2.4%) with active trailing stop - momentum + protection working",
+      "Trailing stop discipline on 6/10 positions shows risk management functioning",
+      "Social momentum detection caught MRVL (+7.85%) and TTDU (+37%) movers"
+    ],
+    "what_not_working": [
+      "Extended hours entries leaving positions naked overnight without stop protection",
+      "Position sizing WAY too small - $625 positions when we have $45K buying power is leaving 95% of capital dead",
+      "MAX positions cap at 10 with 2.5% sizing = only ~$2,500 deployed vs $25K account - math doesn't work for velocity",
+      "Catching runners LATE (TTDU +37% but we're flat = bought the peak, not the momentum)",
+      "HELP scanner candidate down -33.5% - our 'social momentum' scanner is surfacing losers alongside winners"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1772756971.51345
+  },
+  {
+    "market_assessment": "After-hours on Thursday evening - market closed, positions locked overnight with minimal ability to react until 9:30 AM Friday.",
+    "position_health": [
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up 37% today, already peaked at $14.45, trailing stop active at $14.04 - protecting +1.4% gain, strong volume"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Small gain to $30.75, trailing stop protecting capital"
+      },
+      {
+        "symbol": "BW",
+        "status": "at_risk",
+        "note": "Flat at entry $13.32, no movement yet, trailing stop set but no cushion"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "Flat at entry $71.64, no trailing stop, grocery stock - low volatility, dead capital"
+      },
+      {
+        "symbol": "NPT",
+        "status": "at_risk",
+        "note": "Flat at entry $21.45, no trailing stop, no movement"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Flat at entry $8.78, trailing stop set but zero cushion"
+      },
+      {
+        "symbol": "VG",
+        "status": "at_risk",
+        "note": "Flat at entry $12.28, trailing stop set but zero cushion"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry at $17.54, order pending, NO trailing stop set yet - naked position"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "healthy",
+        "note": "Up 7.85% today, extended hours entry at $84.22, strong earnings momentum, but NO trailing stop active yet"
+      },
+      {
+        "symbol": "IOT",
+        "status": "healthy",
+        "note": "Up 3.15% today, extended hours entry at $29.60, perfect StockTwits sentiment (1.0), but NO trailing stop yet"
+      }
+    ],
+    "risk_flags": [
+      "THREE extended hours positions (PMTS, MRVL, IOT) have NO trailing stops active - exposed overnight",
+      "SEVEN positions are flat or barely moving - dead capital totaling ~$1,900",
+      "Portfolio heat at 4% but only 10.9% deployed ($2,733 in market vs $25,010 equity) - MASSIVE cash drag",
+      "KR and NPT have NO trailing stops at all - manual management required",
+      "10 positions = max position count, but most are low-conviction carryovers",
+      "After-hours = locked in until Friday open, can't adjust anything for 14+ hours"
+    ],
+    "what_working": [
+      "SOC momentum play - caught a 37% runner with volume",
+      "MRVL earnings momentum - up 7.85% with social confirmation",
+      "Extended hours social momentum strategy - IOT, MRVL entries catching evening momentum"
+    ],
+    "what_not_working": [
+      "Carryover positions from broker sync - most are dead weight (BW, KR, NPT, TTDU, VG all flat)",
+      "Low-volatility stocks like KR - grocery chains don't provide velocity we need",
+      "Missing trailing stops on new entries - protection gaps"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1772757589.426573
+  },
+  {
+    "market_assessment": "After-hours Thursday, market closed - all positions are extended-hours entries with pending orders that need monitoring at tomorrow's open",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "Has trailing stop protection, holding entry at $13.32"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Blue chip grocery, stable but NO TRAILING STOP - needs protection"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "Holding at entry $21.45, NO TRAILING STOP - exposed"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "BEAST MODE: +37% gainer today, up 2.4% from our entry, has trailing stop"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "Has trailing stop at entry $8.78"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Oil leverage ETF up 0.4% from entry, has trailing stop"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "Has trailing stop at entry $12.28"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry at $17.54, order status 'pending' - NO TRAILING STOP SET YET"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry at $84.22 (+7.85% day), order 'pending' - NO TRAILING STOP SET YET"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry at $29.60, order 'pending' - NO TRAILING STOP SET YET"
+      }
+    ],
+    "risk_flags": [
+      "THREE extended-hours positions (PMTS, MRVL, IOT) showing 'pending' order status with NO trailing stops - UNPROTECTED",
+      "KR and NPT are carryover positions WITHOUT trailing stops - exposed to gap risk",
+      "Portfolio is 89% CASH ($22.3K of $25K) - MASSIVE dead capital opportunity cost",
+      "Only 10.9% deployed ($2,738 long market value) - severely under-allocated for momentum strategy",
+      "Heat at 4.0% with open risk only $40 - we have massive room to deploy more capital",
+      "At 10 positions (tier max) but most are tiny - blocking new entries when we should be ADDING to winners"
+    ],
+    "what_working": [
+      "SOC is THE winner: +37% on the day, already up 2.4% from our entry - momentum working perfectly",
+      "Extended hours social momentum entries showing conviction (PMTS, MRVL, IOT) - aggressive positioning",
+      "Trailing stops on 5 of 10 positions protecting downside",
+      "Perfect win rate so far (1/1, 100%)"
+    ],
+    "what_not_working": [
+      "Position sizing WAY too small - $468 and $375 positions are meaningless at our account size",
+      "89% cash drag is KILLING velocity - each hour not deployed is lost compounding",
+      "Mixed position management: some have stops, some don't - inconsistent risk control",
+      "Hitting max position count with tiny sizes blocks us from real opportunities"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "actionable_observations": [
+      "IMMEDIATE: Set trailing stops on PMTS, MRVL, IOT once market opens tomorrow",
+      "IMMEDIATE: Set trailing stops on KR and NPT to protect carryover positions",
+      "CRITICAL: SOC is our only real momentum winner - consider ADDING to this position if it continues tomorrow",
+      "STRATEGIC: We need to consolidate - exit small losers fast and concentrate capital in 3-5 REAL runners",
+      "VELOCITY ISSUE: $22K cash sitting idle is a CRIME against our mission - need to deploy 70%+ of capital into active momentum",
+      "Tomorrow's open is DECISION TIME: protect the extended hours bets, add to SOC if it runs, and get capital MOVING"
+    ],
+    "timestamp": 1772758205.793273
+  },
+  {
+    "market_assessment": "After-hours Thursday evening - market is CLOSED, all positions are static carryovers or extended-hours entries waiting for Friday open to prove themselves.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "unknown",
+        "note": "Carryover at $13.32, no movement data, has trailing stop - neutral hold"
+      },
+      {
+        "symbol": "KR",
+        "status": "healthy",
+        "note": "Kroger at $71.64, stable large-cap, minimal risk but minimal momentum potential"
+      },
+      {
+        "symbol": "NPT",
+        "status": "unknown",
+        "note": "Carryover at $21.45, no price action visible, waiting for market open"
+      },
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "UP 37.41% TODAY - already peaked at $14.19 from $13.85 entry (+2.4%), has trailing stop protecting gains, STAR PERFORMER"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "UP 37.05% TODAY - entered at $8.78, strong volume spike 4.55x, high sentiment 0.85, has trailing stop, MOMENTUM RUNNER"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Oil 2x ETF, slight gain $30.63\u2192$30.75 (+0.4%), has trailing stop, following energy momentum"
+      },
+      {
+        "symbol": "VG",
+        "status": "unknown",
+        "note": "Carryover at $12.28, has trailing stop, no movement data yet"
+      },
+      {
+        "symbol": "PMTS",
+        "status": "at_risk",
+        "note": "Extended hours entry at $17.54, order PENDING, NO trailing stop set yet, needs immediate attention at market open"
+      },
+      {
+        "symbol": "MRVL",
+        "status": "at_risk",
+        "note": "Extended hours entry at $84.22 (UP 7.85% today), order PENDING, NO trailing stop, high conviction but unprotected"
+      },
+      {
+        "symbol": "IOT",
+        "status": "at_risk",
+        "note": "Extended hours entry at $29.60, order PENDING, NO trailing stop, needs protection immediately"
+      }
+    ],
+    "risk_flags": [
+      "THREE extended-hours positions (PMTS, MRVL, IOT) have NO TRAILING STOPS - orders still pending, vulnerable to gap-down at open",
+      "10/10 max positions filled - ZERO buying power available for Friday morning runners",
+      "89% cash ($22.3K of $25K) sitting DEAD - massive opportunity cost",
+      "Only $2,755 deployed (11% of capital) - violating capital velocity principle",
+      "Open risk only $40.33 (0.16% of equity) - we're playing it WAY too safe",
+      "Heat at 4% but actual deployment is pathetic - risk framework too conservative"
+    ],
+    "what_working": [
+      "SOC: +37% daily move with trailing stop protection - textbook momentum capture",
+      "TTDU: +37% daily move, 4.5x volume spike, 0.85 sentiment - social momentum strategy working",
+      "Extended hours scanning caught MRVL (+7.85%), PMTS, IOT before they run - good signal detection"
+    ],
+    "what_not_working": [
+      "Capital deployment: $22K sitting idle is LOSING MONEY via opportunity cost",
+      "Risk management execution: pending orders without trailing stops = sloppy",
+      "Position sizing: Too many small positions, not enough concentration in proven winners",
+      "Carryover positions (BW, KR, NPT, VG) showing no momentum - dead weight"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "key_observations": {
+      "critical_action_needed": "At Friday open: (1) Confirm fills on PMTS/MRVL/IOT and SET TRAILING STOPS IMMEDIATELY, (2) Evaluate carryover dead weight for exits, (3) Deploy idle $22K into fresh momentum runners - PDYN at +33.87% is SCREAMING for entry",
+      "missed_opportunity": "PDYN up 33.87% with 7.75x volume spike - we SHOULD be in this, but we're at max positions with dead capital",
+      "strategic_problem": "We're hoarding cash and max positions simultaneously - need to clear losers/stagnant positions FAST to free slots for runners",
+      "capital_efficiency": "11% deployed is FAILURE MODE - we need 60-80% deployed in active momentum to hit velocity targets"
+    },
+    "timestamp": 1772758827.571424
+  },
+  {
+    "market_assessment": "After-hours Thursday, market closed - all 7 positions are carryover holds from previous session, currently sitting in extended hours with no intraday movement data.",
+    "position_health": [
+      {
+        "symbol": "SOC",
+        "status": "healthy",
+        "note": "Up 2.4% from entry (peak 14.187), strong momentum runner +37% on day with trailing stop active - this is our winner"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "Up 0.4% from entry (peak 30.75), oil play with trailing stop - holding steady"
+      },
+      {
+        "symbol": "BW",
+        "status": "at_risk",
+        "note": "Flat at entry 13.32, no peak movement, has trailing stop but showing no momentum yet"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "at_risk",
+        "note": "Flat at entry 8.78, massive +37% runner TODAY but we're at break-even - entered too late or it's fading"
+      },
+      {
+        "symbol": "VG",
+        "status": "at_risk",
+        "note": "Flat at entry 12.28, no movement, has trailing stop but dead capital currently"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "Flat at entry 71.64, no trailing stop, grocery play showing zero momentum"
+      },
+      {
+        "symbol": "NPT",
+        "status": "at_risk",
+        "note": "Flat at entry 21.45, no trailing stop, no movement - dead money"
+      }
+    ],
+    "risk_flags": [
+      "89% of capital sitting in FLAT positions (6 of 7 positions at exact entry)",
+      "Only $2,715 deployed vs $22,277 cash - MASSIVE capital inefficiency",
+      "2 positions (KR, NPT) have NO trailing stops in extended hours",
+      "Heat at 2.7% but only because position sizes are tiny - we're under-deployed",
+      "7 positions held overnight with zero intraday data = blind flying"
+    ],
+    "what_working": [
+      "SOC momentum play - caught the +37% runner and up 2.4%",
+      "Trailing stops on 5 of 7 positions protecting gains",
+      "Scanner identifying same winners (SOC, TTDU both on scanner and in portfolio)"
+    ],
+    "what_not_working": [
+      "6 of 7 positions completely FLAT - no velocity, no compounding",
+      "Holding overnight runners that may have already peaked (TTDU +37% but we're flat)",
+      "89% cash drag - dead capital earning nothing while market moves"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "additional_observations": {
+      "capital_velocity_crisis": "We have $22K in cash doing NOTHING. At 2.5% position size that's 8-9 MORE positions we could deploy. Every hour this sits is compounding opportunity lost.",
+      "timing_issue": "TTDU up +37% today, we're in it but FLAT - suggests we entered at top or it faded. Scanner still shows it - need to evaluate if momentum continues or cut.",
+      "pre_market_opportunity": "Market opens in 13.5 hours. We should have a PLAN for tomorrow's open, not just sit on these 7 flat positions.",
+      "perfect_4-0_record": "100% win rate on 4 trades is great, but we've only made $7.57 net (0.03% return). We're playing TOO SAFE. Need to deploy more capital per the mission."
+    },
+    "timestamp": 1772760654.77232
   }
 ]
