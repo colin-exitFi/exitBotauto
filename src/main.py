@@ -65,6 +65,7 @@ class TradingBot:
         self._breakout_queue = asyncio.Queue(maxsize=20)
         self._fast_path_pending = set()
         self._fast_path_eval_queue = asyncio.Queue(maxsize=50)
+        self._last_daily_reset_date = None
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -273,11 +274,7 @@ class TradingBot:
         self.pnl_state.setdefault("options_total_trades", 0)
         self.pnl_state.setdefault("options_winning_trades", 0)
         self.pnl_state.setdefault("options_losing_trades", 0)
-        from datetime import datetime
-        today = datetime.now().strftime("%Y-%m-%d")
-        if self.pnl_state.get("today_date") != today:
-            self.pnl_state["today_realized_pnl"] = 0.0
-            self.pnl_state["today_date"] = today
+        self._roll_daily_state_if_needed()
 
         # AI layer state
         saved_ai = persistence.load_ai_state()
@@ -339,6 +336,7 @@ class TradingBot:
             while self.running:
                 now = time.time()
                 session_type = "regular"
+                self._roll_daily_state_if_needed()
 
                 # Sync equity from Alpaca every 60s
                 if now - last_equity_sync >= 60 and self.alpaca_client:
@@ -1021,6 +1019,41 @@ class TradingBot:
             return None
 
     @staticmethod
+    def _current_trading_day() -> str:
+        try:
+            import zoneinfo
+            et = zoneinfo.ZoneInfo("US/Eastern")
+            return datetime.now(et).strftime("%Y-%m-%d")
+        except Exception:
+            try:
+                from pytz import timezone as tz
+                return datetime.now(tz("US/Eastern")).strftime("%Y-%m-%d")
+            except Exception:
+                return datetime.now().strftime("%Y-%m-%d")
+
+    def _roll_daily_state_if_needed(self):
+        """Reset per-day P&L and risk stats once when trading day changes."""
+        if not isinstance(getattr(self, "pnl_state", None), dict):
+            return
+
+        today = self._current_trading_day()
+        if self._last_daily_reset_date == today and self.pnl_state.get("today_date") == today:
+            return
+
+        if self.pnl_state.get("today_date") != today:
+            self.pnl_state["today_realized_pnl"] = 0.0
+            self.pnl_state["today_date"] = today
+            if self.risk_manager:
+                self.risk_manager.reset_daily()
+            try:
+                persistence.save_pnl_state(self.pnl_state)
+            except Exception:
+                pass
+            logger.info(f"📅 Daily trading state rolled to {today}")
+
+        self._last_daily_reset_date = today
+
+    @staticmethod
     def _compute_signal_latency_fields(position: dict) -> dict:
         signal_ts = position.get("signal_timestamp")
         order_ts = position.get("entry_order_timestamp")
@@ -1630,26 +1663,34 @@ class TradingBot:
             logger.debug(f"Alpaca position sync error: {e}")
             return
 
-        # Also get open orders to detect pending (unfilled) entries
+        # Also get open orders to detect pending (unfilled) entries.
+        pending_entry_order_keys = set()
         try:
             open_orders = await asyncio.get_event_loop().run_in_executor(
                 None, self.alpaca_client.get_orders
             )
-            pending_buy_symbols = {o["symbol"] for o in open_orders
-                                   if o.get("side") == "buy" and o.get("status") in ("new", "accepted", "pending_new", "partially_filled")}
+            pending_entry_order_keys = {
+                (o.get("symbol", ""), o.get("side", ""))
+                for o in open_orders
+                if o.get("status") in ("new", "accepted", "pending_new", "partially_filled")
+                and o.get("type") != "trailing_stop"
+            }
         except Exception:
-            pending_buy_symbols = set()
+            pending_entry_order_keys = set()
 
-        # Reconciliation path: backfill entry fill timestamps when WS callbacks were missed.
+        # Fetch closed orders once for reconciliation and confirmed-exit checks.
         needs_fill_backfill = any(not p.get("fill_timestamp") for p in positions)
-        closed_orders_for_fill = []
-        if needs_fill_backfill:
+        symbols_missing_from_broker = any(
+            p.get("symbol", "") and p.get("symbol") not in alpaca_symbols for p in positions
+        )
+        closed_orders = []
+        if needs_fill_backfill or symbols_missing_from_broker:
             try:
-                closed_orders_for_fill = await asyncio.get_event_loop().run_in_executor(
+                closed_orders = await asyncio.get_event_loop().run_in_executor(
                     None, self.alpaca_client.get_orders, "closed"
                 )
             except Exception:
-                closed_orders_for_fill = []
+                closed_orders = []
 
         for pos in positions:
             if pos.get("fill_timestamp"):
@@ -1662,7 +1703,7 @@ class TradingBot:
             order_id = str(pos.get("order_id", "") or "")
             best_fill_ts = None
             best_fill_price = None
-            for order in closed_orders_for_fill:
+            for order in closed_orders:
                 if order.get("symbol") != symbol:
                     continue
                 if order.get("side") and order.get("side") != expected_entry_side:
@@ -1690,47 +1731,65 @@ class TradingBot:
             try:
                 # ── DETECT TRAILING STOP FILLS ──
                 # If we're tracking it but Alpaca no longer has it → trailing stop fired
-                # BUT: if there's still a pending buy order, the position hasn't opened yet
-                if symbol in pending_buy_symbols:
-                    logger.debug(f"{symbol}: pending buy order still open — waiting for fill")
+                # BUT: if there's still a pending entry order, the position hasn't opened yet.
+                side = pos.get("side", "long")
+                expected_entry_side = "sell" if side == "short" else "buy"
+                if (symbol, expected_entry_side) in pending_entry_order_keys:
+                    logger.debug(f"{symbol}: pending {expected_entry_side} entry order still open — waiting for fill")
                     continue
 
                 if symbol not in alpaca_symbols:
+                    expected_exit_side = "buy" if side == "short" else "sell"
+                    latest = None
+                    latest_fill_ts = None
+                    latest_key = ""
+                    latest_fill_price = None
+                    session_start_ts = float(getattr(self, "start_time", 0) or 0)
+                    for o in closed_orders:
+                        if o.get("symbol") != symbol:
+                            continue
+                        if o.get("side") and o.get("side") != expected_exit_side:
+                            continue
+                        ts_key = str(o.get("filled_at") or o.get("updated_at") or o.get("submitted_at") or "")
+                        fill_ts = self._parse_iso_ts(ts_key)
+                        if fill_ts is None:
+                            continue
+                        # Guard against matching stale historical exits from before this bot session.
+                        if session_start_ts and fill_ts + 1 < session_start_ts:
+                            continue
+                        try:
+                            fill_price = float(o.get("filled_avg_price", 0) or 0)
+                        except Exception:
+                            fill_price = 0
+                        if fill_price <= 0:
+                            continue
+                        if latest_fill_ts is None or fill_ts > latest_fill_ts:
+                            latest = o
+                            latest_fill_ts = fill_ts
+                            latest_fill_price = fill_price
+                            latest_key = ts_key
+
+                    if not latest:
+                        # Broker snapshots can transiently fail at open; never force local exits
+                        # without a confirmed closed fill.
+                        if not pos.get("_missing_broker_warned"):
+                            logger.warning(
+                                f"⚠️ {symbol} missing from broker snapshot but no confirmed exit fill yet — keeping position"
+                            )
+                            pos["_missing_broker_warned"] = True
+                        continue
+
                     if pos.get("_exit_recorded") or pos.get("_exit_recording"):
                         logger.debug(f"{symbol}: trailing stop exit already being/been recorded — skipping duplicate")
                         continue
                     pos["_exit_recording"] = True
                     try:
                         entry_price = pos.get("entry_price", 0)
-                        side = pos.get("side", "long")
-                        # Get the actual fill price from closed orders
-                        exit_price = entry_price  # default fallback
-                        try:
-                            orders = await asyncio.get_event_loop().run_in_executor(
-                                None, self.alpaca_client.get_orders, "closed"
-                            )
-                            expected_side = "sell" if side == "long" else "buy"
-                            latest = None
-                            latest_key = ""
-                            for o in orders:
-                                if o.get("symbol") != symbol:
-                                    continue
-                                if o.get("side") and o.get("side") != expected_side:
-                                    continue
-                                if not o.get("filled_avg_price"):
-                                    continue
-                                # Accept any filled sell order (trailing_stop, market, limit, stop)
-                                ts_key = str(o.get("filled_at") or o.get("updated_at") or o.get("submitted_at") or "")
-                                if ts_key >= latest_key:
-                                    latest_key = ts_key
-                                    latest = o
-                            if latest:
-                                exit_price = float(latest.get("filled_avg_price", entry_price))
-                                logger.info(f"📊 {symbol} exit fill found: ${exit_price:.2f} (type={latest.get('type')}, filled_at={latest_key[:19]})")
-                            else:
-                                logger.warning(f"⚠️ {symbol} no filled sell order found — using entry_price ${entry_price:.2f} as exit (P&L will be $0)")
-                        except Exception as e:
-                            logger.warning(f"⚠️ {symbol} order lookup failed: {e} — using entry_price as exit")
+                        exit_price = float(latest_fill_price or entry_price)
+                        logger.info(
+                            f"📊 {symbol} exit fill found: ${exit_price:.2f} "
+                            f"(type={latest.get('type')}, filled_at={latest_key[:19]})"
+                        )
 
                         qty = pos.get("quantity", 0)
                         if side == "short":
@@ -1778,6 +1837,8 @@ class TradingBot:
                     finally:
                         pos.pop("_exit_recording", None)
                     continue
+                else:
+                    pos.pop("_missing_broker_warned", None)
 
                 # ── VERIFY TRAILING STOP EXISTS ──
                 if pos.get("_trail_adjusting"):

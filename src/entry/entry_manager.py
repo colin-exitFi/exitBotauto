@@ -281,8 +281,8 @@ class EntryManager:
                 alpaca_positions = self.broker.get_positions()
                 for p in alpaca_positions:
                     if p.get("symbol") == symbol:
-                        actual_qty = float(p.get("qty", 0))
-                        actual_price = float(p.get("avg_entry_price", price))
+                        actual_qty = float(p.get("qty", p.get("quantity", 0)) or 0)
+                        actual_price = float(p.get("avg_entry_price", p.get("average_price", price)) or price)
                         if actual_qty > 0:
                             logger.warning(f"⚠️ {symbol}: order failed but found {actual_qty} shares on Alpaca — recording position")
                             shares = actual_qty
@@ -304,6 +304,28 @@ class EntryManager:
         except Exception:
             fill_price = price
         entry_price = fill_price if fill_price > 0 else price
+        try:
+            requested_qty = float(shares)
+        except Exception:
+            requested_qty = 0.0
+        try:
+            order_qty = float(order.get("qty", requested_qty) or requested_qty)
+        except Exception:
+            order_qty = requested_qty
+        try:
+            filled_qty = float(order.get("filled_qty", order_qty) or order_qty)
+        except Exception:
+            filled_qty = 0.0
+        actual_qty = filled_qty if filled_qty > 0 else order_qty
+        if actual_qty <= 0:
+            actual_qty = requested_qty
+        if actual_qty <= 0:
+            logger.error(f"Failed to determine filled quantity for {symbol}")
+            return None
+        order_status = str(order.get("status", "") or "").lower()
+        if not order_status:
+            order_status = "pending" if extended else "filled"
+        actual_notional = entry_price * actual_qty
 
         # Record position
         signal_sources = sentiment_data.get("signal_sources", ["unknown"])
@@ -317,7 +339,7 @@ class EntryManager:
             "symbol": symbol,
             "entry_price": entry_price,
             "fill_price": fill_price,
-            "quantity": shares,
+            "quantity": actual_qty,
             "entry_time": time.time(),
             "signal_timestamp": signal_timestamp,
             "entry_order_timestamp": entry_order_timestamp,
@@ -332,11 +354,11 @@ class EntryManager:
             "extended_hours_entry": extended,
             "conviction_level": conviction,
             "risk_tier": self.risk.get_risk_tier().get("name", "?") if self.risk else "?",
-            "notional": notional,
+            "notional": actual_notional,
             "trail_pct": trail_pct,
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
-            "order_status": "pending" if extended else "filled",  # limit orders need fill confirmation
+            "order_status": order_status,
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
             "signal_sources": signal_sources,
             "decision_confidence": sentiment_data.get("consensus_confidence", 0),
@@ -348,10 +370,16 @@ class EntryManager:
         }
         self.positions[symbol] = position
         if extended:
-            logger.success(f"📋 LIMIT ORDER PLACED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total) — awaiting fill")
+            logger.success(
+                f"📋 LIMIT ORDER PLACED: {actual_qty:.4f} {symbol} @ ${price:.2f} "
+                f"(${actual_notional:.2f} est) — awaiting fill"
+            )
         else:
             trail_info = f" 📈 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
-            logger.success(f"✅ ENTERED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f} total){trail_info}")
+            logger.success(
+                f"✅ ENTERED: {actual_qty:.4f} {symbol} @ ${entry_price:.2f} "
+                f"(${actual_notional:.2f} total){trail_info}"
+            )
         return position
 
     async def enter_short(self, symbol: str, sentiment_data: Dict) -> Optional[Dict]:
@@ -448,15 +476,19 @@ class EntryManager:
         if order:
             await asyncio.sleep(1)
             try:
+                try:
+                    stop_qty = int(float(order.get("filled_qty", order.get("qty", shares)) or shares))
+                except Exception:
+                    stop_qty = int(shares)
                 if hasattr(self.broker, 'place_trailing_stop_short'):
                     trailing_stop_order = await asyncio.get_event_loop().run_in_executor(
-                        None, self.broker.place_trailing_stop_short, symbol, shares, trail_pct
+                        None, self.broker.place_trailing_stop_short, symbol, stop_qty, trail_pct
                     )
                 else:
                     import requests as req_lib
                     stop_data = {
                         'symbol': symbol,
-                        'qty': str(shares),
+                        'qty': str(stop_qty),
                         'side': 'buy',  # buy to cover
                         'type': 'trailing_stop',
                         'trail_percent': str(trail_pct),
@@ -471,7 +503,7 @@ class EntryManager:
                     trailing_stop_order = resp.json() if resp.status_code in (200, 201) else None
 
                 if trailing_stop_order:
-                    logger.success(f"📉 SHORT trailing stop set: {symbol} {shares}sh trail={trail_pct}%")
+                    logger.success(f"📉 SHORT trailing stop set: {symbol} {stop_qty}sh trail={trail_pct}%")
                 else:
                     logger.warning(f"⚠️ SHORT trailing stop FAILED for {symbol}")
             except Exception as e:
@@ -492,13 +524,35 @@ class EntryManager:
         except Exception:
             fill_price = price
         entry_price = fill_price if fill_price > 0 else price
+        try:
+            requested_qty = float(shares)
+        except Exception:
+            requested_qty = 0.0
+        try:
+            order_qty = float(order.get("qty", requested_qty) or requested_qty)
+        except Exception:
+            order_qty = requested_qty
+        try:
+            filled_qty = float(order.get("filled_qty", order_qty) or order_qty)
+        except Exception:
+            filled_qty = 0.0
+        actual_qty = filled_qty if filled_qty > 0 else order_qty
+        if actual_qty <= 0:
+            actual_qty = requested_qty
+        if actual_qty <= 0:
+            logger.error(f"Failed to determine short filled quantity for {symbol}")
+            return None
+        order_status = str(order.get("status", "") or "").lower()
+        if not order_status:
+            order_status = "filled"
+        actual_notional = entry_price * actual_qty
 
         position = {
             "symbol": symbol,
             "side": "short",
             "entry_price": entry_price,
             "fill_price": fill_price,
-            "quantity": shares,
+            "quantity": actual_qty,
             "entry_time": time.time(),
             "signal_timestamp": signal_timestamp,
             "entry_order_timestamp": entry_order_timestamp,
@@ -511,10 +565,11 @@ class EntryManager:
             "extended_hours_entry": extended,
             "conviction_level": conviction,
             "risk_tier": self.risk.get_risk_tier().get("name", "?") if self.risk else "?",
-            "notional": shares * price,
+            "notional": actual_notional,
             "trail_pct": trail_pct,
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
+            "order_status": order_status,
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
             "signal_sources": signal_sources,
             "decision_confidence": sentiment_data.get("consensus_confidence", 0),
@@ -526,7 +581,7 @@ class EntryManager:
         }
         self.positions[symbol] = position
         trail_info = f" 📉 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
-        logger.success(f"🩳 SHORTED: {shares} {symbol} @ ${price:.2f} (${shares * price:.2f}){trail_info}")
+        logger.success(f"🩳 SHORTED: {actual_qty:.4f} {symbol} @ ${entry_price:.2f} (${actual_notional:.2f}){trail_info}")
         return position
 
     async def add_to_scout(self, symbol: str, sentiment_data: Dict) -> Optional[Dict]:

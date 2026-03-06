@@ -1559,5 +1559,132 @@
     "overall_sentiment": "neutral",
     "urgency": "high",
     "timestamp": 1772775527.034136
+  },
+  {
+    "market_assessment": "Markets closed (Friday 12:54 AM ET) - all positions are carryovers from Thursday, no live price action to assess until Monday open.",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "unknown",
+        "note": "35 shares @ $13.32 ($466) - has trailing stop protection, need Monday open to assess"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "5 shares @ $71.64 ($358) - NO trailing stop, exposed to weekend gap risk"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "11 shares @ $21.45 ($236) - peak $22.50, showing +$11.55 gain, NO trailing stop"
+      },
+      {
+        "symbol": "SOC",
+        "status": "at_risk",
+        "note": "33 shares @ $13.85 ($457) - NO trailing stop, flat since entry"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "unknown",
+        "note": "42 shares @ $8.78 ($369) - has trailing stop protection"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "12 shares @ $30.63 ($367) - peak $30.85, small gain, has trailing stop"
+      },
+      {
+        "symbol": "VG",
+        "status": "unknown",
+        "note": "38 shares @ $12.28 ($467) - has trailing stop protection"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 3 positions (KR, NPT, SOC) have NO trailing stops - $1,051 exposed to weekend gap risk",
+      "89% cash sitting idle ($22,277) - massive opportunity cost if we're in capital velocity mode",
+      "Only $2,710 deployed (10.8% of portfolio) - extremely conservative for momentum trading",
+      "7 positions but all tiny sizes (~$350-470 each) - won't move needle on $25K account",
+      "Weekend gap risk on all positions - markets closed until Monday 9:30 AM ET",
+      "Zero trades today despite having buying power and momentum mission",
+      "Account slightly underwater (-0.05% all-time) but essentially flat"
+    ],
+    "what_working": [
+      "NPT showing momentum (+4.9% from entry, hit $22.50 peak)",
+      "UCO showing slight momentum (+0.7% peak)",
+      "Trailing stops deployed on 4/7 positions provides some protection"
+    ],
+    "what_not_working": [
+      "Dead capital problem - 89% in cash generates zero returns",
+      "Position sizing too small - $350-470 positions won't compound to $5M",
+      "Not enough action - zero trades executed, momentum engine is idle",
+      "3 positions unprotected over weekend - unforced risk exposure"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1772776526.147218
+  },
+  {
+    "market_assessment": "Markets closed (Friday 00:55 ET) - positions carried over weekend, no new opportunities until Monday open",
+    "position_health": [
+      {
+        "symbol": "BW",
+        "status": "healthy",
+        "note": "35 shares @ $13.32, has trailing stop protection, flat since entry"
+      },
+      {
+        "symbol": "KR",
+        "status": "at_risk",
+        "note": "5 shares @ $71.64, NO trailing stop, largest single position value ($358), exposed over weekend"
+      },
+      {
+        "symbol": "NPT",
+        "status": "healthy",
+        "note": "11 shares @ $21.45, peaked at $22.50 (+4.9%), no trailing stop but showing strength"
+      },
+      {
+        "symbol": "SOC",
+        "status": "at_risk",
+        "note": "33 shares @ $13.85, NO trailing stop, flat performance, weekend gap risk"
+      },
+      {
+        "symbol": "TTDU",
+        "status": "healthy",
+        "note": "42 shares @ $8.78, has trailing stop protection, flat but protected"
+      },
+      {
+        "symbol": "UCO",
+        "status": "healthy",
+        "note": "12 shares @ $30.63, peaked at $30.85 (+0.7%), has trailing stop, oil commodity exposure"
+      },
+      {
+        "symbol": "VG",
+        "status": "healthy",
+        "note": "38 shares @ $12.28, has trailing stop protection, flat since entry"
+      }
+    ],
+    "risk_flags": [
+      "89% cash idle ($22,277) - massive opportunity cost sitting dead",
+      "Only 10.8% deployed ($2,710 of $25K) - extreme underutilization",
+      "Weekend gap risk on 7 positions with markets closed until Monday",
+      "KR and SOC lack trailing stops - unprotected weekend exposure",
+      "Zero momentum - all positions flat or barely moved, no runners identified",
+      "7 positions consuming slots but not performing - concentration without velocity",
+      "No recent trades (0) - engine appears dormant or just restarted"
+    ],
+    "what_working": [
+      "NPT showing +4.9% peak gain - only position with meaningful movement",
+      "Trailing stops operational on 4/7 positions (BW, TTDU, UCO, VG) - risk managed",
+      "Heat at 2.7% - well within risk parameters, room for aggressive deployment"
+    ],
+    "what_not_working": [
+      "Capital deployment paralysis - 89% cash earning nothing",
+      "Carryover positions all flat - no momentum captured",
+      "Missing trailing stops on KR and SOC - incomplete risk management",
+      "Zero velocity - no entries, no exits, no compounding happening",
+      "Friday night timing - locked in weekend with dead positions and dead cash"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1772776527.2409139
   }
 ]

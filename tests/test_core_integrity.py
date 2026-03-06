@@ -12,12 +12,16 @@ from src.entry.entry_manager import EntryManager
 class FakeRiskManager:
     def __init__(self):
         self.recorded = []
+        self.reset_calls = 0
 
     def get_risk_tier(self):
         return {"name": "TEST"}
 
     def record_trade(self, trade):
         self.recorded.append(trade)
+
+    def reset_daily(self):
+        self.reset_calls += 1
 
 
 class FakeEntryManager:
@@ -137,6 +141,31 @@ class ExitAccountingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bot.pnl_state.get("total_trades"), 1)
         self.assertAlmostEqual(bot.pnl_state.get("total_realized_pnl", 0), 15.0, places=6)
 
+    async def test_monitor_positions_keeps_position_without_confirmed_closed_fill(self):
+        pos = {
+            "symbol": "AAPL",
+            "entry_price": 100.0,
+            "quantity": 10.0,
+            "entry_time": time.time() - 60,
+            "side": "long",
+            "_exit_recorded": False,
+        }
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.entry_manager = FakeEntryManager(pos, remove_on_exit=True)
+        bot.risk_manager = FakeRiskManager()
+        bot.alpaca_client = FakeAlpacaForMonitor(closed_orders=[])
+        bot.pnl_state = {}
+
+        with patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
+             patch.object(main_module.persistence, "save_pnl_state"), \
+             patch.object(main_module.persistence, "save_positions"), \
+             patch.object(main_module.persistence, "save_trades"):
+            await bot._monitor_positions()
+
+        self.assertEqual(record_trade_mock.call_count, 0)
+        self.assertEqual(len(bot.risk_manager.recorded), 0)
+        self.assertIn("AAPL", bot.entry_manager.positions)
+
     async def test_monitor_and_ws_race_records_exit_once(self):
         pos = {
             "symbol": "AAPL",
@@ -190,6 +219,22 @@ class ExitAccountingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(bot.risk_manager.recorded), 1)
         self.assertEqual(bot.pnl_state.get("total_trades"), 1)
         self.assertAlmostEqual(bot.pnl_state.get("total_realized_pnl", 0), 50.0, places=6)
+
+    def test_roll_daily_state_resets_risk_once_on_new_trading_day(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.risk_manager = FakeRiskManager()
+        bot.pnl_state = {"today_realized_pnl": 125.0, "today_date": "2026-03-05"}
+        bot._last_daily_reset_date = "2026-03-05"
+
+        with patch.object(main_module.TradingBot, "_current_trading_day", return_value="2026-03-06"), \
+             patch.object(main_module.persistence, "save_pnl_state") as save_pnl_mock:
+            bot._roll_daily_state_if_needed()
+            bot._roll_daily_state_if_needed()
+
+        self.assertEqual(bot.pnl_state.get("today_realized_pnl"), 0.0)
+        self.assertEqual(bot.pnl_state.get("today_date"), "2026-03-06")
+        self.assertEqual(bot.risk_manager.reset_calls, 1)
+        self.assertEqual(save_pnl_mock.call_count, 1)
 
 
 class ShortRestartSyncTests(unittest.TestCase):

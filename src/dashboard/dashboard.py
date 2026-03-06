@@ -617,16 +617,16 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .card h2{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;border-bottom:1px solid #21262d;padding-bottom:10px;display:flex;align-items:center;gap:8px}
 .card h2 .icon{font-size:16px}
 .full{grid-column:1/-1}
-.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.metrics.pnl-grid{grid-template-columns:repeat(5,1fr)}
-.metric{text-align:center;padding:14px 10px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.metric{text-align:center;padding:12px 8px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s;overflow:hidden}
 .metric:hover{border-color:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
-.metric .value{font-size:22px;font-weight:800;color:#58a6ff;transition:all .3s}
+.metric .value{font-size:18px;font-weight:800;color:#58a6ff;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .metric .value.positive{color:#3fb950}
 .metric .value.negative{color:#f85149}
 .metric .value.animated{animation:countUp .4s ease-out}
-.metric .label{font-size:10px;color:#6e7681;margin-top:6px;text-transform:uppercase;letter-spacing:.5px}
-.big-pnl{font-size:36px!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
+.metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big-pnl{font-size:28px!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px solid #21262d}
 td{padding:8px 10px;border-bottom:1px solid #21262d44;font-size:13px;transition:background .2s}
@@ -644,10 +644,11 @@ tr:hover td{background:#161b2288}
 .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .btn:active{transform:translateY(0)}
 .empty{color:#484f58;text-align:center;padding:24px;font-style:italic}
-.summary-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
-.summary-item{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 16px;flex:1;min-width:120px;text-align:center}
-.summary-item .val{font-size:20px;font-weight:800}
-.summary-item .lbl{font-size:10px;color:#6e7681;text-transform:uppercase;margin-top:2px}
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.summary-item{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 12px;text-align:center;overflow:hidden}
+.summary-item .val{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.summary-item .val.val-sm{font-size:13px;font-weight:700}
+.summary-item .lbl{font-size:9px;color:#6e7681;text-transform:uppercase;margin-top:3px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ai-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;font-size:12px;line-height:1.5;max-height:200px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word}
 .ai-card strong{color:#58a6ff;display:block;margin-bottom:4px}
@@ -718,8 +719,8 @@ tr:hover td{background:#161b2288}
   <div class="card full">
     <h2><span class="icon">💰</span> Trade History <span id="tradeStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="tradeSummary"></div>
-    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L $</th><th>P&L %</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Sources</th><th>Slip(bps)</th><th>Latency(ms)</th></tr></thead>
-    <tbody id="tradeHistory"></tbody></table>
+    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Sources</th><th>Slip</th><th>Latency</th></tr></thead>
+    <tbody id="tradeHistory"></tbody></table></div>
   </div>
 
   <!-- Strategy Controls -->
@@ -739,8 +740,8 @@ tr:hover td{background:#161b2288}
   <!-- Options Positions -->
   <div class="card full">
     <h2><span class="icon">🧩</span> Options Positions <span id="optionsValue" style="margin-left:auto;color:#58a6ff;font-size:12px"></span></h2>
-    <table><thead><tr><th>Underlying</th><th>Contract</th><th>Type</th><th>Strike</th><th>Expiry</th><th>Qty</th><th>Entry</th><th>Current</th><th>Bid</th><th>Ask</th><th>P&L%</th><th>DTE</th><th>Status</th></tr></thead>
-    <tbody id="optionsPositions"></tbody></table>
+    <div style="overflow-x:auto"><table><thead><tr><th>Underlying</th><th>Contract</th><th>Type</th><th>Strike</th><th>Exp</th><th>Qty</th><th>Entry</th><th>Curr</th><th>Bid</th><th>Ask</th><th>P&L%</th><th>DTE</th><th>Status</th></tr></thead>
+    <tbody id="optionsPositions"></tbody></table></div>
   </div>
 
   <!-- Activity Feed + Watchlist side by side -->
@@ -757,8 +758,8 @@ tr:hover td{background:#161b2288}
   <!-- Positions + Candidates side by side -->
   <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
-    <table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Trail%</th><th>Protection</th><th>Hold</th></tr></thead>
-    <tbody id="positions"></tbody></table>
+    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Trail%</th><th>Protection</th><th>Hold</th></tr></thead>
+    <tbody id="positions"></tbody></table></div>
   </div>
   <div class="card">
     <h2><span class="icon">🔍</span> Scanner Candidates</h2>
@@ -920,12 +921,12 @@ async function refresh() {
     const ac = st.api_calls || {};
     $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations` : '❌ Disabled';
     $('consensusSummary').innerHTML = con.enabled ? `
-      <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Total Evals</div></div>
-      <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY Signals</div></div>
-      <div class="summary-item"><div class="val" style="color:#d2a8ff">${st.shorts||0}</div><div class="lbl">SHORT Signals</div></div>
-      <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP Signals</div></div>
-      <div class="summary-item"><div class="val" style="color:#e3b341">${st.avg_confidence?(st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Avg Confidence</div></div>
-      <div class="summary-item"><div class="val" style="color:#8b949e;font-size:11px">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
+      <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Evals</div></div>
+      <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY</div></div>
+      <div class="summary-item"><div class="val" style="color:#d2a8ff">${st.shorts||0}</div><div class="lbl">SHORT</div></div>
+      <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP</div></div>
+      <div class="summary-item"><div class="val" style="color:#e3b341">${st.avg_confidence?(st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Avg Conf</div></div>
+      <div class="summary-item"><div class="val val-sm" style="color:#8b949e">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
     ` : '';
     $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
       const decCls = h.decision==='BUY'?'tag-buy':h.decision==='SHORT'?'tag-short':'tag-skip';
@@ -947,14 +948,14 @@ async function refresh() {
     const bestSource = topPnlBucket(th.stats?.by_signal_source);
     $('tradeStats').textContent = `${s.wins||0}W / ${s.losses||0}L`;
     $('tradeSummary').innerHTML = th.trades.length ? `
-      <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Total Trades</div></div>
+      <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Trades</div></div>
       <div class="summary-item"><div class="val ${(s.win_rate_pct||0)>=50?'positive':'negative'}">${(s.win_rate_pct||0).toFixed(1)}%</div><div class="lbl">Win Rate</div></div>
       <div class="summary-item"><div class="val ${cls(s.total_pnl||0)}">${fmt(s.total_pnl||0)}</div><div class="lbl">Total P&L</div></div>
-      <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">Best Trade ${best?best.symbol:''}</div></div>
-      <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">Worst Trade ${worst?worst.symbol:''}</div></div>
-      <div class="summary-item"><div class="val ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name:'—'}</div><div class="lbl">Top Strategy</div></div>
-      <div class="summary-item"><div class="val ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?bestSource.name:'—'}</div><div class="lbl">Top Source</div></div>
-      <div class="summary-item"><div class="val info">${typeof s.avg_signal_to_fill_ms==='number'?Math.round(s.avg_signal_to_fill_ms)+'ms':'—'}</div><div class="lbl">Avg Signal→Fill</div></div>
+      <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">${best?best.symbol+' Best':'Best'}</div></div>
+      <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">${worst?worst.symbol+' Worst':'Worst'}</div></div>
+      <div class="summary-item" title="${bestStrategy?bestStrategy.name:''}"><div class="val val-sm ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name.replace('_',' '):'—'}</div><div class="lbl">Top Strategy</div></div>
+      <div class="summary-item" title="${bestSource?bestSource.name:''}"><div class="val val-sm ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?bestSource.name:'—'}</div><div class="lbl">Top Source</div></div>
+      <div class="summary-item"><div class="val info">${typeof s.avg_signal_to_fill_ms==='number'?Math.round(s.avg_signal_to_fill_ms)+'ms':'—'}</div><div class="lbl">Avg Sig→Fill</div></div>
     ` : '';
     $('tradeHistory').innerHTML = th.trades.length ? th.trades.slice().reverse().map(t => `<tr>
       <td><strong>${t.symbol||'?'}</strong></td>

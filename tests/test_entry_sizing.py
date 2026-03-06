@@ -84,6 +84,38 @@ class EntrySizingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(broker.smart_buy_calls)
         self.assertAlmostEqual(broker.smart_buy_calls[0][1], 500.0, places=2)
 
+    async def test_position_uses_filled_qty_for_quantity_and_notional(self):
+        class _PartialFillBroker(_DummyBroker):
+            def smart_buy(self, symbol: str, notional: float):
+                self.smart_buy_calls.append((symbol, float(notional)))
+                return {
+                    "id": "order-2",
+                    "qty": "5",
+                    "filled_qty": "3",
+                    "filled_avg_price": "101",
+                    "status": "partially_filled",
+                }
+
+        broker = _PartialFillBroker()
+        entry = EntryManager(
+            alpaca_client=broker,
+            polygon_client=_DummyPolygon(),
+            risk_manager=_DummyRisk(),
+        )
+        entry.is_extended_hours = lambda: False
+
+        sentiment_data = {
+            "score": 0.4,
+            "share_notional_multiplier": 0.5,
+            "strategy_tag": "momentum_long",
+            "signal_sources": ["polygon"],
+        }
+        pos = await entry.enter_position("AAPL", sentiment_data)
+        self.assertIsNotNone(pos)
+        self.assertAlmostEqual(float(pos.get("quantity", 0)), 3.0, places=6)
+        self.assertAlmostEqual(float(pos.get("entry_price", 0)), 101.0, places=6)
+        self.assertAlmostEqual(float(pos.get("notional", 0)), 303.0, places=6)
+
 
 if __name__ == "__main__":
     unittest.main()

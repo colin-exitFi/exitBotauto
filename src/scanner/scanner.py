@@ -238,6 +238,10 @@ class Scanner:
             logger.info(f"🚫 Strategy controls skipped {disabled_count} candidates this cycle")
 
         # Compute technicals only for post-filter survivors.
+        technical_fetch_delay = max(
+            0.15,
+            float(getattr(settings, "SCANNER_TECHNICAL_FETCH_DELAY_SECONDS", 0.26) or 0.26),
+        )
         for idx, c in enumerate(active_candidates):
             snapshot = {
                 "day_high": c.get("day_high", c.get("high", 0)),
@@ -253,7 +257,7 @@ class Scanner:
                 c.update(technicals)
             # Keep minute-bar fetches under free-tier rate limits.
             if idx < (len(active_candidates) - 1):
-                await asyncio.sleep(0.21)
+                await asyncio.sleep(technical_fetch_delay)
 
         # ── SCORE & RANK (adaptive by regime + recent hit-rate) ───
         index_context = await self._load_index_context()

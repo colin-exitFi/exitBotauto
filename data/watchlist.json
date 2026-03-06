@@ -11,16 +11,6 @@
       "expires_at": 1773026014.0390248
     },
     {
-      "ticker": "TTD",
-      "conviction": 0.99,
-      "side": "long",
-      "reason": "StockTwits #27 trending | StockTwits #29 trending",
-      "sources": "stocktwits",
-      "added_at": 1772679846.4704928,
-      "last_refreshed": 1772681224.6660638,
-      "expires_at": 1772767624.6660638
-    },
-    {
       "ticker": "MU",
       "conviction": 0.98,
       "side": "long",
@@ -29,26 +19,6 @@
       "added_at": 1772679846.476177,
       "last_refreshed": 1772681224.671028,
       "expires_at": 1772854024.671028
-    },
-    {
-      "ticker": "AMPX",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #22 trending",
-      "sources": "stocktwits",
-      "added_at": 1772681224.669065,
-      "last_refreshed": 1772681224.669065,
-      "expires_at": 1772767624.669065
-    },
-    {
-      "ticker": "CEPT",
-      "conviction": 0.87,
-      "side": "long",
-      "reason": "StockTwits #17 trending",
-      "sources": "stocktwits",
-      "added_at": 1772681224.670055,
-      "last_refreshed": 1772681224.670055,
-      "expires_at": 1772767624.670055
     },
     {
       "ticker": "NVDA",
@@ -241,6 +211,6 @@
       "expires_at": 1773026038.2943501
     }
   ],
-  "updated_at": "2026-03-05T21:14:00.218386",
-  "count": 24
+  "updated_at": "2026-03-05T23:54:49.506270",
+  "count": 21
 }
