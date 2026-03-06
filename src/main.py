@@ -59,6 +59,7 @@ class TradingBot:
         self.running = False
         self.paused = False
         self.start_time = time.time()
+        self._breakout_queue = asyncio.Queue(maxsize=20)
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -402,6 +403,13 @@ class TradingBot:
                             log_activity("trade", f"🛡️ {sym}: {action}")
                 except Exception as e:
                     logger.error(f"Extended guard error: {e}")
+
+                # ── FAST-PATH BREAKOUT EVALUATION ─────────────────
+                # Process any breakouts queued by WebSocket stream
+                try:
+                    await self._process_breakout_queue()
+                except Exception as e:
+                    logger.error(f"Breakout queue error: {e}")
 
                 await asyncio.sleep(monitor_interval)
 
@@ -921,6 +929,39 @@ class TradingBot:
         # Long adverse slippage means entry higher than signal.
         return ((entry_price - signal_price) / signal_price) * 10000
 
+    async def _process_breakout_queue(self):
+        """Process breakouts detected by WebSocket for immediate evaluation.
+        
+        This is the FAST PATH — gets us into runners 10-15 minutes before
+        the next scan cycle would find them.
+        """
+        if not hasattr(self, '_breakout_queue') or self._breakout_queue.empty():
+            return
+        
+        if not self.risk_manager.can_trade():
+            return
+
+        # Process up to 3 breakouts per cycle to avoid flooding
+        processed = 0
+        while not self._breakout_queue.empty() and processed < 3:
+            try:
+                candidate = self._breakout_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            
+            symbol = candidate["symbol"]
+            
+            # Double-check not already held (could have been bought since queue)
+            held_symbols = {p.get("symbol") for p in self.entry_manager.get_positions()}
+            if symbol in held_symbols:
+                continue
+            
+            logger.info(f"⚡ FAST-PATH evaluating: {symbol} @ ${candidate['price']:.2f} ({candidate['change_pct']:+.1f}%, {candidate['volume_spike']:.1f}x vol)")
+            
+            # Run through the same orchestrator pipeline as normal candidates
+            await self._process_candidates([candidate])
+            processed += 1
+
     async def _process_candidates(self, candidates):
         """Evaluate scanner candidates for entry with position manager veto."""
         if not self.risk_manager.can_trade():
@@ -1316,6 +1357,41 @@ class TradingBot:
         direction = "🚀" if pct_change > 0 else "💥"
         logger.info(f"{direction} BREAKOUT: {symbol} {pct_change:+.1f}% @ ${price:.2f} (vol {volume_spike:.1f}x)")
         log_activity("scan", f"{direction} Breakout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x")
+
+        # ── FAST-PATH: Queue breakout for immediate evaluation ──
+        # Only if: significant move, not already held, not recently evaluated
+        if abs(pct_change) < 5.0 or volume_spike < 1.5:
+            return  # Too small — let normal scan handle it
+
+        held_symbols = {p.get("symbol") for p in self.entry_manager.get_positions()}
+        if symbol in held_symbols:
+            return  # Already in this one
+
+        # Check orchestrator skip cache (don't re-evaluate SKIPs within 5 min)
+        if self.orchestrator and self.orchestrator._skip_cache.get(symbol):
+            skip_ts = self.orchestrator._skip_cache[symbol]
+            if time.time() - skip_ts < 300:
+                return
+
+        # Queue for async evaluation (can't await from sync callback)
+        if not hasattr(self, '_breakout_queue'):
+            self._breakout_queue = asyncio.Queue()
+        candidate = {
+            "symbol": symbol,
+            "price": price,
+            "change_pct": pct_change,
+            "volume_spike": volume_spike,
+            "sentiment_score": 0.5,  # neutral default, agents will assess
+            "score": abs(pct_change) / 100 + volume_spike / 10,  # rough priority score
+            "source": "breakout_stream",
+            "spread_pct": 0,
+        }
+        try:
+            self._breakout_queue.put_nowait(candidate)
+            logger.info(f"⚡ FAST-PATH: {symbol} queued for immediate evaluation ({pct_change:+.1f}%, {volume_spike:.1f}x vol)")
+            log_activity("scan", f"⚡ Fast-path: {symbol} {pct_change:+.1f}% queued for immediate eval")
+        except asyncio.QueueFull:
+            pass  # Queue full, skip this one
 
     def _on_trailing_stop_filled(self, symbol: str, fill_price: float, qty: float):
         """Called by trade stream when a trailing stop order fills."""
