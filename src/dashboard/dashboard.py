@@ -133,7 +133,14 @@ async def get_positions():
     enriched = []
     for p in positions:
         price = 0
-        if _bot.polygon_client:
+        # Use Alpaca as source of truth for current price (matches portfolio view)
+        if _bot.alpaca_client:
+            try:
+                price = _bot.alpaca_client.get_latest_price(p["symbol"])
+            except:
+                pass
+        # Fallback to Polygon, then entry price
+        if not price and _bot.polygon_client:
             try:
                 price = _bot.polygon_client.get_price(p["symbol"])
             except:

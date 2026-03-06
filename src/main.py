@@ -1253,19 +1253,20 @@ class TradingBot:
         self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
         self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
         self.pnl_state["total_trades"] = self.pnl_state.get("total_trades", 0) + 1
-        if pnl >= 0:
+        if pnl > 0:
             self.pnl_state["winning_trades"] = self.pnl_state.get("winning_trades", 0) + 1
-        else:
+        elif pnl < 0:
             self.pnl_state["losing_trades"] = self.pnl_state.get("losing_trades", 0) + 1
+        # pnl == 0 → breakeven, not counted as win or loss
         self.pnl_state["best_trade"] = max(self.pnl_state.get("best_trade", 0), pnl)
         self.pnl_state["worst_trade"] = min(self.pnl_state.get("worst_trade", 0), pnl)
 
         if asset_type == "option":
             self.pnl_state["options_total_realized_pnl"] = self.pnl_state.get("options_total_realized_pnl", 0) + pnl
             self.pnl_state["options_total_trades"] = self.pnl_state.get("options_total_trades", 0) + 1
-            if pnl >= 0:
+            if pnl > 0:
                 self.pnl_state["options_winning_trades"] = self.pnl_state.get("options_winning_trades", 0) + 1
-            else:
+            elif pnl < 0:
                 self.pnl_state["options_losing_trades"] = self.pnl_state.get("options_losing_trades", 0) + 1
 
         persistence.save_pnl_state(self.pnl_state)
@@ -1328,8 +1329,8 @@ class TradingBot:
                     try:
                         entry_price = pos.get("entry_price", 0)
                         side = pos.get("side", "long")
-                        # Get the latest matching trailing-stop fill price from closed orders
-                        exit_price = entry_price  # default
+                        # Get the actual fill price from closed orders
+                        exit_price = entry_price  # default fallback
                         try:
                             orders = await asyncio.get_event_loop().run_in_executor(
                                 None, self.alpaca_client.get_orders, "closed"
@@ -1340,20 +1341,22 @@ class TradingBot:
                             for o in orders:
                                 if o.get("symbol") != symbol:
                                     continue
-                                if o.get("type") != "trailing_stop":
-                                    continue
                                 if o.get("side") and o.get("side") != expected_side:
                                     continue
                                 if not o.get("filled_avg_price"):
                                     continue
+                                # Accept any filled sell order (trailing_stop, market, limit, stop)
                                 ts_key = str(o.get("filled_at") or o.get("updated_at") or o.get("submitted_at") or "")
                                 if ts_key >= latest_key:
                                     latest_key = ts_key
                                     latest = o
                             if latest:
                                 exit_price = float(latest.get("filled_avg_price", entry_price))
-                        except Exception:
-                            pass
+                                logger.info(f"📊 {symbol} exit fill found: ${exit_price:.2f} (type={latest.get('type')}, filled_at={latest_key[:19]})")
+                            else:
+                                logger.warning(f"⚠️ {symbol} no filled sell order found — using entry_price ${entry_price:.2f} as exit (P&L will be $0)")
+                        except Exception as e:
+                            logger.warning(f"⚠️ {symbol} order lookup failed: {e} — using entry_price as exit")
 
                         qty = pos.get("quantity", 0)
                         if side == "short":

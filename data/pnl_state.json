@@ -4,7 +4,13 @@
   "peak_equity": 25034.81,
   "total_realized_pnl": 0.0,
   "total_trades": 4,
-  "winning_trades": 4,
+  "winning_trades": 0,
+  "losing_trades": 0,
   "best_trade": 0,
-  "worst_trade": 0
+  "worst_trade": 0,
+  "starting_equity": 25000.0,
+  "options_total_realized_pnl": 0.0,
+  "options_total_trades": 0,
+  "options_winning_trades": 0,
+  "options_losing_trades": 0
 }

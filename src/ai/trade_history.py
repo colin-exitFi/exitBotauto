@@ -59,7 +59,8 @@ def get_analytics() -> Dict:
         return {"total_trades": 0, "message": "No trade history yet."}
 
     wins = [t for t in history if t.get("pnl", 0) > 0]
-    losses = [t for t in history if t.get("pnl", 0) <= 0]
+    losses = [t for t in history if t.get("pnl", 0) < 0]
+    breakevens = [t for t in history if t.get("pnl", 0) == 0]
     total_pnl = sum(t.get("pnl", 0) for t in history)
 
     # By symbol
