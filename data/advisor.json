@@ -706,5 +706,136 @@
     ],
     "key_insight": "WEEKEND = PREPARATION PHASE. Monday playbook: (1) Scan premarket 9:00-9:25 for overnight runners with volume, (2) Prioritize REPL if it gaps up or HIMS if it breaks resistance with volume, (3) EXECUTE ALL 3 POSITIONS by 10:00 AM - dead capital is the only real risk. A $50 stop loss is nothing vs sitting on $25K earning zero. The bot has found 66%+ runners - the scanner WORKS. Now we need to LET IT TRADE. Bias toward action Monday open.",
     "timestamp": 1772907131.308016
+  },
+  {
+    "strategy": "Weekend prep mode: Build Monday watchlist focused on FRESH breakouts, not Friday's exhausted runners \u2014 deploy aggressively in first 30min with tight stops to catch new momentum",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech_with_catalyst",
+        "small_cap_breakouts",
+        "high_short_interest"
+      ],
+      "avoid": [
+        "friday_extended_runners",
+        "insider_selling_names"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "Tier already at 1.0% stop \u2014 config mismatch. Tighter stops let us take MORE swings with same risk budget. On a $625 position (2.5% of $25K), 1% stop = $6.25 risk vs 1.5% = $9.38. We can take 67% MORE shots with 1% stops."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.6,
+        "reason": "QURE had 100% bullish sentiment AND insider selling = trap. Require 60%+ sentiment to filter noise but still catch real momentum (DAWN was 100%, HIMS 89% \u2014 both valid)"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "At market open Monday, momentum moves in SECONDS. 60-second scans miss initial breakout entries. Cut to 30sec for first hour, then revert to 60sec after 10:30 AM."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "Friday's runners moved 34-78% \u2014 our 1.5% TP1 would've trimmed us out of DAWN at +1.5% when it ran to +66%. Let winners breathe. 2% TP1 keeps us in the trade longer."
+      }
+    ],
+    "key_insight": "Zero execution risk = zero reward. The Observer correctly flagged that 100% cash over the weekend is dead capital, BUT the real issue isn't weekend exposure \u2014 it's that we haven't taken a SINGLE trade yet. Monday 9:30 AM is go-time. IGNORE Friday's runners (DAWN/EDSA/QURE are fade setups now). Focus scanner on NEW breakouts with volume in first 30min. Enter 4-5 positions immediately if signals align. A $6 stop loss on a runner that goes +20% = $125 gain. Sitting in cash costs us that $125 every single time. The math is simple: DEPLOY OR DIE.",
+    "timestamp": 1772908933.264503
+  },
+  {
+    "strategy": "MONDAY OPEN = GO TIME. Deploy first capital into strongest 9:30-10:00 momentum breakouts with volume confirmation.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap tech",
+        "energy"
+      ],
+      "avoid": [
+        "broad market beta plays"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "Friday's runners (DAWN +66%, EDSA +78%) show momentum extends well past 1.5% \u2014 we're leaving meat on the bone. TP1 at 2.5% captures more of the move while still locking profit early."
+      },
+      {
+        "param": "TAKE_PROFIT_2_PCT",
+        "current": 3.0,
+        "suggested": 5.0,
+        "reason": "Same logic \u2014 these explosive runners hit 30-70% intraday. A 5% TP2 is still conservative but lets winners run further. We can always trail-stop the remainder."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.5,
+        "reason": "KEEP IT. 1.5% stop = $9.38 risk per $625 position. Tight enough to protect capital, loose enough to avoid noise shakeouts in volatile small-caps."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.0,
+        "reason": "KEEP IT. We're hunting pure momentum/volume breakouts, not macro sentiment plays. Stay agile."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Monday open will be fast. Scanning every 30 seconds (vs 60) doubles our opportunity detection speed during the critical 9:30-10:30 window."
+      }
+    ],
+    "key_insight": "We're at DAY ZERO with $25K of DEAD CAPITAL. Friday proved the scanner works (identified DAWN +66%, EDSA +78%, QURE +34%) but we sat on the sidelines. Monday 9:30 ET is our inflection point. The market handed us a -1.4% risk-off day Friday, which often creates Monday morning reversals or sector rotation into beaten-down names. Our edge: SPEED. First 90 minutes post-open = highest volume + volatility = prime hunting ground. Goal: Deploy 2-3 positions ($1,250-$1,875) by 10:30 AM into confirmed breakouts with 5x+ volume. A single DAWN-type runner (+66%) on a $625 position = +$412 profit = +1.65% account growth in ONE TRADE. That's the velocity math that gets us from $25K \u2192 $50K \u2192 $100K. No positions = no compounding. BIAS TOWARD ACTION Monday open.",
+    "timestamp": 1772910739.0467799
+  },
+  {
+    "strategy": "Weekend preparation mode: validate scanner logic, tighten entry criteria for Monday open, prepare to strike fast on confirmed momentum.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap healthcare",
+        "high-beta tech"
+      ],
+      "avoid": [
+        "broad indices",
+        "mega-cap stocks with weekend news risk"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Scanner showing +66% and +78% runners - we need sentiment filter to avoid dead cat bounces after weekend gaps"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "High-volatility runners like DAWN/EDSA will have wider spreads at Monday open - 1.5% stop too tight for gap volatility"
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "If we're chasing Friday +60% runners on Monday, quick 1.5% scalps won't justify the gap risk - need bigger targets"
+      }
+    ],
+    "key_insight": "DAWN +66%, EDSA +78%, QURE +34% are FRIDAY'S closes. By Monday 9:30 AM these will gap significantly. DO NOT blindly chase stale scanner data. Strategy: (1) Watch pre-market 9:00-9:30 for continuation vs reversal, (2) Only enter if volume confirms + price holding gains, (3) First 30min Monday will reveal if Friday momentum is real or trap. Weekend gaps kill momentum traders - wait for confirmation, THEN be aggressive. Capital preservation now = capital velocity Monday.",
+    "timestamp": 1772912532.911891
   }
 ]

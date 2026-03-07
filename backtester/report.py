@@ -44,7 +44,15 @@ class ReportGenerator:
     def _build_top_indicators(self, ranked_results: List[Dict]) -> List[Dict]:
         unique = OrderedDict()
         for row in ranked_results:
+            score = float(row.get("score", 0.0) or 0.0)
+            # Skip indicators with no composite score (insufficient trades or poor metrics)
+            if score <= 0:
+                continue
             result = row.get("result", {})
+            # Double-check: require at least 30 trades to avoid overfitting on tiny samples
+            total_trades = int(result.get("total_trades", 0) or 0)
+            if total_trades < 30:
+                continue
             key = (
                 result.get("indicator_name"),
                 json.dumps(result.get("params", {}), sort_keys=True),
@@ -55,12 +63,13 @@ class ReportGenerator:
             unique[key] = {
                 "name": result.get("indicator_name"),
                 "params": result.get("params", {}),
-                "score": round(float(row.get("score", 0.0) or 0.0), 2),
+                "score": round(score, 2),
                 "win_rate": float(result.get("win_rate", 0.0) or 0.0),
                 "sharpe": float(result.get("sharpe_ratio", 0.0) or 0.0),
                 "profit_factor": float(result.get("profit_factor", 0.0) or 0.0),
+                "total_trades": total_trades,
                 "side": result.get("side", "long"),
-                "recommended_weight": round(min(1.0, max(0.25, float(row.get("score", 0.0) or 0.0) / 100.0)), 2),
+                "recommended_weight": round(min(1.0, max(0.25, score / 100.0)), 2),
             }
             if len(unique) >= 10:
                 break

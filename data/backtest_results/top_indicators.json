@@ -1,124 +1,128 @@
 [
   {
-    "name": "vwap_bands",
+    "name": "obv_div_l10_s3",
     "params": {
-      "std_mult": 1.0
+      "lookback": 10,
+      "smooth": 3
     },
-    "score": 83.27,
-    "win_rate": 0.5345,
-    "sharpe": 3.3645,
-    "profit_factor": 1.7275,
+    "score": 80.4,
+    "win_rate": 0.667,
+    "sharpe": 14.68,
+    "profit_factor": 211.36,
+    "total_trades": 36,
+    "symbols_tested": 7,
+    "symbols_profitable": 4,
+    "consistency": 0.57,
+    "side": "long",
+    "recommended_weight": 0.8
+  },
+  {
+    "name": "smi_k10_d5",
+    "params": {
+      "k_length": 10,
+      "d_length": 5,
+      "smooth_length": 5,
+      "ob": 40,
+      "os": -40
+    },
+    "score": 83.0,
+    "win_rate": 0.645,
+    "sharpe": 7.83,
+    "profit_factor": 200.31,
+    "total_trades": 31,
+    "symbols_tested": 6,
+    "symbols_profitable": 4,
+    "consistency": 0.67,
     "side": "long",
     "recommended_weight": 0.83
-  },
-  {
-    "name": "vwap_bands",
-    "params": {
-      "std_mult": 1.5
-    },
-    "score": 83.27,
-    "win_rate": 0.5345,
-    "sharpe": 3.3645,
-    "profit_factor": 1.7275,
-    "side": "long",
-    "recommended_weight": 0.83
-  },
-  {
-    "name": "vwap_bands",
-    "params": {
-      "std_mult": 2.0
-    },
-    "score": 83.27,
-    "win_rate": 0.5345,
-    "sharpe": 3.3645,
-    "profit_factor": 1.7275,
-    "side": "long",
-    "recommended_weight": 0.83
-  },
-  {
-    "name": "squeeze_mom_bb20_kc1.5",
-    "params": {
-      "bb_length": 20,
-      "bb_mult": 2.0,
-      "kc_length": 20,
-      "kc_mult": 1.5
-    },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 4906.5453,
-    "profit_factor": 858.0089,
-    "side": "long",
-    "recommended_weight": 0.25
-  },
-  {
-    "name": "wavetrend_c10_a21",
-    "params": {
-      "channel_length": 10,
-      "avg_length": 21,
-      "ob_level": 53,
-      "os_level": -53
-    },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 1751.5503,
-    "profit_factor": 796.5323,
-    "side": "long",
-    "recommended_weight": 0.25
   },
   {
     "name": "rsi_divergence",
     "params": {
-      "period": 21
+      "period": 7
     },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 1008.7388,
-    "profit_factor": 636.6179,
+    "score": 90.0,
+    "win_rate": 0.648,
+    "sharpe": 5.68,
+    "profit_factor": 606.91,
+    "total_trades": 54,
+    "symbols_tested": 10,
+    "symbols_profitable": 9,
+    "consistency": 0.9,
     "side": "long",
-    "recommended_weight": 0.25
+    "recommended_weight": 0.9
   },
   {
-    "name": "wavetrend_c14_a21",
+    "name": "smi_k10_d3",
     "params": {
-      "channel_length": 14,
-      "avg_length": 21,
-      "ob_level": 53,
-      "os_level": -53
+      "k_length": 10,
+      "d_length": 3,
+      "smooth_length": 3,
+      "ob": 40,
+      "os": -40
     },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 531.098,
-    "profit_factor": 628.4033,
+    "score": 84.9,
+    "win_rate": 0.62,
+    "sharpe": 5.43,
+    "profit_factor": 363.35,
+    "total_trades": 137,
+    "symbols_tested": 24,
+    "symbols_profitable": 18,
+    "consistency": 0.75,
     "side": "long",
-    "recommended_weight": 0.25
+    "recommended_weight": 0.85
   },
   {
-    "name": "mean_rev_z14_e2.0",
+    "name": "smi_k14_d3",
     "params": {
-      "lookback": 14,
-      "entry_z": -2.0,
-      "exit_z": 0.0
+      "k_length": 14,
+      "d_length": 3,
+      "smooth_length": 3,
+      "ob": 40,
+      "os": -40
     },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 464.5319,
-    "profit_factor": 640.4941,
+    "score": 83.4,
+    "win_rate": 0.532,
+    "sharpe": 5.17,
+    "profit_factor": 27.11,
+    "total_trades": 94,
+    "symbols_tested": 17,
+    "symbols_profitable": 13,
+    "consistency": 0.76,
     "side": "long",
-    "recommended_weight": 0.25
+    "recommended_weight": 0.83
   },
   {
-    "name": "atr_channel_e50_a20_m2.0",
+    "name": "hull_ma",
     "params": {
-      "ema_period": 50,
-      "atr_period": 20,
-      "atr_mult": 2.0
+      "period": 16
     },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 398.6764,
-    "profit_factor": 1422.4379,
+    "score": 77.3,
+    "win_rate": 0.429,
+    "sharpe": 3.81,
+    "profit_factor": 3.45,
+    "total_trades": 429,
+    "symbols_tested": 31,
+    "symbols_profitable": 29,
+    "consistency": 0.94,
     "side": "long",
-    "recommended_weight": 0.25
+    "recommended_weight": 0.77
+  },
+  {
+    "name": "hull_ma",
+    "params": {
+      "period": 25
+    },
+    "score": 73.7,
+    "win_rate": 0.397,
+    "sharpe": 3.82,
+    "profit_factor": 6.32,
+    "total_trades": 292,
+    "symbols_tested": 31,
+    "symbols_profitable": 26,
+    "consistency": 0.84,
+    "side": "long",
+    "recommended_weight": 0.74
   },
   {
     "name": "atr_channel_e10_a10_m2.0",
@@ -127,11 +131,53 @@
       "atr_period": 10,
       "atr_mult": 2.0
     },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 194.3407,
-    "profit_factor": 400.9097,
+    "score": 69.8,
+    "win_rate": 0.417,
+    "sharpe": 3.77,
+    "profit_factor": 3.22,
+    "total_trades": 36,
+    "symbols_tested": 7,
+    "symbols_profitable": 5,
+    "consistency": 0.71,
     "side": "long",
-    "recommended_weight": 0.25
+    "recommended_weight": 0.7
+  },
+  {
+    "name": "smi_k5_d3",
+    "params": {
+      "k_length": 5,
+      "d_length": 3,
+      "smooth_length": 3,
+      "ob": 40,
+      "os": -40
+    },
+    "score": 74.2,
+    "win_rate": 0.59,
+    "sharpe": 4.23,
+    "profit_factor": 524.78,
+    "total_trades": 173,
+    "symbols_tested": 29,
+    "symbols_profitable": 18,
+    "consistency": 0.62,
+    "side": "long",
+    "recommended_weight": 0.74
+  },
+  {
+    "name": "atr_channel_e20_a14_m1.5",
+    "params": {
+      "ema_period": 20,
+      "atr_period": 14,
+      "atr_mult": 1.5
+    },
+    "score": 67.2,
+    "win_rate": 0.415,
+    "sharpe": 3.34,
+    "profit_factor": 2.91,
+    "total_trades": 123,
+    "symbols_tested": 20,
+    "symbols_profitable": 15,
+    "consistency": 0.75,
+    "side": "long",
+    "recommended_weight": 0.67
   }
 ]

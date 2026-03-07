@@ -15,6 +15,7 @@ from config import settings
 from src.data import strategy_controls
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
 from src.data.technicals import compute_technicals
+from src.signals.live_indicators import compute_live_signals, get_consensus
 
 
 class Scanner:
@@ -361,6 +362,22 @@ class Scanner:
             )
             if technicals:
                 c.update(technicals)
+            # Compute validated indicator signals from backtest winners
+            if self.polygon:
+                try:
+                    live_sigs = await compute_live_signals(
+                        symbol=c.get("symbol", ""),
+                        price=float(c.get("price", 0) or 0),
+                        polygon_client=self.polygon,
+                    )
+                    if live_sigs:
+                        c["validated_indicator_signals"] = live_sigs
+                        consensus = get_consensus(live_sigs)
+                        c["indicator_consensus_bias"] = consensus["bias"]
+                        c["indicator_consensus_strength"] = consensus["strength"]
+                        c["indicator_consensus_agreement"] = consensus["agreement"]
+                except Exception as e:
+                    logger.debug(f"Live indicator signals failed for {c.get('symbol', '?')}: {e}")
             self._apply_strategy_context(c)
             # Keep minute-bar fetches under free-tier rate limits.
             if idx < (len(active_candidates) - 1):
