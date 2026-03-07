@@ -100,6 +100,7 @@ class RiskManager:
 
         # Round trip (day trade) tracking: [{symbol, entry_time, exit_time}]
         self._round_trips: List[Dict] = []
+        self._alpaca_daytrade_count = 0
 
         # Load persisted state (including wash sales)
         self._load_state()
@@ -116,9 +117,14 @@ class RiskManager:
     def equity(self) -> float:
         return self._equity
 
-    def update_equity(self, equity: float):
+    def update_equity(self, equity: float, daytrade_count: Optional[int] = None):
         """Called every scan cycle with live Alpaca equity."""
         self._equity = equity
+        if daytrade_count is not None:
+            try:
+                self._alpaca_daytrade_count = max(0, int(daytrade_count))
+            except Exception:
+                logger.debug(f"Invalid Alpaca daytrade_count ignored: {daytrade_count}")
         if equity > self._ath_equity:
             self._ath_equity = equity
         self._save_state()
@@ -161,6 +167,9 @@ class RiskManager:
         self._check_weekly_reset()
         self._check_weekly_circuit_breaker()
         base_notional *= self.weekly_size_reduction
+        if self.is_swing_mode():
+            swing_mult = max(0.1, float(getattr(settings, "SWING_MODE_SIZE_REDUCTION", 0.7) or 0.7))
+            base_notional *= swing_mult
 
         return max(0.0, round(base_notional, 2))
 
@@ -257,6 +266,8 @@ class RiskManager:
 
     def is_wash_sale(self, symbol: str) -> bool:
         """Check if buying this symbol would trigger a wash sale (sold at loss within 30 days)."""
+        if getattr(settings, "PAPER_MODE", False):
+            return False
         self._clean_expired_wash_sales()
         if symbol in self._wash_sale_list:
             entry = self._wash_sale_list[symbol]
@@ -280,14 +291,22 @@ class RiskManager:
         # Wash sale check
         if symbol and self.is_wash_sale(symbol):
             return False
-        # PDT protection: if equity < $25K, limit to 3 day trades per 5 business days
+        # PDT awareness: if equity < $25K and at 3 day trades, switch to swing-only mode.
+        # We still allow entries; broker blocks same-day exits once the cap is hit.
         if self._equity < 25000:
-            day_trades = self._count_recent_day_trades()
-            if day_trades >= 3:
-                logger.error(f"🚨 PDT GUARD: {day_trades}/3 day trades used, equity ${self._equity:,.0f} < $25K — BLOCKED")
-                return False
-            elif day_trades >= 2:
-                logger.warning(f"⚠️ PDT WARNING: {day_trades}/3 day trades used — 1 remaining")
+            broker_day_trades = max(0, int(self._alpaca_daytrade_count or 0))
+            internal_day_trades = self._count_recent_day_trades()
+            if broker_day_trades != internal_day_trades:
+                logger.warning(
+                    f"⚠️ PDT count mismatch: Alpaca={broker_day_trades}, internal={internal_day_trades}"
+                )
+            if broker_day_trades >= 3:
+                logger.warning(
+                    f"⚠️ PDT SWING MODE: {broker_day_trades}/3 day trades used, equity ${self._equity:,.0f} < $25K "
+                    f"(entries allowed; same-day exits may be blocked by broker)"
+                )
+            elif broker_day_trades >= 2:
+                logger.warning(f"⚠️ PDT WARNING: {broker_day_trades}/3 day trades used — 1 remaining")
         tier = self.get_risk_tier()
         if len(current_positions) >= tier["max_positions"]:
             logger.warning(f"Max positions for {tier['name']} tier: {len(current_positions)}/{tier['max_positions']}")
@@ -308,6 +327,56 @@ class RiskManager:
                 if not already:
                     count += 1
         return count
+
+    def remaining_day_trades(self) -> int:
+        """Best available PDT budget from Alpaca account state."""
+        if self._equity >= 25000:
+            return 999
+        return max(0, 3 - int(self._alpaca_daytrade_count or 0))
+
+    def is_swing_mode(self) -> bool:
+        """Below-PDT-threshold account with no same-day exit budget remaining."""
+        return self._equity < 25000 and int(self._alpaca_daytrade_count or 0) >= 3
+
+    @staticmethod
+    def _eastern_trading_day(ts: Optional[float] = None) -> str:
+        from datetime import datetime
+
+        try:
+            import zoneinfo
+
+            et = zoneinfo.ZoneInfo("US/Eastern")
+        except Exception:
+            from pytz import timezone as tz
+
+            et = tz("US/Eastern")
+
+        if ts is None:
+            return datetime.now(et).strftime("%Y-%m-%d")
+        return datetime.fromtimestamp(float(ts), et).strftime("%Y-%m-%d")
+
+    def can_exit_position(self, position: Optional[Dict], reason: str = "", log_block: bool = True) -> bool:
+        """Block same-day automated exits while swing-only mode is active."""
+        if not position or not position.get("swing_only"):
+            return True
+        if not self.is_swing_mode():
+            return True
+
+        entry_time = position.get("entry_time")
+        if not entry_time:
+            return True
+        if self._eastern_trading_day(entry_time) != self._eastern_trading_day():
+            return True
+
+        normalized_reason = str(reason or "").strip().lower()
+        if "emergency" in normalized_reason or "halt" in normalized_reason or "circuit_breaker" in normalized_reason:
+            return True
+
+        if log_block:
+            logger.warning(
+                f"⛔ Swing-only same-day exit blocked for {position.get('symbol', '?')}: {normalized_reason or 'unspecified'}"
+            )
+        return False
 
     # ── Post-trade Updates ─────────────────────────────────────────
 
@@ -352,7 +421,7 @@ class RiskManager:
 
         # ── Wash sale tracking ──
         symbol = trade.get("symbol", "")
-        if pnl < 0 and symbol:
+        if pnl < 0 and symbol and not getattr(settings, "PAPER_MODE", False):
             self._wash_sale_list[symbol] = {
                 "loss": pnl,
                 "exit_time": trade.get("exit_time", time.time()),
@@ -432,6 +501,10 @@ class RiskManager:
                 (self._total_options_premium / max(1.0, self._equity * (float(getattr(settings, "OPTIONS_MAX_PORTFOLIO_PCT", 10.0)) / 100.0))) * 100.0,
                 1,
             ),
+            "alpaca_daytrade_count": int(self._alpaca_daytrade_count or 0),
+            "internal_daytrade_count": self._count_recent_day_trades(),
+            "remaining_day_trades": self.remaining_day_trades(),
+            "swing_mode": self.is_swing_mode(),
             # Legacy compat
             "max_positions": tier["max_positions"],
             "max_deployed": self._equity * (tier["size_pct"] / 100.0) * tier["max_positions"],
@@ -538,6 +611,7 @@ class RiskManager:
             "start_date": self._start_date,
             "wash_sale_list": self._wash_sale_list,
             "round_trips": self._round_trips[-100:],  # Keep last 100
+            "alpaca_daytrade_count": self._alpaca_daytrade_count,
         }
         try:
             (DATA_DIR / "risk_state.json").write_text(json.dumps(state, indent=2))
@@ -556,6 +630,7 @@ class RiskManager:
                 self._start_date = state.get("start_date", self._start_date)
                 self._wash_sale_list = state.get("wash_sale_list", {})
                 self._round_trips = state.get("round_trips", [])
+                self._alpaca_daytrade_count = int(state.get("alpaca_daytrade_count", self._alpaca_daytrade_count) or 0)
                 logger.info(f"Loaded risk state: ATH=${self._ath_equity:,.2f}, start=${self._starting_equity:,.2f}, wash_sales={len(self._wash_sale_list)}, round_trips={len(self._round_trips)}")
             except Exception:
                 pass

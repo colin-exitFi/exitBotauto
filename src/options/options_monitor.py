@@ -44,15 +44,21 @@ class OptionsMonitor:
         if not options_engine:
             return
         try:
-            trades = await asyncio.get_event_loop().run_in_executor(
+            results = await asyncio.get_event_loop().run_in_executor(
                 None, options_engine.close_paired_options, underlying_symbol, reason
             )
-            for trade in trades or []:
-                self.bot._record_realized_exit(trade)
-                log_activity(
-                    "options",
-                    f"🔗 PAIRED OPTIONS EXIT: {trade.get('symbol')} ({trade.get('reason')}) P&L ${trade.get('pnl', 0):.2f}",
-                )
+            for item in results or []:
+                if item.get("pnl") is not None:
+                    self.bot._record_realized_exit(item)
+                    log_activity(
+                        "options",
+                        f"🔗 PAIRED OPTIONS EXIT: {item.get('symbol')} ({item.get('reason')}) P&L ${item.get('pnl', 0):.2f}",
+                    )
+                else:
+                    log_activity(
+                        "options",
+                        f"🔗 PAIRED OPTIONS CLOSE SUBMITTED: {item.get('symbol')} ({item.get('reason', reason)})",
+                    )
         except Exception as e:
             logger.error(f"Paired options close error for {underlying_symbol}: {e}")
 
@@ -84,8 +90,44 @@ class OptionsMonitor:
             return False
 
         exit_premium = float(action.get("current_premium", 0) or 0)
+        status = str(order.get("status", "") or "").lower()
+        try:
+            default_filled_qty = int(float(order.get("filled_qty", 0) or 0))
+        except Exception:
+            default_filled_qty = 0
+        if default_filled_qty <= 0 and status in ("filled", "partially_filled"):
+            default_filled_qty = int(qty)
+        try:
+            default_fill_price = float(order.get("filled_avg_price", exit_premium) or exit_premium)
+        except Exception:
+            default_fill_price = exit_premium
+        fill_details = {
+            "status": status,
+            "filled_qty": default_filled_qty,
+            "fill_price": default_fill_price,
+        }
+        if hasattr(options_engine, "extract_order_fill"):
+            fill_details = await asyncio.get_event_loop().run_in_executor(
+                None, options_engine.extract_order_fill, order, qty, exit_premium
+            )
+        filled_qty = int(fill_details.get("filled_qty", 0) or 0)
+        if filled_qty < 1:
+            log_activity(
+                "options",
+                f"⏳ OPTIONS EXIT SUBMITTED: {contract_symbol} {reason} awaiting fill",
+            )
+            return False
+
+        if getattr(options_engine, "reconcile_exit_required", False):
+            log_activity(
+                "options",
+                f"⏳ OPTIONS EXIT FILLED: {contract_symbol} {reason} awaiting broker reconciliation",
+            )
+            return True
+
+        fill_price = float(fill_details.get("fill_price", exit_premium) or exit_premium)
         trade_record = await asyncio.get_event_loop().run_in_executor(
-            None, options_engine.finalize_exit, contract_symbol, qty, exit_premium, reason
+            None, options_engine.finalize_exit, contract_symbol, filled_qty, fill_price, reason, order
         )
         if not trade_record:
             return False
@@ -115,6 +157,12 @@ class OptionsMonitor:
 
         # Keep local options state in sync with broker snapshot.
         recon = await asyncio.get_event_loop().run_in_executor(None, options_engine.reconcile_with_broker)
+        for trade_record in recon.get("reconciled_trades", []) if isinstance(recon, dict) else []:
+            self.bot._record_realized_exit(trade_record)
+            log_activity(
+                "options",
+                f"🧾 OPTIONS RECONCILED EXIT: {trade_record.get('symbol')} pnl=${trade_record.get('pnl', 0):.2f}",
+            )
         for removed_pos in recon.get("removed_positions", []) if isinstance(recon, dict) else []:
             trade_record = options_engine.build_external_close_trade(
                 removed_pos, reason="options_reconcile_closed"

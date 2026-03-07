@@ -154,7 +154,8 @@ What's your strategic advice?"""
         result["timestamp"] = time.time()
         adv_file = DATA_DIR / "advisor.json"
         try:
-            history = json.loads(adv_file.read_text()) if adv_file.exists() else []
+            raw = json.loads(adv_file.read_text()) if adv_file.exists() else []
+            history = raw if isinstance(raw, list) else []
         except Exception:
             history = []
         history.append(result)

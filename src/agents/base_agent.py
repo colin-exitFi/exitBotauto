@@ -3,9 +3,10 @@ Base Agent - Common infrastructure for all specialized agents.
 Handles AI calls, JSON parsing, error handling, rate limiting.
 """
 
+import asyncio
 import json
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from loguru import logger
 import httpx
 
@@ -20,6 +21,8 @@ _provider_timestamps: Dict[str, list] = {
     "perplexity": [],
 }
 _api_calls: Dict[str, int] = {"claude": 0, "gpt": 0, "grok": 0, "perplexity": 0}
+_provider_backoff_until: Dict[str, float] = {}
+_provider_backoff_seconds: Dict[str, int] = {}
 
 # Per-provider limits per hour (conservative defaults under actual API limits)
 _PROVIDER_LIMITS: Dict[str, int] = {
@@ -36,28 +39,76 @@ def get_api_stats() -> Dict:
     return dict(_api_calls)
 
 
-def _check_rate_limit(provider: str) -> bool:
-    """Returns True if the given provider is under its rate limit."""
+def _get_eastern_hour() -> int:
     from datetime import datetime
+
     try:
         import zoneinfo
-        _et_hour = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
-    except Exception:
-        _et_hour = 12
 
-    # After hours: reduce all limits to save cost
-    if not (4 <= _et_hour < 20):
-        limit = 30
-    else:
-        limit = _PROVIDER_LIMITS.get(provider, 60)
+        return datetime.now(zoneinfo.ZoneInfo("US/Eastern")).hour
+    except Exception:
+        return 12
+
+
+def _get_provider_hourly_limit(provider: str, et_hour: Optional[int] = None) -> int:
+    """Reduce after-hours limits, but not so aggressively that agents go blind."""
+    if et_hour is None:
+        et_hour = _get_eastern_hour()
+
+    base_limit = int(_PROVIDER_LIMITS.get(provider, 60))
+    if 4 <= et_hour < 20:
+        return base_limit
+
+    # After hours still needs meaningful scans; keep 75% of regular limit with a sane floor.
+    return max(45, int((base_limit * 3 + 3) / 4))
+
+
+def _check_rate_limit(
+    provider: str,
+    now: Optional[float] = None,
+    et_hour: Optional[int] = None,
+) -> Tuple[bool, float]:
+    """Returns (allowed, wait_seconds) for the given provider."""
+    if now is None:
+        now = time.time()
+
+    backoff_until = float(_provider_backoff_until.get(provider, 0.0) or 0.0)
+    if backoff_until > now:
+        return False, max(0.0, backoff_until - now)
+
+    limit = _get_provider_hourly_limit(provider, et_hour=et_hour)
 
     timestamps = _provider_timestamps.setdefault(provider, [])
-    now = time.time()
     timestamps[:] = [t for t in timestamps if now - t < 3600]
     if len(timestamps) >= limit:
-        return False
+        last_backoff = int(_provider_backoff_seconds.get(provider, 0) or 0)
+        next_backoff = min(30, max(2, last_backoff * 2 if last_backoff else 2))
+        _provider_backoff_seconds[provider] = next_backoff
+        _provider_backoff_until[provider] = now + next_backoff
+        return False, float(next_backoff)
+
     timestamps.append(now)
-    return True
+    _provider_backoff_seconds[provider] = 0
+    _provider_backoff_until.pop(provider, None)
+    return True, 0.0
+
+
+async def _await_rate_limit_slot(provider: str, max_attempts: int = 5) -> bool:
+    """Wait a bounded amount of time before giving up on a provider call."""
+    for attempt in range(1, max_attempts + 1):
+        allowed, wait_seconds = _check_rate_limit(provider)
+        if allowed:
+            return True
+
+        wait_seconds = max(0.5, float(wait_seconds or 0.0))
+        logger.warning(
+            f"Rate limit reached for {provider}; backing off {wait_seconds:.1f}s "
+            f"(attempt {attempt}/{max_attempts})"
+        )
+        await asyncio.sleep(wait_seconds)
+
+    logger.warning(f"Rate limit remained active for {provider}; skipping call after backoff")
+    return False
 
 
 def parse_json(text: str) -> dict:
@@ -83,8 +134,7 @@ async def call_claude(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Claude Sonnet and return parsed JSON."""
     if not settings.ANTHROPIC_API_KEY:
         return None
-    if not _check_rate_limit("claude"):
-        logger.warning("Rate limit reached — skipping Claude call")
+    if not await _await_rate_limit_slot("claude"):
         return None
     model = getattr(settings, 'CLAUDE_MODEL', 'claude-sonnet-4-5-20250929')
     try:
@@ -115,8 +165,7 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call GPT-5.2 and return parsed JSON."""
     if not settings.OPENAI_API_KEY:
         return None
-    if not _check_rate_limit("gpt"):
-        logger.warning("Rate limit reached — skipping GPT call")
+    if not await _await_rate_limit_slot("gpt"):
         return None
     model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.4')
     try:
@@ -146,8 +195,7 @@ async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Grok-4 via xAI and return parsed JSON."""
     if not settings.XAI_API_KEY:
         return None
-    if not _check_rate_limit("grok"):
-        logger.warning("Rate limit reached — skipping Grok call")
+    if not await _await_rate_limit_slot("grok"):
         return None
     model = getattr(settings, 'XAI_MODEL', 'grok-4-0709')
     try:
@@ -178,8 +226,7 @@ async def call_perplexity(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Perplexity sonar-pro and return parsed JSON."""
     if not settings.PERPLEXITY_API_KEY:
         return None
-    if not _check_rate_limit("perplexity"):
-        logger.warning("Rate limit reached — skipping Perplexity call")
+    if not await _await_rate_limit_slot("perplexity"):
         return None
     model = getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro')
     try:

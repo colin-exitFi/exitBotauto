@@ -130,6 +130,7 @@ class FakeOptionsEngine:
         self.positions = {}
         self.execute_calls = []
         self.close_calls = []
+        self.close_order_template = None
         self.reconcile_calls = 0
         self.exit_actions = {}
         self.reconcile_removed_positions = []
@@ -201,9 +202,43 @@ class FakeOptionsEngine:
 
     def close_option_position(self, contract_symbol: str, qty: int = None, reason: str = "manual"):
         self.close_calls.append((contract_symbol, qty, reason))
-        return {"id": "close-order"}
+        pos = self.positions.get(contract_symbol)
+        if pos:
+            pos["status"] = "closing"
+            pos["pending_close_qty"] = int(qty or pos.get("qty", 0) or 0)
+        if self.close_order_template is not None:
+            order = dict(self.close_order_template)
+        else:
+            order = {
+                "id": "close-order",
+                "status": "filled",
+                "filled_qty": str(int(qty or 0)),
+                "filled_avg_price": "1.0",
+            }
+        order.setdefault("id", "close-order")
+        order.setdefault("status", "filled")
+        order.setdefault("symbol", contract_symbol)
+        return order
 
-    def finalize_exit(self, contract_symbol: str, qty: int, exit_premium: float, reason: str):
+    def extract_order_fill(self, order: dict, requested_qty: int, fallback_price: float = 0.0):
+        status = str(order.get("status", "")).lower()
+        try:
+            filled_qty = int(float(order.get("filled_qty", 0) or 0))
+        except Exception:
+            filled_qty = 0
+        if filled_qty <= 0 and status in ("filled", "partially_filled"):
+            filled_qty = int(requested_qty or 0)
+        try:
+            fill_price = float(order.get("filled_avg_price", fallback_price) or fallback_price)
+        except Exception:
+            fill_price = float(fallback_price or 0.0)
+        return {
+            "status": status,
+            "filled_qty": min(int(requested_qty or 0), max(0, filled_qty)),
+            "fill_price": fill_price,
+        }
+
+    def finalize_exit(self, contract_symbol: str, qty: int, exit_premium: float, reason: str, order: dict = None):
         pos = self.positions.pop(contract_symbol, None)
         if not pos:
             return None
@@ -364,6 +399,35 @@ class OptionsIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(recorded), 1)
         self.assertEqual(recorded[0].get("asset_type"), "option")
         self.assertIn("AAPL", bot.entry_manager.positions)
+
+    async def test_options_unfilled_exit_order_does_not_record_realized_trade(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.risk_manager = FakeRiskManager()
+        bot.entry_manager = FakeEntryManager()
+        bot.options_engine = FakeOptionsEngine()
+        opt = await bot.options_engine.execute_option_trade("AAPL", 100.0, "BUY", 500.0, {"strategy_tag": "momentum_long"})
+        bot.options_engine.exit_actions[opt["contract_symbol"]] = {
+            "action": "close",
+            "qty": 2,
+            "reason": "premium_stop_loss",
+            "current_premium": 0.8,
+        }
+        bot.options_engine.close_order_template = {
+            "id": "close-order",
+            "status": "new",
+            "filled_qty": "0",
+            "filled_avg_price": None,
+        }
+
+        recorded = []
+        bot._record_realized_exit = lambda trade: recorded.append(trade)
+
+        with patch.object(main_module, "log_activity"), \
+             patch.object(main_module.persistence, "save_options_positions"):
+            await bot._monitor_options_once()
+
+        self.assertEqual(len(recorded), 0)
+        self.assertIn(opt["contract_symbol"], bot.options_engine.positions)
 
     async def test_reconcile_removed_option_records_external_close_trade(self):
         bot = main_module.TradingBot.__new__(main_module.TradingBot)

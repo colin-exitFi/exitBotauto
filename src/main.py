@@ -12,6 +12,7 @@ import sys
 import time
 from pathlib import Path
 from datetime import datetime
+from typing import Dict
 
 from loguru import logger
 from dotenv import load_dotenv
@@ -25,11 +26,17 @@ from src.signals.stocktwits import StockTwitsClient
 from src.signals.twitter import TwitterSentimentClient
 from src.signals.pharma_catalyst import PharmaCatalystScanner
 from src.signals.fade_runner import FadeRunnerScanner
+from src.signals.copy_trader import CopyTraderMonitor
 from src.signals.watchlist import DynamicWatchlist
 from src.signals.edgar import EdgarScanner
 from src.signals.earnings import EarningsScanner
+from src.signals.ark_trades import ArkTradesScanner
+from src.signals.finnhub import FinnhubClient
+from src.signals.fred import FredClient
+from src.signals.human_intel import HumanIntelStore
 from src.signals.unusual_options import UnusualOptionsScanner
 from src.signals.congress import CongressScanner
+from src.signals.unusual_whales import UnusualWhalesClient
 from src.signals.short_interest import ShortInterestScanner
 from src.signals.sector_rotation import SectorRotationModel
 from src.streams.market_stream import MarketStream
@@ -58,14 +65,37 @@ from src.options.options_monitor import OptionsMonitor
 class TradingBot:
     """Main trading bot orchestrator."""
 
+    copy_trader_monitor = None
+    _processed_copy_trader_exit_ids = None
+    human_intel_store = None
+    fred_client = None
+    finnhub_client = None
+    pharma_scanner = None
+    fade_scanner = None
+    edgar_scanner = None
+    earnings_scanner = None
+    ark_trades = None
+    unusual_whales = None
+    options_scanner = None
+    congress_scanner = None
+    short_scanner = None
+    sector_model = None
+    market_stream = None
+    trade_stream = None
+    watchlist = None
+    grok_x_trending = None
+    extended_guard = None
+
     def __init__(self):
         self.running = False
         self.paused = False
         self.start_time = time.time()
         self._breakout_queue = asyncio.Queue(maxsize=20)
         self._fast_path_pending = set()
+        self._jury_vetoed_symbols: Dict[str, float] = {}
         self._fast_path_eval_queue = asyncio.Queue(maxsize=50)
         self._last_daily_reset_date = None
+        self._processed_copy_trader_exit_ids = set()
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -117,6 +147,10 @@ class TradingBot:
         # Signal sources
         self.stocktwits_client = StockTwitsClient()
         self.twitter_client = TwitterSentimentClient()
+        self.copy_trader_monitor = CopyTraderMonitor()
+        self.human_intel_store = HumanIntelStore()
+        self.fred_client = FredClient()
+        self.finnhub_client = FinnhubClient()
 
         # Risk manager
         self.risk_manager = RiskManager()
@@ -125,7 +159,10 @@ class TradingBot:
         if self.alpaca_client:
             try:
                 acct = self.alpaca_client.get_account()
-                self.risk_manager.update_equity(acct.get("equity", settings.TOTAL_CAPITAL))
+                self.risk_manager.update_equity(
+                    acct.get("equity", settings.TOTAL_CAPITAL),
+                    daytrade_count=acct.get("daytrade_count"),
+                )
             except Exception:
                 pass
 
@@ -144,11 +181,17 @@ class TradingBot:
         # Earnings calendar scanner
         self.earnings_scanner = EarningsScanner()
 
+        # ARK daily trade notifications
+        self.ark_trades = ArkTradesScanner()
+
+        # Unusual Whales REST client
+        self.unusual_whales = UnusualWhalesClient()
+
         # Unusual options activity scanner
-        self.options_scanner = UnusualOptionsScanner()
+        self.options_scanner = UnusualOptionsScanner(uw_client=self.unusual_whales)
 
         # Congressional trading scanner
-        self.congress_scanner = CongressScanner()
+        self.congress_scanner = CongressScanner(uw_client=self.unusual_whales)
 
         # Short interest / squeeze detector
         self.short_scanner = ShortInterestScanner()
@@ -176,6 +219,10 @@ class TradingBot:
             pharma_scanner=self.pharma_scanner,
             fade_scanner=self.fade_scanner,
             grok_x_trending=self.grok_x_trending,
+            unusual_whales_client=self.unusual_whales,
+            human_intel_store=self.human_intel_store,
+            watchlist_provider=self.watchlist,
+            copy_trader_monitor=self.copy_trader_monitor,
         )
 
         # Entry manager
@@ -223,6 +270,9 @@ class TradingBot:
             broker=self.alpaca_client,
             entry_manager=self.entry_manager,
             risk_manager=self.risk_manager,
+            fred_client=self.fred_client,
+            finnhub_client=self.finnhub_client,
+            human_intel_store=self.human_intel_store,
         )
 
         # AI layers
@@ -238,6 +288,8 @@ class TradingBot:
             "last_game_film_summary": None,
             "last_position_manager": None,
             "last_consensus": None,
+            "short_verdicts_blocked": 0,
+            "last_short_block_reason": None,
         }
 
         # ── Restore persisted state ─────────────────────────────────
@@ -287,6 +339,8 @@ class TradingBot:
         # ── WebSocket streams ─────────────────────────────────────
         # Market data stream: real-time prices + breakout detection
         self.market_stream.set_breakout_callback(self._on_breakout_detected)
+        self.market_stream.set_halt_callback(self._on_halt_status)
+        self.market_stream.set_luld_callback(self._on_luld_status)
         await self.market_stream.start()
 
         # Trade updates stream: instant order fill detection
@@ -343,7 +397,10 @@ class TradingBot:
                     last_equity_sync = now
                     try:
                         acct = self.alpaca_client.get_account()
-                        self.risk_manager.update_equity(acct.get("equity", self.risk_manager.equity))
+                        self.risk_manager.update_equity(
+                            acct.get("equity", self.risk_manager.equity),
+                            daytrade_count=acct.get("daytrade_count"),
+                        )
                         # Update open risk
                         positions = self.entry_manager.get_positions() if self.entry_manager else []
                         self.risk_manager.update_open_risk(positions)
@@ -445,6 +502,12 @@ class TradingBot:
                     await self._monitor_positions()
                 except Exception as e:
                     logger.error(f"Monitor error: {e}")
+
+                # ── COPY-TRADER EXIT SIGNALS ─────────────────────
+                try:
+                    await self._process_copy_trader_exit_signals()
+                except Exception as e:
+                    logger.error(f"Copy trader exit handling error: {e}")
 
                 # ── EXTENDED HOURS GUARD ──────────────────────────
                 # Ensure every position has protection (trailing stop OR dynamic limit)
@@ -637,6 +700,112 @@ class TradingBot:
                         logger.info(f"🩳 Squeeze candidates: {', '.join(s['ticker'] for s in squeeze_candidates[:5])}")
                         log_activity("research", f"🩳 Squeeze candidates: {', '.join(s['ticker'] for s in squeeze_candidates[:5])}")
 
+                # 5f. Insider cluster buys via Unusual Whales
+                insider_signals = []
+                if self.unusual_whales and self.unusual_whales.is_configured():
+                    try:
+                        insider_trades = await asyncio.get_event_loop().run_in_executor(
+                            None, self.unusual_whales.get_insider_trades, None, 100
+                        )
+                        by_ticker = {}
+                        for trade in insider_trades or []:
+                            ticker = str(trade.get("ticker", "")).upper().strip()
+                            if not ticker:
+                                continue
+                            bucket = by_ticker.setdefault(ticker, {"ticker": ticker, "buy_count": 0, "buy_value": 0.0})
+                            if trade.get("transaction") == "buy":
+                                bucket["buy_count"] += 1
+                                bucket["buy_value"] += float(trade.get("value", 0) or 0)
+                        insider_signals = sorted(
+                            [row for row in by_ticker.values() if row["buy_count"] >= 2],
+                            key=lambda row: (row["buy_count"], row["buy_value"]),
+                            reverse=True,
+                        )
+                        for sig in insider_signals[:5]:
+                            conviction = min(0.8, 0.45 + 0.1 * min(sig["buy_count"], 3))
+                            self.watchlist.add(
+                                sig["ticker"],
+                                side="long",
+                                conviction=conviction,
+                                source="insider",
+                                reason=f"{sig['buy_count']} insider buys (${sig['buy_value']:,.0f})",
+                            )
+                        if insider_signals:
+                            logger.info(f"👔 Insider buys: {', '.join(s['ticker'] for s in insider_signals[:5])}")
+                            log_activity("research", f"👔 Insider buying: {', '.join(s['ticker'] for s in insider_signals[:5])}")
+                    except Exception as e:
+                        logger.debug(f"Insider trades scan failed: {e}")
+
+                # 5f. ARK daily trades (next-day watchlist signal)
+                ark_buy_signals = []
+                ark_sell_signals = []
+                if self.ark_trades:
+                    try:
+                        await asyncio.get_event_loop().run_in_executor(
+                            None, self.ark_trades.get_recent_trades
+                        )
+                        ark_buy_signals = self.ark_trades.get_buy_signals()
+                        ark_sell_signals = self.ark_trades.get_sell_signals()
+                        for sig in ark_buy_signals[:8]:
+                            self.watchlist.add(
+                                sig["ticker"],
+                                side="long",
+                                conviction=sig.get("conviction", 0.4),
+                                source="ark_buy",
+                                reason=sig.get("reason", "ARK buy signal"),
+                            )
+                        for sig in ark_sell_signals[:5]:
+                            self.watchlist.add(
+                                sig["ticker"],
+                                side="short",
+                                conviction=max(0.3, sig.get("conviction", 0.35) - 0.05),
+                                source="ark_sell",
+                                reason=sig.get("reason", "ARK sell signal"),
+                            )
+                        if ark_buy_signals or ark_sell_signals:
+                            logger.info(
+                                f"🏛️ ARK trades: {len(ark_buy_signals)} buys, {len(ark_sell_signals)} sells"
+                            )
+                            leaders = [sig["ticker"] for sig in (ark_buy_signals[:3] + ark_sell_signals[:2])]
+                            log_activity("research", f"🏛️ ARK trades: {', '.join(leaders)}")
+                    except Exception as e:
+                        logger.debug(f"ARK trades scan failed: {e}")
+
+                # 5g. Finnhub macro calendar + IPO calendar
+                economic_calendar = {}
+                ipo_calendar = []
+                if self.finnhub_client and self.finnhub_client.is_configured():
+                    try:
+                        economic_calendar = await asyncio.get_event_loop().run_in_executor(
+                            None, self.finnhub_client.summarize_economic_calendar, 7
+                        )
+                        if economic_calendar.get("events"):
+                            state["economic_calendar"] = economic_calendar.get("events", [])
+                            logger.info(
+                                "🗓️ Macro calendar: "
+                                + ", ".join(event.get("event", "") for event in economic_calendar.get("events", [])[:3])
+                            )
+                            log_activity("research", f"🗓️ Macro calendar: {economic_calendar.get('summary', '')}")
+                    except Exception as e:
+                        logger.debug(f"Finnhub economic calendar failed: {e}")
+                    try:
+                        ipo_calendar = await asyncio.get_event_loop().run_in_executor(
+                            None, self.finnhub_client.get_ipo_calendar
+                        )
+                        for ipo in ipo_calendar[:8]:
+                            self.watchlist.add(
+                                ipo["symbol"],
+                                side="long",
+                                conviction=0.35,
+                                source="ipo_calendar",
+                                reason=f"IPO watch: {ipo.get('name', ipo['symbol'])} listing {ipo.get('date', '')}",
+                            )
+                        if ipo_calendar:
+                            logger.info(f"🆕 IPO calendar: {', '.join(ipo['symbol'] for ipo in ipo_calendar[:5])}")
+                            log_activity("research", f"🆕 IPO watch: {', '.join(ipo['symbol'] for ipo in ipo_calendar[:5])}")
+                    except Exception as e:
+                        logger.debug(f"Finnhub IPO calendar failed: {e}")
+
                 # 6. REBUILD WATCHLIST from all sources
                 self.watchlist.rebuild_overnight(
                     stocktwits_trending=stocktwits_data,
@@ -645,6 +814,26 @@ class TradingBot:
                     pharma_catalysts=pharma_signals,
                     fade_candidates=fade_candidates,
                 )
+
+                # 6b. Operator-guided context
+                if self.human_intel_store:
+                    human_candidates = self.human_intel_store.get_watchlist_candidates(limit=12)
+                    for intel in human_candidates:
+                        ticker = intel.get("ticker", "")
+                        if not ticker:
+                            continue
+                        side = "short" if intel.get("bias") == "bearish" else "long"
+                        conviction = min(0.95, 0.35 + float(intel.get("avg_confidence", 0.5) or 0.5) * 0.5)
+                        self.watchlist.add(
+                            ticker,
+                            side=side,
+                            conviction=conviction,
+                            source="human_intel",
+                            reason=intel.get("summary", "operator context"),
+                        )
+                    if human_candidates:
+                        logger.info(f"🧠 Human intel watchlist: {', '.join(i['ticker'] for i in human_candidates[:5])}")
+                        log_activity("research", f"🧠 Human intel: {', '.join(i['ticker'] for i in human_candidates[:5])}")
 
                 # Save thesis
                 if thesis:
@@ -747,6 +936,17 @@ class TradingBot:
                         if form == "8-K" and ticker:
                             self.watchlist.add(ticker, side="long", conviction=0.5,
                                               source="edgar", reason=f"8-K filing: {f.get('description', '')[:50]}")
+                        if form == "4" and ticker:
+                            insider = await self.edgar_scanner.get_insider_trades(ticker, filings=[f])
+                            signal = insider.get("signal")
+                            if signal in ("bullish", "bearish"):
+                                self.watchlist.add(
+                                    ticker,
+                                    side="long" if signal == "bullish" else "short",
+                                    conviction=0.45 if signal == "bullish" else 0.4,
+                                    source="edgar_form4",
+                                    reason=insider.get("summary", "Form 4 insider activity"),
+                                )
             except Exception as e:
                 logger.debug(f"EDGAR scan failed: {e}")
 
@@ -1082,8 +1282,19 @@ class TradingBot:
     def _passes_fast_path_deterministic_screen(self, symbol: str, price: float, pct_change: float, volume_spike: float):
         if not getattr(settings, "FAST_PATH_ENABLED", True):
             return False, "disabled"
+        if (
+            self.risk_manager
+            and getattr(settings, "SWING_MODE_DISABLE_FAST_PATH", True)
+            and self.risk_manager.is_swing_mode()
+        ):
+            return False, "swing_mode_disabled"
         if symbol in self._fast_path_pending:
             return False, "already_pending"
+        self._prune_jury_vetoes()
+        jury_vetoes = getattr(self, "_jury_vetoed_symbols", {})
+        vetoed_at = jury_vetoes.get(symbol)
+        if vetoed_at and (time.time() - float(vetoed_at)) < 3600:
+            return False, "jury_vetoed"
         if price <= 0 or price < 5 or price > 500:
             return False, "price_out_of_range"
         min_change = float(getattr(settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0))
@@ -1114,6 +1325,33 @@ class TradingBot:
                 return False, f"rsi_block_{cached_rsi:.1f}"
 
         return True, "ok"
+
+    def _prune_jury_vetoes(self):
+        jury_vetoes = getattr(self, "_jury_vetoed_symbols", None)
+        if not jury_vetoes:
+            return
+        cutoff = time.time() - 3600
+        stale_symbols = [symbol for symbol, ts in jury_vetoes.items() if float(ts or 0) < cutoff]
+        for symbol in stale_symbols:
+            jury_vetoes.pop(symbol, None)
+
+    def _record_jury_veto(self, symbol: str):
+        jury_vetoes = getattr(self, "_jury_vetoed_symbols", None)
+        if jury_vetoes is None:
+            jury_vetoes = {}
+            self._jury_vetoed_symbols = jury_vetoes
+        jury_vetoes[symbol] = time.time()
+
+    def _clear_jury_veto(self, symbol: str):
+        jury_vetoes = getattr(self, "_jury_vetoed_symbols", None)
+        if jury_vetoes is not None:
+            jury_vetoes.pop(symbol, None)
+
+    def _record_short_verdict_block(self, symbol: str, reason: str, stage: str):
+        reason_text = f"{stage}:{reason or 'unknown'}"
+        self.ai_layers["short_verdicts_blocked"] = int(self.ai_layers.get("short_verdicts_blocked", 0) or 0) + 1
+        self.ai_layers["last_short_block_reason"] = f"{symbol} {reason_text}"
+        logger.warning(f"🩳 SHORT blocked for {symbol}: {reason_text}")
 
     def _handle_fast_path_breakout(self, symbol: str, price: float, pct_change: float, volume_spike: float):
         """Synchronous callback-safe breakout handler (zero network, in-memory checks only)."""
@@ -1154,9 +1392,19 @@ class TradingBot:
         volume_spike = float(candidate.get("volume_spike", 0) or 0)
         signal_timestamp = float(candidate.get("signal_timestamp", time.time()) or time.time())
         try:
+            if (
+                self.risk_manager
+                and getattr(settings, "SWING_MODE_DISABLE_FAST_PATH", True)
+                and self.risk_manager.is_swing_mode()
+            ):
+                logger.info(f"⚡ FAST-PATH skipped in swing mode: {symbol}")
+                return
             min_entry_sent = float(getattr(settings, "MIN_ENTRY_SENTIMENT", 0.3) or 0.3)
             scout_score = max(0.75, min(1.0, min_entry_sent + 0.05))
             positions = self.entry_manager.get_positions()
+            if symbol in getattr(self.entry_manager, "positions", {}):
+                logger.info(f"⚡ FAST-PATH duplicate position blocked: {symbol}")
+                return
             can = await self.entry_manager.can_enter(symbol, scout_score, positions)
             if not can:
                 logger.info(f"⚡ FAST-PATH blocked by entry checks: {symbol}")
@@ -1370,7 +1618,11 @@ class TradingBot:
         if not self.risk_manager.can_trade():
             return
 
+        self._prune_jury_vetoes()
         positions = self.entry_manager.get_positions()
+        congress_scanner = getattr(self, "congress_scanner", None)
+        human_intel_store = getattr(self, "human_intel_store", None)
+        edgar_scanner = getattr(self, "edgar_scanner", None)
 
         # Evaluate candidates — skip held tickers and recently-SKIPped to find FRESH opportunities
         evaluated = 0
@@ -1393,6 +1645,33 @@ class TradingBot:
             sentiment_data["decision_price"] = signal_price
             sentiment_data["signal_sources"] = signal_sources
             sentiment_data["signal_timestamp"] = signal_timestamp
+            if congress_scanner and not candidate.get("congress_trades"):
+                related_congress = [
+                    trade for trade in getattr(congress_scanner, "_trades", [])
+                    if str(trade.get("ticker", "")).upper() == symbol
+                ][:3]
+                if related_congress:
+                    candidate["congress_trades"] = "; ".join(
+                        f"{trade.get('member', 'Unknown')} {trade.get('transaction', 'trade')} {trade.get('amount', '')}".strip()
+                        for trade in related_congress
+                    )
+            if human_intel_store and not candidate.get("human_intel"):
+                human_intel = human_intel_store.summarize_for_symbol(symbol)
+                if human_intel.get("count"):
+                    candidate["human_intel"] = human_intel.get("summary", "")
+                    candidate["human_intel_bias"] = human_intel.get("bias", "neutral")
+            if edgar_scanner and (not candidate.get("edgar_filings") or not candidate.get("insider_activity")):
+                edgar_filings = await edgar_scanner.check_ticker(symbol)
+                if edgar_filings and not candidate.get("edgar_filings"):
+                    candidate["edgar_filings"] = "; ".join(
+                        f"{filing.get('form_type', '?')} {filing.get('filed', '')}".strip()
+                        for filing in edgar_filings[:3]
+                    )
+                if not candidate.get("insider_activity"):
+                    insider_activity = await edgar_scanner.get_insider_trades(symbol, filings=edgar_filings)
+                    if insider_activity.get("form4_count"):
+                        candidate["insider_activity"] = insider_activity.get("summary", "")
+                        candidate["insider_signal"] = insider_activity.get("signal", "watch")
 
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
@@ -1415,10 +1694,13 @@ class TradingBot:
                     self.ai_layers["last_consensus"] = verdict.to_dict()
                     if verdict.decision not in ("BUY", "SHORT"):
                         if "cooldown" not in verdict.reasoning.lower():
+                            self._record_jury_veto(symbol)
                             logger.info(f"🗳️ Jury SKIP for {symbol}: {verdict.reasoning}")
                             log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning}")
                         continue
                     direction = verdict.decision
+                    if direction == "BUY":
+                        self._clear_jury_veto(symbol)
                     # Map jury sizing to consensus_size_modifier (0-1 range)
                     tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
                     tier_size = tier.get("size_pct", 2.0)
@@ -1441,11 +1723,32 @@ class TradingBot:
             sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
             sentiment_data.setdefault("share_notional_multiplier", 1.0)
             sentiment_data.setdefault("signal_timestamp", signal_timestamp)
+            if candidate.get("copy_trader_context"):
+                sentiment_data["copy_trader_context"] = candidate.get("copy_trader_context", "")
+                sentiment_data["copy_trader_handles"] = list(candidate.get("copy_trader_handles", []) or [])
+                sentiment_data["copy_trader_signal_count"] = int(candidate.get("copy_trader_signal_count", 0) or 0)
+                sentiment_data["copy_trader_convergence"] = int(candidate.get("copy_trader_convergence", 0) or 0)
+                sentiment_data["copy_trader_weight"] = float(candidate.get("copy_trader_weight", 1.0) or 1.0)
+                sentiment_data["copy_trader_size_multiplier"] = float(
+                    candidate.get("copy_trader_size_multiplier", 1.0) or 1.0
+                )
+            raw_sentiment_score = float(sentiment_score or 0)
+            effective_sentiment_score = raw_sentiment_score
+            if direction == "SHORT":
+                min_entry_sent = float(getattr(self.entry_manager, "min_sentiment", settings.MIN_ENTRY_SENTIMENT) or settings.MIN_ENTRY_SENTIMENT)
+                effective_sentiment_score = -max(abs(raw_sentiment_score), min_entry_sent)
+                sentiment_data["raw_sentiment_score"] = raw_sentiment_score
+                sentiment_data["score"] = effective_sentiment_score
+            else:
+                sentiment_data["score"] = raw_sentiment_score
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
-            check_sentiment = -sentiment_score if direction == "SHORT" else sentiment_score
+            check_sentiment = -effective_sentiment_score if direction == "SHORT" else effective_sentiment_score
             can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
             logger.info(f"🔑 {symbol} can_enter={can} (check_sent={check_sentiment:.2f})")
+            if direction == "SHORT" and not can:
+                gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "entry_gate_block")
+                self._record_short_verdict_block(symbol, gate_reason, "gate")
             if can:
                 logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
 
@@ -1509,6 +1812,9 @@ class TradingBot:
                     pos = await self.entry_manager.enter_short(symbol, sentiment_data)
                 else:
                     pos = await self.entry_manager.enter_position(symbol, sentiment_data)
+                if direction == "SHORT" and not pos:
+                    order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
+                    self._record_short_verdict_block(symbol, order_reason, "execution")
                 if pos:
                     positions = self.entry_manager.get_positions()
 
@@ -1605,12 +1911,31 @@ class TradingBot:
         pnl = float(trade_record.get("pnl", 0))
         symbol = trade_record.get("symbol", "")
         asset_type = str(trade_record.get("asset_type", "equity") or "equity").lower()
+        position = None
+        if self.entry_manager and symbol and asset_type != "option":
+            position = self.entry_manager.positions.get(symbol)
+            if position:
+                for field in (
+                    "copy_trader_context",
+                    "copy_trader_handles",
+                    "copy_trader_signal_count",
+                    "copy_trader_convergence",
+                    "copy_trader_weight",
+                ):
+                    if trade_record.get(field) in (None, "", [], {}):
+                        trade_record[field] = position.get(field)
 
         trade_history.record_trade(trade_record)
         if self.entry_manager and symbol and asset_type != "option":
             self.entry_manager.remove_position(symbol)
         if self.risk_manager:
             self.risk_manager.record_trade(trade_record)
+        copy_trader_monitor = getattr(self, "copy_trader_monitor", None)
+        if copy_trader_monitor and (
+            trade_record.get("copy_trader_handles")
+            or "copy_trader" in (trade_record.get("signal_sources", []) or [])
+        ):
+            copy_trader_monitor.record_trade_result(trade_record)
 
         self.pnl_state["total_realized_pnl"] = self.pnl_state.get("total_realized_pnl", 0) + pnl
         self.pnl_state["today_realized_pnl"] = self.pnl_state.get("today_realized_pnl", 0) + pnl
@@ -1639,6 +1964,158 @@ class TradingBot:
             if self.risk_manager:
                 self.risk_manager.update_options_exposure(options_engine.get_options_positions())
         persistence.save_trades([trade_record])
+
+    @staticmethod
+    def _position_is_copy_trader_influenced(position: dict) -> bool:
+        handles = position.get("copy_trader_handles") or []
+        if handles:
+            return True
+        sources = position.get("signal_sources", []) or []
+        if isinstance(sources, str):
+            sources = [s.strip() for s in sources.split(",") if s.strip()]
+        return "copy_trader" in sources
+
+    async def _refresh_position_trailing_stop(self, position: dict, new_trail_pct: float) -> bool:
+        pos = position or {}
+        symbol = pos.get("symbol", "")
+        qty = int(float(pos.get("quantity", 0) or 0))
+        side = pos.get("side", "long")
+        if not symbol or qty < 1 or pos.get("swing_only"):
+            pos["trail_pct"] = new_trail_pct
+            return False
+        broker = getattr(self, "alpaca_client", None)
+        entry_manager = getattr(self, "entry_manager", None)
+        if not broker or not entry_manager:
+            pos["trail_pct"] = new_trail_pct
+            return False
+
+        cancel_fn = None
+        if side == "short" and hasattr(broker, "cancel_open_buys_for_symbol"):
+            cancel_fn = broker.cancel_open_buys_for_symbol
+        elif side != "short" and hasattr(broker, "cancel_open_sells_for_symbol"):
+            cancel_fn = broker.cancel_open_sells_for_symbol
+        try:
+            if cancel_fn:
+                await asyncio.get_event_loop().run_in_executor(None, cancel_fn, symbol)
+            trail_order, protection_failed = await entry_manager._place_entry_protection_order(
+                symbol, qty, new_trail_pct, side
+            )
+            pos["trail_pct"] = new_trail_pct
+            pos["protection_failed"] = bool(protection_failed)
+            if trail_order:
+                pos["has_trailing_stop"] = True
+                pos["trailing_stop_order_id"] = trail_order.get("id", pos.get("trailing_stop_order_id"))
+                return True
+        except Exception as e:
+            logger.warning(f"Could not refresh trailing stop for {symbol}: {e}")
+        return False
+
+    async def _process_copy_trader_exit_signals(self):
+        monitor = getattr(self, "copy_trader_monitor", None)
+        entry_manager = getattr(self, "entry_manager", None)
+        if not monitor or not entry_manager:
+            return
+
+        try:
+            exit_signals = list(monitor.get_exit_signals() or [])
+        except Exception as e:
+            logger.debug(f"Copy trader exit fetch failed: {e}")
+            return
+        if not exit_signals:
+            return
+
+        processed_ids = getattr(self, "_processed_copy_trader_exit_ids", None)
+        if processed_ids is None:
+            processed_ids = set()
+            self._processed_copy_trader_exit_ids = processed_ids
+
+        tighten_mult = max(0.1, float(getattr(settings, "COPY_TRADER_EXIT_TIGHTEN_MULT", 0.6) or 0.6))
+        min_trail = max(0.5, float(getattr(settings, "COPY_TRADER_EXIT_MIN_TRAIL_PCT", 1.5) or 1.5))
+        auto_exit_enabled = bool(getattr(settings, "COPY_TRADER_AUTO_EXIT_STRONG", False))
+        strong_exit_min = max(2, int(getattr(settings, "COPY_TRADER_STRONG_EXIT_MIN_SIGNALS", 2) or 2))
+
+        for signal in exit_signals:
+            tweet_ids = [tid for tid in signal.get("copy_trader_exit_tweet_ids", []) if tid]
+            new_ids = [tid for tid in tweet_ids if tid not in processed_ids]
+            if tweet_ids and not new_ids:
+                continue
+
+            symbol = str(signal.get("symbol", "") or "").upper()
+            if not symbol:
+                processed_ids.update(new_ids)
+                continue
+
+            pos = entry_manager.positions.get(symbol)
+            if not pos or not self._position_is_copy_trader_influenced(pos):
+                processed_ids.update(new_ids)
+                continue
+
+            signal_handles = {str(h).lower() for h in signal.get("copy_trader_exit_handles", []) if h}
+            position_handles = {
+                str(h).lower()
+                for h in (pos.get("copy_trader_handles", []) or [])
+                if h
+            }
+            if position_handles and signal_handles and not (position_handles & signal_handles):
+                processed_ids.update(new_ids)
+                continue
+
+            current_trail = max(0.5, float(pos.get("trail_pct", 3.0) or 3.0))
+            tightened_trail = max(min_trail, min(current_trail, current_trail * tighten_mult))
+            refreshed = False
+            if tightened_trail < current_trail:
+                refreshed = await self._refresh_position_trailing_stop(pos, tightened_trail)
+            pos["copy_trader_exit_action"] = signal.get("copy_trader_exit_action", "trim")
+            pos["copy_trader_exit_count"] = int(signal.get("copy_trader_exit_count", 0) or 0)
+            pos["copy_trader_exit_handles"] = list(signal.get("copy_trader_exit_handles", []) or [])
+            pos["copy_trader_exit_context"] = signal.get("copy_trader_exit_context", "")
+            pos["copy_trader_exit_at"] = time.time()
+            self.ai_layers["last_copy_trader_exit_signal"] = f"{symbol} {pos['copy_trader_exit_context']}"
+            log_activity(
+                "trade",
+                f"📣 {symbol}: copy-trader {pos['copy_trader_exit_action']} signal"
+                f" ({pos['copy_trader_exit_count']} handles) -> trail {tightened_trail:.1f}%",
+                {
+                    "symbol": symbol,
+                    "handles": pos["copy_trader_exit_handles"],
+                    "refreshed": refreshed,
+                },
+            )
+
+            if (
+                auto_exit_enabled
+                and pos.get("copy_trader_exit_action") == "exit"
+                and pos.get("copy_trader_exit_count", 0) >= strong_exit_min
+                and not pos.get("swing_only")
+            ):
+                pos["copy_trader_auto_exit_ready"] = True
+                exit_manager = getattr(self, "exit_manager", None)
+                polygon_client = getattr(self, "polygon_client", None)
+                if exit_manager and polygon_client:
+                    try:
+                        current_price = await asyncio.get_event_loop().run_in_executor(
+                            None, polygon_client.get_price, symbol
+                        )
+                    except Exception:
+                        current_price = float(pos.get("entry_price", 0) or 0)
+                    entry_price = float(pos.get("entry_price", 0) or 0)
+                    pnl_pct = 0.0
+                    if entry_price and current_price:
+                        if pos.get("side", "long") == "short":
+                            pnl_pct = ((entry_price - current_price) / entry_price) * 100
+                        else:
+                            pnl_pct = ((current_price - entry_price) / entry_price) * 100
+                    qty = int(float(pos.get("quantity", 0) or 0))
+                    if qty >= 1:
+                        await exit_manager._execute_exit(
+                            pos,
+                            qty,
+                            current_price,
+                            "copy_trader_exit_signal",
+                            pnl_pct,
+                        )
+
+            processed_ids.update(new_ids)
 
     async def _monitor_positions(self):
         """
@@ -1729,6 +2206,9 @@ class TradingBot:
         for pos in list(positions):
             symbol = pos["symbol"]
             try:
+                if pos.get("halted"):
+                    logger.debug(f"{symbol}: market halted — skipping monitor checks")
+                    continue
                 # ── DETECT TRAILING STOP FILLS ──
                 # If we're tracking it but Alpaca no longer has it → trailing stop fired
                 # BUT: if there's still a pending entry order, the position hasn't opened yet.
@@ -1845,6 +2325,13 @@ class TradingBot:
                     logger.debug(f"⏳ {symbol} trail being adjusted by Exit Agent — skipping monitor check")
                     continue
                 if not pos.get("has_trailing_stop"):
+                    if self.risk_manager and hasattr(self.risk_manager, "can_exit_position"):
+                        if not self.risk_manager.can_exit_position(pos, reason="trailing_stop", log_block=False):
+                            if not pos.get("_swing_trail_deferred_logged"):
+                                logger.info(f"🌙 {symbol} swing-only same-day position — trailing stop deferred")
+                                pos["_swing_trail_deferred_logged"] = True
+                            continue
+                        pos.pop("_swing_trail_deferred_logged", None)
                     # During extended hours, trailing stops don't work on Alpaca.
                     # ExtendedHoursGuard handles protection. Don't retry or emergency sell.
                     from datetime import datetime
@@ -1922,6 +2409,40 @@ class TradingBot:
             price=price,
             pct_change=pct_change,
             volume_spike=volume_spike,
+        )
+
+    def _on_halt_status(self, symbol: str, status_code: str, reason: str, halted: bool):
+        """Pause active monitoring on halted positions until trading resumes."""
+        if not self.entry_manager:
+            return
+        pos = self.entry_manager.positions.get(symbol)
+        if not pos:
+            return
+        pos["halted"] = bool(halted)
+        pos["market_status_code"] = status_code
+        pos["market_status_reason"] = reason
+        pos["market_status_updated_at"] = time.time()
+        if halted:
+            log_activity("alert", f"🚨 {symbol} HALTED — monitor paused ({reason or status_code})")
+            logger.warning(f"{symbol} halted while held — pausing monitor checks")
+        else:
+            log_activity("alert", f"✅ {symbol} RESUMED — monitor restored")
+            logger.info(f"{symbol} resumed trading — monitor restored")
+
+    def _on_luld_status(self, symbol: str, band_data: dict):
+        """Track active LULD bands for held positions."""
+        if not self.entry_manager:
+            return
+        pos = self.entry_manager.positions.get(symbol)
+        if not pos:
+            return
+        pos["luld_state"] = band_data.get("band_state") or band_data.get("indicator") or "active"
+        pos["luld_upper_band"] = band_data.get("upper_band")
+        pos["luld_lower_band"] = band_data.get("lower_band")
+        pos["luld_updated_at"] = time.time()
+        log_activity(
+            "alert",
+            f"⚠️ {symbol} LULD bands: {band_data.get('lower_band')} - {band_data.get('upper_band')}",
         )
 
     async def _on_trade_update_fill(self, data: dict, event: str):

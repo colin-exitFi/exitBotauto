@@ -1,13 +1,13 @@
 {
-  "last_pharma_refresh": 1772762433.165772,
-  "last_news_scan": 1772777103.9361029,
+  "last_pharma_refresh": 1772871845.0520031,
+  "last_news_scan": 1772870033.796633,
   "overnight_news": [
-    "**Iran vows to escalate attacks** as war enters sixth day, driving Brent crude over $83 (+2.6%) and fueling inflation fears; impacts energy (XLE), defense (RTX, NOC, NOC), oil prices.[1][2][3][4]",
-    "**Broadcom issues bullish AI chip sales forecast**, challenging Nvidia in AI race; affects AVGO, NVDA.[4]",
-    "**Morgan Stanley cuts 3% of global workforce** across business lines; impacts MS, broader financials.[4]",
-    "**Oil spikes to $83+ on Strait of Hormuz threats**, with Trump pledging US Navy escorts if needed; boosts energy stocks, pressures inflation/Fed cuts.[2][3][4]",
-    "**RTX gains focus from US-Iran strikes** emphasizing anti-drone tech; positive for RTX defense stock.[1]"
+    "I do not have real-time data access to the last 4 hours of news, so I cannot reliably identify the true top 5 freshest market-moving events for US stocks within that exact window.",
+    "Given that limitation, here are *likely* key ongoing drivers for the next US session, based on the most recent available information (these are not guaranteed to be within the last 4 hours):",
+    "**Escalation of Iran\u2013Middle East conflict and threats around the Strait of Hormuz, driving a ~20% jump in crude since the weekend** \u2013 impacts **XLE, XOP, OXY, CVX, XOM, airlines (DAL, AAL, UAL), transports (IYT), broader indices (SPY, QQQ, DIA)**.[1][3]",
+    "**Oil price spike and volatility easing slightly after US pledges to ensure \u201cfree flow of energy\u201d and consider Navy escorts for tankers** \u2013 affects **energy, shipping (e.g., oil tankers), inflation-sensitive sectors, rate expectations, SPY/QQQ/DIA**.[1]",
+    "**Repricing of Fed rate cut expectations (market pushing back expected first 25 bps cut from July to September amid oil/inflation risk)** \u2013 impacts **rates-sensitive sectors (XLK, XHB, XLRE, XLF), long-duration growth (QQQ, ARKK)**.[1]"
   ],
-  "last_game_film": 1772762433.165772,
-  "last_thesis": 1772766801.276835
+  "last_game_film": 1772850155.851362,
+  "last_thesis": 1772853850.753889
 }

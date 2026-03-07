@@ -215,13 +215,10 @@ class ExitAgent:
             if qty > 0:
                 logger.warning(f"🚨 EXIT_NOW: {symbol} — {action.get('reasoning', '')}")
                 try:
-                    # Cancel existing trailing stop first
-                    stop_id = pos.get("trailing_stop_order_id")
-                    if stop_id:
-                        await asyncio.get_event_loop().run_in_executor(
-                            None, self.broker.cancel_order, stop_id
-                        )
                     side = pos.get("side", "long")
+                    canceled = await self._cancel_conflicting_exit_orders(symbol, side=side)
+                    if canceled:
+                        logger.info(f"Exit agent canceled {canceled} conflicting orders for {symbol} before EXIT_NOW")
                     if side == "short":
                         # Buy to cover
                         await asyncio.get_event_loop().run_in_executor(
@@ -277,6 +274,41 @@ class ExitAgent:
                 logger.error(f"Exit agent trail adjust failed for {symbol}: {e}")
             finally:
                 pos.pop("_trail_adjusting", None)  # Always clear the flag
+
+    async def _cancel_conflicting_exit_orders(self, symbol: str, side: str = "long") -> int:
+        """Cancel open orders that would reserve the same position quantity needed for EXIT_NOW."""
+        if not hasattr(self.broker, "get_orders") or not hasattr(self.broker, "cancel_order"):
+            return 0
+
+        exit_side = "buy" if side == "short" else "sell"
+        try:
+            open_orders = await asyncio.get_event_loop().run_in_executor(
+                None, self.broker.get_orders, "open"
+            )
+        except Exception:
+            return 0
+
+        target_symbol = str(symbol or "").upper()
+        cancel_ids = []
+        for order in open_orders or []:
+            if str(order.get("symbol", "")).upper() != target_symbol:
+                continue
+            if str(order.get("side", "")).lower() != exit_side:
+                continue
+            order_id = str(order.get("id", "") or "").strip()
+            if order_id:
+                cancel_ids.append(order_id)
+
+        canceled = 0
+        for order_id in sorted(set(cancel_ids)):
+            ok = await asyncio.get_event_loop().run_in_executor(
+                None, self.broker.cancel_order, order_id
+            )
+            if ok:
+                canceled += 1
+        if canceled:
+            await asyncio.sleep(0.25)
+        return canceled
 
 
 def _brief_summary(brief: Dict) -> str:

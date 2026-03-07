@@ -98,7 +98,16 @@ class AlpacaClient:
             }
         except Exception as e:
             logger.error(f"Get account failed: {e}")
-            return {"cash": 0, "buying_power": 0, "equity": 0, "portfolio_value": 0}
+            return {
+                "cash": 0.0,
+                "buying_power": 0.0,
+                "equity": 0.0,
+                "portfolio_value": 0.0,
+                "pattern_day_trader": False,
+                "daytrade_count": 0,
+                "trading_blocked": False,
+                "long_market_value": 0.0,
+            }
 
     def get_balances(self) -> Dict:
         """Convenience method matching old interface."""
@@ -190,7 +199,12 @@ class AlpacaClient:
             logger.error(f"Market buy failed ({symbol}): {e}")
             return None
 
-    def place_market_sell(self, symbol: str, qty_or_notional: Union[int, float]) -> Optional[Dict]:
+    def place_market_sell(
+        self,
+        symbol: str,
+        qty_or_notional: Union[int, float],
+        _retry_on_qty_conflict: bool = True,
+    ) -> Optional[Dict]:
         """Place a market sell order."""
         self._ensure_init()
         try:
@@ -215,10 +229,22 @@ class AlpacaClient:
             logger.success(f"Market SELL: {qty_or_notional} {symbol} → order {order.id}")
             return self._order_to_dict(order)
         except Exception as e:
+            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
+                cancelled = self.cancel_open_sells_for_symbol(symbol)
+                if cancelled:
+                    time.sleep(0.5)
+                    return self.place_market_sell(symbol, qty_or_notional, _retry_on_qty_conflict=False)
             logger.error(f"Market sell failed ({symbol}): {e}")
             return None
 
-    def place_limit_buy(self, symbol: str, qty: int, price: float, extended_hours: bool = False) -> Optional[Dict]:
+    def place_limit_buy(
+        self,
+        symbol: str,
+        qty: int,
+        price: float,
+        extended_hours: bool = False,
+        _retry_on_qty_conflict: bool = True,
+    ) -> Optional[Dict]:
         """Place a limit buy order. Extended hours requires limit+day."""
         self._ensure_init()
         try:
@@ -237,6 +263,17 @@ class AlpacaClient:
             logger.success(f"Limit BUY: {qty} {symbol} @ ${limit_price} → order {order.id}")
             return self._order_to_dict(order)
         except Exception as e:
+            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
+                cancelled = self.cancel_open_sells_for_symbol(symbol)
+                if cancelled:
+                    time.sleep(0.5)
+                    return self.place_limit_buy(
+                        symbol,
+                        qty,
+                        price,
+                        extended_hours=extended_hours,
+                        _retry_on_qty_conflict=False,
+                    )
             logger.error(f"Limit buy failed ({symbol}): {e}")
             return None
 
@@ -291,6 +328,81 @@ class AlpacaClient:
         except Exception as e:
             logger.error(f"Get orders failed: {e}")
             return []
+
+    @staticmethod
+    def _is_qty_conflict_error(message: object) -> bool:
+        text = str(message or "").lower()
+        return (
+            "insufficient qty" in text
+            or "insufficient quantity" in text
+            or "insufficient qty available" in text
+            or "qty available" in text
+        )
+
+    def _get_open_orders_for_symbol(self, symbol: str) -> List[Dict]:
+        self._ensure_init()
+        try:
+            resp = requests.get(
+                f"{self._base_url}/v2/orders",
+                headers=self._rest_headers(),
+                params={
+                    "status": "open",
+                    "symbols": symbol,
+                    "limit": 100,
+                    "nested": "true",
+                },
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                logger.error(f"Open orders query failed for {symbol}: {resp.status_code} {resp.text[:200]}")
+                return []
+            rows = resp.json()
+            return rows if isinstance(rows, list) else []
+        except Exception as e:
+            logger.error(f"Open orders query error for {symbol}: {e}")
+            return []
+
+    def _wait_for_open_orders_cleared(self, symbol: str, side: str, timeout_seconds: float = 2.0) -> bool:
+        deadline = time.time() + max(0.1, float(timeout_seconds or 0))
+        target_side = str(side or "").lower()
+        while time.time() < deadline:
+            open_orders = self._get_open_orders_for_symbol(symbol)
+            conflicts = [
+                order for order in open_orders
+                if str(order.get("side", "")).lower() == target_side
+            ]
+            if not conflicts:
+                return True
+            time.sleep(0.2)
+        return False
+
+    def _cancel_open_orders_for_symbol(self, symbol: str, side: str) -> int:
+        cancelled = 0
+        for order in self._get_open_orders_for_symbol(symbol):
+            if str(order.get("side", "")).lower() != str(side or "").lower():
+                continue
+            order_id = str(order.get("id", "") or "").strip()
+            if not order_id:
+                continue
+            if self.cancel_order(order_id):
+                cancelled += 1
+        if cancelled:
+            self._wait_for_open_orders_cleared(symbol, side)
+        return cancelled
+
+    def cancel_open_sells_for_symbol(self, symbol: str) -> int:
+        """Cancel open sell-side orders that lock a long position."""
+        cancelled = self._cancel_open_orders_for_symbol(symbol, "sell")
+        if cancelled:
+            logger.info(f"Cancelled {cancelled} open sell orders for {symbol}")
+        return cancelled
+
+    def cancel_open_buys_for_symbol(self, symbol: str) -> int:
+        """Cancel open buy-side orders that conflict with short-cover protection."""
+        cancelled = self._cancel_open_orders_for_symbol(symbol, "buy")
+        if cancelled:
+            logger.info(f"Cancelled {cancelled} open buy orders for {symbol}")
+        return cancelled
 
     # ── Smart Order Execution ─────────────────────────────────────
 
@@ -537,7 +649,13 @@ class AlpacaClient:
             logger.error(f"Bracket short error for {symbol}: {e}")
             return None
 
-    def place_trailing_stop(self, symbol: str, qty, trail_percent: float = 3.0) -> Optional[Dict]:
+    def place_trailing_stop(
+        self,
+        symbol: str,
+        qty,
+        trail_percent: float = 3.0,
+        _retry_on_qty_conflict: bool = True,
+    ) -> Optional[Dict]:
         """
         Place a trailing stop sell order on an existing position.
         The stop price follows the stock up and triggers on a pullback.
@@ -582,15 +700,40 @@ class AlpacaClient:
                     'hwm': data.get('hwm'),
                     'status': data['status'],
                 }
-            else:
-                logger.error(f"Trailing stop failed: {resp.status_code} {resp.text[:200]}")
-                return None
+            if _retry_on_qty_conflict and self._is_qty_conflict_error(resp.text):
+                cancelled = self.cancel_open_sells_for_symbol(symbol)
+                if cancelled:
+                    time.sleep(0.5)
+                    return self.place_trailing_stop(
+                        symbol,
+                        qty,
+                        trail_percent=trail_percent,
+                        _retry_on_qty_conflict=False,
+                    )
+            logger.error(f"Trailing stop failed: {resp.status_code} {resp.text[:200]}")
+            return None
 
         except Exception as e:
+            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
+                cancelled = self.cancel_open_sells_for_symbol(symbol)
+                if cancelled:
+                    time.sleep(0.5)
+                    return self.place_trailing_stop(
+                        symbol,
+                        qty,
+                        trail_percent=trail_percent,
+                        _retry_on_qty_conflict=False,
+                    )
             logger.error(f"Trailing stop error for {symbol}: {e}")
             return None
 
-    def place_trailing_stop_short(self, symbol: str, qty, trail_percent: float = 3.0) -> Optional[Dict]:
+    def place_trailing_stop_short(
+        self,
+        symbol: str,
+        qty,
+        trail_percent: float = 3.0,
+        _retry_on_qty_conflict: bool = True,
+    ) -> Optional[Dict]:
         """
         Place a trailing stop BUY order for a short position (buy-to-cover).
         """
@@ -630,10 +773,30 @@ class AlpacaClient:
                     'status': data['status'],
                 }
 
+            if _retry_on_qty_conflict and self._is_qty_conflict_error(resp.text):
+                cancelled = self.cancel_open_buys_for_symbol(symbol)
+                if cancelled:
+                    time.sleep(0.5)
+                    return self.place_trailing_stop_short(
+                        symbol,
+                        qty,
+                        trail_percent=trail_percent,
+                        _retry_on_qty_conflict=False,
+                    )
             logger.error(f"Short trailing stop failed: {resp.status_code} {resp.text[:200]}")
             return None
 
         except Exception as e:
+            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
+                cancelled = self.cancel_open_buys_for_symbol(symbol)
+                if cancelled:
+                    time.sleep(0.5)
+                    return self.place_trailing_stop_short(
+                        symbol,
+                        qty,
+                        trail_percent=trail_percent,
+                        _retry_on_qty_conflict=False,
+                    )
             logger.error(f"Short trailing stop error for {symbol}: {e}")
             return None
 
@@ -670,6 +833,66 @@ class AlpacaClient:
         except Exception as e:
             logger.debug(f"Latest price failed for {symbol}: {e}")
             return 0
+
+    @staticmethod
+    def _normalize_mover_row(row: Dict, source: str = "alpaca_movers") -> Optional[Dict]:
+        if not isinstance(row, dict):
+            return None
+        symbol = str(row.get("symbol", "") or "").upper().strip()
+        if not symbol:
+            return None
+        try:
+            price = float(row.get("price", row.get("last_price", 0)) or 0)
+        except Exception:
+            price = 0.0
+        try:
+            change_pct = float(
+                row.get("change_percent", row.get("percent_change", row.get("change", 0))) or 0
+            )
+        except Exception:
+            change_pct = 0.0
+        try:
+            volume = int(float(row.get("volume", row.get("day_volume", row.get("v", 0))) or 0))
+        except Exception:
+            volume = 0
+        return {
+            "symbol": symbol,
+            "price": price,
+            "change_pct": change_pct,
+            "volume": volume,
+            "source": source,
+        }
+
+    def get_movers(self, top: int = 20, market_type: str = "stocks") -> List[Dict]:
+        """Get top market movers from Alpaca screener."""
+        self._ensure_init()
+        try:
+            resp = requests.get(
+                f"https://data.alpaca.markets/v1beta1/screener/{market_type}/movers",
+                headers=self._rest_headers(),
+                params={"top": max(1, int(top or 20))},
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                logger.debug(f"Alpaca movers failed: {resp.status_code} {resp.text[:200]}")
+                return []
+
+            payload = resp.json()
+            if not isinstance(payload, dict):
+                payload = {}
+            results: List[Dict] = []
+            for bucket_name in ("gainers", "losers"):
+                for row in payload.get(bucket_name, []) or []:
+                    normalized = self._normalize_mover_row(row)
+                    if normalized:
+                        normalized["mover_bucket"] = bucket_name
+                        results.append(normalized)
+
+            self._capture_payload(f"movers_{market_type}", results)
+            return results
+        except Exception as e:
+            logger.debug(f"Alpaca movers request error: {e}")
+            return []
 
     def _rest_headers(self) -> Dict:
         """REST API headers for direct requests."""

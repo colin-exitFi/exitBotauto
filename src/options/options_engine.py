@@ -27,6 +27,11 @@ class OptionsEngine:
         self.positions: Dict[str, Dict] = {}
         self._quote_cache: Dict[str, Dict] = {}
         self._quote_cache_ttl = 10
+        self._snapshot_cache: Dict[str, Dict] = {}
+        self._snapshot_cache_ttl = 15
+        self._pdt_rejection_cache: Dict[str, Dict] = {}
+        self._pdt_rejection_log_ts: Dict[str, float] = {}
+        self.reconcile_exit_required = True
         logger.info("Options engine initialized")
 
     @staticmethod
@@ -63,6 +68,15 @@ class OptionsEngine:
             return None
         try:
             return datetime.strptime(expiry, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _parse_iso_ts(value) -> Optional[float]:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
         except Exception:
             return None
 
@@ -166,6 +180,30 @@ class OptionsEngine:
             mid = ask or bid or 0.0
         return bid, ask, mid
 
+    @staticmethod
+    def _snapshot_quote(snapshot: Optional[Dict]) -> Optional[Dict]:
+        if not isinstance(snapshot, dict):
+            return None
+        quote = snapshot.get("latestQuote") or snapshot.get("latest_quote") or {}
+        return quote if isinstance(quote, dict) else None
+
+    @staticmethod
+    def _snapshot_delta(snapshot: Optional[Dict], option_type: str) -> Optional[float]:
+        if not isinstance(snapshot, dict):
+            return None
+        greeks = snapshot.get("greeks") or {}
+        if not isinstance(greeks, dict):
+            return None
+        try:
+            delta = float(greeks.get("delta"))
+        except Exception:
+            return None
+        if option_type == "put" and delta > 0:
+            delta = -delta
+        if option_type == "call" and delta < 0:
+            delta = abs(delta)
+        return delta
+
     def _derive_exit_limit_price(self, contract_symbol: str) -> Tuple[Optional[float], str]:
         """
         Build a marketable limit price for option exits to reduce spread bleed.
@@ -186,6 +224,122 @@ class OptionsEngine:
             return round(px, 2), "mid"
         return None, "none"
 
+    def _build_trade_record(
+        self,
+        pos: Dict,
+        qty: int,
+        exit_premium: float,
+        reason: str,
+        exit_time: Optional[float] = None,
+        fill_timestamp_source: str = "engine_clock",
+    ) -> Optional[Dict]:
+        if not pos:
+            return None
+        exit_qty = max(0, int(qty or 0))
+        if exit_qty < 1:
+            return None
+
+        contract_symbol = pos.get("contract_symbol") or pos.get("symbol")
+        if not contract_symbol:
+            return None
+
+        entry_premium = float(pos.get("entry_premium", 0) or 0)
+        if exit_premium <= 0:
+            exit_premium = float(pos.get("current_premium", entry_premium) or entry_premium)
+
+        pnl = (exit_premium - entry_premium) * exit_qty * 100.0
+        pnl_pct = ((exit_premium - entry_premium) / entry_premium * 100.0) if entry_premium > 0 else 0.0
+        now_ts = float(exit_time if exit_time is not None else time.time())
+
+        underlying_entry = float(pos.get("underlying_entry_price", 0) or 0)
+        underlying_last = float(pos.get("underlying_last_price", underlying_entry) or underlying_entry)
+        underlying_move_pct = (
+            ((underlying_last - underlying_entry) / underlying_entry) * 100.0 if underlying_entry > 0 else 0.0
+        )
+
+        return {
+            "asset_type": "option",
+            "symbol": contract_symbol,
+            "contract_symbol": contract_symbol,
+            "underlying": pos.get("underlying", self._infer_underlying_from_contract(contract_symbol)),
+            "option_type": pos.get("option_type", ""),
+            "strike": float(pos.get("strike", 0) or 0),
+            "expiry": pos.get("expiry", ""),
+            "side": "sell",
+            "entry_price": entry_premium,
+            "exit_price": exit_premium,
+            "entry_premium": entry_premium,
+            "exit_premium": exit_premium,
+            "quantity": exit_qty,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "reason": reason,
+            "hold_seconds": now_ts - float(pos.get("entry_time", now_ts) or now_ts),
+            "entry_time": float(pos.get("entry_time", now_ts) or now_ts),
+            "exit_time": now_ts,
+            "fill_timestamp": now_ts,
+            "fill_timestamp_source": fill_timestamp_source,
+            "delta_at_entry": float(pos.get("delta_at_entry", 0.0) or 0.0),
+            "underlying_move_pct": underlying_move_pct,
+            "strategy_tag": pos.get("strategy_tag", "unknown"),
+            "signal_sources": pos.get("signal_sources", ["unknown"]),
+            "decision_confidence": pos.get("decision_confidence", 0),
+            "provider_used": pos.get("provider_used", ""),
+            "signal_price": pos.get("signal_price", underlying_entry),
+            "decision_price": pos.get("decision_price", underlying_entry),
+            "fill_price": exit_premium,
+            "slippage_bps": 0.0,
+        }
+
+    @staticmethod
+    def _to_int(value, default: int = 0) -> int:
+        try:
+            return int(float(value))
+        except Exception:
+            return default
+
+    @staticmethod
+    def _to_float(value, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except Exception:
+            return default
+
+    def extract_order_fill(self, order: Optional[Dict], requested_qty: int, fallback_price: float = 0.0) -> Dict[str, object]:
+        """
+        Normalize order fill details across Alpaca response shape variants.
+        Returns filled quantity and average fill price for deterministic exit accounting.
+        """
+        requested = max(0, int(requested_qty or 0))
+        if not order:
+            return {"status": "", "filled_qty": 0, "fill_price": float(fallback_price or 0.0)}
+
+        status = str(order.get("status", "") or "").lower()
+        filled_qty = self._to_int(
+            order.get("filled_qty", order.get("filled_quantity", order.get("filled", 0))),
+            default=0,
+        )
+
+        # Some broker payloads mark status=filled but omit filled_qty.
+        if filled_qty <= 0 and status in ("filled", "partially_filled"):
+            filled_qty = self._to_int(order.get("qty", order.get("quantity", requested)), default=requested)
+
+        if requested > 0:
+            filled_qty = min(requested, max(0, filled_qty))
+
+        fill_price = self._to_float(
+            order.get(
+                "filled_avg_price",
+                order.get("filled_average_price", order.get("average_price", order.get("avg_fill_price", fallback_price))),
+            ),
+            default=float(fallback_price or 0.0),
+        )
+        return {
+            "status": status,
+            "filled_qty": max(0, int(filled_qty)),
+            "fill_price": max(0.0, float(fill_price)),
+        }
+
     def _fetch_contract_chain(self, symbol: str, option_type: str, min_expiry: str, max_expiry: str) -> List[Dict]:
         resp = httpx.get(
             f"{self.base_url}/v2/options/contracts",
@@ -203,6 +357,37 @@ class OptionsEngine:
             logger.warning(f"Options chain lookup failed for {symbol}: {resp.status_code} {resp.text[:200]}")
             return []
         return resp.json().get("option_contracts", [])
+
+    def get_option_chain_snapshots(self, symbol: str, force_refresh: bool = False) -> Dict[str, Dict]:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return {}
+
+        now_ts = time.time()
+        if not force_refresh:
+            cached = self._snapshot_cache.get(ticker)
+            if cached and (now_ts - cached.get("ts", 0)) <= self._snapshot_cache_ttl:
+                return dict(cached.get("snapshots") or {})
+
+        try:
+            resp = httpx.get(
+                f"https://data.alpaca.markets/v1beta1/options/snapshots/{ticker}",
+                headers=self._headers,
+                params={"feed": "indicative", "limit": 1000},
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return {}
+            payload = resp.json()
+            if not isinstance(payload, dict):
+                payload = {}
+            snapshots = payload.get("snapshots", {}) or {}
+            if isinstance(snapshots, dict):
+                self._snapshot_cache[ticker] = {"snapshots": snapshots, "ts": now_ts}
+                return dict(snapshots)
+        except Exception as exc:
+            logger.debug(f"Options snapshot error for {ticker}: {exc}")
+        return {}
 
     def find_contract(
         self,
@@ -234,6 +419,7 @@ class OptionsEngine:
             if not contracts:
                 logger.info(f"No {option_type} contracts found for {symbol} in {min_expiry}..{max_expiry}")
                 return None
+            chain_snapshots = self.get_option_chain_snapshots(symbol)
 
             staged: List[Tuple[float, Dict]] = []
             for contract in contracts:
@@ -251,14 +437,20 @@ class OptionsEngine:
                 if oi < min_oi:
                     continue
 
-                delta = self.estimate_delta(
-                    underlying_price=price,
-                    strike=strike,
-                    days_to_expiry=dte,
-                    option_type=option_type,
-                    change_pct=change_pct,
-                    volume_spike=volume_spike,
-                )
+                contract_symbol = str(contract.get("symbol", "") or "").strip()
+                snapshot = chain_snapshots.get(contract_symbol, {})
+                delta = self._snapshot_delta(snapshot, option_type)
+                delta_source = "alpaca_snapshot"
+                if delta is None:
+                    delta = self.estimate_delta(
+                        underlying_price=price,
+                        strike=strike,
+                        days_to_expiry=dte,
+                        option_type=option_type,
+                        change_pct=change_pct,
+                        volume_spike=volume_spike,
+                    )
+                    delta_source = "estimate"
                 abs_delta = abs(delta)
 
                 # Keep around 0.30-0.50 but allow a wider guardrail for sparse chains.
@@ -274,6 +466,8 @@ class OptionsEngine:
 
                 candidate = dict(contract)
                 candidate["_estimated_delta"] = round(delta, 4)
+                candidate["_delta_source"] = delta_source
+                candidate["_snapshot_quote"] = self._snapshot_quote(snapshot)
                 candidate["_pre_score"] = pre_score
                 staged.append((pre_score, candidate))
 
@@ -287,7 +481,7 @@ class OptionsEngine:
             best_score = float("inf")
             for _, contract in staged[:25]:
                 contract_symbol = contract.get("symbol", "")
-                quote = self.get_option_quote(contract_symbol)
+                quote = contract.get("_snapshot_quote") or self.get_option_quote(contract_symbol)
                 bid, ask, mid = self._quote_to_prices(quote)
                 if mid <= 0:
                     continue
@@ -314,6 +508,7 @@ class OptionsEngine:
             logger.info(
                 f"📋 Options contract: {best.get('symbol')} strike=${best.get('strike_price')} "
                 f"exp={best.get('expiration_date')} delta≈{best.get('_estimated_delta')} "
+                f"({best.get('_delta_source', 'estimate')}) "
                 f"spread={best.get('_spread_pct', 0):.2f}%"
             )
             return best
@@ -350,6 +545,76 @@ class OptionsEngine:
         _, _, mid = self._quote_to_prices(quote)
         return mid
 
+    @staticmethod
+    def _parse_error_response(resp) -> Tuple[str, str]:
+        code = str(getattr(resp, "status_code", "") or "")
+        message = str(getattr(resp, "text", "") or "")
+        try:
+            payload = resp.json()
+            if isinstance(payload, dict):
+                code = str(payload.get("code", code) or code)
+                message = str(
+                    payload.get("message")
+                    or payload.get("error")
+                    or payload.get("msg")
+                    or message
+                )
+        except Exception:
+            pass
+        return code, message
+
+    @staticmethod
+    def _is_pdt_rejection(code: str, message: str) -> bool:
+        msg = str(message or "").lower()
+        code_text = str(code or "")
+        return (
+            code_text == "40310100"
+            or "40310100" in msg
+            or "pattern day" in msg
+            or "day trade" in msg
+            or "pdt" in msg
+        )
+
+    def _cache_pdt_rejection(self, contract_symbol: str, code: str, message: str):
+        symbol = str(contract_symbol or "").upper().strip()
+        if not symbol:
+            return
+        record = {
+            "code": str(code or "40310100"),
+            "message": str(message or "pattern day trade restriction"),
+            "timestamp": time.time(),
+        }
+        self._pdt_rejection_cache[symbol] = record
+        pos = self.positions.get(symbol)
+        if isinstance(pos, dict):
+            pos["pdt_close_blocked"] = True
+            pos["pdt_close_blocked_at"] = record["timestamp"]
+            pos["pdt_close_block_reason"] = record["message"]
+            self.positions[symbol] = pos
+        logger.warning(
+            f"Options PDT rejection cached for {symbol}: {record['code']} {record['message']}"
+        )
+
+    def _get_cached_pdt_rejection(self, contract_symbol: str) -> Optional[Dict]:
+        symbol = str(contract_symbol or "").upper().strip()
+        if not symbol:
+            return None
+        return self._pdt_rejection_cache.get(symbol)
+
+    def _log_cached_pdt_skip(self, contract_symbol: str, rejection: Dict):
+        symbol = str(contract_symbol or "").upper().strip()
+        if not symbol or not rejection:
+            return
+        now = time.time()
+        last_log = float(self._pdt_rejection_log_ts.get(symbol, 0.0) or 0.0)
+        if now - last_log < 300:
+            return
+        self._pdt_rejection_log_ts[symbol] = now
+        logger.warning(
+            f"Skipping options close for {symbol}; cached PDT rejection "
+            f"{rejection.get('code', '')} {rejection.get('message', '')}"
+        )
+
     def place_option_order(
         self,
         contract_symbol: str,
@@ -363,8 +628,15 @@ class OptionsEngine:
         if qty < 1:
             return None
 
+        symbol = str(contract_symbol or "").upper().strip()
+        if side.lower() == "sell":
+            cached_rejection = self._get_cached_pdt_rejection(symbol)
+            if cached_rejection:
+                self._log_cached_pdt_skip(symbol, cached_rejection)
+                return None
+
         order_data = {
-            "symbol": contract_symbol,
+            "symbol": symbol,
             "qty": str(qty),
             "side": side,
             "type": order_type,
@@ -382,15 +654,18 @@ class OptionsEngine:
                 timeout=10,
             )
             if resp.status_code not in (200, 201):
-                logger.error(f"Options order failed: {resp.status_code} {resp.text[:200]}")
+                code, message = self._parse_error_response(resp)
+                if side.lower() == "sell" and self._is_pdt_rejection(code, message):
+                    self._cache_pdt_rejection(symbol, code, message)
+                logger.error(f"Options order failed: {resp.status_code} {message[:200]}")
                 return None
             order = resp.json()
             logger.success(
-                f"🎯 Options order: {side.upper()} {qty}x {contract_symbol} -> {order.get('id', '')[:8]}"
+                f"🎯 Options order: {side.upper()} {qty}x {symbol} -> {order.get('id', '')[:8]}"
             )
             return order
         except Exception as exc:
-            logger.error(f"Options order error for {contract_symbol}: {exc}")
+            logger.error(f"Options order error for {symbol}: {exc}")
             return None
 
     @staticmethod
@@ -735,6 +1010,16 @@ class OptionsEngine:
         if pos.get("status") == "closing":
             return None
 
+        cached_rejection = self._get_cached_pdt_rejection(contract_symbol)
+        if cached_rejection:
+            self._log_cached_pdt_skip(contract_symbol, cached_rejection)
+            if isinstance(pos, dict):
+                pos["pdt_close_blocked"] = True
+                pos["pdt_close_blocked_at"] = cached_rejection.get("timestamp", time.time())
+                pos["pdt_close_block_reason"] = cached_rejection.get("message", "")
+                self.positions[contract_symbol] = pos
+            return None
+
         held_qty = int(pos.get("qty", 0) or 0)
         if held_qty < 1:
             return None
@@ -775,6 +1060,11 @@ class OptionsEngine:
         if not order:
             return None
 
+        order_status = str(order.get("status", "") or "").lower()
+        if order_status in ("rejected", "canceled", "cancelled", "expired"):
+            logger.warning(f"Options exit order rejected/cancelled for {contract_symbol}: status={order_status}")
+            return None
+
         if limit_price and order.get("type") == "limit":
             order["exit_limit_price"] = limit_price
             order["exit_price_source"] = limit_source
@@ -786,17 +1076,58 @@ class OptionsEngine:
         pos["close_order_id"] = order.get("id")
         pos["close_order_type"] = order.get("exit_order_type", order.get("type", "market"))
         pos["pending_close_qty"] = sell_qty
+        pos["close_order_status"] = order_status
+        pos["close_submitted_at"] = time.time()
         pos["last_exit_reason"] = reason
+        fill_details = self.extract_order_fill(order, requested_qty=sell_qty, fallback_price=limit_price or 0.0)
+        if int(fill_details.get("filled_qty", 0) or 0) > 0:
+            pos["pending_close_fill_qty"] = int(fill_details.get("filled_qty", 0) or 0)
+            pos["pending_close_fill_price"] = float(fill_details.get("fill_price", limit_price or 0.0) or 0.0)
+            fill_ts = self._parse_iso_ts(order.get("filled_at"))
+            if fill_ts is not None:
+                pos["pending_close_fill_at"] = fill_ts
         return order
 
-    def finalize_exit(self, contract_symbol: str, qty: int, exit_premium: float, reason: str) -> Optional[Dict]:
+    def _broker_has_option_position(self, contract_symbol: str) -> Optional[bool]:
+        try:
+            resp = httpx.get(f"{self.base_url}/v2/positions", headers=self._headers, timeout=10)
+            if resp.status_code != 200:
+                return None
+            rows = resp.json() if isinstance(resp.json(), list) else []
+            for row in rows:
+                symbol = str(row.get("symbol", "")).upper().strip()
+                asset_class = str(row.get("asset_class", "")).lower()
+                if symbol == str(contract_symbol).upper() and asset_class in ("us_option", "option"):
+                    qty = int(abs(float(row.get("qty", 0) or 0)))
+                    if qty > 0:
+                        return True
+            return False
+        except Exception:
+            return None
+
+    def finalize_exit(
+        self,
+        contract_symbol: str,
+        qty: int,
+        exit_premium: float,
+        reason: str,
+        order: Optional[Dict] = None,
+    ) -> Optional[Dict]:
         """Finalize an option exit into a trade record and mutate position state."""
         pos = self.positions.get(contract_symbol)
         if not pos:
             return None
+        original_pos = dict(pos)
 
         held_qty = int(pos.get("qty", 0) or 0)
-        exit_qty = min(held_qty, int(qty or 0))
+        requested_qty = max(0, int(qty or 0))
+        exit_qty = min(held_qty, requested_qty)
+        fill_status = ""
+        if order is not None:
+            fill = self.extract_order_fill(order, requested_qty=requested_qty, fallback_price=exit_premium)
+            exit_qty = min(held_qty, int(fill.get("filled_qty", 0) or 0))
+            exit_premium = float(fill.get("fill_price", exit_premium) or exit_premium)
+            fill_status = str(fill.get("status", "") or "").lower()
         if exit_qty < 1:
             return None
 
@@ -804,59 +1135,42 @@ class OptionsEngine:
             exit_premium = self.get_current_premium(contract_symbol, force_refresh=True)
         if exit_premium <= 0:
             exit_premium = float(pos.get("entry_premium", 0) or 0)
-
         entry_premium = float(pos.get("entry_premium", 0) or 0)
-        pnl = (exit_premium - entry_premium) * exit_qty * 100.0
-        pnl_pct = ((exit_premium - entry_premium) / entry_premium * 100.0) if entry_premium > 0 else 0.0
 
-        underlying_entry = float(pos.get("underlying_entry_price", 0) or 0)
-        underlying_last = float(pos.get("underlying_last_price", underlying_entry) or underlying_entry)
-        underlying_move_pct = (
-            ((underlying_last - underlying_entry) / underlying_entry) * 100.0 if underlying_entry > 0 else 0.0
+        fill_ts = self._parse_iso_ts(order.get("filled_at")) if order else None
+        now_ts = float(fill_ts if fill_ts is not None else time.time())
+        trade_record = self._build_trade_record(
+            pos,
+            exit_qty,
+            exit_premium,
+            reason,
+            exit_time=now_ts,
+            fill_timestamp_source="order_response" if order else "engine_clock",
         )
-
-        now_ts = time.time()
-        trade_record = {
-            "asset_type": "option",
-            "symbol": contract_symbol,
-            "contract_symbol": contract_symbol,
-            "underlying": pos.get("underlying", self._infer_underlying_from_contract(contract_symbol)),
-            "option_type": pos.get("option_type", ""),
-            "strike": float(pos.get("strike", 0) or 0),
-            "expiry": pos.get("expiry", ""),
-            "side": "sell",
-            "entry_price": entry_premium,
-            "exit_price": exit_premium,
-            "entry_premium": entry_premium,
-            "exit_premium": exit_premium,
-            "quantity": exit_qty,
-            "pnl": pnl,
-            "pnl_pct": pnl_pct,
-            "reason": reason,
-            "hold_seconds": now_ts - float(pos.get("entry_time", now_ts) or now_ts),
-            "entry_time": float(pos.get("entry_time", now_ts) or now_ts),
-            "exit_time": now_ts,
-            "delta_at_entry": float(pos.get("delta_at_entry", 0.0) or 0.0),
-            "underlying_move_pct": underlying_move_pct,
-            "strategy_tag": pos.get("strategy_tag", "unknown"),
-            "signal_sources": pos.get("signal_sources", ["unknown"]),
-            "decision_confidence": pos.get("decision_confidence", 0),
-            "provider_used": pos.get("provider_used", ""),
-            "signal_price": pos.get("signal_price", underlying_entry),
-            "decision_price": pos.get("decision_price", underlying_entry),
-            "fill_price": exit_premium,
-            "slippage_bps": 0.0,
-        }
+        if not trade_record:
+            return None
 
         remaining = held_qty - exit_qty
         if remaining <= 0:
             self.positions.pop(contract_symbol, None)
         else:
             pos["qty"] = remaining
-            pos["status"] = "open"
-            pos["pending_close_qty"] = 0
+            if order is not None and fill_status == "partially_filled":
+                pos["status"] = "closing"
+                pos["pending_close_qty"] = max(0, requested_qty - exit_qty)
+            else:
+                pos["status"] = "open"
+                pos["pending_close_qty"] = 0
             pos["total_cost"] = round(remaining * entry_premium * 100.0, 2)
             self.positions[contract_symbol] = pos
+
+        broker_still_has_position = self._broker_has_option_position(contract_symbol)
+        if broker_still_has_position is True:
+            logger.error(
+                f"Options finalize_exit reversal: broker still shows open position for {contract_symbol}"
+            )
+            self.positions[contract_symbol] = original_pos
+            return None
 
         return trade_record
 
@@ -871,48 +1185,19 @@ class OptionsEngine:
         if not contract_symbol:
             return None
 
-        entry_premium = float(pos.get("entry_premium", 0) or 0)
-        exit_premium = float(pos.get("current_premium", entry_premium) or entry_premium)
-        pnl = (exit_premium - entry_premium) * qty * 100.0
-        pnl_pct = ((exit_premium - entry_premium) / entry_premium * 100.0) if entry_premium > 0 else 0.0
-        now_ts = time.time()
-        underlying_entry = float(pos.get("underlying_entry_price", 0) or 0)
-        underlying_last = float(pos.get("underlying_last_price", underlying_entry) or underlying_entry)
-        underlying_move_pct = (
-            ((underlying_last - underlying_entry) / underlying_entry) * 100.0 if underlying_entry > 0 else 0.0
+        exit_premium = float(
+            pos.get("pending_close_fill_price", pos.get("current_premium", pos.get("entry_premium", 0))) or 0
         )
-
-        return {
-            "asset_type": "option",
-            "symbol": contract_symbol,
-            "contract_symbol": contract_symbol,
-            "underlying": pos.get("underlying", self._infer_underlying_from_contract(contract_symbol)),
-            "option_type": pos.get("option_type", ""),
-            "strike": float(pos.get("strike", 0) or 0),
-            "expiry": pos.get("expiry", ""),
-            "side": "sell",
-            "entry_price": entry_premium,
-            "exit_price": exit_premium,
-            "entry_premium": entry_premium,
-            "exit_premium": exit_premium,
-            "quantity": qty,
-            "pnl": pnl,
-            "pnl_pct": pnl_pct,
-            "reason": reason,
-            "hold_seconds": now_ts - float(pos.get("entry_time", now_ts) or now_ts),
-            "entry_time": float(pos.get("entry_time", now_ts) or now_ts),
-            "exit_time": now_ts,
-            "delta_at_entry": float(pos.get("delta_at_entry", 0.0) or 0.0),
-            "underlying_move_pct": underlying_move_pct,
-            "strategy_tag": pos.get("strategy_tag", "unknown"),
-            "signal_sources": pos.get("signal_sources", ["unknown"]),
-            "decision_confidence": pos.get("decision_confidence", 0),
-            "provider_used": pos.get("provider_used", ""),
-            "signal_price": pos.get("signal_price", underlying_entry),
-            "decision_price": pos.get("decision_price", underlying_entry),
-            "fill_price": exit_premium,
-            "slippage_bps": 0.0,
-        }
+        exit_time = float(pos.get("pending_close_fill_at", time.time()) or time.time())
+        fill_source = "close_order_response" if pos.get("pending_close_fill_price") else "broker_reconcile"
+        return self._build_trade_record(
+            pos,
+            qty,
+            exit_premium,
+            pos.get("last_exit_reason", reason),
+            exit_time=exit_time,
+            fill_timestamp_source=fill_source,
+        )
 
     def close_paired_options(self, underlying_symbol: str, reason: str = "underlying_exit") -> List[Dict]:
         """Close all option positions linked to an underlying symbol."""
@@ -922,13 +1207,9 @@ class OptionsEngine:
             qty = int(pos.get("qty", 0) or 0)
             if not contract_symbol or qty < 1:
                 continue
-            premium = self.get_current_premium(contract_symbol, force_refresh=True)
             order = self.close_option_position(contract_symbol, qty=qty, reason=reason)
             if not order:
                 continue
-            trade = self.finalize_exit(contract_symbol, qty=qty, exit_premium=premium, reason=reason)
-            if trade:
-                exits.append(trade)
         return exits
 
     def reconcile_with_broker(self) -> Dict[str, object]:
@@ -939,10 +1220,11 @@ class OptionsEngine:
         removed = 0
         added = 0
         removed_positions: List[Dict] = []
+        reconciled_trades: List[Dict] = []
         try:
             resp = httpx.get(f"{self.base_url}/v2/positions", headers=self._headers, timeout=10)
             if resp.status_code != 200:
-                return {"removed": 0, "added": 0, "removed_positions": []}
+                return {"removed": 0, "added": 0, "removed_positions": [], "reconciled_trades": []}
             rows = resp.json() if isinstance(resp.json(), list) else []
             broker_open = {}
             for row in rows:
@@ -962,6 +1244,47 @@ class OptionsEngine:
                 if removed_pos:
                     removed_positions.append(removed_pos)
                 removed += 1
+
+            for symbol in sorted(local_symbols & broker_symbols):
+                pos = self.positions.get(symbol)
+                row = broker_open[symbol]
+                if not pos:
+                    continue
+                local_qty = int(pos.get("qty", 0) or 0)
+                broker_qty = int(abs(float(row.get("qty", 0) or 0)))
+                if local_qty < 1:
+                    continue
+
+                if broker_qty < local_qty:
+                    closed_qty = local_qty - broker_qty
+                    exit_premium = float(
+                        pos.get("pending_close_fill_price", pos.get("current_premium", pos.get("entry_premium", 0))) or 0
+                    )
+                    exit_time = float(pos.get("pending_close_fill_at", time.time()) or time.time())
+                    fill_source = "close_order_response" if pos.get("pending_close_fill_price") else "broker_reconcile"
+                    trade = self._build_trade_record(
+                        pos,
+                        closed_qty,
+                        exit_premium,
+                        pos.get("last_exit_reason", "options_reconcile_partial"),
+                        exit_time=exit_time,
+                        fill_timestamp_source=fill_source,
+                    )
+                    if trade:
+                        reconciled_trades.append(trade)
+
+                    pos["qty"] = broker_qty
+                    pos["total_cost"] = round(broker_qty * float(pos.get("entry_premium", 0) or 0) * 100.0, 2)
+                    pos["status"] = "open"
+                    pos["pending_close_qty"] = 0
+                    pos.pop("pending_close_fill_qty", None)
+                    pos.pop("pending_close_fill_price", None)
+                    pos.pop("pending_close_fill_at", None)
+                    self.positions[symbol] = pos
+                elif broker_qty > local_qty:
+                    pos["qty"] = broker_qty
+                    pos["total_cost"] = round(broker_qty * float(pos.get("entry_premium", 0) or 0) * 100.0, 2)
+                    self.positions[symbol] = pos
 
             for symbol in sorted(broker_symbols - local_symbols):
                 row = broker_open[symbol]
@@ -1004,7 +1327,12 @@ class OptionsEngine:
                 added += 1
         except Exception as exc:
             logger.debug(f"Options reconcile error: {exc}")
-        return {"removed": removed, "added": added, "removed_positions": removed_positions}
+        return {
+            "removed": removed,
+            "added": added,
+            "removed_positions": removed_positions,
+            "reconciled_trades": reconciled_trades,
+        }
 
     def get_positions_snapshot(self, refresh_quotes: bool = False) -> List[Dict]:
         """Return dashboard-friendly options positions with live metrics."""

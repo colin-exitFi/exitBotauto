@@ -8,7 +8,61 @@
       "volume": 1074035.0,
       "volume_spike": 1.010160427159421,
       "sentiment_at_peak": 0.4545
+    },
+    {
+      "symbol": "DAWN",
+      "date": "2026-03-06",
+      "change_pct": 66.01,
+      "close_price": 21.2,
+      "volume": 78173931.0,
+      "volume_spike": 27.02781301827651,
+      "sentiment_at_peak": 1.0
+    },
+    {
+      "symbol": "RVI",
+      "date": "2026-03-06",
+      "change_pct": 599.83,
+      "close_price": 21,
+      "volume": 4713945.0,
+      "volume_spike": 0.8657185768404907,
+      "sentiment_at_peak": 1.0
+    },
+    {
+      "symbol": "EDSA",
+      "date": "2026-03-06",
+      "change_pct": 77.99,
+      "close_price": 6.52,
+      "volume": 30204616.0,
+      "volume_spike": 17.69983596356004,
+      "sentiment_at_peak": 0.1429
+    },
+    {
+      "symbol": "DAWN",
+      "date": "2026-03-07",
+      "change_pct": 66.01,
+      "close_price": 21.2,
+      "volume": 78372872.0,
+      "volume_spike": 27.096594773023742,
+      "sentiment_at_peak": 1.0
+    },
+    {
+      "symbol": "EDSA",
+      "date": "2026-03-07",
+      "change_pct": 77.99,
+      "close_price": 6.52,
+      "volume": 32193581.0,
+      "volume_spike": 18.86536490911135,
+      "sentiment_at_peak": 0.4286
+    },
+    {
+      "symbol": "RVI",
+      "date": "2026-03-07",
+      "change_pct": 599.83,
+      "close_price": 21,
+      "volume": 4787827.0,
+      "volume_spike": 0.8792870465392524,
+      "sentiment_at_peak": 0.8
     }
   ],
-  "updated_at": "2026-03-05T19:59:02.182772"
+  "updated_at": "2026-03-07T04:05:13.799645"
 }

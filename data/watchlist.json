@@ -1,86 +1,6 @@
 {
   "items": [
     {
-      "ticker": "AVGO",
-      "conviction": 0.92332,
-      "side": "long",
-      "reason": "1 congress members buying | StockTwits #29 trending | Reports after close today \u2014 potential gap tomorrow | StockTwits #28 trending | Up +1.18%, broad semiconductor interest[4]",
-      "sources": "congress + stocktwits + earnings + perplexity",
-      "added_at": 1772679842.52475,
-      "last_refreshed": 1772766814.0390248,
-      "expires_at": 1773026014.0390248
-    },
-    {
-      "ticker": "MU",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "Micron up +5.55%, memory chip demand signals.[2] | Up +5.55%, semiconductor momentum in volatile session[4]",
-      "sources": "perplexity",
-      "added_at": 1772679846.476177,
-      "last_refreshed": 1772681224.671028,
-      "expires_at": 1772854024.671028
-    },
-    {
-      "ticker": "NVDA",
-      "conviction": 0.9,
-      "side": "long",
-      "reason": "Up +1.66% overnight, key AI/tech mover with Nasdaq strength[4]",
-      "sources": "perplexity",
-      "added_at": 1772681224.670775,
-      "last_refreshed": 1772681224.670775,
-      "expires_at": 1772854024.670775
-    },
-    {
-      "ticker": "JD",
-      "conviction": 1.0,
-      "side": "long",
-      "reason": "StockTwits #30 trending",
-      "sources": "stocktwits",
-      "added_at": 1772766466.785846,
-      "last_refreshed": 1772766817.522568,
-      "expires_at": 1772853217.522568
-    },
-    {
-      "ticker": "AKA",
-      "conviction": 0.9400000000000001,
-      "side": "long",
-      "reason": "StockTwits #22 trending | Reports after close today \u2014 potential gap tomorrow | StockTwits #24 trending",
-      "sources": "stocktwits + earnings",
-      "added_at": 1772766466.787485,
-      "last_refreshed": 1772766817.524449,
-      "expires_at": 1772853217.524449
-    },
-    {
-      "ticker": "OPRX",
-      "conviction": 0.95,
-      "side": "long",
-      "reason": "StockTwits #21 trending | Earnings beat: +17.2% AH gap up | Reports after close today \u2014 potential gap tomorrow | StockTwits #20 trending",
-      "sources": "stocktwits + earnings_reaction",
-      "added_at": 1772766466.787749,
-      "last_refreshed": 1772766832.79266,
-      "expires_at": 1773026032.79266
-    },
-    {
-      "ticker": "PTRN",
-      "conviction": 0.858,
-      "side": "long",
-      "reason": "StockTwits #20 trending | Reports after close today \u2014 potential gap tomorrow",
-      "sources": "stocktwits + earnings",
-      "added_at": 1772766466.788102,
-      "last_refreshed": 1772766809.768563,
-      "expires_at": 1773026009.768563
-    },
-    {
-      "ticker": "HGRAF",
-      "conviction": 0.87,
-      "side": "long",
-      "reason": "StockTwits #17 trending | StockTwits #13 trending",
-      "sources": "stocktwits",
-      "added_at": 1772766466.788759,
-      "last_refreshed": 1772766817.5267258,
-      "expires_at": 1772853217.5267258
-    },
-    {
       "ticker": "MRVL",
       "conviction": 0.98,
       "side": "long",
@@ -131,16 +51,6 @@
       "expires_at": 1773026022.344363
     },
     {
-      "ticker": "PMTS",
-      "conviction": 0.95,
-      "side": "long",
-      "reason": "Earnings beat: +40.5% AH gap up",
-      "sources": "earnings_reaction",
-      "added_at": 1772766489.705566,
-      "last_refreshed": 1772766833.1076438,
-      "expires_at": 1773026033.1076438
-    },
-    {
       "ticker": "HMR",
       "conviction": 0.9603,
       "side": "long",
@@ -149,16 +59,6 @@
       "added_at": 1772766493.8793962,
       "last_refreshed": 1772766836.7261791,
       "expires_at": 1773026036.7261791
-    },
-    {
-      "ticker": "RBNE",
-      "conviction": 0.95,
-      "side": "long",
-      "reason": "Earnings beat: +13.3% AH gap up",
-      "sources": "earnings_reaction",
-      "added_at": 1772766498.597803,
-      "last_refreshed": 1772766839.449874,
-      "expires_at": 1773026039.449874
     },
     {
       "ticker": "NVNO",
@@ -181,18 +81,8 @@
       "expires_at": 1773026024.005599
     },
     {
-      "ticker": "BVS",
-      "conviction": 0.9273,
-      "side": "long",
-      "reason": "Earnings beat: +7.1% AH gap up",
-      "sources": "earnings_reaction",
-      "added_at": 1772766825.20885,
-      "last_refreshed": 1772766825.20885,
-      "expires_at": 1773026025.20885
-    },
-    {
       "ticker": "MKTW",
-      "conviction": 0.924,
+      "conviction": 0.98,
       "side": "long",
       "reason": "Earnings beat: +7.0% AH gap up",
       "sources": "earnings_reaction",
@@ -202,15 +92,75 @@
     },
     {
       "ticker": "RAIN",
-      "conviction": 0.9262,
+      "conviction": 0.98,
       "side": "long",
       "reason": "Earnings beat: +7.1% AH gap up",
       "sources": "earnings_reaction",
       "added_at": 1772766838.2943501,
       "last_refreshed": 1772766838.2943501,
       "expires_at": 1773026038.2943501
+    },
+    {
+      "ticker": "HIMS",
+      "conviction": 0.953,
+      "side": "long",
+      "reason": "StockTwits #30 trending",
+      "sources": "stocktwits",
+      "added_at": 1772855418.401597,
+      "last_refreshed": 1772855418.401597,
+      "expires_at": 1772941818.401597
+    },
+    {
+      "ticker": "NVO",
+      "conviction": 0.99,
+      "side": "long",
+      "reason": "StockTwits #29 trending",
+      "sources": "stocktwits",
+      "added_at": 1772855418.402821,
+      "last_refreshed": 1772855418.402821,
+      "expires_at": 1772941818.402821
+    },
+    {
+      "ticker": "CAPR",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "StockTwits #28 trending",
+      "sources": "stocktwits",
+      "added_at": 1772855418.404029,
+      "last_refreshed": 1772855418.404029,
+      "expires_at": 1772941818.404029
+    },
+    {
+      "ticker": "DAWN",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "StockTwits #22 trending",
+      "sources": "stocktwits",
+      "added_at": 1772855418.410178,
+      "last_refreshed": 1772855418.410178,
+      "expires_at": 1772941818.410178
+    },
+    {
+      "ticker": "SOTY",
+      "conviction": 1.02,
+      "side": "long",
+      "reason": "FDA sNDA[3] Sotyktu (deucravacitinib) in 0d",
+      "sources": "pharma",
+      "added_at": 1772855418.42226,
+      "last_refreshed": 1772855418.42226,
+      "expires_at": 1773114618.42226
+    },
+    {
+      "ticker": "SEV",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +39.8% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1772855426.3275661,
+      "last_refreshed": 1772855426.3275661,
+      "expires_at": 1773114626.3275661
     }
   ],
-  "updated_at": "2026-03-05T23:54:49.506270",
-  "count": 21
+  "updated_at": "2026-03-06T21:50:30.120067",
+  "count": 16
 }

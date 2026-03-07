@@ -26,6 +26,7 @@ from loguru import logger
 
 import httpx
 from config import settings
+from src.signals.unusual_whales import UnusualWhalesClient
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 CACHE_FILE = DATA_DIR / "unusual_options.json"
@@ -34,10 +35,11 @@ CACHE_FILE = DATA_DIR / "unusual_options.json"
 class UnusualOptionsScanner:
     """Detect unusual options activity as a leading indicator."""
 
-    def __init__(self):
+    def __init__(self, uw_client: Optional[UnusualWhalesClient] = None):
         self._cache: List[Dict] = []
         self._last_fetch = 0
         self._fetch_interval = 300  # 5 min
+        self.uw = uw_client or UnusualWhalesClient()
         self._load_cache()
         logger.info(f"Unusual options scanner initialized ({len(self._cache)} cached)")
 
@@ -67,14 +69,25 @@ class UnusualOptionsScanner:
 
         signals = []
 
-        # Source 1: Barchart unusual options volume
-        try:
-            barchart = await self._fetch_barchart()
-            signals.extend(barchart)
-        except Exception as e:
-            logger.debug(f"Barchart UOA fetch failed: {e}")
+        # Source 1: Unusual Whales API
+        if self.uw and self.uw.is_configured():
+            try:
+                flow_alerts = await asyncio.get_event_loop().run_in_executor(
+                    None, self.uw.get_flow_alerts, 100_000, None, 100
+                )
+                signals.extend(self._aggregate_uw_flow(flow_alerts))
+            except Exception as e:
+                logger.debug(f"Unusual Whales UOA fetch failed: {e}")
 
-        # Source 2: Perplexity for real-time UOA (uses live web data)
+        # Source 2: Barchart unusual options volume
+        if not signals:
+            try:
+                barchart = await self._fetch_barchart()
+                signals.extend(barchart)
+            except Exception as e:
+                logger.debug(f"Barchart UOA fetch failed: {e}")
+
+        # Source 3: Perplexity for real-time UOA (uses live web data)
         if not signals:
             try:
                 pplx = await self._fetch_via_perplexity()
@@ -93,6 +106,16 @@ class UnusualOptionsScanner:
     async def check_ticker(self, ticker: str) -> Dict:
         """Check options flow for a specific ticker using Alpaca options data."""
         result = {"ticker": ticker, "has_unusual": False, "signals": []}
+
+        if self.uw and self.uw.is_configured():
+            try:
+                flow = await asyncio.get_event_loop().run_in_executor(
+                    None, self.uw.summarize_flow_for_symbol, ticker
+                )
+                result.update(flow)
+                return result
+            except Exception as e:
+                logger.debug(f"UW ticker flow check failed for {ticker}: {e}")
 
         try:
             async with httpx.AsyncClient(timeout=10) as client:
@@ -140,6 +163,65 @@ class UnusualOptionsScanner:
             logger.debug(f"Options check failed for {ticker}: {e}")
 
         return result
+
+    @staticmethod
+    def _aggregate_uw_flow(flow_alerts: List[Dict]) -> List[Dict]:
+        by_ticker: Dict[str, Dict] = {}
+        for alert in flow_alerts or []:
+            ticker = str(alert.get("ticker", "")).upper()
+            if not ticker:
+                continue
+            bucket = by_ticker.setdefault(
+                ticker,
+                {
+                    "ticker": ticker,
+                    "bullish_premium": 0.0,
+                    "bearish_premium": 0.0,
+                    "volume": 0,
+                    "open_interest": 0,
+                    "count": 0,
+                    "source": "unusual_whales",
+                },
+            )
+            sentiment = alert.get("sentiment")
+            premium = float(alert.get("premium", 0.0) or 0.0)
+            if sentiment == "bullish":
+                bucket["bullish_premium"] += premium
+            elif sentiment == "bearish":
+                bucket["bearish_premium"] += premium
+            bucket["volume"] += int(alert.get("volume", 0) or 0)
+            bucket["open_interest"] += int(alert.get("open_interest", 0) or 0)
+            bucket["count"] += 1
+
+        signals = []
+        for ticker, bucket in by_ticker.items():
+            bullish = bucket["bullish_premium"]
+            bearish = bucket["bearish_premium"]
+            if bullish <= 0 and bearish <= 0:
+                continue
+            bias = "bullish" if bullish >= bearish else "bearish"
+            conviction = 0.55
+            if max(bullish, bearish) >= 250_000:
+                conviction = 0.7
+            if max(bullish, bearish) >= 1_000_000:
+                conviction = 0.85
+            signals.append(
+                {
+                    "ticker": ticker,
+                    "type": "call" if bias == "bullish" else "put",
+                    "bias": bias,
+                    "reason": (
+                        f"Whale flow {bias}: ${max(bullish, bearish):,.0f} premium across {bucket['count']} alerts"
+                    ),
+                    "source": "unusual_whales",
+                    "conviction": conviction,
+                    "premium": round(max(bullish, bearish), 2),
+                    "volume": bucket["volume"],
+                    "open_interest": bucket["open_interest"],
+                }
+            )
+        signals.sort(key=lambda item: item.get("premium", 0), reverse=True)
+        return signals
 
     async def _fetch_barchart(self) -> List[Dict]:
         """Scrape Barchart for unusual options volume."""

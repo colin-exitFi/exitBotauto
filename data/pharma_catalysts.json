@@ -1,31 +1,15 @@
 {
   "catalysts": [
     {
-      "ticker": "LLY",
-      "company": "Eli Lilly",
-      "drug": "Orforglipron",
-      "indication": "Type 2 Diabetes",
-      "date": "2026-03-25",
-      "type": "NDA[1]"
-    },
-    {
       "ticker": "RCKT",
       "company": "Rocket Pharmaceuticals",
-      "drug": "Kresladi",
-      "indication": "Danon Disease",
+      "drug": "Marnetegragene autotemcel (Kresladi)",
+      "indication": "Severe leukocyte adhesion deficiency-I",
       "date": "2026-03-28",
-      "type": "NDA[1][2]"
-    },
-    {
-      "ticker": "LNTH",
-      "company": "Lantheus",
-      "drug": "Ga68-edotreotide",
-      "indication": "GEP-NETs Imaging",
-      "date": "2026-03-29",
-      "type": "NDA[1]"
+      "type": "BLA"
     }
   ],
   "known_approvals": [],
-  "last_pplx_refresh": 1772762435.9495418,
-  "updated_at": "2026-03-05T20:00:35.950521"
+  "last_pplx_refresh": 1772871847.424547,
+  "updated_at": "2026-03-07T02:24:07.425630"
 }

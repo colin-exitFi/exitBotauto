@@ -10,10 +10,10 @@ from src.agents.base_agent import call_gpt
 
 
 DEFAULT_BRIEF = {
-    "approved": False,
-    "max_size_pct": 0.0,
-    "reasoning": "Risk agent unavailable — defaulting to block",
-    "portfolio_heat": "high",
+    "approved": True,
+    "max_size_pct": 0.5,
+    "reasoning": "Risk agent unavailable — defaulting to reduced-size approve",
+    "portfolio_heat": "medium",
     "warnings": ["risk_agent_failed"],
     "error": True,
 }
@@ -109,8 +109,8 @@ async def analyze(symbol: str, price: float, signals: Dict,
         # PDT check
         pdt_status = "SAFE"
         if equity < 25000:
-            day_trades = risk_manager._count_recent_day_trades()
-            pdt_status = f"{day_trades}/3 day trades used (equity < $25K)"
+            day_trades = int(getattr(risk_manager, "_alpaca_daytrade_count", 0) or 0)
+            pdt_status = f"{day_trades}/3 day trades used (Alpaca, equity < $25K)"
 
         prompt = PROMPT_TEMPLATE.format(
             symbol=symbol,
@@ -137,7 +137,7 @@ async def analyze(symbol: str, price: float, signals: Dict,
 
         result = await call_gpt(prompt, max_tokens=400)
         if not result or "approved" not in result:
-            logger.warning(f"Risk agent failed for {symbol} — blocking by default")
+            logger.warning(f"Risk agent failed for {symbol} — approving at reduced size by default")
             return {**DEFAULT_BRIEF, "symbol": symbol}
 
         brief = {

@@ -55,6 +55,26 @@ class TradeStream:
         """Called specifically when trailing stop fills: callback(symbol, fill_price, qty)"""
         self._on_stop_triggered = callback
 
+    @staticmethod
+    def _build_auth_message() -> Dict:
+        return {
+            "action": "auth",
+            "key": settings.ALPACA_API_KEY,
+            "secret": settings.ALPACA_SECRET_KEY,
+        }
+
+    @staticmethod
+    def _auth_succeeded(payload) -> bool:
+        messages = payload if isinstance(payload, list) else [payload]
+        for msg in messages:
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("T") == "success" and msg.get("msg") == "authenticated":
+                return True
+            if msg.get("stream") == "authorization" and msg.get("data", {}).get("status") == "authorized":
+                return True
+        return False
+
     async def start(self):
         """Start the trade updates stream."""
         self._running = True
@@ -101,22 +121,17 @@ class TradeStream:
                     self._reconnect_delay = 1
 
                     # Authenticate
-                    auth = {
-                        "action": "authenticate",
-                        "data": {
-                            "key_id": settings.ALPACA_API_KEY,
-                            "secret_key": settings.ALPACA_SECRET_KEY,
-                        },
-                    }
+                    auth = self._build_auth_message()
                     await ws.send(json.dumps(auth))
                     auth_resp = await ws.recv()
                     logger.debug(f"Trade WS auth: {auth_resp}")
 
                     resp = json.loads(auth_resp)
-                    if resp.get("data", {}).get("status") == "authorized":
+                    if self._auth_succeeded(resp):
                         logger.success("📡 Trade stream connected + authenticated")
-                    elif resp.get("stream") == "authorization" and resp.get("data", {}).get("status") == "authorized":
-                        logger.success("📡 Trade stream connected + authenticated")
+                    else:
+                        logger.error(f"📡 Trade WS auth failed: {resp}")
+                        continue
 
                     # Subscribe to trade updates
                     sub = {"action": "listen", "data": {"streams": ["trade_updates"]}}

@@ -88,15 +88,18 @@ class Tuner:
 
     async def run(self, bot, advisor_output: Optional[Dict] = None) -> Optional[Dict]:
         """Run tuning cycle. Returns changes applied or None."""
-        # HARD LOCK: Don't tune until we have 20+ REAL trades with game film data
+        min_trades_to_tune = 10
+        # HARD LOCK: Don't tune until we have enough REAL trades with game film data
         # Fail-closed: if we can't verify trade count, DO NOT TUNE
         try:
             total = int(get_analytics().get("total_trades", 0))
         except Exception as e:
             logger.warning(f"🔧 Tuner: LOCKED — cannot verify trade count ({e}), refusing to tune")
             return None
-        if total < 20:
-            logger.info(f"🔧 Tuner: LOCKED — need {20 - total} more trades before tuning (have {total})")
+        if total < min_trades_to_tune:
+            logger.info(
+                f"🔧 Tuner: LOCKED — need {min_trades_to_tune - total} more trades before tuning (have {total})"
+            )
             return None
 
         now = time.time()

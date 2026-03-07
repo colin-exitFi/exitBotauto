@@ -32,6 +32,9 @@ KNOWN SIGNALS:
 - Unusual options activity: {options_info}
 - Congressional trades: {congress_info}
 - SEC filings: {edgar_info}
+- Insider activity: {insider_info}
+- Economic calendar: {economic_calendar}
+- Human intel: {human_intel}
 
 Search for the latest news about {symbol} in the last 24 hours. What is driving this move?
 Is the catalyst front-loaded (sell the news) or does it have legs (accumulation phase)?
@@ -60,6 +63,9 @@ async def analyze(symbol: str, price: float, signals: Dict) -> Dict:
             options_info=signals.get("unusual_options", "None") or "None",
             congress_info=signals.get("congress_trades", "None") or "None",
             edgar_info=signals.get("edgar_filings", "None") or "None",
+            insider_info=signals.get("insider_activity", "None") or "None",
+            economic_calendar=signals.get("economic_calendar", "None") or "None",
+            human_intel=signals.get("human_intel", "None") or "None",
         )
 
         result = await call_perplexity(prompt, max_tokens=400)

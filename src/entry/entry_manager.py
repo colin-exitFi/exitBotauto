@@ -32,6 +32,8 @@ class EntryManager:
 
         # Track active positions (symbol -> position dict)
         self.positions: Dict[str, Dict] = {}
+        self.last_gate: Dict[str, str] = {}
+        self.last_order_error: str = ""
         # Load existing brokerage positions on init
         self._load_brokerage_positions()
         logger.info("Entry manager initialized")
@@ -77,40 +79,87 @@ class EntryManager:
         except Exception:
             return None
 
+    async def _cancel_conflicting_protection_orders(self, symbol: str, side: str) -> int:
+        if not self.broker:
+            return 0
+        cancel_fn = None
+        if side == "short" and hasattr(self.broker, "cancel_open_buys_for_symbol"):
+            cancel_fn = self.broker.cancel_open_buys_for_symbol
+        elif side != "short" and hasattr(self.broker, "cancel_open_sells_for_symbol"):
+            cancel_fn = self.broker.cancel_open_sells_for_symbol
+        if not cancel_fn:
+            return 0
+        try:
+            cancelled = await asyncio.get_event_loop().run_in_executor(None, cancel_fn, symbol)
+            return int(cancelled or 0)
+        except Exception as e:
+            logger.warning(f"Could not cancel conflicting protection orders for {symbol}: {e}")
+            return 0
+
+    async def _place_entry_protection_order(self, symbol: str, qty: int, trail_pct: float, side: str):
+        if qty < 1:
+            return None, False
+        if side == "short" and hasattr(self.broker, "place_trailing_stop_short"):
+            trail_fn = self.broker.place_trailing_stop_short
+        elif hasattr(self.broker, "place_trailing_stop"):
+            trail_fn = self.broker.place_trailing_stop
+        else:
+            return None, False
+
+        order = await asyncio.get_event_loop().run_in_executor(None, trail_fn, symbol, qty, trail_pct)
+        if order:
+            return order, False
+
+        for attempt in range(1, 4):
+            cancelled = await self._cancel_conflicting_protection_orders(symbol, side)
+            if cancelled:
+                logger.info(
+                    f"Cancelled {cancelled} conflicting protection orders for {symbol} before retry {attempt}/3"
+                )
+            await asyncio.sleep(1)
+            order = await asyncio.get_event_loop().run_in_executor(None, trail_fn, symbol, qty, trail_pct)
+            if order:
+                return order, False
+
+        logger.critical(f"Protection placement failed for {symbol} after 3 retries")
+        return None, True
+
+    def _set_gate(self, symbol: str, allowed: bool, reason: str):
+        self.last_gate = {"symbol": symbol, "allowed": allowed, "reason": reason}
+        return allowed
+
+    @staticmethod
+    def _copy_trader_size_multiplier(sentiment_data: Dict, swing_only: bool) -> float:
+        if swing_only:
+            return 1.0
+        try:
+            multiplier = float(sentiment_data.get("copy_trader_size_multiplier", 1.0) or 1.0)
+        except Exception:
+            multiplier = 1.0
+        return max(1.0, min(1.25, multiplier))
+
     async def can_enter(self, symbol: str, sentiment_score: float, current_positions: List[Dict]) -> bool:
         """Check all entry conditions."""
+        self.last_order_error = ""
         if not self.is_market_open():
             logger.debug("Market closed, cannot enter")
-            return False
+            return self._set_gate(symbol, False, "market_closed")
 
         if symbol in self.positions:
-            # Allow averaging up on profitable positions (Risk Agent will validate)
-            pos = self.positions[symbol]
-            entry_price = pos.get("entry_price", 0)
-            peak_price = pos.get("peak_price", entry_price)
-            if entry_price > 0 and peak_price > entry_price:
-                pnl_pct = ((peak_price - entry_price) / entry_price) * 100
-                if pnl_pct >= 3.0:  # Only average up if we're up at least 3%
-                    logger.info(f"📈 {symbol} already held at ${entry_price:.2f}, peak ${peak_price:.2f} (+{pnl_pct:.1f}%) — allowing average-up evaluation")
-                    # Don't block — let Risk Agent decide
-                else:
-                    logger.info(f"⛔ Already in position: {symbol} (only +{pnl_pct:.1f}%, need +3% to average up)")
-                    return False
-            else:
-                logger.info(f"⛔ Already in position: {symbol} (underwater — blocking)")
-                return False
+            logger.info(f"⛔ Already in position: {symbol} — duplicate entry blocked")
+            return self._set_gate(symbol, False, "already_held")
 
         if sentiment_score < self.min_sentiment:
             logger.info(f"⛔ {symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")
-            return False
+            return self._set_gate(symbol, False, "sentiment_below_threshold")
 
         if self.risk and not self.risk.can_open_position(current_positions, symbol=symbol):
-            return False
+            return self._set_gate(symbol, False, "risk_open_position_block")
 
         if self.risk and not self.risk.can_enter_sector(symbol, current_positions):
-            return False
+            return self._set_gate(symbol, False, "sector_block")
 
-        return True
+        return self._set_gate(symbol, True, "ok")
 
     async def enter_position(self, symbol: str, sentiment_data: Dict) -> Optional[Dict]:
         """
@@ -119,6 +168,12 @@ class EntryManager:
         """
         if not self.broker or not self.polygon:
             logger.error("Broker or Polygon client not available")
+            self.last_order_error = "broker_or_polygon_unavailable"
+            return None
+        self.last_order_error = ""
+        if symbol in self.positions:
+            logger.warning(f"Duplicate long entry blocked for {symbol}")
+            self.last_order_error = "duplicate_position"
             return None
 
         # Get current price
@@ -127,6 +182,7 @@ class EntryManager:
         )
         if price <= 0:
             logger.warning(f"Could not get price for {symbol}")
+            self.last_order_error = "price_unavailable"
             return None
         signal_timestamp = float(sentiment_data.get("signal_timestamp", time.time()) or time.time())
 
@@ -138,6 +194,7 @@ class EntryManager:
             None, self.broker.get_balances
         )
         buying_power = self.risk.get_buying_power_field(balances) if self.risk else balances.get("buying_power", 0)
+        swing_only = bool(self.risk and getattr(self.risk, "is_swing_mode", None) and self.risk.is_swing_mode())
 
         # Extended hours adjustments
         extended = self.is_extended_hours()
@@ -160,6 +217,7 @@ class EntryManager:
         notional = self.risk.get_position_size(price, buying_power, conviction) if self.risk else 0
         # Apply consensus size modifier
         notional *= consensus_size_modifier
+        notional *= self._copy_trader_size_multiplier(sentiment_data, swing_only)
         # If options were placed, reduce share notional to keep total risk inside tier budget.
         share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
         notional *= max(0.0, min(1.0, share_mult))
@@ -173,6 +231,7 @@ class EntryManager:
                 f"Position size is 0 for {symbol} @ ${price:.2f} "
                 f"(buying_power=${buying_power:.2f}, tier={tier.get('name', '?')}, conviction={conviction})"
             )
+            self.last_order_error = "position_size_zero"
             return None
 
         # Use smart order execution for larger positions
@@ -191,6 +250,7 @@ class EntryManager:
             chase_pct = abs((recheck_price - signal_price) / signal_price) * 100
             if chase_pct > self.max_chase_pct:
                 logger.warning(f"CHASE PREVENTION: {symbol} moved {chase_pct:.2f}% since signal → SKIPPING")
+                self.last_order_error = "chase_prevention"
                 return None
             price = recheck_price  # use freshest price
 
@@ -218,6 +278,9 @@ class EntryManager:
                 trail_pct = max(1.0, min(trail_pct, 4.0))  # clamp 1-4%
         else:
             trail_pct = max(1.0, min(5.0, float(trail_pct)))  # clamp jury recommendation
+        if swing_only:
+            swing_trail = max(1.0, float(getattr(settings, "SWING_MODE_TRAIL_PCT", 4.5) or 4.5))
+            trail_pct = max(trail_pct, swing_trail)
 
         # ── STEP 1: BUY the stock ─────────────────────────────────
         order = None
@@ -262,18 +325,21 @@ class EntryManager:
         # ── STEP 2: Immediately place trailing stop % ─────────────
         # This is the ONLY exit strategy. Up or down, if it gives back trail_pct%, we're out.
         trailing_stop_order = None
-        if order and hasattr(self.broker, 'place_trailing_stop'):
+        protection_failed = False
+        if swing_only:
+            logger.info(f"🌙 Swing-only entry for {symbol}: deferring trailing stop placement until next trading day")
+        elif order and hasattr(self.broker, 'place_trailing_stop'):
             filled_qty = int(float(order.get("filled_qty", order.get("qty", shares))))
             if filled_qty >= 1:
                 # Small delay to let the fill register
                 await asyncio.sleep(1)
-                trailing_stop_order = await asyncio.get_event_loop().run_in_executor(
-                    None, self.broker.place_trailing_stop, symbol, filled_qty, trail_pct
+                trailing_stop_order, protection_failed = await self._place_entry_protection_order(
+                    symbol, filled_qty, trail_pct, "long"
                 )
                 if trailing_stop_order:
                     logger.success(f"📈 Trailing stop set: {symbol} {filled_qty}sh trail={trail_pct}%")
                 else:
-                    logger.warning(f"⚠️ Trailing stop FAILED for {symbol} — will retry next monitor cycle")
+                    logger.warning(f"⚠️ Trailing stop FAILED for {symbol}")
 
         if not order:
             # Check if we accidentally got filled on a limit before smart_buy cancelled it
@@ -295,6 +361,7 @@ class EntryManager:
 
         if not order:
             logger.error(f"Failed to enter {symbol} after {self.max_retries} attempts")
+            self.last_order_error = "entry_order_failed"
             return None
 
         fill_timestamp = self._parse_iso_ts(order.get("filled_at")) if isinstance(order, dict) else None
@@ -358,6 +425,7 @@ class EntryManager:
             "trail_pct": trail_pct,
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
+            "protection_failed": protection_failed,
             "order_status": order_status,
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
             "signal_sources": signal_sources,
@@ -366,6 +434,12 @@ class EntryManager:
             "signal_price": sentiment_data.get("signal_price", price),
             "decision_price": sentiment_data.get("decision_price", price),
             "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
+            "copy_trader_context": sentiment_data.get("copy_trader_context", ""),
+            "copy_trader_handles": list(sentiment_data.get("copy_trader_handles", []) or []),
+            "copy_trader_signal_count": int(sentiment_data.get("copy_trader_signal_count", 0) or 0),
+            "copy_trader_convergence": int(sentiment_data.get("copy_trader_convergence", 0) or 0),
+            "copy_trader_weight": float(sentiment_data.get("copy_trader_weight", 1.0) or 1.0),
+            "swing_only": swing_only,
             "_exit_recorded": False,
         }
         self.positions[symbol] = position
@@ -389,6 +463,12 @@ class EntryManager:
         """
         if not self.broker or not self.polygon:
             logger.error("Broker or Polygon client not available")
+            self.last_order_error = "broker_or_polygon_unavailable"
+            return None
+        self.last_order_error = ""
+        if symbol in self.positions:
+            logger.warning(f"Duplicate short entry blocked for {symbol}")
+            self.last_order_error = "duplicate_position"
             return None
 
         price = await asyncio.get_event_loop().run_in_executor(
@@ -396,6 +476,7 @@ class EntryManager:
         )
         if price <= 0:
             logger.warning(f"Could not get price for {symbol}")
+            self.last_order_error = "price_unavailable"
             return None
         signal_timestamp = float(sentiment_data.get("signal_timestamp", time.time()) or time.time())
 
@@ -404,6 +485,7 @@ class EntryManager:
             None, self.broker.get_balances
         )
         buying_power = self.risk.get_buying_power_field(balances) if self.risk else balances.get("buying_power", 0)
+        swing_only = bool(self.risk and getattr(self.risk, "is_swing_mode", None) and self.risk.is_swing_mode())
 
         extended = self.is_extended_hours()
 
@@ -420,6 +502,7 @@ class EntryManager:
 
         notional = self.risk.get_position_size(price, buying_power, conviction) if self.risk else 0
         notional *= consensus_size_modifier
+        notional *= self._copy_trader_size_multiplier(sentiment_data, swing_only)
         share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
         notional *= max(0.0, min(1.0, share_mult))
         if extended:
@@ -427,6 +510,7 @@ class EntryManager:
         shares = int(notional / price) if price > 0 else 0
         if shares < 1:
             logger.warning(f"SHORT position size too small for {symbol} @ ${price:.2f}")
+            self.last_order_error = "position_size_zero"
             return None
 
         # Calculate trail percent
@@ -441,6 +525,10 @@ class EntryManager:
                 trail_pct = max(1.0, min(trail_pct, 4.0))
         except Exception:
             pass
+
+        if swing_only:
+            swing_trail = max(1.0, float(getattr(settings, "SWING_MODE_TRAIL_PCT", 4.5) or 4.5))
+            trail_pct = max(trail_pct, swing_trail)
 
         logger.info(f"🩳 Shorting {symbol}: {shares}sh @ ${price:.2f} (${shares * price:.2f} total, conviction={conviction})")
 
@@ -466,41 +554,28 @@ class EntryManager:
                 order = resp.json()
             else:
                 logger.error(f"Short sell failed: {resp.status_code} {resp.text[:200]}")
+                self.last_order_error = f"alpaca_short_rejected_{resp.status_code}"
                 return None
         except Exception as e:
             logger.error(f"Short sell error for {symbol}: {e}")
+            self.last_order_error = "alpaca_short_exception"
             return None
 
         # Place trailing stop (buy to cover) for the short
         trailing_stop_order = None
-        if order:
+        protection_failed = False
+        if swing_only:
+            logger.info(f"🌙 Swing-only short entry for {symbol}: deferring buy-to-cover trailing stop until next trading day")
+        elif order:
             await asyncio.sleep(1)
             try:
                 try:
                     stop_qty = int(float(order.get("filled_qty", order.get("qty", shares)) or shares))
                 except Exception:
                     stop_qty = int(shares)
-                if hasattr(self.broker, 'place_trailing_stop_short'):
-                    trailing_stop_order = await asyncio.get_event_loop().run_in_executor(
-                        None, self.broker.place_trailing_stop_short, symbol, stop_qty, trail_pct
-                    )
-                else:
-                    import requests as req_lib
-                    stop_data = {
-                        'symbol': symbol,
-                        'qty': str(stop_qty),
-                        'side': 'buy',  # buy to cover
-                        'type': 'trailing_stop',
-                        'trail_percent': str(trail_pct),
-                        'time_in_force': 'gtc',
-                    }
-                    resp = req_lib.post(
-                        f'{self.broker._base_url}/v2/orders',
-                        headers=self.broker._rest_headers(),
-                        json=stop_data,
-                        timeout=10,
-                    )
-                    trailing_stop_order = resp.json() if resp.status_code in (200, 201) else None
+                trailing_stop_order, protection_failed = await self._place_entry_protection_order(
+                    symbol, stop_qty, trail_pct, "short"
+                )
 
                 if trailing_stop_order:
                     logger.success(f"📉 SHORT trailing stop set: {symbol} {stop_qty}sh trail={trail_pct}%")
@@ -569,6 +644,7 @@ class EntryManager:
             "trail_pct": trail_pct,
             "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
             "has_trailing_stop": trailing_stop_order is not None,
+            "protection_failed": protection_failed,
             "order_status": order_status,
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
             "signal_sources": signal_sources,
@@ -577,6 +653,12 @@ class EntryManager:
             "signal_price": sentiment_data.get("signal_price", price),
             "decision_price": sentiment_data.get("decision_price", price),
             "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
+            "copy_trader_context": sentiment_data.get("copy_trader_context", ""),
+            "copy_trader_handles": list(sentiment_data.get("copy_trader_handles", []) or []),
+            "copy_trader_signal_count": int(sentiment_data.get("copy_trader_signal_count", 0) or 0),
+            "copy_trader_convergence": int(sentiment_data.get("copy_trader_convergence", 0) or 0),
+            "copy_trader_weight": float(sentiment_data.get("copy_trader_weight", 1.0) or 1.0),
+            "swing_only": swing_only,
             "_exit_recorded": False,
         }
         self.positions[symbol] = position
@@ -766,6 +848,7 @@ class EntryManager:
                     "signal_price": avg_price,
                     "decision_price": avg_price,
                     "scout_escalated": False,
+                    "swing_only": False,
                     "_exit_recorded": False,
                 }
                 side_tag = "SHORT" if side == "short" else "LONG"

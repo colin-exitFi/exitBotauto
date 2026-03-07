@@ -22,6 +22,7 @@ from loguru import logger
 
 import httpx
 from config import settings
+from src.signals.unusual_whales import UnusualWhalesClient
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 CACHE_FILE = DATA_DIR / "congress_trades.json"
@@ -30,10 +31,11 @@ CACHE_FILE = DATA_DIR / "congress_trades.json"
 class CongressScanner:
     """Track congressional stock trades for alpha signals."""
 
-    def __init__(self):
+    def __init__(self, uw_client: Optional[UnusualWhalesClient] = None):
         self._trades: List[Dict] = []
         self._last_fetch = 0
         self._fetch_interval = 3600  # 1 hour (trades update slowly)
+        self.uw = uw_client or UnusualWhalesClient()
         self._load_cache()
         logger.info(f"Congress scanner initialized ({len(self._trades)} cached trades)")
 
@@ -63,14 +65,24 @@ class CongressScanner:
 
         trades = []
 
-        # Source 1: Quiver Quantitative (free tier)
-        try:
-            quiver = await self._fetch_quiver()
-            trades.extend(quiver)
-        except Exception as e:
-            logger.debug(f"Quiver congress fetch failed: {e}")
+        # Source 1: Unusual Whales Congress feed
+        if self.uw and self.uw.is_configured():
+            try:
+                trades = await asyncio.get_event_loop().run_in_executor(
+                    None, self.uw.get_congress_trades, 100
+                )
+            except Exception as e:
+                logger.debug(f"Unusual Whales congress fetch failed: {e}")
 
-        # Source 2: Perplexity for recent congressional trades
+        # Source 2: Quiver Quantitative (free tier)
+        if not trades:
+            try:
+                quiver = await self._fetch_quiver()
+                trades.extend(quiver)
+            except Exception as e:
+                logger.debug(f"Quiver congress fetch failed: {e}")
+
+        # Source 3: Perplexity for recent congressional trades
         if not trades:
             try:
                 pplx = await self._fetch_via_perplexity()

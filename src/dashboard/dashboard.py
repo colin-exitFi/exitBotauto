@@ -233,6 +233,8 @@ async def get_ai_status():
         "last_tuner_changes": ai.get("last_tuner_changes"),
         "last_game_film": ai.get("last_game_film_summary"),
         "last_position_manager": ai.get("last_position_manager"),
+        "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
+        "last_short_block_reason": ai.get("last_short_block_reason"),
     }
 
 
@@ -241,10 +243,13 @@ async def get_consensus():
     """Get agent orchestrator history and stats."""
     if not _bot or not hasattr(_bot, 'orchestrator') or not _bot.orchestrator:
         return {"enabled": False, "history": [], "stats": {}}
+    ai = getattr(_bot, "ai_layers", {}) or {}
     return {
         "enabled": True,
         "history": _bot.orchestrator.get_history()[-10:],
         "stats": _bot.orchestrator.get_stats(),
+        "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
+        "last_short_block_reason": ai.get("last_short_block_reason"),
     }
 
 
@@ -487,12 +492,27 @@ async def get_intelligence():
             "squeeze_candidates": [s["ticker"] for s in squeeze[:5]],
         }
 
+    if hasattr(_bot, "ark_trades") and _bot.ark_trades:
+        result["ark_trades"] = {
+            "buys": _bot.ark_trades.get_buy_signals()[:5],
+            "sells": _bot.ark_trades.get_sell_signals()[:5],
+        }
+
+    if hasattr(_bot, "copy_trader_monitor") and _bot.copy_trader_monitor:
+        result["copy_trader"] = _bot.copy_trader_monitor.get_dashboard_data()
+
     # Sector rotation
     if hasattr(_bot, 'sector_model') and _bot.sector_model:
         result["sectors"] = _bot.sector_model.get_dashboard_data()
         result["sector_bias"] = _bot.sector_model.get_sector_bias()
         focus = _bot.sector_model.suggest_focus()
         result["sector_focus"] = focus
+
+    if hasattr(_bot, "human_intel_store") and _bot.human_intel_store:
+        result["human_intel"] = {
+            "count": len(_bot.human_intel_store.list_entries(limit=100)),
+            "top_tickers": [entry["ticker"] for entry in _bot.human_intel_store.list_entries(limit=5)],
+        }
 
     return result
 
@@ -540,6 +560,79 @@ async def get_watchlist():
     if not _bot or not hasattr(_bot, 'watchlist'):
         return []
     return _bot.watchlist.get_all()
+
+
+@app.get("/api/human-intel")
+async def get_human_intel(limit: int = 20):
+    """Get operator-supplied discretionary context."""
+    if not _bot or not hasattr(_bot, "human_intel_store") or not _bot.human_intel_store:
+        return []
+    return _bot.human_intel_store.list_entries(limit=limit)
+
+
+@app.post("/api/human-intel")
+async def add_human_intel(request: Request):
+    """Persist human context and immediately promote it into the watchlist."""
+    if not _bot or not hasattr(_bot, "human_intel_store") or not _bot.human_intel_store:
+        return JSONResponse(status_code=503, content={"error": "Human intel store unavailable"})
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    ticker = str(payload.get("ticker", "") or "").upper().strip()
+    if not ticker:
+        return JSONResponse(status_code=400, content={"error": "ticker is required"})
+
+    entry = _bot.human_intel_store.add_entry(
+        ticker=ticker,
+        title=str(payload.get("title", "") or ""),
+        notes=str(payload.get("notes", "") or ""),
+        url=str(payload.get("url", "") or ""),
+        source=str(payload.get("source", "") or ""),
+        kind=str(payload.get("kind", "note") or "note"),
+        bias=str(payload.get("bias", "neutral") or "neutral"),
+        confidence=float(payload.get("confidence", 0.5) or 0.5),
+        ttl_hours=float(payload.get("ttl_hours", 96) or 96),
+    )
+
+    try:
+        if hasattr(_bot, "watchlist") and _bot.watchlist:
+            side = "short" if entry.get("bias") == "bearish" else "long"
+            conviction = min(0.95, 0.35 + float(entry.get("confidence", 0.5) or 0.5) * 0.5)
+            reason = entry.get("title") or entry.get("notes") or "operator context"
+            _bot.watchlist.add(
+                ticker,
+                conviction=conviction,
+                side=side,
+                source="human_intel",
+                reason=f"Human intel: {reason[:100]}",
+                ttl_hours=float(entry.get("ttl_hours", 96) or 96),
+            )
+    except Exception as e:
+        logger.debug(f"Human intel watchlist add failed: {e}")
+
+    try:
+        if hasattr(_bot, "orchestrator") and _bot.orchestrator:
+            for cache in (getattr(_bot.orchestrator, "_cache", {}), getattr(_bot.orchestrator, "_skip_cache", {})):
+                for key in list(cache.keys()):
+                    if str(key).startswith(f"{ticker}:"):
+                        cache.pop(key, None)
+    except Exception as e:
+        logger.debug(f"Human intel cache invalidation failed: {e}")
+
+    log_activity("research", f"🧠 Human intel added: {ticker} {entry.get('bias', 'neutral')} — {(entry.get('title') or entry.get('notes') or '')[:120]}")
+    return {"ok": True, "entry": entry}
+
+
+@app.delete("/api/human-intel/{entry_id}")
+async def delete_human_intel(entry_id: str):
+    """Remove a persisted human-intel entry."""
+    if not _bot or not hasattr(_bot, "human_intel_store") or not _bot.human_intel_store:
+        return JSONResponse(status_code=503, content={"error": "Human intel store unavailable"})
+    removed = _bot.human_intel_store.remove_entry(entry_id)
+    if removed:
+        log_activity("research", f"🧠 Human intel removed: {entry_id}")
+    return {"ok": removed}
 
 
 @app.post("/api/pause")
@@ -641,6 +734,7 @@ tr:hover td{background:#161b2288}
 .btn-start{background:linear-gradient(135deg,#238636,#2ea043);color:#fff}
 .btn-pause{background:linear-gradient(135deg,#d29922,#e3b341);color:#000}
 .btn-stop{background:linear-gradient(135deg,#da3633,#f85149);color:#fff}
+.btn-intel{background:linear-gradient(135deg,#1f6feb,#58a6ff);color:#fff}
 .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .btn:active{transform:translateY(0)}
 .empty{color:#484f58;text-align:center;padding:24px;font-style:italic}
@@ -654,6 +748,23 @@ tr:hover td{background:#161b2288}
 .ai-card strong{color:#58a6ff;display:block;margin-bottom:4px}
 .ai-card.tuner{border-color:#d2a8ff33}.ai-card.pm{border-color:#3fb95033}
 .watermark{text-align:center;padding:20px;color:#21262d;font-size:11px;letter-spacing:2px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,14,20,.78);display:none;align-items:center;justify-content:center;z-index:300}
+.modal-backdrop.open{display:flex}
+.modal{width:min(680px,92vw);background:linear-gradient(145deg,#161b22 0%,#0d1117 100%);border:1px solid #30363d;border-radius:14px;padding:18px;box-shadow:0 12px 60px rgba(0,0,0,.45)}
+.modal h3{font-size:15px;color:#58a6ff;margin-bottom:12px}
+.intel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.6px}
+.field input,.field select,.field textarea{background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#c9d1d9;padding:10px 12px;font-size:13px}
+.field textarea{min-height:110px;resize:vertical}
+.intel-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.intel-entry{padding:10px 0;border-bottom:1px solid #21262d}
+.intel-entry:last-child{border-bottom:none}
+.intel-meta{display:flex;gap:10px;align-items:center;font-size:11px;color:#8b949e;margin-bottom:6px;flex-wrap:wrap}
+.intel-title{font-weight:700;color:#c9d1d9}
+.intel-notes{font-size:12px;color:#8b949e;line-height:1.5}
+.intel-link{color:#58a6ff;text-decoration:none}
+.mini-btn{padding:4px 8px;background:#0d1117;border:1px solid #30363d;color:#8b949e;border-radius:6px;cursor:pointer;font-size:11px}
 </style>
 </head>
 <body>
@@ -662,6 +773,7 @@ tr:hover td{background:#161b2288}
   <div class="status">
     <span id="statusBadge" class="badge stopped">LOADING</span>
     <div class="controls">
+      <button class="btn btn-intel" onclick="openIntelModal()">🧠 Intel</button>
       <button class="btn btn-start" onclick="api('/api/resume','POST')">▶ Resume</button>
       <button class="btn btn-pause" onclick="api('/api/pause','POST')">⏸ Pause</button>
       <button class="btn btn-stop" onclick="api('/api/stop','POST')">⏹ Stop</button>
@@ -755,6 +867,33 @@ tr:hover td{background:#161b2288}
     <tbody id="watchlist"></tbody></table>
   </div>
 
+  <div class="card full">
+    <h2><span class="icon">🧠</span> Human Intel <span id="humanIntelCount" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <div id="humanIntelList" class="empty">No operator context yet</div>
+  </div>
+
+  <div class="card full">
+    <h2><span class="icon">📡</span> Copy Trader Intel</h2>
+    <div class="summary-row" id="copyTraderSummary"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+      <div style="overflow-x:auto">
+        <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Entry Signals</div>
+        <table><thead><tr><th>Symbol</th><th>Side</th><th>Handles</th><th>Size</th></tr></thead>
+        <tbody id="copyTraderSignals"></tbody></table>
+      </div>
+      <div style="overflow-x:auto">
+        <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Exit Signals</div>
+        <table><thead><tr><th>Symbol</th><th>Action</th><th>Handles</th><th>Count</th></tr></thead>
+        <tbody id="copyTraderExits"></tbody></table>
+      </div>
+      <div style="overflow-x:auto">
+        <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Tracked Traders</div>
+        <table><thead><tr><th>Handle</th><th>Weight</th><th>W/L</th><th>WR</th></tr></thead>
+        <tbody id="copyTraderTraders"></tbody></table>
+      </div>
+    </div>
+  </div>
+
   <!-- Positions + Candidates side by side -->
   <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
@@ -776,6 +915,27 @@ tr:hover td{background:#161b2288}
 </div>
 <div class="watermark">VELOX v2.0 — autonomous velocity trading</div>
 
+<div id="intelModal" class="modal-backdrop" onclick="if(event.target===this)closeIntelModal()">
+  <div class="modal">
+    <h3>Submit Human Intel</h3>
+    <div class="intel-grid">
+      <div class="field"><label for="intelTicker">Ticker</label><input id="intelTicker" placeholder="BATL" maxlength="8"></div>
+      <div class="field"><label for="intelBias">Bias</label><select id="intelBias"><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="neutral">Neutral</option></select></div>
+      <div class="field"><label for="intelKind">Type</label><select id="intelKind"><option value="article">Article</option><option value="chart">Chart</option><option value="rumor">Rumor</option><option value="note">Note</option></select></div>
+      <div class="field"><label for="intelConfidence">Confidence (0.1-1.0)</label><input id="intelConfidence" type="number" min="0.1" max="1.0" step="0.05" value="0.7"></div>
+      <div class="field"><label for="intelSource">Source</label><input id="intelSource" placeholder="Discord / article / personal read"></div>
+      <div class="field"><label for="intelTtl">TTL Hours</label><input id="intelTtl" type="number" min="1" max="336" step="1" value="96"></div>
+      <div class="field" style="grid-column:1/-1"><label for="intelTitle">Title</label><input id="intelTitle" placeholder="FDA adcom next week / cup-and-handle forming / squeeze chatter"></div>
+      <div class="field" style="grid-column:1/-1"><label for="intelUrl">URL</label><input id="intelUrl" placeholder="https://..."></div>
+      <div class="field" style="grid-column:1/-1"><label for="intelNotes">Notes</label><textarea id="intelNotes" placeholder="Why this matters, what the machine would miss, and what side it should lean."></textarea></div>
+    </div>
+    <div class="intel-actions">
+      <button class="btn btn-pause" onclick="closeIntelModal()">Cancel</button>
+      <button class="btn btn-intel" onclick="submitIntel()">Save Intel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = s => document.getElementById(s);
 let _prevPnl = null;
@@ -784,16 +944,50 @@ function withToken(url) {
   if (!_dashToken) return url;
   return url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(_dashToken);
 }
-async function api(url, method='GET') {
+async function api(url, method='GET', body=null) {
   try {
     const headers = _dashToken ? {'Authorization': `Bearer ${_dashToken}`} : {};
-    const r = await fetch(withToken(url), {method, headers});
+    const opts = {method, headers};
+    if (body !== null) {
+      headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(withToken(url), opts);
     return await r.json();
   } catch(e) { return null; }
 }
 function cls(v) { return v >= 0 ? 'positive' : 'negative'; }
 function fmt(v, d=2) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—'; }
 function holdStr(secs) { if(!secs) return '—'; const m=Math.floor(secs/60); const h=Math.floor(m/60); return h>0?h+'h '+m%60+'m':m+'m'; }
+function openIntelModal() { $('intelModal').classList.add('open'); }
+function closeIntelModal() { $('intelModal').classList.remove('open'); }
+async function submitIntel() {
+  const ticker = ($('intelTicker').value || '').trim().toUpperCase();
+  if (!ticker) return;
+  const payload = {
+    ticker,
+    title: $('intelTitle').value || '',
+    notes: $('intelNotes').value || '',
+    url: $('intelUrl').value || '',
+    source: $('intelSource').value || '',
+    kind: $('intelKind').value || 'note',
+    bias: $('intelBias').value || 'neutral',
+    confidence: parseFloat($('intelConfidence').value || '0.7'),
+    ttl_hours: parseFloat($('intelTtl').value || '96'),
+  };
+  const res = await api('/api/human-intel', 'POST', payload);
+  if (res && res.ok) {
+    closeIntelModal();
+    ['intelTicker','intelTitle','intelNotes','intelUrl','intelSource'].forEach(id => { if ($(id)) $(id).value = ''; });
+    $('intelConfidence').value = '0.7';
+    $('intelTtl').value = '96';
+    await refresh();
+  }
+}
+async function deleteIntel(entryId) {
+  await api(`/api/human-intel/${encodeURIComponent(entryId)}`, 'DELETE');
+  await refresh();
+}
 function topPnlBucket(obj) {
   if (!obj) return null;
   const rows = Object.entries(obj);
@@ -888,6 +1082,8 @@ async function refresh() {
     const anim = pnlChanged ? ' animated' : '';
     $('metrics').innerHTML = `
       <div class="metric"><div class="value" style="color:#d2a8ff;font-size:16px">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
+      <div class="metric"><div class="value ${m.swing_mode?'negative':'positive'}">${m.swing_mode?'SWING':'NORMAL'}</div><div class="label">Mode</div></div>
+      <div class="metric"><div class="value">${m.remaining_day_trades??'—'}</div><div class="label">Day Trades</div></div>
       <div class="metric"><div class="value">${m.consecutive_wins||0}W/${m.consecutive_losses||0}L</div><div class="label">Streak</div></div>
       <div class="metric"><div class="value">${(m.heat_pct||0).toFixed(0)}%</div><div class="label">Heat</div></div>
       <div class="metric"><div class="value">${(m.tier_size_pct||0)}%</div><div class="label">Pos Size</div></div>
@@ -911,6 +1107,7 @@ async function refresh() {
       html += '<div class="ai-card pm"><strong>🛡️ Position Manager</strong>' + (ai.last_position_manager || '<em>Pending…</em>') + '</div>';
       html += '</div>';
       if (ai.last_game_film) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#d2a8ff">🎬 Game Film:</strong> ' + ai.last_game_film + '</div>';
+      if (ai.short_verdicts_blocked) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#f85149">🩳 Short blocks:</strong> ' + ai.short_verdicts_blocked + (ai.last_short_block_reason ? ' · ' + ai.last_short_block_reason : '') + '</div>';
       $('aiStatus').innerHTML = html;
     } else { $('aiStatus').innerHTML = '<span class="empty">AI layers not initialized</span>'; }
   }
@@ -925,6 +1122,7 @@ async function refresh() {
       <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY</div></div>
       <div class="summary-item"><div class="val" style="color:#d2a8ff">${st.shorts||0}</div><div class="lbl">SHORT</div></div>
       <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP</div></div>
+      <div class="summary-item" title="${con.last_short_block_reason||''}"><div class="val negative">${con.short_verdicts_blocked||0}</div><div class="lbl">Short Blocked</div></div>
       <div class="summary-item"><div class="val" style="color:#e3b341">${st.avg_confidence?(st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Avg Conf</div></div>
       <div class="summary-item"><div class="val val-sm" style="color:#8b949e">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
     ` : '';
@@ -1095,6 +1293,58 @@ async function refresh() {
     <td style="color:#6e7681">${w.sources||''}</td>
     <td style="font-size:11px;color:#8b949e">${(w.reason||'').substring(0,60)}</td>
   </tr>`).join('') : '<tr><td colspan="5" class="empty">Watchlist builds at 10PM ET</td></tr>';
+
+  // Human intel
+  const intel = await api('/api/human-intel?limit=12');
+  $('humanIntelCount').textContent = intel ? `${intel.length} active notes` : '';
+  $('humanIntelList').innerHTML = intel && intel.length ? intel.map(entry => `
+    <div class="intel-entry">
+      <div class="intel-meta">
+        <span class="${entry.bias === 'bearish' ? 'negative' : entry.bias === 'bullish' ? 'positive' : 'info'}">${(entry.bias || 'neutral').toUpperCase()}</span>
+        <span>${entry.ticker}</span>
+        <span>conf ${(entry.confidence || 0).toFixed(2)}</span>
+        <span>${entry.kind || 'note'}</span>
+        <span>${entry.source || 'manual'}</span>
+        <button class="mini-btn" onclick="deleteIntel('${entry.id}')">Delete</button>
+      </div>
+      <div class="intel-title">${entry.title || '(untitled)'}</div>
+      <div class="intel-notes">${entry.notes || ''}</div>
+      ${entry.url ? `<div style="margin-top:6px"><a class="intel-link" href="${entry.url}" target="_blank" rel="noopener noreferrer">${entry.url}</a></div>` : ''}
+    </div>
+  `).join('') : '<div class="empty">No operator context yet</div>';
+
+  // Intelligence panel
+  const intelligence = await api('/api/intelligence');
+  const ct = (intelligence && intelligence.copy_trader) || {};
+  const ctSignals = ct.signals || [];
+  const ctExits = ct.exits || [];
+  const ctTraders = ct.traders || [];
+  const ark = (intelligence && intelligence.ark_trades) || {};
+  $('copyTraderSummary').innerHTML = `
+    <div class="summary-item"><div class="val info">${ctSignals.length}</div><div class="lbl">Active Signals</div></div>
+    <div class="summary-item"><div class="val negative">${ctExits.length}</div><div class="lbl">Exit Signals</div></div>
+    <div class="summary-item"><div class="val">${ctTraders.length}</div><div class="lbl">Tracked Traders</div></div>
+    <div class="summary-item"><div class="val positive">${ctTraders.length ? (ctTraders[0].weight||1).toFixed(2) : '—'}</div><div class="lbl">Top Weight</div></div>
+    <div class="summary-item"><div class="val info">${(ark.buys||[]).length}/${(ark.sells||[]).length}</div><div class="lbl">ARK B/S</div></div>
+  `;
+  $('copyTraderSignals').innerHTML = ctSignals.length ? ctSignals.map(row => `<tr>
+    <td><strong>${row.symbol||'?'}</strong></td>
+    <td>${(row.side||'').toUpperCase()}</td>
+    <td style="font-size:11px;color:#8b949e">${(row.copy_trader_handles||[]).slice(0,3).join(', ') || '—'}</td>
+    <td>${(row.copy_trader_size_multiplier||1).toFixed(2)}x</td>
+  </tr>`).join('') : '<tr><td colspan="4" class="empty">No recent entry signals</td></tr>';
+  $('copyTraderExits').innerHTML = ctExits.length ? ctExits.map(row => `<tr>
+    <td><strong>${row.symbol||'?'}</strong></td>
+    <td class="${row.copy_trader_exit_action==='exit'?'negative':'info'}">${(row.copy_trader_exit_action||'trim').toUpperCase()}</td>
+    <td style="font-size:11px;color:#8b949e">${(row.copy_trader_exit_handles||[]).slice(0,3).join(', ') || '—'}</td>
+    <td>${row.copy_trader_exit_count||0}</td>
+  </tr>`).join('') : '<tr><td colspan="4" class="empty">No recent exit signals</td></tr>';
+  $('copyTraderTraders').innerHTML = ctTraders.length ? ctTraders.slice(0,6).map(row => `<tr>
+    <td><strong>@${row.handle||'?'}</strong></td>
+    <td>${(row.weight||1).toFixed(2)}</td>
+    <td>${row.signals_correct||0}/${row.signals_wrong||0}</td>
+    <td>${((row.realized_win_rate||0)*100).toFixed(0)}%</td>
+  </tr>`).join('') : '<tr><td colspan="4" class="empty">No trader stats yet</td></tr>';
 
   // History
   const hist = await api('/api/history');

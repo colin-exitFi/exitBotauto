@@ -1,5 +1,28 @@
 {
-  "raw_thesis": "I appreciate your detailed request, but I cannot provide the comprehensive overnight market analysis you've asked for based on the available search results.\n\n**Limitations:**\n\nThe search results contain S&P 500 futures pricing data from March 3-5, 2026, but lack the critical information needed for a complete analysis:\n\n- **Overnight news:** No earnings announcements, geopolitical developments, or Federal Reserve statements are included in the search results.\n- **Sector momentum:** The results show individual stock tickers with price changes, but no sector-level analysis or forward-looking commentary.\n- **Market catalysts:** There is no information about what might drive tomorrow's session.\n\n**What the data shows:**\n\nS&P 500 E-mini futures (ESH26) closed at **6,884.75, up +0.88%** on March 4, 2026.[5] The 52-week performance shows a **+12.84% gain since March 5, 2025**, with a recent 3-month decline of **-1.57% since December 5, 2025**.[2] Key support levels mentioned include 6,453 and 6,429, with resistance around 6,522-6,588.[3]\n\n**To obtain the analysis you need:**\n\nYou would need to check current financial news sources (Bloomberg, CNBC, MarketWatch, CME Group), earnings calendars, and Fed communications for overnight developments that would inform tomorrow's trading session.",
-  "market_bias": "unknown",
-  "watchlist": []
+  "sp500_futures": "Down -0.95% overnight, trading around 6460-6467 levels. Key support at 6462, 6453, 6429; resistance at 6472, with upside targets 6522, 6540 if reclaimed[1][2][6].",
+  "overnight_news": "S&P 500 futures slipping amid inflation concerns, rising bond yields, surging oil prices due to Middle East tensions, and anticipation of key U.S. jobs report. Recent session closed down -1.33% on weak job market data[2].",
+  "hot_sectors": "Airlines (weakness in ALK, UAL); Technology/Semiconductors (AMAT -6.29%, ADI -4.22%, AVGO); Energy (oil surge); Housing (DHI)[2].",
+  "watchlist": [
+    {
+      "ticker": "ALK",
+      "reason": "Down -3.42%, leading airline sector weakness[2]"
+    },
+    {
+      "ticker": "AMAT",
+      "reason": "Sharp decline -6.29% in semiconductors amid broader tech pressure[2]"
+    },
+    {
+      "ticker": "UAL",
+      "reason": "Down -3.52%, airline sector underperformer[2]"
+    },
+    {
+      "ticker": "MSTR",
+      "reason": "Declining -4.49%, volatile crypto-related play amid risk-off sentiment[2]"
+    },
+    {
+      "ticker": "AVGO",
+      "reason": "Down -0.70%, key semiconductor name to watch with Nasdaq futures weakness[2]"
+    }
+  ],
+  "market_bias": "Bearish"
 }

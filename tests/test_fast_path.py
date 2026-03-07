@@ -22,6 +22,9 @@ class _RiskOK:
     def get_risk_tier(self):
         return {"size_pct": 2.5}
 
+    def is_swing_mode(self):
+        return False
+
 
 class _EntryNoNetwork:
     def __init__(self):
@@ -190,6 +193,53 @@ class FastPathTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bot._fast_path_eval_queue.qsize(), 1)
         queued = bot._fast_path_eval_queue.get_nowait()
         self.assertEqual(queued.get("attempts"), 1)
+
+    async def test_jury_veto_blocks_fast_path_until_expiry(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot._fast_path_pending = set()
+        bot._jury_vetoed_symbols = {"AAPL": time.time()}
+        bot.entry_manager = _EntryNoNetwork()
+        bot.risk_manager = _RiskOK()
+
+        with patch.object(main_module.settings, "FAST_PATH_ENABLED", True), \
+             patch.object(main_module.settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0), \
+             patch.object(main_module.settings, "FAST_PATH_MIN_VOLUME_SPIKE", 2.0), \
+             patch.object(main_module, "get_cached_rsi", return_value=60.0):
+            ok, reason = bot._passes_fast_path_deterministic_screen(
+                symbol="AAPL",
+                price=100.0,
+                pct_change=6.0,
+                volume_spike=3.0,
+            )
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "jury_vetoed")
+
+    async def test_swing_mode_disables_fast_path(self):
+        class _SwingRisk(_RiskOK):
+            def is_swing_mode(self):
+                return True
+
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot._fast_path_pending = set()
+        bot._jury_vetoed_symbols = {}
+        bot.entry_manager = _EntryNoNetwork()
+        bot.risk_manager = _SwingRisk()
+
+        with patch.object(main_module.settings, "FAST_PATH_ENABLED", True), \
+             patch.object(main_module.settings, "SWING_MODE_DISABLE_FAST_PATH", True), \
+             patch.object(main_module.settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0), \
+             patch.object(main_module.settings, "FAST_PATH_MIN_VOLUME_SPIKE", 2.0), \
+             patch.object(main_module, "get_cached_rsi", return_value=60.0):
+            ok, reason = bot._passes_fast_path_deterministic_screen(
+                symbol="AAPL",
+                price=100.0,
+                pct_change=6.0,
+                volume_spike=3.0,
+            )
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "swing_mode_disabled")
 
     async def test_hold_decision_requeues_with_tightened_trail(self):
         bot = main_module.TradingBot.__new__(main_module.TradingBot)

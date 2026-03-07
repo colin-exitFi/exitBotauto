@@ -12,6 +12,7 @@ class _DummyPolygon:
 class _DummyBroker:
     def __init__(self):
         self.smart_buy_calls = []
+        self.trailing_stop_calls = []
 
     @staticmethod
     def get_positions():
@@ -30,8 +31,8 @@ class _DummyBroker:
     def place_limit_buy(symbol: str, qty: int, limit_price: float, extended_hours: bool = False):
         return {"id": "order-limit-1", "filled_qty": str(qty), "qty": str(qty), "limit_price": str(limit_price)}
 
-    @staticmethod
-    def place_trailing_stop(symbol: str, qty: int, trail_pct: float):
+    def place_trailing_stop(self, symbol: str, qty: int, trail_pct: float):
+        self.trailing_stop_calls.append((symbol, qty, float(trail_pct)))
         return {"id": "trail-1", "symbol": symbol, "qty": str(qty), "trail_percent": str(trail_pct)}
 
 
@@ -60,8 +61,30 @@ class _DummyRisk:
     def can_enter_sector(symbol: str, current_positions):
         return True
 
+    @staticmethod
+    def is_swing_mode():
+        return False
+
 
 class EntrySizingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_can_enter_blocks_duplicate_positions_unconditionally(self):
+        entry = EntryManager(
+            alpaca_client=_DummyBroker(),
+            polygon_client=_DummyPolygon(),
+            risk_manager=_DummyRisk(),
+        )
+        entry.is_market_open = lambda: True
+        entry.positions["AAPL"] = {
+            "symbol": "AAPL",
+            "entry_price": 100.0,
+            "peak_price": 110.0,
+            "quantity": 5,
+        }
+
+        allowed = await entry.can_enter("AAPL", 0.8, current_positions=entry.get_positions())
+
+        self.assertFalse(allowed)
+
     async def test_share_notional_multiplier_reduces_share_budget(self):
         broker = _DummyBroker()
         entry = EntryManager(
@@ -115,6 +138,58 @@ class EntrySizingTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(float(pos.get("quantity", 0)), 3.0, places=6)
         self.assertAlmostEqual(float(pos.get("entry_price", 0)), 101.0, places=6)
         self.assertAlmostEqual(float(pos.get("notional", 0)), 303.0, places=6)
+
+    async def test_copy_trader_size_multiplier_boosts_notional(self):
+        broker = _DummyBroker()
+        entry = EntryManager(
+            alpaca_client=broker,
+            polygon_client=_DummyPolygon(),
+            risk_manager=_DummyRisk(),
+        )
+        entry.is_extended_hours = lambda: False
+
+        sentiment_data = {
+            "score": 0.4,
+            "copy_trader_size_multiplier": 1.2,
+            "copy_trader_handles": ["traderstewie", "alphatrends"],
+            "copy_trader_context": "2 Tier-1 trader signals",
+            "strategy_tag": "momentum_long",
+            "signal_sources": ["copy_trader"],
+        }
+        pos = await entry.enter_position("AAPL", sentiment_data)
+        self.assertIsNotNone(pos)
+        self.assertAlmostEqual(float(pos.get("notional", 0)), 1200.0, places=2)
+        self.assertEqual(int(float(pos.get("quantity", 0))), 12)
+        self.assertAlmostEqual(broker.smart_buy_calls[0][1], 1200.0, places=2)
+
+    async def test_swing_only_entry_defers_trailing_stop_and_widens_trail(self):
+        class _SwingRisk(_DummyRisk):
+            @staticmethod
+            def is_swing_mode():
+                return True
+
+        broker = _DummyBroker()
+        entry = EntryManager(
+            alpaca_client=broker,
+            polygon_client=_DummyPolygon(),
+            risk_manager=_SwingRisk(),
+        )
+        entry.is_extended_hours = lambda: False
+
+        sentiment_data = {
+            "score": 0.4,
+            "strategy_tag": "momentum_long",
+            "signal_sources": ["polygon"],
+            "jury_trail_pct": 2.0,
+        }
+
+        pos = await entry.enter_position("AAPL", sentiment_data)
+
+        self.assertIsNotNone(pos)
+        self.assertTrue(pos.get("swing_only"))
+        self.assertFalse(pos.get("has_trailing_stop"))
+        self.assertEqual(broker.trailing_stop_calls, [])
+        self.assertGreaterEqual(float(pos.get("trail_pct", 0)), 4.5)
 
 
 if __name__ == "__main__":

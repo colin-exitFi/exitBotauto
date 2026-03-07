@@ -1,10 +1,11 @@
 """
 Scanner - Find high-momentum stocks from MULTIPLE sources.
-Sources: Polygon gainers + StockTwits trending + enrichment via Polygon snapshots.
+Sources: Alpaca movers + Polygon gainers + StockTwits trending + enrichment via snapshots.
 """
 
 import asyncio
 import time
+from datetime import datetime
 from typing import Dict, List, Optional, Set
 from loguru import logger
 
@@ -19,14 +20,15 @@ from src.data.technicals import compute_technicals
 class Scanner:
     """
     Multi-source stock scanner:
-      1. Polygon gainers (price movers with volume)
-      2. StockTwits trending (social momentum)
-      3. Merge + enrich ALL with Polygon snapshot data
-      4. Filter on enriched data (not raw)
-      5. Score & rank
+      1. Alpaca movers (fast, free with account)
+      2. Polygon gainers (price movers with volume)
+      3. StockTwits trending (social momentum)
+      4. Merge + enrich ALL with snapshot data
+      5. Filter on enriched data (not raw)
+      6. Score & rank
     """
 
-    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None, grok_x_trending=None):
+    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None, grok_x_trending=None, unusual_whales_client=None, human_intel_store=None, watchlist_provider=None, copy_trader_monitor=None):
         self.polygon = polygon_client
         self.sentiment = sentiment_analyzer
         self.stocktwits = stocktwits_client
@@ -34,6 +36,10 @@ class Scanner:
         self.pharma = pharma_scanner
         self.fade = fade_scanner
         self.grok_x = grok_x_trending
+        self.unusual_whales = unusual_whales_client
+        self.human_intel = human_intel_store
+        self.watchlist = watchlist_provider
+        self.copy_trader = copy_trader_monitor
 
         self.min_price = settings.MIN_PRICE
         self.max_price = settings.MAX_PRICE
@@ -57,6 +63,7 @@ class Scanner:
             300,
             int(getattr(settings, "SCANNER_SIGNAL_FIRST_SEEN_TTL_SECONDS", 3600)),
         )
+        self._last_runners_record_date = ""
         self._last_market_regime = "mixed"
         logger.info("Scanner initialized")
 
@@ -65,6 +72,18 @@ class Scanner:
         logger.info("🔍 Running stock scan...")
         cutoff = time.time() - self._signal_first_seen_ttl
         self._signal_first_seen = {s: ts for s, ts in self._signal_first_seen.items() if ts >= cutoff}
+
+        # ── SOURCE 0: Alpaca movers ────────────────────────────────
+        alpaca_candidates = []
+        if self.alpaca:
+            try:
+                raw = await asyncio.get_event_loop().run_in_executor(None, self.alpaca.get_movers, 20, "stocks")
+                for s in raw or []:
+                    s.setdefault("source", "alpaca_movers")
+                alpaca_candidates = list(raw or [])
+                logger.info(f"Alpaca movers: {len(alpaca_candidates)}")
+            except Exception as e:
+                logger.debug(f"Alpaca movers failed: {e}")
 
         # ── SOURCE 1: Polygon gainers ──────────────────────────────
         polygon_candidates = []
@@ -145,6 +164,9 @@ class Scanner:
                             "fade_signal": sig.get("signal_type", ""),
                             "fade_score": sig.get("score", 0),
                             "fade_run_pct": sig.get("run_change_pct", 0),
+                            "run_volume": sig.get("run_volume", 0),
+                            "run_close": sig.get("run_close", 0),
+                            "price_change_from_run": sig.get("price_change_from_run", 0),
                         })
                 if fade_signals:
                     logger.info(f"📉 Fade candidates: {len(fade_signals)} short setups")
@@ -178,29 +200,113 @@ class Scanner:
             except Exception as e:
                 logger.warning(f"Grok X trending scan failed: {e}")
 
+        # ── SOURCE 6: Tier-1 copy trader signals ─────────────────
+        copy_trader_candidates = []
+        if self.copy_trader and getattr(self.copy_trader, "is_configured", lambda: False)():
+            try:
+                copy_trader_candidates = list(self.copy_trader.get_candidate_signals() or [])
+                if copy_trader_candidates:
+                    logger.info(f"📣 Copy trader source: {len(copy_trader_candidates)} candidates")
+            except Exception as e:
+                logger.warning(f"Copy trader source failed: {e}")
+
+        # ── SOURCE 7: Overnight watchlist (curated for the next day) ───────
+        watchlist_candidates = []
+        if self.watchlist:
+            try:
+                for item in self.watchlist.get_all()[:25]:
+                    symbol = str(item.get("ticker", "")).upper().strip()
+                    if not symbol:
+                        continue
+                    watchlist_candidates.append({
+                        "symbol": symbol,
+                        "price": 0,
+                        "change_pct": 0,
+                        "volume": 0,
+                        "source": str(item.get("sources", "watchlist") or "watchlist"),
+                        "side": item.get("side", "long"),
+                        "watchlist_reason": item.get("reason", ""),
+                        "watchlist_conviction": float(item.get("conviction", 0) or 0),
+                        "priority": 1,
+                    })
+                if watchlist_candidates:
+                    logger.info(f"📋 Watchlist source: {len(watchlist_candidates)} curated tickers")
+            except Exception as e:
+                logger.warning(f"Watchlist source failed: {e}")
+
+        # ── SOURCE 8: Human intel / operator context ───────────────
+        human_candidates = []
+        if self.human_intel:
+            try:
+                for intel in self.human_intel.get_watchlist_candidates(limit=15):
+                    symbol = str(intel.get("ticker", "")).upper().strip()
+                    if not symbol or symbol == "MARKET":
+                        continue
+                    human_candidates.append({
+                        "symbol": symbol,
+                        "price": 0,
+                        "change_pct": 0,
+                        "volume": 0,
+                        "source": "human_intel",
+                        "side": "short" if intel.get("bias") == "bearish" else "long",
+                        "human_intel": intel.get("summary", ""),
+                        "human_intel_bias": intel.get("bias", "neutral"),
+                        "human_intel_confidence": intel.get("avg_confidence", 0.5),
+                        "human_intel_score_adjustment": intel.get("score_adjustment", 0.0),
+                        "priority": 1,
+                    })
+                if human_candidates:
+                    logger.info(f"🧠 Human intel: {len(human_candidates)} guided tickers")
+            except Exception as e:
+                logger.warning(f"Human intel source failed: {e}")
+
         # ── MERGE: deduplicate by symbol ───────────────────────────
         seen = {}
-        for s in polygon_candidates:
+        for s in alpaca_candidates:
             sym = s.get("symbol", "")
             if sym:
                 seen[sym] = s
 
+        for s in polygon_candidates:
+            sym = s.get("symbol", "")
+            if sym:
+                if sym in seen:
+                    self._merge_candidate(seen[sym], s)
+                else:
+                    seen[sym] = s
+
         for s in stocktwits_candidates:
             sym = s["symbol"]
             if sym in seen:
-                seen[sym]["stocktwits_trending_score"] = s.get("stocktwits_trending_score", 0)
-                seen[sym]["source"] = "both"
+                self._merge_candidate(seen[sym], s)
             else:
                 seen[sym] = s
 
         for s in grok_x_candidates:
             sym = s["symbol"]
             if sym in seen:
-                seen[sym]["grok_x_reason"] = s.get("grok_x_reason", "")
-                seen[sym]["grok_x_sentiment"] = s.get("grok_x_sentiment", "mixed")
-                seen[sym]["grok_x_buzz"] = s.get("grok_x_buzz", 0.5)
-                if seen[sym]["source"] not in ("both",):
-                    seen[sym]["source"] = seen[sym]["source"] + "+grok_x"
+                self._merge_candidate(seen[sym], s)
+            else:
+                seen[sym] = s
+
+        for s in copy_trader_candidates:
+            sym = s["symbol"]
+            if sym in seen:
+                self._merge_candidate(seen[sym], s)
+            else:
+                seen[sym] = s
+
+        for s in watchlist_candidates:
+            sym = s["symbol"]
+            if sym in seen:
+                self._merge_candidate(seen[sym], s)
+            else:
+                seen[sym] = s
+
+        for s in human_candidates:
+            sym = s["symbol"]
+            if sym in seen:
+                self._merge_candidate(seen[sym], s)
             else:
                 seen[sym] = s
 
@@ -255,13 +361,34 @@ class Scanner:
             )
             if technicals:
                 c.update(technicals)
+            self._apply_strategy_context(c)
             # Keep minute-bar fetches under free-tier rate limits.
             if idx < (len(active_candidates) - 1):
                 await asyncio.sleep(technical_fetch_delay)
 
+        market_tide = {}
+        await self._apply_unusual_whales_enrichment(active_candidates)
+        self._apply_human_intel_enrichment(active_candidates)
+        if self.unusual_whales and getattr(self.unusual_whales, "is_configured", lambda: False)():
+            try:
+                market_tide = await asyncio.get_event_loop().run_in_executor(
+                    None, self.unusual_whales.get_market_tide
+                )
+                market_tide_summary = (
+                    f"{market_tide.get('bias', 'mixed')} p/c {float(market_tide.get('put_call_ratio', 0) or 0):.2f}; "
+                    f"puts ${float(market_tide.get('net_put_premium', 0) or 0):,.0f}; "
+                    f"calls ${float(market_tide.get('net_call_premium', 0) or 0):,.0f}"
+                )
+                for candidate in active_candidates:
+                    candidate["market_tide"] = market_tide_summary
+                    candidate["market_tide_bias"] = market_tide.get("bias", "mixed")
+            except Exception as e:
+                logger.debug(f"Market tide enrichment unavailable: {e}")
+
         # ── SCORE & RANK (adaptive by regime + recent hit-rate) ───
         index_context = await self._load_index_context()
         regime = self._detect_market_regime(active_candidates, index_context=index_context)
+        regime = self._apply_market_tide_bias(regime, market_tide)
         self._last_market_regime = regime
         performance = self._load_performance_snapshot()
         if index_context.get("count", 0) >= 2:
@@ -289,11 +416,7 @@ class Scanner:
         self._cache = active_candidates[:20]  # Keep more candidates for orchestrator diversity
 
         # Record today's big runners for tomorrow's fade watchlist
-        if self.fade:
-            try:
-                self.fade.record_todays_runners(active_candidates)
-            except Exception:
-                pass
+        self._maybe_record_todays_runners(active_candidates)
 
         logger.success(f"Scan complete: {len(self._cache)} ranked candidates ({regime})")
         
@@ -336,17 +459,21 @@ class Scanner:
         if not sym or len(sym) > 5 or not sym.isalpha():
             return False
 
-        # For StockTwits-sourced tickers, be more lenient on momentum
+        # For social/manual-context tickers, be more lenient on momentum
         # (they're trending for a reason — social momentum IS momentum)
-        is_social = s.get("source") in ("stocktwits", "both")
-        min_mom = 0.5 if is_social else self.min_momentum  # 0.5% vs 2%
+        source_parts = set(self._source_parts(s.get("source", "")))
+        is_social = s.get("source") in ("stocktwits", "both") or "stocktwits" in source_parts
+        is_human = "human_intel" in source_parts or bool(s.get("human_intel"))
+        is_copy_trader = "copy_trader" in source_parts or bool(s.get("copy_trader_context"))
+        is_watchlist = bool(s.get("watchlist_reason")) or "watchlist" in source_parts or bool(s.get("watchlist_conviction"))
+        min_mom = 0.0 if (is_human or is_watchlist or is_copy_trader) else (0.5 if is_social else self.min_momentum)
 
         change = abs(s.get("change_pct", 0))
         if change < min_mom:
             return False
 
         # Volume check — require some volume but lower bar for social tickers
-        min_vol = 200_000 if is_social else self.min_volume
+        min_vol = 100_000 if (is_human or is_watchlist or is_copy_trader) else (200_000 if is_social else self.min_volume)
         vol = s.get("volume", 0)
         avg_vol = s.get("avg_volume", 0)
         effective_vol = max(vol, avg_vol)
@@ -545,6 +672,239 @@ class Scanner:
     @staticmethod
     def _derive_strategy_tag(candidate: Dict) -> str:
         return derive_strategy_tag(candidate, candidate.get("side", "long"))
+
+    @staticmethod
+    def _source_parts(source: str) -> List[str]:
+        raw = str(source or "").strip().lower()
+        if not raw:
+            return []
+        if raw == "both":
+            return ["polygon", "stocktwits"]
+        return [part.strip() for part in raw.split("+") if part.strip()]
+
+    def _merge_sources(self, existing_source: str, incoming_source: str) -> str:
+        merged: List[str] = []
+        for raw in (existing_source, incoming_source):
+            for part in self._source_parts(raw):
+                if part not in merged:
+                    merged.append(part)
+        if merged == ["polygon", "stocktwits"]:
+            return "both"
+        return "+".join(merged)
+
+    def _merge_candidate(self, existing: Dict, incoming: Dict):
+        existing["source"] = self._merge_sources(existing.get("source", ""), incoming.get("source", ""))
+
+        overlay_keys = {
+            "stocktwits_trending_score",
+            "pharma_signal",
+            "pharma_score",
+            "pharma_drug",
+            "pharma_days_until",
+            "pharma_catalyst_type",
+            "fade_signal",
+            "fade_score",
+            "fade_run_pct",
+            "run_volume",
+            "run_close",
+            "price_change_from_run",
+            "current_price",
+            "priority",
+            "grok_x_reason",
+            "grok_x_sentiment",
+            "grok_x_buzz",
+            "sentiment_score",
+            "human_intel",
+            "human_intel_bias",
+            "human_intel_confidence",
+            "human_intel_score_adjustment",
+            "watchlist_reason",
+            "watchlist_conviction",
+            "copy_trader_signal_count",
+            "copy_trader_handles",
+            "copy_trader_context",
+            "copy_trader_convergence",
+            "copy_trader_weight",
+            "copy_trader_size_multiplier",
+            "copy_trader_score_adjustment",
+        }
+
+        for key, value in incoming.items():
+            if key == "source":
+                continue
+            if key == "side":
+                if str(value or "").strip().lower() == "short" or not existing.get("side"):
+                    existing["side"] = value
+                continue
+            if key in overlay_keys:
+                if value not in (None, "", [], {}):
+                    existing[key] = value
+                continue
+            if key in ("price", "change_pct", "volume"):
+                try:
+                    existing_value = float(existing.get(key, 0) or 0)
+                    incoming_value = float(value or 0)
+                except Exception:
+                    existing_value = 0.0
+                    incoming_value = 0.0
+                if existing_value <= 0 and incoming_value != 0:
+                    existing[key] = value
+                continue
+            if key not in existing or existing.get(key) in (None, "", [], {}):
+                existing[key] = value
+
+    def _apply_strategy_context(self, candidate: Dict):
+        if not candidate.get("fade_signal"):
+            return
+
+        candidate["side"] = "short"
+        run_volume = float(candidate.get("run_volume", 0) or 0)
+        day2_volume = float(candidate.get("volume", 0) or 0)
+        rsi = float(candidate.get("rsi", 0) or 0)
+        volume_declining = run_volume > 0 and day2_volume > 0 and day2_volume < run_volume
+        candidate["fade_volume_declining"] = volume_declining
+        candidate["fade_high_conviction"] = bool(rsi >= 80 and volume_declining)
+        if candidate["fade_high_conviction"]:
+            candidate["fade_score"] = max(float(candidate.get("fade_score", 0) or 0), 0.9)
+        candidate["strategy_tag"] = self._derive_strategy_tag(candidate)
+        candidate["signal_sources"] = self._extract_signal_sources(candidate)
+
+    def _maybe_record_todays_runners(self, candidates: List[Dict]):
+        if not self.fade:
+            return
+        try:
+            import zoneinfo
+
+            now_et = datetime.now(zoneinfo.ZoneInfo("US/Eastern"))
+        except Exception:
+            from pytz import timezone as tz
+
+            now_et = datetime.now(tz("US/Eastern"))
+
+        if now_et.weekday() >= 5:
+            return
+        if (now_et.hour, now_et.minute) < (15, 55):
+            return
+
+        today = now_et.strftime("%Y-%m-%d")
+        if self._last_runners_record_date == today:
+            return
+
+        try:
+            self.fade.record_todays_runners(candidates)
+            self._last_runners_record_date = today
+        except Exception:
+            pass
+
+    async def _apply_unusual_whales_enrichment(self, candidates: List[Dict]):
+        if not candidates or not self.unusual_whales or not getattr(self.unusual_whales, "is_configured", lambda: False)():
+            return
+        try:
+            flow_alerts = await asyncio.get_event_loop().run_in_executor(
+                None, self.unusual_whales.get_flow_alerts, 100_000, None, 150
+            )
+            dark_pool = await asyncio.get_event_loop().run_in_executor(
+                None, self.unusual_whales.get_dark_pool, None, 150
+            )
+        except Exception as e:
+            logger.debug(f"Unusual Whales enrichment failed: {e}")
+            return
+
+        flow_by_ticker: Dict[str, List[Dict]] = {}
+        for alert in flow_alerts or []:
+            ticker = str(alert.get("ticker", "")).upper()
+            if ticker:
+                flow_by_ticker.setdefault(ticker, []).append(alert)
+
+        dark_by_ticker: Dict[str, List[Dict]] = {}
+        for trade in dark_pool or []:
+            ticker = str(trade.get("ticker", "")).upper()
+            if ticker:
+                dark_by_ticker.setdefault(ticker, []).append(trade)
+
+        for candidate in candidates[:20]:
+            symbol = str(candidate.get("symbol", "")).upper()
+            side = str(candidate.get("side", "long")).lower()
+            alerts = flow_by_ticker.get(symbol, [])
+            dark_trades = dark_by_ticker.get(symbol, [])
+            score_adj = 0.0
+
+            if alerts:
+                bullish_premium = sum(a.get("premium", 0.0) for a in alerts if a.get("sentiment") == "bullish")
+                bearish_premium = sum(a.get("premium", 0.0) for a in alerts if a.get("sentiment") == "bearish")
+                dominant = "bullish" if bullish_premium > bearish_premium else "bearish" if bearish_premium > bullish_premium else "neutral"
+                if dominant != "neutral":
+                    if (side == "short" and dominant == "bearish") or (side != "short" and dominant == "bullish"):
+                        score_adj += 0.15
+                    else:
+                        score_adj -= 0.20
+                candidate["unusual_options"] = (
+                    f"{len(alerts)} whale flow alerts; bull ${bullish_premium:,.0f}; "
+                    f"bear ${bearish_premium:,.0f}; bias {dominant}"
+                )
+                candidate["uw_flow_sentiment"] = dominant
+
+            if dark_trades:
+                bullish_dark = sum(t.get("premium", 0.0) for t in dark_trades if t.get("sentiment") == "bullish")
+                bearish_dark = sum(t.get("premium", 0.0) for t in dark_trades if t.get("sentiment") == "bearish")
+                dark_bias = "bullish" if bullish_dark > bearish_dark else "bearish" if bearish_dark > bullish_dark else "neutral"
+                if dark_bias == "bullish" and side != "short":
+                    score_adj += 0.10
+                elif dark_bias == "bearish" and side == "short":
+                    score_adj += 0.10
+                candidate["dark_pool"] = (
+                    f"{len(dark_trades)} dark pool prints; bull ${bullish_dark:,.0f}; "
+                    f"bear ${bearish_dark:,.0f}; bias {dark_bias}"
+                )
+                candidate["uw_dark_pool_bias"] = dark_bias
+
+            candidate["uw_score_adjustment"] = round(score_adj, 3)
+
+        # Gamma is per-symbol; keep it to the top few candidates to stay under rate limits.
+        for candidate in candidates[:10]:
+            symbol = str(candidate.get("symbol", "")).upper()
+            if not symbol:
+                continue
+            try:
+                gamma = await asyncio.get_event_loop().run_in_executor(
+                    None, self.unusual_whales.get_gamma_exposure, symbol
+                )
+            except Exception as e:
+                logger.debug(f"Gamma enrichment unavailable for {symbol}: {e}")
+                continue
+
+            if not gamma.get("levels"):
+                continue
+            candidate["gamma_support"] = gamma.get("support_strikes", [])
+            candidate["gamma_resistance"] = gamma.get("resistance_strikes", [])
+            candidate["gamma_max_strike"] = gamma.get("max_gamma_strike", 0)
+            candidate["gamma_levels"] = gamma.get("levels", [])
+
+    def _apply_human_intel_enrichment(self, candidates: List[Dict]):
+        if not candidates or not self.human_intel:
+            return
+        for candidate in candidates[:20]:
+            symbol = str(candidate.get("symbol", "")).upper()
+            if not symbol:
+                continue
+            if candidate.get("human_intel"):
+                continue
+            intel = self.human_intel.summarize_for_symbol(symbol)
+            if not intel.get("count"):
+                continue
+            candidate["human_intel"] = intel.get("summary", "")
+            candidate["human_intel_bias"] = intel.get("bias", "neutral")
+            candidate["human_intel_confidence"] = intel.get("avg_confidence", 0.0)
+            candidate["human_intel_score_adjustment"] = intel.get("score_adjustment", 0.0)
+
+    @staticmethod
+    def _apply_market_tide_bias(regime: str, market_tide: Dict) -> str:
+        bias = str((market_tide or {}).get("bias", "") or "").strip().lower()
+        if bias == "risk_off" and regime in ("mixed", "choppy"):
+            return "risk_off"
+        if bias == "risk_on" and regime == "mixed":
+            return "risk_on"
+        return regime
 
     @staticmethod
     def _clamp(value: float, low: float, high: float) -> float:
@@ -830,6 +1190,9 @@ class Scanner:
         vol_score = min(c.get("volume_spike", 0) / 5.0, 1.0)
         mom_score = min(abs(c.get("change_pct", 0)) / 10.0, 1.0)
         sent_raw = c.get("sentiment_score", 0)
+        side = str(c.get("side", "long")).lower()
+        if side == "short":
+            sent_raw = -float(sent_raw or 0)
         sent_score = (sent_raw + 1.0) / 2.0  # map -1..1 → 0..1
         twits_score = min(c.get("stocktwits_trending_score", 0) / 30.0, 1.0)
         news_score = 1.0 if c.get("news_headlines") else 0.3
@@ -837,7 +1200,6 @@ class Scanner:
         # Pharma catalyst bonus — upcoming FDA decisions are HUGE signals
         pharma_score = c.get("pharma_score", 0)
 
-        side = str(c.get("side", "long")).lower()
         weights = self._regime_weights(regime, side)
         base_score = (
             vol_score * weights["volume"]
@@ -847,6 +1209,18 @@ class Scanner:
             + pharma_score * weights["pharma"]
             + news_score * weights["news"]
         )
+        if c.get("fade_signal"):
+            base_score += min(float(c.get("fade_score", 0) or 0), 1.0) * 0.12
+            if c.get("fade_high_conviction"):
+                base_score += 0.08
+        base_score += float(c.get("uw_score_adjustment", 0.0) or 0.0)
+        human_adj = float(c.get("human_intel_score_adjustment", 0.0) or 0.0)
+        if side == "short" and human_adj:
+            human_adj = -human_adj
+        base_score += human_adj
+        base_score += min(float(c.get("watchlist_conviction", 0) or 0), 1.0) * 0.15
+        base_score += float(c.get("copy_trader_score_adjustment", 0.0) or 0.0)
+        base_score += max(0.0, min(0.06, (float(c.get("copy_trader_weight", 1.0) or 1.0) - 1.0) * 0.15))
 
         multiplier = self._performance_multiplier(c, performance or {})
         return base_score * multiplier

@@ -1,1 +1,245 @@
-{}
+{
+  "generated_at": 1772876953.789907,
+  "total_trades": 16,
+  "total_wins": 5,
+  "total_losses": 11,
+  "overall_win_rate_pct": 31.2,
+  "total_pnl": 1474.33,
+  "avg_win": 296.33,
+  "avg_loss": -0.66,
+  "by_symbol": {
+    "FSLY260320C00021000": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1393.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1393.0
+    },
+    "UCO": {
+      "trades": 2,
+      "wins": 2,
+      "pnl": 64.1,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 32.05
+    },
+    "VG": {
+      "trades": 2,
+      "wins": 2,
+      "pnl": 24.54,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 12.27
+    },
+    "TNGX": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "PMTS": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "MRVL": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "IOT": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "USO": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "BW": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -1.7,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.85
+    },
+    "IREN": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -2.25,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.13
+    },
+    "TTDU": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -3.36,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.68
+    }
+  },
+  "by_strategy_tag": {
+    "social_momentum_long": {
+      "trades": 8,
+      "wins": 1,
+      "pnl": 1390.75,
+      "win_rate_pct": 12.5,
+      "avg_pnl": 173.84
+    },
+    "carryover": {
+      "trades": 8,
+      "wins": 4,
+      "pnl": 83.58,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 10.45
+    }
+  },
+  "by_hour": {
+    "03": {
+      "trades": 3,
+      "wins": 1,
+      "pnl": 1390.75,
+      "win_rate_pct": 33.3,
+      "avg_pnl": 463.58
+    },
+    "23": {
+      "trades": 8,
+      "wins": 4,
+      "pnl": 83.58,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 10.45
+    },
+    "16": {
+      "trades": 4,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "04": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    }
+  },
+  "by_hold_duration": {
+    ">4h": {
+      "trades": 10,
+      "wins": 5,
+      "pnl": 1476.58,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 147.66
+    },
+    "30min-2h": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "2-4h": {
+      "trades": 3,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "5-30min": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -2.25,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.13
+    }
+  },
+  "by_exit_reason": {
+    "options_reconcile_closed": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1393.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1393.0
+    },
+    "trailing_stop": {
+      "trades": 15,
+      "wins": 4,
+      "pnl": 81.33,
+      "win_rate_pct": 26.7,
+      "avg_pnl": 5.42
+    }
+  },
+  "by_risk_tier": {
+    "unknown": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1393.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1393.0
+    },
+    "COMPOUND": {
+      "trades": 15,
+      "wins": 4,
+      "pnl": 81.33,
+      "win_rate_pct": 26.7,
+      "avg_pnl": 5.42
+    }
+  },
+  "by_conviction": {
+    "normal": {
+      "trades": 10,
+      "wins": 5,
+      "pnl": 1476.58,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 147.66
+    },
+    "high": {
+      "trades": 6,
+      "wins": 0,
+      "pnl": -2.25,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.38
+    }
+  },
+  "by_day_of_week": {
+    "Friday": {
+      "trades": 4,
+      "wins": 1,
+      "pnl": 1390.75,
+      "win_rate_pct": 25.0,
+      "avg_pnl": 347.69
+    },
+    "Thursday": {
+      "trades": 12,
+      "wins": 4,
+      "pnl": 83.58,
+      "win_rate_pct": 33.3,
+      "avg_pnl": 6.96
+    }
+  },
+  "max_win_streak": 2,
+  "max_loss_streak": 6,
+  "avg_winner_hold_min": 479.1,
+  "avg_loser_hold_min": 327.2,
+  "recent_20_win_rate_pct": 31.2,
+  "recent_20_pnl": 1474.33,
+  "recommendations": {
+    "best_hours": [
+      "03",
+      "23"
+    ],
+    "best_exit_reasons": [
+      "options_reconcile_closed",
+      "trailing_stop"
+    ]
+  }
+}

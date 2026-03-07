@@ -65,6 +65,19 @@ class ExtendedHoursGuard:
         hour, minute = now.hour, now.minute
         return (hour == 9 and minute >= 30) or (10 <= hour < 16)
 
+    @staticmethod
+    def _same_eastern_trading_day(entry_time: Optional[float]) -> bool:
+        if not entry_time:
+            return False
+        try:
+            entry_dt = datetime.fromtimestamp(float(entry_time), ET)
+        except Exception:
+            return False
+        return entry_dt.strftime("%Y-%m-%d") == datetime.now(ET).strftime("%Y-%m-%d")
+
+    def _should_defer_swing_protection(self, pos: Dict) -> bool:
+        return bool(pos.get("swing_only")) and self._same_eastern_trading_day(pos.get("entry_time"))
+
     async def protect_positions(self, positions: List[Dict]) -> Dict[str, str]:
         """
         Main loop call — ensure every position has protection.
@@ -86,6 +99,11 @@ class ExtendedHoursGuard:
             qty = int(float(pos.get("quantity", 0)))
 
             if qty < 1:
+                continue
+            if self._should_defer_swing_protection(pos):
+                if symbol in self._guards:
+                    await self._cancel_guard(symbol)
+                    self._guards.pop(symbol, None)
                 continue
 
             if extended:
@@ -115,6 +133,9 @@ class ExtendedHoursGuard:
         During extended hours: manage a dynamic limit sell that ratchets up.
         Acts as a software trailing stop since Alpaca's doesn't work.
         """
+        if self._should_defer_swing_protection(pos):
+            return None
+
         # Get current price
         try:
             price = self.broker.get_price(symbol)
@@ -229,6 +250,8 @@ class ExtendedHoursGuard:
         At market open: cancel extended hours limit sells, ensure trailing stop is active.
         Smooth transition — no gap in protection.
         """
+        if self._should_defer_swing_protection(pos):
+            return None
         guard = self._guards.get(symbol)
 
         # If we have an extended hours guard, transition it
@@ -239,6 +262,8 @@ class ExtendedHoursGuard:
                 logger.info(f"🔄 {symbol}: cancelled extended hours limit sell")
             except Exception:
                 pass
+
+            await self._cancel_conflicting_orders(symbol, side)
 
             # Place trailing stop % (regular hours)
             if not pos.get("has_trailing_stop"):
@@ -265,6 +290,7 @@ class ExtendedHoursGuard:
         # No guard but also no trailing stop — fix it
         if not pos.get("has_trailing_stop"):
             try:
+                await self._cancel_conflicting_orders(symbol, side)
                 side = pos.get("side", "long")
                 if side == "short" and hasattr(self.broker, "place_trailing_stop_short"):
                     stop_order = self.broker.place_trailing_stop_short(symbol, qty, trail_pct)
@@ -279,10 +305,28 @@ class ExtendedHoursGuard:
 
         return None
 
+    async def _cancel_conflicting_orders(self, symbol: str, side: str):
+        if not self.broker:
+            return
+        try:
+            cancel_fn = None
+            if side == "short" and hasattr(self.broker, "cancel_open_buys_for_symbol"):
+                cancel_fn = self.broker.cancel_open_buys_for_symbol
+            elif side != "short" and hasattr(self.broker, "cancel_open_sells_for_symbol"):
+                cancel_fn = self.broker.cancel_open_sells_for_symbol
+            if not cancel_fn:
+                return
+            cancelled = await asyncio.get_event_loop().run_in_executor(None, cancel_fn, symbol)
+            if cancelled:
+                await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.warning(f"Could not cancel conflicting guard orders for {symbol}: {e}")
+
     def _place_extended_limit_sell(self, symbol: str, qty: int, price: float) -> Optional[Dict]:
         """Place a limit sell order valid for extended hours."""
         try:
             import requests
+            ts = int(time.time() * 1000)
             order_data = {
                 'symbol': symbol,
                 'qty': str(qty),
@@ -291,6 +335,7 @@ class ExtendedHoursGuard:
                 'limit_price': str(round(price, 2)),
                 'time_in_force': 'day',
                 'extended_hours': True,
+                'client_order_id': f'ehg-{symbol}-{ts}',
             }
             resp = requests.post(
                 f'{self.broker._base_url}/v2/orders',
@@ -311,6 +356,7 @@ class ExtendedHoursGuard:
         """Place a limit buy order valid for extended hours (short cover protection)."""
         try:
             import requests
+            ts = int(time.time() * 1000)
             order_data = {
                 'symbol': symbol,
                 'qty': str(qty),
@@ -319,6 +365,7 @@ class ExtendedHoursGuard:
                 'limit_price': str(round(price, 2)),
                 'time_in_force': 'day',
                 'extended_hours': True,
+                'client_order_id': f'ehg-{symbol}-{ts}',
             }
             resp = requests.post(
                 f'{self.broker._base_url}/v2/orders',

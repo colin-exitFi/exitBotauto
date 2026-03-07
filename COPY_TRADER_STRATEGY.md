@@ -2,18 +2,33 @@
 
 > **Status:** NEW FEATURE — Ready for implementation
 > **Priority:** HIGH — Deploy before Monday market open if possible, otherwise Tuesday
-> **Author:** exitBot + Colin Tracy
+> **Author:** exitBot + Colin Tracy + Opus 4.6 review
 > **Date:** 2026-03-07
+> **Reviewed:** 2026-03-07 by Opus 4.6 — revisions incorporated below
 
 ---
 
 ## Executive Summary
 
-Add a new signal source to Velox that monitors verified professional traders who post their trades publicly on X/Twitter. The system uses AI to parse trade signals from tweets in real-time, then feeds them into the existing multi-AI consensus engine as a HIGH_PRIORITY signal — not to blindly copy, but as one more vote in the jury.
+Add a new signal source to Velox that monitors verified professional traders who post their trades publicly on X/Twitter. The system uses AI to parse trade signals from tweets in real-time, then feeds them into the existing multi-AI consensus engine as a weighted signal — not to blindly copy, but as one more vote in the jury.
 
-**Why this is an edge:** Professional traders with 60-75% verified win rates post their entries in real-time. Their 150K+ followers take 2-5 minutes to react. Our system parses and validates in 5-15 seconds. The edge is SPEED + VALIDATION: we get the directional conviction of a proven trader, confirmed by our own technical/flow analysis, executed before the crowd moves the price.
+**Why this is an edge:** Professional traders with verified track records post entries in real time. Their followers take 2-5 minutes to react. Our system parses and validates in 30-60 seconds (tweet delivery 1-5s + AI parse 3-8s + enrichment 2-5s + jury 5-15s + order 2-5s). The edge is SPEED + VALIDATION: we get the directional conviction of a proven trader, confirmed by our own technical/flow analysis, executed before the crowd moves the price.
 
 **Integration point:** This is a new scanner source (`SOURCE 6`) in `src/scanner/scanner.py` and a new signal module at `src/signals/copy_trader.py`. It feeds candidates into the existing jury pipeline — the jury still has full veto power.
+
+---
+
+## Opus 4.6 Review Notes (incorporated into spec)
+
+1. **V1 scope: Tier 1 only (6 traders), not all 15.** Prove signal quality with highest-confidence group before expanding. Less API pressure, less parsing cost, cleaner attribution data. Tier 2/3/4 activate in V2 after Tier 1 demonstrates positive contribution.
+
+2. **All win rates start at 0.50 (neutral).** Do NOT pre-load self-reported win rates. Let the adaptive weighting system establish real performance from Velox's own data. If @TraderStewie really performs at 70% confirmed by our tracking after 20+ signals, the weight will naturally increase.
+
+3. **Tweet parsing uses a cheaper model.** Parsing "did this tweet contain a trade?" is simpler than jury deliberation. Use the fastest/cheapest available model for tweet parsing (not the same Sonnet the jury uses). Budget tweet parsing calls separately from the jury AI budget.
+
+4. **ARK Invest trades is the higher-edge, lower-risk signal. Implement first.** Structured CSV data, no AI parsing, no rate limits, $15B fund's actual positions. Copy trader (tweet parsing) is V1b after ARK is wired.
+
+5. **Pro trader convergence (3+ on same stock) is signal, not crowding.** The original spec treated 3+ traders on the same stock as "CROWDED" and reduced size. This is backwards for institutional-quality traders — convergent conviction from verified traders is a strong signal. Reduce crowding logic to: if 3+ traders AND StockTwits trending AND retail FOMO visible, THEN reduce size. Pure pro convergence = boost.
 
 ---
 
@@ -72,9 +87,11 @@ A trader is added to the monitor list only if they meet ALL of:
 4. Not primarily a course seller (some education is fine, but trading must be primary)
 5. Active on X/Twitter (posted in last 7 days)
 
-### Tier 1 — Highest Confidence (Verified, Consistent, Equity Focus)
+### Tier 1 — Highest Confidence (Verified, Consistent, Equity Focus) — V1 SCOPE
 
-These traders have broker-verified or championship-verified results. Their signals get the highest weight.
+These traders have broker-verified or championship-verified results. **V1 monitors ONLY Tier 1.** Tier 2/3/4 activate in V2 after Tier 1 demonstrates positive contribution over 50+ signals.
+
+**IMPORTANT:** All `win_rate` values in the tracker config start at `0.0` (neutral). The system discovers real performance through its own tracking. The "Win Rate" column below is historical/claimed — for reference only, NOT loaded into the system.
 
 | # | Handle | Name | Style | Trades | Win Rate | Verified? | Notes |
 |---|--------|------|-------|--------|----------|-----------|-------|
@@ -85,9 +102,9 @@ These traders have broker-verified or championship-verified results. Their signa
 | 5 | @alphatrends | Brian Shannon | Large-cap/ETF momentum | Daily (4-7/wk) | ~68% | Yes — TOS statements, CMT chartered | Volume profile charts + brief rationale. "Technical Analysis Using Multiple Timeframes" author. |
 | 6 | @ripster47 | Ripster | EMA level swing trades | 3-5/wk | ~65-70% | Yes — IBKR screenshots, self-tracked spreadsheets | Annotated chart-heavy. 2-10 day holds. Purely free sharing, no paid push. |
 
-### Tier 2 — High Confidence (Partially Verified, High Volume)
+### Tier 2 — High Confidence (Partially Verified, High Volume) — V2 SCOPE
 
-These traders post frequently with partial verification. Signals get moderate weight.
+These traders post frequently with partial verification. **NOT monitored in V1.** Activate after Tier 1 proves positive.
 
 | # | Handle | Name | Style | Trades | Win Rate | Verified? | Notes |
 |---|--------|------|-------|--------|----------|-----------|-------|
@@ -98,9 +115,9 @@ These traders post frequently with partial verification. Signals get moderate we
 | 11 | @Modern_Rock | Modern Rock | Swing equities | 3-5/wk | Unknown | Self-reported | Chart-based setups with entries/stops/targets. |
 | 12 | @stockdweebs | Stock Dweebs | Momentum equities | Daily | Unknown | Self-reported | Quick-fire alerts with tickers and levels. |
 
-### Tier 3 — Institutional / Macro (Position Signals, Lower Frequency)
+### Tier 3 — Institutional / Macro (Position Signals, Lower Frequency) — V2 SCOPE
 
-These are hedge fund managers, institutional traders, or macro strategists who tweet positions less frequently but with very high conviction and large capital behind their calls.
+These are hedge fund managers, institutional traders, or macro strategists. **NOT monitored in V1.** Lower frequency makes them less useful for momentum but valuable for macro context.
 
 | # | Handle | Name | Style | Frequency | Notes |
 |---|--------|------|-------|-----------|-------|
@@ -197,18 +214,24 @@ class TrackedTrader:
 
 
 # Pre-configured trader list — resolve X user IDs at startup via API
+## V1 ACTIVE TRADERS (Tier 1 only — 6 traders)
+# All win_rate = 0.0 → system discovers real performance via adaptive tracking.
+# claimed_win_rate is for human reference only, NOT loaded into the system.
 TRACKED_TRADERS: List[Dict] = [
-    # ── Tier 1: Verified ──
-    {"handle": "TraderStewie", "name": "Gil Morales", "tier": "tier_1", "style": "momentum_swing", "win_rate": 0.70, "avg_hold_days": 3, "verified": True},
-    {"handle": "InvestorsLive", "name": "Nathan Michaud", "tier": "tier_1", "style": "momentum", "win_rate": 0.67, "avg_hold_days": 1, "verified": True},
-    {"handle": "markminervini", "name": "Mark Minervini", "tier": "tier_1", "style": "swing_growth", "win_rate": 0.70, "avg_hold_days": 10, "verified": True},
-    {"handle": "PeterLBrandt", "name": "Peter Brandt", "tier": "tier_1", "style": "swing_classical", "win_rate": 0.60, "avg_hold_days": 14, "verified": True},
-    {"handle": "alphatrends", "name": "Brian Shannon", "tier": "tier_1", "style": "momentum_swing", "win_rate": 0.68, "avg_hold_days": 2, "verified": True},
-    {"handle": "ripster47", "name": "Ripster", "tier": "tier_1", "style": "swing_ema", "win_rate": 0.67, "avg_hold_days": 5, "verified": True},
-    
+    # ── Tier 1: Verified (V1 ACTIVE) ──
+    {"handle": "TraderStewie", "name": "Gil Morales", "tier": "tier_1", "style": "momentum_swing", "win_rate": 0.0, "claimed_win_rate": 0.70, "avg_hold_days": 3, "verified": True},
+    {"handle": "InvestorsLive", "name": "Nathan Michaud", "tier": "tier_1", "style": "momentum", "win_rate": 0.0, "claimed_win_rate": 0.67, "avg_hold_days": 1, "verified": True},
+    {"handle": "markminervini", "name": "Mark Minervini", "tier": "tier_1", "style": "swing_growth", "win_rate": 0.0, "claimed_win_rate": 0.70, "avg_hold_days": 10, "verified": True},
+    {"handle": "PeterLBrandt", "name": "Peter Brandt", "tier": "tier_1", "style": "swing_classical", "win_rate": 0.0, "claimed_win_rate": 0.60, "avg_hold_days": 14, "verified": True},
+    {"handle": "alphatrends", "name": "Brian Shannon", "tier": "tier_1", "style": "momentum_swing", "win_rate": 0.0, "claimed_win_rate": 0.68, "avg_hold_days": 2, "verified": True},
+    {"handle": "ripster47", "name": "Ripster", "tier": "tier_1", "style": "swing_ema", "win_rate": 0.0, "claimed_win_rate": 0.67, "avg_hold_days": 5, "verified": True},
+]
+
+## V2 TRADERS (activate after Tier 1 proves positive over 50+ signals)
+V2_TRADERS: List[Dict] = [
     # ── Tier 2: Partially Verified ──
-    {"handle": "warriortrading", "name": "Ross Cameron", "tier": "tier_2", "style": "day_momentum", "win_rate": 0.70, "avg_hold_days": 0.5, "verified": True},
-    {"handle": "HumbledTrader18", "name": "Shay Huang", "tier": "tier_2", "style": "day_momentum", "win_rate": 0.60, "avg_hold_days": 0.5, "verified": False},
+    {"handle": "warriortrading", "name": "Ross Cameron", "tier": "tier_2", "style": "day_momentum", "win_rate": 0.0, "avg_hold_days": 0.5, "verified": True},
+    {"handle": "HumbledTrader18", "name": "Shay Huang", "tier": "tier_2", "style": "day_momentum", "win_rate": 0.0, "avg_hold_days": 0.5, "verified": False},
     {"handle": "traborinvest", "name": "Trabor Burns", "tier": "tier_2", "style": "momentum", "win_rate": 0.0, "avg_hold_days": 2, "verified": False},
     {"handle": "DaddyDayTrader_", "name": "Chris", "tier": "tier_2", "style": "day_trade", "win_rate": 0.0, "avg_hold_days": 0.5, "verified": False},
     {"handle": "Modern_Rock", "name": "Modern Rock", "tier": "tier_2", "style": "swing", "win_rate": 0.0, "avg_hold_days": 5, "verified": False},
@@ -913,9 +936,10 @@ if copy_weight > 0:
 - Max 5 total positions sourced from copy-trader signals
 - Max 20% of portfolio in copy-trader-sourced positions
 
-### Correlation Guard
-- If 3+ traders tweet the same ticker in <10 minutes, treat as CROWDED (reduce size by 50%)
-- Popular tickers that everyone's tweeting = the move is already happening
+### Convergence / Crowding Logic (revised per Opus review)
+- If 3+ verified pro traders (Tier 1) enter the same ticker in <10 minutes = CONVERGENT CONVICTION → boost score by +0.15 (this is strong directional signal from independent experts)
+- If 3+ pro traders AND StockTwits trending AND retail FOMO visible (high StockTwits bullish ratio) = TRUE CROWDING → reduce size by 30% (the move is already being front-run by retail)
+- Pure pro convergence without retail pile-on is signal, not noise
 
 ### Regime Detection (Trader Going Cold)
 - Track rolling 10-trade win rate per trader
@@ -941,9 +965,10 @@ if copy_weight > 0:
   
 ### ACTUAL VIABLE APPROACH: Filtered Stream
 - Basic tier includes 1 filtered stream connection with 25 rules
-- Create rules: `from:user_id1 OR from:user_id2 OR ... OR from:user_id15`
+- V1: Create rules for 6 Tier 1 traders only: `from:user_id1 OR from:user_id2 OR ... OR from:user_id6`
 - This uses ONE persistent connection, ZERO polling calls
 - Tweets arrive in 1-5 seconds
+- V2: Expand rules to include Tier 2/3 (still under 25-rule limit with 15 total traders)
 - **This is the correct implementation.** Polling is only the fallback.
 
 ### Fallback: If stream disconnects
@@ -1055,19 +1080,44 @@ Add a "Copy Traders" section to the Velox dashboard showing:
 
 ---
 
+## Implementation Order (revised per Opus review)
+
+**Phase A: ARK Invest daily trades (implement FIRST)**
+- Higher edge, lower risk: structured CSV, no AI parsing, no rate limits, $15B fund
+- Create `src/signals/ark_trades.py`
+- Wire into overnight watchlist rebuild
+- Tag as `signal_source: "ark_invest"`
+
+**Phase B: Tier 1 copy trader monitor (implement after ARK)**
+- 6 traders only, filtered stream, Claude parsing with cheap model
+- Create `src/signals/copy_trader.py` (V1 scope)
+- Wire as SOURCE 6 in scanner, context in jury prompt
+
+**Phase C (V2): Expand to Tier 2/3 after 50+ Tier 1 signals with positive attribution**
+
 ## File Map
 
 ```
-src/signals/copy_trader.py       ← NEW: Main copy trader monitor (this spec)
-src/signals/ark_trades.py        ← NEW: ARK Invest daily trades
+src/signals/ark_trades.py        ← NEW: ARK Invest daily trades (Phase A — implement first)
+src/signals/copy_trader.py       ← NEW: Main copy trader monitor (Phase B — Tier 1 only)
 data/copy_trader_performance.json ← NEW: Persistent trader performance stats
 src/scanner/scanner.py           ← MODIFIED: Add SOURCE 6
 src/agents/jury.py               ← MODIFIED: Add copy trader context to prompt
 src/entry/entry_manager.py       ← MODIFIED: Copy trader sizing boost
-src/main.py                      ← MODIFIED: Initialize and wire copy trader monitor
+src/main.py                      ← MODIFIED: Initialize and wire copy trader + ARK
 src/exit/exit_manager.py         ← MODIFIED: Record copy-trade outcomes on exit
-src/dashboard/dashboard.py       ← MODIFIED: Add copy trader stats section
+src/dashboard/dashboard.py       ← MODIFIED: Add copy trader + ARK stats section
 ```
+
+---
+
+## Tweet Parsing Model (revised per Opus review)
+
+The tweet parser should NOT use Claude Sonnet (the jury model). Tweet parsing is a simpler classification task:
+- Use the fastest/cheapest available model for parsing
+- Budget tweet parsing API calls SEPARATELY from jury/agent calls
+- At 6 Tier 1 traders posting ~3-5 trade-like tweets/day each = ~18-30 parse calls/day
+- This is a small budget compared to the 850+ jury calls/day
 
 ---
 
@@ -1085,5 +1135,5 @@ src/dashboard/dashboard.py       ← MODIFIED: Add copy trader stats section
 - **Signal quality:** >70% of parsed signals correctly identified as real trades (not opinion)
 - **Jury agreement rate:** 40-60% of copy-trader signals get jury approval (too high = rubber stamping, too low = useless)
 - **Copy-sourced win rate:** >55% profitable (our validation should improve on the raw trader WR)
-- **Latency:** Tweet → signal in scanner < 15 seconds
+- **Latency:** Tweet → signal in scanner < 60 seconds (realistic end-to-end, not the optimistic 15s)
 - **No false positives:** 0 trades entered from opinion/commentary tweets

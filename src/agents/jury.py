@@ -45,6 +45,12 @@ SYMBOL: {symbol} @ ${price:.2f}
 TODAY'S MOVE: {change_pct:+.1f}%
 VOLUME vs AVG: {volume_spike:.1f}x
 SPREAD: {spread_pct}%
+SETUP TAG: {strategy_tag}
+SIDE BIAS: {side_bias}
+FADE CONTEXT: {fade_context}
+ECONOMIC CALENDAR: {economic_calendar}
+HUMAN INTEL: {human_intel}
+PRO TRADER CONTEXT: {copy_trader_context}
 
 AGENT BRIEFS:
 
@@ -67,6 +73,9 @@ DECISION FRAMEWORK:
 - BIAS TOWARD ACTION. Dead capital is the enemy. Trailing stops manage risk — your job is to find trades, not avoid them.
 - BUY if: Stock is up significantly (+10%+) with volume (1.5x+) and risk approves. Technical BUY is ideal but Technical HOLD with decent confidence (50%+) is also fine if other signals support.
 - SHORT if: Stock is crashing hard (-5%+ down) with volume, Technical says SELL, and macro/catalyst supports bearish case.
+- SHORT if: This is a fade-the-runner setup. A stock that ran big yesterday and is stalling/fading today is a mean-reversion short, not a momentum long.
+- For fade setups, prioritize exhaustion signals: yesterday's huge run, RSI stretched, day-2 volume failing to match day-1, and price trading weak versus the run close.
+- Convergence from multiple Tier-1 pro traders is supportive confirmation, not crowding by itself. Only discount it if retail/FOMO evidence is also obvious.
 - SKIP ONLY if: Risk explicitly denies, OR the stock has tiny volume (<1x avg), OR the move is clearly over (price reversing against the trend).
 - If some agents are unavailable, MAKE THE CALL with what you have. 3 agents is enough. Don't skip just because sentiment or catalyst is offline.
 - "Decelerating momentum" alone is NOT a reason to skip. Stocks don't go straight up — they consolidate and continue. If price is still up big on volume, the trend is intact.
@@ -96,6 +105,16 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
 
         from src.ai.mission import MISSION_SHORT
         sd = signals_data or {}
+        side_bias = "SHORT" if str(sd.get("side", "")).strip().lower() == "short" else "LONG"
+        if sd.get("fade_signal"):
+            fade_context = (
+                f"Ran {float(sd.get('fade_run_pct', 0) or 0):+.1f}% on the prior session; "
+                f"now {float(sd.get('price_change_from_run', 0) or 0):+.1f}% vs run close; "
+                f"RSI {float(sd.get('rsi', 0) or 0):.1f}; "
+                f"day-2 volume {float(sd.get('volume', 0) or 0):,.0f} vs day-1 {float(sd.get('run_volume', 0) or 0):,.0f}"
+            )
+        else:
+            fade_context = "None"
         prompt = PROMPT_TEMPLATE.format(
             mission=MISSION_SHORT,
             symbol=symbol,
@@ -103,6 +122,12 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             change_pct=sd.get("change_pct", 0),
             volume_spike=sd.get("volume_spike", 0),
             spread_pct=sd.get("spread_pct", "N/A"),
+            strategy_tag=sd.get("strategy_tag", "unknown"),
+            side_bias=side_bias,
+            fade_context=fade_context,
+            economic_calendar=sd.get("economic_calendar", "None"),
+            human_intel=sd.get("human_intel", "None"),
+            copy_trader_context=sd.get("copy_trader_context", "None"),
             technical=fmt(briefs.get("technical", {})),
             sentiment=fmt(briefs.get("sentiment", {})),
             catalyst=fmt(briefs.get("catalyst", {})),

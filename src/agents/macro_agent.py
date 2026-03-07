@@ -29,6 +29,12 @@ MARKET INDICES:
 SECTOR ROTATION:
 {sector_rotation}
 
+FRED MACRO SNAPSHOT:
+- {fred_macro}
+
+UPCOMING ECONOMIC EVENTS:
+- {economic_calendar}
+
 PROPOSED TRADE: {symbol} ({direction})
 
 What is the current market regime? Is the macro environment supportive for this trade direction?
@@ -48,6 +54,8 @@ async def analyze(symbol: str, price: float, signals: Dict,
         dia_info = signals.get("dia_info", "N/A")
         vix_info = signals.get("vix_info", "N/A")
         sector_rotation = signals.get("sector_rotation", "No sector rotation data available")
+        fred_macro = signals.get("fred_macro", "No FRED macro snapshot available")
+        economic_calendar = signals.get("economic_calendar", "No notable upcoming macro events")
 
         prompt = PROMPT_TEMPLATE.format(
             spy_info=spy_info,
@@ -55,6 +63,8 @@ async def analyze(symbol: str, price: float, signals: Dict,
             dia_info=dia_info,
             vix_info=vix_info,
             sector_rotation=sector_rotation,
+            fred_macro=fred_macro,
+            economic_calendar=economic_calendar,
             symbol=symbol,
             direction=direction,
         )
@@ -69,6 +79,7 @@ async def analyze(symbol: str, price: float, signals: Dict,
             "sector_flow": str(result.get("sector_flow", "mixed"))[:200],
             "bias": result.get("bias", "neutral"),
             "headwinds": result.get("headwinds", []),
+            "macro_snapshot": fred_macro[:200],
         }
         logger.debug(f"🌍 Macro {symbol}: regime={brief['regime']} bias={brief['bias']}")
         return brief

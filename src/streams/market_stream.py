@@ -11,7 +11,7 @@ Endpoints:
   - Stock: wss://stream.data.alpaca.markets/v2/iex (free) or /v2/sip (paid)
   - Paper: wss://stream.data.sandbox.alpaca.markets/v2/iex
   
-Channels: trades, quotes, bars (1min/1day)
+Channels: trades, quotes, bars, statuses, lulds
 """
 
 import asyncio
@@ -54,6 +54,11 @@ class MarketStream:
         # Callbacks
         self._on_breakout: Optional[Callable] = None
         self._on_trade: Optional[Callable] = None
+        self._on_halt: Optional[Callable] = None
+        self._on_luld: Optional[Callable] = None
+
+        self.market_status: Dict[str, Dict] = {}
+        self.luld_bands: Dict[str, Dict] = {}
 
         self._reconnect_delay = 1
         self._max_reconnect_delay = 60
@@ -66,6 +71,14 @@ class MarketStream:
     def set_trade_callback(self, callback: Callable):
         """Set callback for every trade: callback(symbol, price, size, timestamp)"""
         self._on_trade = callback
+
+    def set_halt_callback(self, callback: Callable):
+        """Set callback for market status changes: callback(symbol, status_code, reason, halted)"""
+        self._on_halt = callback
+
+    def set_luld_callback(self, callback: Callable):
+        """Set callback for LULD bands: callback(symbol, band_data)"""
+        self._on_luld = callback
 
     async def start(self):
         """Start the WebSocket connection in background."""
@@ -95,12 +108,7 @@ class MarketStream:
         self._subscribed_symbols.update(new_symbols)
         if self._ws:
             try:
-                msg = {
-                    "action": "subscribe",
-                    "trades": list(new_symbols),
-                    "quotes": list(new_symbols),
-                    "bars": list(new_symbols),
-                }
+                msg = self._build_subscription_message(new_symbols, action="subscribe")
                 await self._ws.send(json.dumps(msg))
                 logger.info(f"📡 Subscribed to {len(new_symbols)} symbols: {', '.join(list(new_symbols)[:5])}...")
             except Exception as e:
@@ -118,12 +126,7 @@ class MarketStream:
         self._subscribed_symbols -= remove
         if self._ws:
             try:
-                await self._ws.send(json.dumps({
-                    "action": "unsubscribe",
-                    "trades": list(remove),
-                    "quotes": list(remove),
-                    "bars": list(remove),
-                }))
+                await self._ws.send(json.dumps(self._build_subscription_message(remove, action="unsubscribe")))
             except Exception:
                 pass
 
@@ -150,6 +153,38 @@ class MarketStream:
             "last_message_age": round(time.time() - self._last_message_time, 1) if self._last_message_time else None,
         }
 
+    @staticmethod
+    def _build_auth_message() -> Dict:
+        return {
+            "action": "auth",
+            "key": settings.ALPACA_API_KEY,
+            "secret": settings.ALPACA_SECRET_KEY,
+        }
+
+    @staticmethod
+    def _build_subscription_message(symbols, action: str = "subscribe") -> Dict:
+        rows = sorted({str(symbol).upper() for symbol in symbols if str(symbol).strip()})
+        return {
+            "action": action,
+            "trades": rows,
+            "quotes": rows,
+            "bars": rows,
+            "statuses": rows,
+            "lulds": rows,
+        }
+
+    @staticmethod
+    def _auth_succeeded(payload) -> bool:
+        messages = payload if isinstance(payload, list) else [payload]
+        for msg in messages:
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("T") == "success" and msg.get("msg") == "authenticated":
+                return True
+            if msg.get("stream") == "authorization" and msg.get("data", {}).get("status") == "authorized":
+                return True
+        return False
+
     # ── Internal ──────────────────────────────────────────────────
 
     async def _run_forever(self):
@@ -167,30 +202,24 @@ class MarketStream:
                     logger.debug(f"WS welcome: {welcome}")
 
                     # Authenticate
-                    auth_msg = json.dumps({
-                        "action": "auth",
-                        "key": settings.ALPACA_API_KEY,
-                        "secret": settings.ALPACA_SECRET_KEY,
-                    })
+                    auth_msg = json.dumps(self._build_auth_message())
                     await ws.send(auth_msg)
                     auth_resp = await ws.recv()
                     resp_data = json.loads(auth_resp)
-                    if isinstance(resp_data, list):
-                        for r in resp_data:
-                            if r.get("T") == "error":
-                                logger.error(f"WS auth error: {r}")
-                                return
-                            if r.get("msg") == "authenticated":
-                                logger.success("📡 Market stream connected + authenticated")
+                    messages = resp_data if isinstance(resp_data, list) else [resp_data]
+                    for r in messages:
+                        if isinstance(r, dict) and r.get("T") == "error":
+                            logger.error(f"WS auth error: {r}")
+                            return
+                    if self._auth_succeeded(resp_data):
+                        logger.success("📡 Market stream connected + authenticated")
+                    else:
+                        logger.error(f"WS auth failed: {resp_data}")
+                        return
 
                     # Re-subscribe to all symbols
                     if self._subscribed_symbols:
-                        sub_msg = {
-                            "action": "subscribe",
-                            "trades": list(self._subscribed_symbols),
-                            "quotes": list(self._subscribed_symbols),
-                            "bars": list(self._subscribed_symbols),
-                        }
+                        sub_msg = self._build_subscription_message(self._subscribed_symbols, action="subscribe")
                         await ws.send(json.dumps(sub_msg))
 
                     # Process messages
@@ -273,6 +302,57 @@ class MarketStream:
 
             # Check for volume breakout on bar close
             self._check_breakout(symbol, close, volume)
+
+        elif msg_type == "s":  # Trading status / halt / resume
+            symbol = msg.get("S", "")
+            status_code = str(msg.get("sc") or msg.get("status_code") or msg.get("status") or "").upper()
+            reason = str(msg.get("rc") or msg.get("reason_code") or msg.get("reason") or "").strip()
+            status_message = str(msg.get("sm") or msg.get("status_message") or "").strip()
+            halted = status_code in {"H", "HALTED", "2"}
+
+            if symbol:
+                self.market_status[symbol] = {
+                    "status_code": status_code,
+                    "reason": reason,
+                    "status_message": status_message,
+                    "halted": halted,
+                    "updated": time.time(),
+                    "raw": msg,
+                }
+
+            if halted:
+                logger.warning(f"🚨 HALT: {symbol} status={status_code} reason={reason or status_message or 'unknown'}")
+            else:
+                logger.info(f"✅ STATUS: {symbol} status={status_code} reason={reason or status_message or 'normal'}")
+
+            if self._on_halt:
+                try:
+                    self._on_halt(symbol, status_code, reason or status_message, halted)
+                except Exception:
+                    pass
+
+        elif msg_type == "l":  # LULD bands
+            symbol = msg.get("S", "")
+            band_data = {
+                "symbol": symbol,
+                "upper_band": msg.get("u") or msg.get("upper_band"),
+                "lower_band": msg.get("d") or msg.get("lower_band"),
+                "indicator": msg.get("i") or msg.get("indicator"),
+                "band_state": msg.get("bs") or msg.get("state") or "",
+                "timestamp": msg.get("t", ""),
+                "raw": msg,
+            }
+            if symbol:
+                self.luld_bands[symbol] = {**band_data, "updated": time.time()}
+                logger.warning(
+                    f"⚠️ LULD: {symbol} lower={band_data['lower_band']} upper={band_data['upper_band']} "
+                    f"state={band_data['band_state'] or band_data['indicator'] or 'active'}"
+                )
+            if self._on_luld:
+                try:
+                    self._on_luld(symbol, band_data)
+                except Exception:
+                    pass
 
     def _track_volume(self, symbol: str, size: float):
         """Track rolling 1-min volume for breakout detection."""

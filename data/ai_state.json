@@ -1,20 +1,20 @@
 {
-  "last_observation": "After-hours Thursday evening - markets closed, holding 7 carryover positions from previous session with mixed performance.",
+  "last_observation": "Market is CLOSED (Saturday 5:02 AM ET) - this is stale Friday close data showing risk-off regime with indices down -1.31% avg.",
   "last_advice": null,
   "last_tuner_changes": null,
-  "last_game_film_summary": null,
+  "last_game_film_summary": "16 trades, 31.2% WR, $1474.33",
   "last_position_manager": "healthy | 0 exits | 0 vetoes",
   "last_consensus": {
-    "symbol": "GAP",
+    "symbol": "VRT",
     "decision": "SKIP",
     "size_pct": 0,
-    "trail_pct": 3.0,
-    "reasoning": "Skip cooldown (2 min)",
-    "confidence": 0.0,
-    "provider_used": "",
-    "timestamp": 1772762296.7730958
+    "trail_pct": 1.0,
+    "reasoning": "VRT down 3.1% on average volume in a risk-off macro environment. Technical signals SELL with 72% confidence and decelerating momentum. No catalyst or sentiment data to counter the bearish setup. This isn't a short candidate (move not severe enough, no volume spike) nor a dip-buy opportunity (broad m",
+    "confidence": 75.0,
+    "provider_used": "claude",
+    "timestamp": 1772877893.7787578
   },
-  "scan_regime": "mixed",
-  "scan_regime_raw": "mixed",
-  "scan_interval_seconds": 60
+  "scan_regime": "risk_off",
+  "scan_regime_raw": "risk_off",
+  "scan_interval_seconds": 300
 }

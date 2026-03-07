@@ -1,0 +1,95 @@
+{
+  "stocks": [
+    {
+      "ticker": "FOX",
+      "short_float_pct": 15.9,
+      "days_to_cover": 5.6,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 16% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "RGTI",
+      "short_float_pct": 15.7,
+      "days_to_cover": 1.7,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 16% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "PATH",
+      "short_float_pct": 15.7,
+      "days_to_cover": 2.5,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 16% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "W",
+      "short_float_pct": 14.9,
+      "days_to_cover": 4.4,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 15% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "MSTR",
+      "short_float_pct": 12.1,
+      "days_to_cover": 1.2,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 12% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "QS",
+      "short_float_pct": 12.1,
+      "days_to_cover": 4.1,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 12% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "CPB",
+      "short_float_pct": 11.7,
+      "days_to_cover": 5.6,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 12% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "GVA",
+      "short_float_pct": 11.7,
+      "days_to_cover": 7.0,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 12% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "PRMB",
+      "short_float_pct": 11.3,
+      "days_to_cover": 8.4,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 11% \u2014 squeeze candidate"
+    },
+    {
+      "ticker": "DUOL",
+      "short_float_pct": 18.9,
+      "days_to_cover": 2.8,
+      "source": "perplexity",
+      "signal": "high_short_interest",
+      "conviction": 0.3,
+      "reason": "Short float 19% \u2014 squeeze candidate"
+    }
+  ],
+  "fetched_at": 1772855418.398651
+}

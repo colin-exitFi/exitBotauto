@@ -38,9 +38,14 @@ X_CONSUMER_SECRET = _env("X_CONSUMER_SECRET")
 ALPACA_API_KEY = _env("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = _env("ALPACA_SECRET_KEY")
 ALPACA_PAPER = _env("ALPACA_PAPER", "true").lower() in ("true", "1", "yes")
+PAPER_MODE = _env("PAPER_MODE", "false").lower() in ("true", "1", "yes")
 
 # Polygon
 POLYGON_API_KEY = _env("POLYGON_API_KEY")
+UW_API_TOKEN = _env("UW_API_TOKEN")
+FRED_API_KEY = _env("FRED_API_KEY")
+FINNHUB_API_KEY = _env("FINNHUB_API_KEY")
+ALPHA_VANTAGE_API_KEY = _env("ALPHA_VANTAGE_API_KEY")
 
 # ── Trading Parameters ────────────────────────────────────────────
 TOTAL_CAPITAL = _env_float("TOTAL_CAPITAL", 25000)
@@ -79,6 +84,13 @@ FAST_PATH_RSI_MIN = _env_float("FAST_PATH_RSI_MIN", 40.0)
 FAST_PATH_RSI_MAX = _env_float("FAST_PATH_RSI_MAX", 85.0)
 FAST_PATH_EVAL_MAX_CYCLES = _env_int("FAST_PATH_EVAL_MAX_CYCLES", 6)
 FAST_PATH_EVAL_MAX_AGE_SECONDS = _env_int("FAST_PATH_EVAL_MAX_AGE_SECONDS", 90)
+SWING_MODE_TRAIL_PCT = _env_float("SWING_MODE_TRAIL_PCT", 4.5)
+SWING_MODE_SIZE_REDUCTION = _env_float("SWING_MODE_SIZE_REDUCTION", 0.7)
+SWING_MODE_DISABLE_FAST_PATH = _env("SWING_MODE_DISABLE_FAST_PATH", "true").lower() in ("true", "1", "yes")
+COPY_TRADER_EXIT_TIGHTEN_MULT = _env_float("COPY_TRADER_EXIT_TIGHTEN_MULT", 0.6)
+COPY_TRADER_EXIT_MIN_TRAIL_PCT = _env_float("COPY_TRADER_EXIT_MIN_TRAIL_PCT", 1.5)
+COPY_TRADER_STRONG_EXIT_MIN_SIGNALS = _env_int("COPY_TRADER_STRONG_EXIT_MIN_SIGNALS", 2)
+COPY_TRADER_AUTO_EXIT_STRONG = _env("COPY_TRADER_AUTO_EXIT_STRONG", "false").lower() in ("true", "1", "yes")
 
 # ── Sentiment Parameters ──────────────────────────────────────────
 MIN_ENTRY_SENTIMENT = _env_float("MIN_ENTRY_SENTIMENT", 0.3)
