@@ -235,7 +235,17 @@ class Scanner:
             except Exception as e:
                 logger.warning(f"Watchlist source failed: {e}")
 
-        # ── SOURCE 8: Human intel / operator context ───────────────
+        # ── SOURCE 8: Unusual Whales flow + hottest chains (smart money) ──
+        uw_candidates = []
+        if self.unusual_whales and getattr(self.unusual_whales, "is_configured", lambda: False)():
+            try:
+                uw_candidates = await self._scan_unusual_whales()
+                if uw_candidates:
+                    logger.info(f"🐋 Unusual Whales scanner: {len(uw_candidates)} whale-flow tickers")
+            except Exception as e:
+                logger.warning(f"Unusual Whales scanner failed: {e}")
+
+        # ── SOURCE 9: Human intel / operator context ───────────────
         human_candidates = []
         if self.human_intel:
             try:
@@ -298,6 +308,13 @@ class Scanner:
                 seen[sym] = s
 
         for s in watchlist_candidates:
+            sym = s["symbol"]
+            if sym in seen:
+                self._merge_candidate(seen[sym], s)
+            else:
+                seen[sym] = s
+
+        for s in uw_candidates:
             sym = s["symbol"]
             if sym in seen:
                 self._merge_candidate(seen[sym], s)
@@ -896,6 +913,150 @@ class Scanner:
             candidate["gamma_resistance"] = gamma.get("resistance_strikes", [])
             candidate["gamma_max_strike"] = gamma.get("max_gamma_strike", 0)
             candidate["gamma_levels"] = gamma.get("levels", [])
+
+    async def _scan_unusual_whales(self) -> List[Dict]:
+        """
+        Discover symbols from Unusual Whales flow alerts + options screener.
+        These are institutional-grade signals: large premium options trades,
+        volume > open interest, OTM bets = smart money positioning.
+        """
+        candidates = []
+        seen_tickers = set()
+        loop = asyncio.get_event_loop()
+
+        # ── 1. Flow alerts: whale options trades with high premium ──
+        try:
+            flow_alerts = await loop.run_in_executor(
+                None,
+                lambda: self.unusual_whales.get_flow_alerts(
+                    min_premium=100_000,  # $100K+ premium trades only
+                    limit=100,
+                ),
+            )
+            # Aggregate by ticker — multiple alerts on same ticker = stronger signal
+            ticker_flow: Dict[str, Dict] = {}
+            for alert in flow_alerts or []:
+                ticker = str(alert.get("ticker", "")).upper()
+                if not ticker or not ticker.isalpha() or len(ticker) > 5:
+                    continue
+
+                if ticker not in ticker_flow:
+                    ticker_flow[ticker] = {
+                        "alerts": 0,
+                        "total_premium": 0.0,
+                        "bullish_premium": 0.0,
+                        "bearish_premium": 0.0,
+                        "max_premium": 0.0,
+                    }
+
+                bucket = ticker_flow[ticker]
+                bucket["alerts"] += 1
+                premium = float(alert.get("premium", 0) or 0)
+                bucket["total_premium"] += premium
+                bucket["max_premium"] = max(bucket["max_premium"], premium)
+                sentiment = alert.get("sentiment", "neutral")
+                if sentiment == "bullish":
+                    bucket["bullish_premium"] += premium
+                elif sentiment == "bearish":
+                    bucket["bearish_premium"] += premium
+
+            # Convert to candidates — require 2+ alerts OR $250K+ single alert
+            for ticker, flow in ticker_flow.items():
+                if flow["alerts"] < 2 and flow["max_premium"] < 250_000:
+                    continue
+
+                # Determine side from flow direction
+                if flow["bullish_premium"] > flow["bearish_premium"] * 1.5:
+                    side = "long"
+                    sentiment_score = 0.7
+                elif flow["bearish_premium"] > flow["bullish_premium"] * 1.5:
+                    side = "short"
+                    sentiment_score = -0.5
+                else:
+                    side = "long"  # Default long on mixed whale activity
+                    sentiment_score = 0.2
+
+                candidates.append({
+                    "symbol": ticker,
+                    "price": 0,
+                    "change_pct": 0,
+                    "volume": 0,
+                    "source": "unusual_whales",
+                    "side": side,
+                    "sentiment_score": sentiment_score,
+                    "uw_flow_alerts": flow["alerts"],
+                    "uw_total_premium": flow["total_premium"],
+                    "uw_bullish_premium": flow["bullish_premium"],
+                    "uw_bearish_premium": flow["bearish_premium"],
+                    "uw_flow_sentiment": "bullish" if side == "long" else "bearish",
+                    "priority": 1,
+                })
+                seen_tickers.add(ticker)
+
+            if ticker_flow:
+                logger.debug(
+                    f"🐋 Flow alerts: {len(ticker_flow)} tickers with whale activity, "
+                    f"{len(candidates)} passed filter"
+                )
+        except Exception as e:
+            logger.debug(f"UW flow alert scan failed: {e}")
+
+        # ── 2. Options screener: hottest chains (volume >> OI, high premium) ──
+        try:
+            screener_records = self.unusual_whales._request(
+                "/api/screener/option-contracts",
+                params={
+                    "limit": 50,
+                    "is_otm": True,
+                    "min_premium": 200_000,
+                    "min_volume": 500,
+                    "vol_greater_oi": True,  # Volume > open interest = new positioning
+                    "max_dte": 45,  # Near-term = conviction, not hedging
+                    "issue_types[]": "Common Stock",
+                },
+            )
+            screener_tickers: Dict[str, int] = {}
+            for record in screener_records or []:
+                ticker = self.unusual_whales._extract_ticker(record)
+                if not ticker or not ticker.isalpha() or len(ticker) > 5:
+                    continue
+                screener_tickers[ticker] = screener_tickers.get(ticker, 0) + 1
+
+            # Tickers appearing in 2+ hot chains = strong institutional interest
+            for ticker, count in screener_tickers.items():
+                if count < 2 or ticker in seen_tickers:
+                    continue
+
+                option_type = "call"  # screener was filtered to OTM
+                for record in screener_records or []:
+                    if self.unusual_whales._extract_ticker(record) == ticker:
+                        raw_type = str(record.get("type", "") or "").lower()
+                        if "put" in raw_type:
+                            option_type = "put"
+                        break
+
+                side = "short" if option_type == "put" else "long"
+                candidates.append({
+                    "symbol": ticker,
+                    "price": 0,
+                    "change_pct": 0,
+                    "volume": 0,
+                    "source": "unusual_whales",
+                    "side": side,
+                    "sentiment_score": 0.5 if side == "long" else -0.3,
+                    "uw_hottest_chains": count,
+                    "uw_flow_sentiment": "bullish" if side == "long" else "bearish",
+                    "priority": 1,
+                })
+                seen_tickers.add(ticker)
+
+            if screener_tickers:
+                hot_count = sum(1 for c in screener_tickers.values() if c >= 2)
+                logger.debug(f"🔥 Hottest chains: {len(screener_tickers)} tickers, {hot_count} with 2+ hot contracts")
+        except Exception as e:
+            logger.debug(f"UW screener scan failed: {e}")
+
+        return candidates
 
     def _apply_human_intel_enrichment(self, candidates: List[Dict]):
         if not candidates or not self.human_intel:
