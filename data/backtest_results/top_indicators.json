@@ -36,6 +36,21 @@
     "recommended_weight": 0.83
   },
   {
+    "name": "squeeze_mom_bb20_kc1.5",
+    "params": {
+      "bb_length": 20,
+      "bb_mult": 2.0,
+      "kc_length": 20,
+      "kc_mult": 1.5
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 4906.5453,
+    "profit_factor": 858.0089,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
     "name": "wavetrend_c10_a21",
     "params": {
       "channel_length": 10,
@@ -116,19 +131,6 @@
     "win_rate": 1.0,
     "sharpe": 194.3407,
     "profit_factor": 400.9097,
-    "side": "long",
-    "recommended_weight": 0.25
-  },
-  {
-    "name": "obv_div_l20_s10",
-    "params": {
-      "lookback": 20,
-      "smooth": 10
-    },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 164.5968,
-    "profit_factor": 2949.5944,
     "side": "long",
     "recommended_weight": 0.25
   }

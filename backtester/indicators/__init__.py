@@ -24,6 +24,9 @@ from backtester.indicators.multi_factor_momentum import MultiFactorMomentumIndic
 from backtester.indicators.donchian_breakout import DonchianBreakoutIndicator
 from backtester.indicators.elder_ray import ElderRayIndicator
 from backtester.indicators.obv_divergence import OBVDivergenceIndicator
+from backtester.indicators.parabolic_sar import ParabolicSARADXIndicator
+from backtester.indicators.squeeze_momentum import SqueezeMomentumIndicator
+from backtester.indicators.range_filter import RangeFilterIndicator
 
 __all__ = [
     "BaseIndicator",
@@ -51,4 +54,7 @@ __all__ = [
     "DonchianBreakoutIndicator",
     "ElderRayIndicator",
     "OBVDivergenceIndicator",
+    "ParabolicSARADXIndicator",
+    "SqueezeMomentumIndicator",
+    "RangeFilterIndicator",
 ]
