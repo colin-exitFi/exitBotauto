@@ -114,5 +114,55 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(verdict.consensus_detail["risk_override"])
 
 
+class JuryRetroContextTests(unittest.TestCase):
+    def test_build_retro_feedback_summarizes_recent_matches(self):
+        recent = [
+            {
+                "symbol": "AAPL",
+                "strategy_tag": "fade_runner",
+                "signal_sources": ["copy_trader"],
+                "pnl": -25.0,
+                "decision_confidence": 85,
+            },
+            {
+                "symbol": "AAPL",
+                "strategy_tag": "fade_runner",
+                "signal_sources": ["copy_trader", "human_intel"],
+                "pnl": -10.0,
+                "decision_confidence": 82,
+            },
+            {
+                "symbol": "TSLA",
+                "strategy_tag": "fade_runner",
+                "signal_sources": ["copy_trader"],
+                "pnl": 5.0,
+                "decision_confidence": 79,
+            },
+            {
+                "symbol": "AAPL",
+                "strategy_tag": "fade_runner",
+                "signal_sources": ["copy_trader"],
+                "pnl": -8.0,
+                "decision_confidence": 77,
+            },
+        ]
+        with patch("src.ai.trade_history.get_recent", return_value=recent):
+            text = jury._build_retro_feedback(
+                "AAPL",
+                {"strategy_tag": "fade_runner", "signal_sources": ["copy_trader"]},
+            )
+
+        self.assertIn("Recent AAPL", text)
+        self.assertIn("Strategy fade_runner", text)
+        self.assertIn("Sources copy_trader", text)
+        self.assertIn("Calibration:", text)
+
+    def test_build_retro_feedback_can_be_disabled(self):
+        with patch.object(jury.settings, "JURY_RETRO_ENABLED", False):
+            text = jury._build_retro_feedback("AAPL", {"strategy_tag": "fade_runner"})
+
+        self.assertEqual(text, "None")
+
+
 if __name__ == "__main__":
     unittest.main()

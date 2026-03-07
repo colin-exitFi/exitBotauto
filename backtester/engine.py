@@ -71,7 +71,7 @@ class BacktestEngine:
     def run_single(self, price_data: pd.DataFrame, signal: IndicatorSignal, symbol: str) -> BacktestResult:
         df = price_data.copy()
         df = df[["close"]].copy() if "close" in df.columns else df.copy()
-        close = pd.Series(df["close"], index=df.index, dtype=float).fillna(method="ffill").fillna(method="bfill")
+        close = pd.Series(df["close"], index=df.index, dtype=float).ffill().bfill()
         entries = pd.Series(signal.entries, index=close.index).fillna(False).astype(bool)
         exits = pd.Series(signal.exits, index=close.index).fillna(False).astype(bool)
 

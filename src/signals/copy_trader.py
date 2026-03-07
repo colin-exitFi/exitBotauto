@@ -1,16 +1,19 @@
 """
 Tier-1 copy-trader monitor.
 
-V1 uses X recent-search polling against a small curated set of high-signal trader
-handles. It only emits explicit entry-style signals with cashtags; vague tweets
-and exit chatter are ignored.
+V2 prefers X filtered-stream delivery with recent-search polling as fallback.
+Entry and exit signals are still parsed locally with regex to keep latency and
+cost low.
 """
+
+from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import requests
 from loguru import logger
@@ -25,6 +28,7 @@ SHORT_HINTS = (" short ", " shorting ", " started short ", " added short ", " st
 TRIM_HINTS = (" trim ", " trimmed ", " trimming ", " scaled ", " taking some off ", " reduced ")
 FULL_EXIT_HINTS = (" sold ", " exit ", " exited ", " out of ", " cover ", " covered ", " closed ", " flat ")
 EXIT_HINTS = TRIM_HINTS + FULL_EXIT_HINTS
+STREAM_RULE_TAG = "velox_copy_trader_v2"
 
 TRACKED_TRADERS = [
     {"handle": "TraderStewie", "name": "Gil Morales", "tier": "tier_1", "style": "momentum_swing", "weight": 1.0},
@@ -37,61 +41,210 @@ TRACKED_TRADERS = [
 
 
 class CopyTraderMonitor:
-    """Poll Tier-1 trader tweets and emit structured candidate signals."""
+    """Monitor high-signal traders through X filtered stream with polling fallback."""
 
     def __init__(self):
         self._bearer = getattr(settings, "X_BEARER_TOKEN", "")
+        self._mode = str(getattr(settings, "COPY_TRADER_MODE", "auto") or "auto").lower()
+        if self._mode not in ("auto", "poll", "stream"):
+            self._mode = "auto"
         self._cache: List[Dict] = []
         self._exit_cache: List[Dict] = []
         self._cache_ts = 0.0
         self._cache_ttl = 120
+        self._signal_window_seconds = max(
+            self._cache_ttl,
+            int(getattr(settings, "COPY_TRADER_SIGNAL_WINDOW_SECONDS", 900) or 900),
+        )
+        self._stream_stale_seconds = max(
+            30,
+            int(getattr(settings, "COPY_TRADER_STREAM_STALE_SECONDS", 180) or 180),
+        )
+        self._stream_rule_refresh_seconds = max(
+            300,
+            int(getattr(settings, "COPY_TRADER_STREAM_RULE_REFRESH_SECONDS", 3600) or 3600),
+        )
         self._seen_tweet_ids = set()
+        self._signal_buffer: List[Dict] = []
+        self._exit_buffer: List[Dict] = []
         self._traders = {row["handle"].lower(): dict(row) for row in TRACKED_TRADERS}
         self._performance_file = Path("data/copy_trader_performance.json")
+        self._lock = threading.Lock()
+        self._stream_stop = threading.Event()
+        self._stream_thread: Optional[threading.Thread] = None
+        self._stream_connected = False
+        self._stream_last_event_ts = 0.0
+        self._stream_last_error = ""
+        self._stream_rules_checked_ts = 0.0
+        self._session = requests.Session()
+        self._session.headers.update(self._auth_headers())
         self._load_performance()
         if self._bearer:
-            logger.info("Copy trader monitor initialized")
+            logger.info(f"Copy trader monitor initialized ({self._mode} mode)")
         else:
             logger.info("Copy trader monitor disabled (X_BEARER_TOKEN missing)")
+
+    def _auth_headers(self) -> Dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self._bearer}",
+            "User-Agent": "Velox/1.0",
+        }
 
     def is_configured(self) -> bool:
         return bool(self._bearer)
 
+    def _stream_allowed(self) -> bool:
+        return self.is_configured() and self._mode in ("auto", "stream")
+
+    def _poll_allowed(self) -> bool:
+        return self.is_configured() and self._mode in ("auto", "poll")
+
+    def start_stream(self) -> bool:
+        if not self._stream_allowed():
+            return False
+        if self._stream_thread and self._stream_thread.is_alive():
+            return True
+        self._stream_stop.clear()
+        self._stream_thread = threading.Thread(
+            target=self._run_stream_loop,
+            name="copy-trader-stream",
+            daemon=True,
+        )
+        self._stream_thread.start()
+        return True
+
+    def stop_stream(self):
+        self._stream_stop.set()
+        thread = self._stream_thread
+        if thread and thread.is_alive():
+            thread.join(timeout=2.0)
+        self._stream_connected = False
+
+    def _ensure_streaming(self):
+        if self._stream_allowed():
+            self.start_stream()
+
+    def _stream_is_fresh(self, now: Optional[float] = None) -> bool:
+        now = float(now or time.time())
+        if not self._stream_allowed():
+            return False
+        if not self._stream_connected:
+            return False
+        return (now - float(self._stream_last_event_ts or 0.0)) <= self._stream_stale_seconds
+
     def get_candidate_signals(self) -> List[Dict]:
         now = time.time()
-        if (now - self._cache_ts) < self._cache_ttl:
-            return self._cache
-        if not self.is_configured():
-            return []
-
-        self._refresh_signal_caches(now)
-        return self._cache
+        self._ensure_streaming()
+        if self._stream_is_fresh(now):
+            with self._lock:
+                self._rebuild_aggregates_locked(now)
+                return list(self._cache)
+        if self._poll_allowed() and (now - self._cache_ts) >= self._cache_ttl:
+            self._refresh_signal_caches(now)
+        else:
+            with self._lock:
+                self._rebuild_aggregates_locked(now)
+        return list(self._cache)
 
     def get_exit_signals(self) -> List[Dict]:
         now = time.time()
-        if (now - self._cache_ts) < self._cache_ttl:
-            return self._exit_cache
-        if not self.is_configured():
-            return []
-
-        self._refresh_signal_caches(now)
-        return self._exit_cache
+        self._ensure_streaming()
+        if self._stream_is_fresh(now):
+            with self._lock:
+                self._rebuild_aggregates_locked(now)
+                return list(self._exit_cache)
+        if self._poll_allowed() and (now - self._cache_ts) >= self._cache_ttl:
+            self._refresh_signal_caches(now)
+        else:
+            with self._lock:
+                self._rebuild_aggregates_locked(now)
+        return list(self._exit_cache)
 
     def _refresh_signal_caches(self, now: float):
         tweets = self._fetch_recent_tweets()
-        parsed_signals: List[Dict] = []
-        parsed_exits: List[Dict] = []
+        ingested_signals = 0
+        ingested_exits = 0
         for tweet in tweets:
-            tweet_id = str(tweet.get("tweet_id", "") or "")
+            added_signals, added_exits = self._ingest_tweet(tweet, now=now)
+            ingested_signals += added_signals
+            ingested_exits += added_exits
+
+        with self._lock:
+            self._rebuild_aggregates_locked(now)
+        self._save_performance()
+        if ingested_signals:
+            logger.info(f"📣 Copy trader signals: {len(self._cache)} candidates from Tier-1 handles")
+        if ingested_exits:
+            logger.info(f"📣 Copy trader exits: {len(self._exit_cache)} active symbol(s)")
+
+    def _ingest_stream_payload(self, payload: Dict, now: Optional[float] = None) -> Tuple[int, int]:
+        data = payload.get("data", {}) if isinstance(payload, dict) else {}
+        includes = payload.get("includes", {}) if isinstance(payload, dict) else {}
+        if not isinstance(data, dict):
+            return 0, 0
+
+        author_id = str(data.get("author_id", "") or "")
+        users = (includes.get("users", []) or []) if isinstance(includes, dict) else []
+        user_map = {str(user.get("id", "")): str(user.get("username", "")).lower() for user in users}
+        handle = user_map.get(author_id, "")
+        if not handle:
+            return 0, 0
+        tweet = {
+            "tweet_id": str(data.get("id", "") or ""),
+            "text": str(data.get("text", "") or ""),
+            "handle": handle,
+            "created_at": str(data.get("created_at", "") or ""),
+        }
+        return self._ingest_tweet(tweet, now=now or time.time())
+
+    def _ingest_tweet(self, tweet: Dict, now: float) -> Tuple[int, int]:
+        tweet_id = str(tweet.get("tweet_id", "") or "")
+        with self._lock:
             if tweet_id and tweet_id in self._seen_tweet_ids:
-                continue
+                return 0, 0
             if tweet_id:
                 self._seen_tweet_ids.add(tweet_id)
-            parsed_signals.extend(self._parse_tweet(tweet))
-            parsed_exits.extend(self._parse_exit_tweet(tweet))
+
+        parsed_signals = self._parse_tweet(tweet)
+        parsed_exits = self._parse_exit_tweet(tweet)
+
+        with self._lock:
+            for signal in parsed_signals:
+                row = dict(signal)
+                row["ingested_at"] = now
+                self._signal_buffer.append(row)
+            for signal in parsed_exits:
+                row = dict(signal)
+                row["ingested_at"] = now
+                self._exit_buffer.append(row)
+            self._rebuild_aggregates_locked(now)
+
+        if parsed_signals:
+            handle = str(tweet.get("handle", "")).lower()
+            trader = self._traders.get(handle)
+            if trader:
+                trader["signals_emitted"] = int(trader.get("signals_emitted", 0) or 0) + len(parsed_signals)
+                trader["last_signal_ts"] = now
+        return len(parsed_signals), len(parsed_exits)
+
+    def _prune_buffers_locked(self, now: float):
+        cutoff = now - self._signal_window_seconds
+        self._signal_buffer = [
+            row for row in self._signal_buffer
+            if float(row.get("ingested_at", 0) or 0) >= cutoff
+        ]
+        self._exit_buffer = [
+            row for row in self._exit_buffer
+            if float(row.get("ingested_at", 0) or 0) >= cutoff
+        ]
+        if len(self._seen_tweet_ids) > 20000:
+            self._seen_tweet_ids = set(list(self._seen_tweet_ids)[-10000:])
+
+    def _rebuild_aggregates_locked(self, now: float):
+        self._prune_buffers_locked(now)
 
         grouped: Dict[Tuple[str, str], Dict] = {}
-        for signal in parsed_signals:
+        for signal in self._signal_buffer:
             key = (signal["ticker"], signal["side"])
             bucket = grouped.setdefault(
                 key,
@@ -110,6 +263,7 @@ class CopyTraderMonitor:
                     "copy_trader_size_multiplier": 1.0,
                     "copy_trader_score_adjustment": 0.0,
                     "priority": 1,
+                    "copy_trader_stream_fresh": self._stream_is_fresh(now),
                 },
             )
             bucket["copy_trader_signal_count"] += 1
@@ -133,13 +287,9 @@ class CopyTraderMonitor:
                 f"{', '.join(handles[:4])}"
             )
             results.append(bucket)
-            for handle in handles:
-                trader = self._traders.get(str(handle).lower())
-                if trader:
-                    trader["signals_emitted"] = int(trader.get("signals_emitted", 0) or 0) + 1
 
         grouped_exits: Dict[str, Dict] = {}
-        for signal in parsed_exits:
+        for signal in self._exit_buffer:
             symbol = signal["ticker"]
             bucket = grouped_exits.setdefault(
                 symbol,
@@ -195,11 +345,6 @@ class CopyTraderMonitor:
         self._cache = results
         self._exit_cache = exit_results
         self._cache_ts = now
-        self._save_performance()
-        if results:
-            logger.info(f"📣 Copy trader signals: {len(results)} candidates from Tier-1 handles")
-        if exit_results:
-            logger.info(f"📣 Copy trader exits: {len(exit_results)} active symbol(s)")
 
     def _average_weight(self, handles: List[str]) -> float:
         weights = []
@@ -281,7 +426,13 @@ class CopyTraderMonitor:
         return rows
 
     def get_dashboard_data(self) -> Dict:
+        now = time.time()
         return {
+            "mode": self._mode,
+            "stream_connected": self._stream_connected,
+            "stream_fresh": self._stream_is_fresh(now),
+            "last_stream_event_ts": self._stream_last_event_ts,
+            "last_stream_error": self._stream_last_error,
             "signals": self.get_candidate_signals()[:5],
             "exits": self.get_exit_signals()[:5],
             "traders": self.get_trader_stats(),
@@ -331,12 +482,8 @@ class CopyTraderMonitor:
         handles = list(self._traders.keys())
         query = "(" + " OR ".join(f"from:{handle}" for handle in handles) + ") lang:en -is:retweet"
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{BASE_URL}/tweets/search/recent",
-                headers={
-                    "Authorization": f"Bearer {self._bearer}",
-                    "User-Agent": "Velox/1.0",
-                },
                 params={
                     "query": query,
                     "max_results": 100,
@@ -370,6 +517,96 @@ class CopyTraderMonitor:
                 }
             )
         return tweets
+
+    def _build_stream_rule_value(self) -> str:
+        handles = list(self._traders.keys())
+        return "(" + " OR ".join(f"from:{handle}" for handle in handles) + ") lang:en -is:retweet"
+
+    def _ensure_stream_rules(self, session: requests.Session) -> bool:
+        now = time.time()
+        if now - self._stream_rules_checked_ts < self._stream_rule_refresh_seconds:
+            return True
+
+        rule_url = f"{BASE_URL}/tweets/search/stream/rules"
+        target_value = self._build_stream_rule_value()
+        try:
+            response = session.get(rule_url, timeout=15)
+            response.raise_for_status()
+            payload = response.json()
+            existing_rules = payload.get("data", []) or []
+            same_tag = [rule for rule in existing_rules if str(rule.get("tag", "")) == STREAM_RULE_TAG]
+            if any(str(rule.get("value", "")) == target_value for rule in same_tag):
+                self._stream_rules_checked_ts = now
+                return True
+
+            delete_ids = [str(rule.get("id", "")) for rule in same_tag if rule.get("id")]
+            if delete_ids:
+                delete_resp = session.post(rule_url, json={"delete": {"ids": delete_ids}}, timeout=15)
+                delete_resp.raise_for_status()
+
+            add_resp = session.post(
+                rule_url,
+                json={"add": [{"value": target_value, "tag": STREAM_RULE_TAG}]},
+                timeout=15,
+            )
+            add_resp.raise_for_status()
+            self._stream_rules_checked_ts = now
+            return True
+        except Exception as e:
+            self._stream_last_error = str(e)
+            logger.debug(f"Copy trader stream rules failed: {e}")
+            return False
+
+    def _run_stream_loop(self):
+        backoff_seconds = 5.0
+        while not self._stream_stop.is_set():
+            session = requests.Session()
+            session.headers.update(self._auth_headers())
+            try:
+                self._stream_connected = False
+                if not self._ensure_stream_rules(session):
+                    raise RuntimeError(self._stream_last_error or "stream rules unavailable")
+
+                with session.get(
+                    f"{BASE_URL}/tweets/search/stream",
+                    params={
+                        "tweet.fields": "created_at,text,author_id",
+                        "expansions": "author_id",
+                        "user.fields": "username,name",
+                    },
+                    stream=True,
+                    timeout=(10, 90),
+                ) as response:
+                    response.raise_for_status()
+                    self._stream_connected = True
+                    self._stream_last_error = ""
+                    self._stream_last_event_ts = time.time()
+                    for line in response.iter_lines(decode_unicode=True):
+                        if self._stream_stop.is_set():
+                            break
+                        self._stream_last_event_ts = time.time()
+                        if not line:
+                            continue
+                        try:
+                            payload = json.loads(line)
+                        except Exception:
+                            continue
+                        self._ingest_stream_payload(payload, now=self._stream_last_event_ts)
+                    self._stream_connected = False
+                backoff_seconds = 5.0
+            except Exception as e:
+                self._stream_connected = False
+                self._stream_last_error = str(e)
+                logger.debug(f"Copy trader stream disconnected: {e}")
+                if self._stream_stop.wait(backoff_seconds):
+                    break
+                backoff_seconds = min(60.0, backoff_seconds * 2.0)
+            finally:
+                try:
+                    session.close()
+                except Exception:
+                    pass
+        self._stream_connected = False
 
     def _parse_tweet(self, tweet: Dict) -> List[Dict]:
         text = f" {str(tweet.get('text', '') or '').lower()} "

@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+import time
 
 import src.main as main_module
 from src.scanner.scanner import Scanner
@@ -104,6 +105,52 @@ class CopyTraderMonitorTests(unittest.TestCase):
         self.assertEqual(exits[0]["copy_trader_exit_count"], 2)
         self.assertEqual(exits[0]["copy_trader_exit_action"], "mixed")
         self.assertIn("traderstewie", exits[0]["copy_trader_exit_handles"])
+
+    def test_stream_payload_ingests_signal_without_recent_search(self):
+        monitor = CopyTraderMonitor()
+        monitor._bearer = "test-token"
+        monitor._mode = "stream"
+        monitor._stream_connected = True
+        now = time.time()
+        monitor._stream_last_event_ts = now
+        payload = {
+            "data": {
+                "id": "20",
+                "author_id": "42",
+                "text": "Starter $HOOD long here 44.20",
+                "created_at": "2026-03-07T10:02:00Z",
+            },
+            "includes": {
+                "users": [{"id": "42", "username": "TraderStewie"}],
+            },
+        }
+
+        monitor._ingest_stream_payload(payload, now=now)
+
+        with patch.object(monitor, "_ensure_streaming"):
+            signals = monitor.get_candidate_signals()
+
+        self.assertEqual(signals[0]["symbol"], "HOOD")
+        self.assertEqual(signals[0]["copy_trader_signal_count"], 1)
+
+    def test_auto_mode_falls_back_to_poll_when_stream_is_stale(self):
+        monitor = CopyTraderMonitor()
+        monitor._bearer = "test-token"
+        monitor._mode = "auto"
+        monitor._stream_connected = False
+        monitor._cache_ts = 0.0
+        tweet = {
+            "tweet_id": "21",
+            "handle": "traderstewie",
+            "text": "Starter $SNAP long here",
+            "created_at": "2026-03-07T10:05:00Z",
+        }
+
+        with patch.object(monitor, "_ensure_streaming"), \
+             patch.object(monitor, "_fetch_recent_tweets", return_value=[tweet]):
+            signals = monitor.get_candidate_signals()
+
+        self.assertEqual(signals[0]["symbol"], "SNAP")
 
 
 class CopyTraderScannerTests(unittest.TestCase):

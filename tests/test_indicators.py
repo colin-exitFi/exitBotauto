@@ -7,7 +7,7 @@ from backtester.indicators import IndicatorRegistry
 
 class IndicatorTests(unittest.TestCase):
     def setUp(self):
-        index = pd.date_range("2026-01-01", periods=120, freq="H", tz="UTC")
+        index = pd.date_range("2026-01-01", periods=120, freq="h", tz="UTC")
         close = pd.Series([100 + (i * 0.4) for i in range(120)], index=index)
         self.df = pd.DataFrame(
             {

@@ -148,6 +148,11 @@ class TradingBot:
         self.stocktwits_client = StockTwitsClient()
         self.twitter_client = TwitterSentimentClient()
         self.copy_trader_monitor = CopyTraderMonitor()
+        if (
+            getattr(self.copy_trader_monitor, "start_stream", None)
+            and str(getattr(self.copy_trader_monitor, "_mode", "auto")) == "stream"
+        ):
+            self.copy_trader_monitor.start_stream()
         self.human_intel_store = HumanIntelStore()
         self.fred_client = FredClient()
         self.finnhub_client = FinnhubClient()
@@ -1721,6 +1726,9 @@ class TradingBot:
                     sentiment_data["consensus_direction"] = direction
                     sentiment_data["jury_trail_pct"] = verdict.trail_pct
                     sentiment_data["provider_used"] = getattr(verdict, "provider_used", "")
+                    sentiment_data["consensus_agreement"] = (
+                        (getattr(verdict, "consensus_detail", {}) or {}).get("agreement", "")
+                    )
                     sentiment_data["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
                 except Exception as e:
                     logger.error(f"Orchestrator error for {symbol}: {e}")
@@ -2638,6 +2646,8 @@ class TradingBot:
             await self.market_stream.stop()
         if self.trade_stream:
             await self.trade_stream.stop()
+        if getattr(self, "copy_trader_monitor", None) and getattr(self.copy_trader_monitor, "stop_stream", None):
+            self.copy_trader_monitor.stop_stream()
         # Save final state
         persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
         if getattr(self, "options_engine", None):

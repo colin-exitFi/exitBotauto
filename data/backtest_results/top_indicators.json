@@ -1,0 +1,134 @@
+[
+  {
+    "name": "vwap_bands",
+    "params": {
+      "std_mult": 1.0
+    },
+    "score": 59.3,
+    "win_rate": 0.5167,
+    "sharpe": 0.9304,
+    "profit_factor": 1.179,
+    "side": "long",
+    "recommended_weight": 0.59
+  },
+  {
+    "name": "vwap_bands",
+    "params": {
+      "std_mult": 1.5
+    },
+    "score": 59.3,
+    "win_rate": 0.5167,
+    "sharpe": 0.9304,
+    "profit_factor": 1.179,
+    "side": "long",
+    "recommended_weight": 0.59
+  },
+  {
+    "name": "vwap_bands",
+    "params": {
+      "std_mult": 2.0
+    },
+    "score": 59.3,
+    "win_rate": 0.5167,
+    "sharpe": 0.9304,
+    "profit_factor": 1.179,
+    "side": "long",
+    "recommended_weight": 0.59
+  },
+  {
+    "name": "rsi_divergence",
+    "params": {
+      "period": 21
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 1008.7388,
+    "profit_factor": 636.6179,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
+    "name": "wavetrend_c14_a21",
+    "params": {
+      "channel_length": 14,
+      "avg_length": 21,
+      "ob_level": 53,
+      "os_level": -53
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 28.3301,
+    "profit_factor": 1213.6888,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
+    "name": "rsi_divergence",
+    "params": {
+      "period": 14
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 24.684,
+    "profit_factor": 469.6333,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
+    "name": "wavetrend_c9_a12",
+    "params": {
+      "channel_length": 9,
+      "avg_length": 12,
+      "ob_level": 53,
+      "os_level": -53
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 20.5739,
+    "profit_factor": 552.4454,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
+    "name": "keltner_channel",
+    "params": {
+      "ema_period": 20,
+      "atr_mult": 2.0,
+      "atr_period": 20
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 20.1761,
+    "profit_factor": 244.194,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
+    "name": "rsi_divergence",
+    "params": {
+      "period": 7
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 15.563,
+    "profit_factor": 366.656,
+    "side": "long",
+    "recommended_weight": 0.25
+  },
+  {
+    "name": "smi_k14_d3",
+    "params": {
+      "k_length": 14,
+      "d_length": 3,
+      "smooth_length": 3,
+      "ob": 40,
+      "os": -40
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 15.5325,
+    "profit_factor": 359.5574,
+    "side": "long",
+    "recommended_weight": 0.25
+  }
+]

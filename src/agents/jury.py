@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from loguru import logger
 
+from config import settings
 from src.agents.base_agent import call_claude, call_gpt, call_grok
 
 
@@ -54,6 +55,7 @@ FADE CONTEXT: {fade_context}
 ECONOMIC CALENDAR: {economic_calendar}
 HUMAN INTEL: {human_intel}
 PRO TRADER CONTEXT: {copy_trader_context}
+RETRO FEEDBACK: {retro_feedback}
 
 AGENT BRIEFS:
 
@@ -79,6 +81,7 @@ DECISION FRAMEWORK:
 - SHORT if: This is a fade-the-runner setup. A stock that ran big yesterday and is stalling/fading today is a mean-reversion short, not a momentum long.
 - For fade setups, prioritize exhaustion signals: yesterday's huge run, RSI stretched, day-2 volume failing to match day-1, and price trading weak versus the run close.
 - Convergence from multiple Tier-1 pro traders is supportive confirmation, not crowding by itself. Only discount it if retail/FOMO evidence is also obvious.
+- Use RETRO FEEDBACK as calibration, not a blind override. If the same setup has recently lost money, demand cleaner alignment or smaller size. If it has recently worked, don't overreact to weak objections.
 - SKIP ONLY if: Risk explicitly denies, OR the stock has tiny volume (<1x avg), OR the move is clearly over (price reversing against the trend).
 - If some agents are unavailable, MAKE THE CALL with what you have. 3 agents is enough. Don't skip just because sentiment or catalyst is offline.
 - "Decelerating momentum" alone is NOT a reason to skip. Stocks don't go straight up — they consolidate and continue. If price is still up big on volume, the trend is intact.
@@ -118,6 +121,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             )
         else:
             fade_context = "None"
+        retro_feedback = _build_retro_feedback(symbol, sd)
         prompt = PROMPT_TEMPLATE.format(
             mission=MISSION_SHORT,
             symbol=symbol,
@@ -131,6 +135,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             economic_calendar=sd.get("economic_calendar", "None"),
             human_intel=sd.get("human_intel", "None"),
             copy_trader_context=sd.get("copy_trader_context", "None"),
+            retro_feedback=retro_feedback,
             technical=fmt(briefs.get("technical", {})),
             sentiment=fmt(briefs.get("sentiment", {})),
             catalyst=fmt(briefs.get("catalyst", {})),
@@ -222,6 +227,89 @@ def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
         "confidence": confidence,
         "reasoning": str(result.get("reasoning", "") or "")[:220],
     }
+
+
+def _build_retro_feedback(symbol: str, signals_data: Dict) -> str:
+    if not bool(getattr(settings, "JURY_RETRO_ENABLED", True)):
+        return "None"
+
+    try:
+        from src.ai import trade_history
+
+        recent = trade_history.get_recent(int(getattr(settings, "JURY_RETRO_LOOKBACK_TRADES", 40) or 40))
+    except Exception:
+        return "None"
+
+    if not recent:
+        return "None"
+
+    min_matches = max(2, int(getattr(settings, "JURY_RETRO_MIN_MATCHES", 3) or 3))
+    strategy_tag = str((signals_data or {}).get("strategy_tag", "unknown") or "unknown")
+    signal_sources = (signals_data or {}).get("signal_sources", []) or []
+    if isinstance(signal_sources, str):
+        signal_sources = [s.strip() for s in signal_sources.split(",") if s.strip()]
+    source_set = {str(src).strip() for src in signal_sources if str(src).strip()}
+
+    rows: List[str] = []
+
+    if symbol:
+        symbol_trades = [
+            trade for trade in recent
+            if str(trade.get("symbol", "")).upper() == str(symbol).upper()
+        ]
+        if len(symbol_trades) >= min_matches:
+            rows.append(_format_retro_row(f"Recent {symbol}", symbol_trades))
+
+    if strategy_tag and strategy_tag != "unknown":
+        strategy_trades = [
+            trade for trade in recent
+            if str(trade.get("strategy_tag", "unknown") or "unknown") == strategy_tag
+        ]
+        if len(strategy_trades) >= min_matches:
+            rows.append(_format_retro_row(f"Strategy {strategy_tag}", strategy_trades))
+            high_conf = [
+                trade for trade in strategy_trades
+                if float(trade.get("decision_confidence", 0) or 0) >= 75.0
+            ]
+            if len(high_conf) >= min_matches:
+                rows.append(_format_confidence_calibration(high_conf))
+
+    if source_set:
+        source_trades = []
+        for trade in recent:
+            sources = trade.get("signal_sources", []) or []
+            if isinstance(sources, str):
+                sources = [s.strip() for s in sources.split(",") if s.strip()]
+            if source_set.intersection({str(src).strip() for src in sources if str(src).strip()}):
+                source_trades.append(trade)
+        if len(source_trades) >= min_matches:
+            rows.append(_format_retro_row(f"Sources {', '.join(sorted(source_set))}", source_trades))
+
+    if not rows:
+        return "None"
+    return "\n".join(f"- {row}" for row in rows[:4])
+
+
+def _format_retro_row(label: str, trades: List[Dict]) -> str:
+    pnl = sum(float(trade.get("pnl", 0) or 0) for trade in trades)
+    wins = sum(1 for trade in trades if float(trade.get("pnl", 0) or 0) > 0)
+    win_rate = wins / max(1, len(trades))
+    return f"{label}: {len(trades)} trades, {win_rate:.0%} WR, ${pnl:.2f} P&L."
+
+
+def _format_confidence_calibration(trades: List[Dict]) -> str:
+    pnl = sum(float(trade.get("pnl", 0) or 0) for trade in trades)
+    wins = sum(1 for trade in trades if float(trade.get("pnl", 0) or 0) > 0)
+    win_rate = wins / max(1, len(trades))
+    if win_rate <= 0.40 or pnl < 0:
+        return (
+            f"Calibration: recent high-confidence calls underperformed "
+            f"({len(trades)} trades, {win_rate:.0%} WR, ${pnl:.2f})."
+        )
+    return (
+        f"Calibration: recent high-confidence calls worked "
+        f"({len(trades)} trades, {win_rate:.0%} WR, ${pnl:.2f})."
+    )
 
 
 def _apply_consensus(symbol: str, price: float, votes: List[Dict], briefs: Dict) -> JuryVerdict:

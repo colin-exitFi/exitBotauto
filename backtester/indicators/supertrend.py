@@ -25,7 +25,7 @@ class SupertrendIndicator(BaseIndicator):
         high = pd.Series(df["high"], dtype=float)
         low = pd.Series(df["low"], dtype=float)
         close = pd.Series(df["close"], dtype=float)
-        atr_series = atr(df, params["period"]).fillna(method="bfill").fillna(0.0)
+        atr_series = atr(df, params["period"]).bfill().fillna(0.0)
         hl2 = (high + low) / 2.0
         upper_band = hl2 + float(params["multiplier"]) * atr_series
         lower_band = hl2 - float(params["multiplier"]) * atr_series

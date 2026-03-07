@@ -4,74 +4,74 @@
       "sector": "Technology",
       "price": 137.26,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLF": {
       "sector": "Financials",
       "price": 50.57,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLE": {
       "sector": "Energy",
       "price": 56.555,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLV": {
       "sector": "Healthcare",
       "price": 152.72,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLY": {
       "sector": "Consumer Discretionary",
       "price": 114.46,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLP": {
       "sector": "Consumer Staples",
       "price": 85.76,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLI": {
       "sector": "Industrials",
       "price": 169.935,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLB": {
       "sector": "Materials",
       "price": 49.865,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLRE": {
       "sector": "Real Estate",
       "price": 42.89,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLU": {
       "sector": "Utilities",
       "price": 46.735,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "XLC": {
       "sector": "Communication",
       "price": 117.48,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     },
     "SPY": {
       "sector": "S&P 500 (benchmark)",
       "price": 672.24,
       "change_pct": 0,
-      "updated": 1772881104.054065
+      "updated": 1772893341.5665972
     }
   },
-  "updated_at": 1772881104.639164
+  "updated_at": 1772893342.321286
 }

@@ -24,8 +24,9 @@ class BollingerSqueezeIndicator(BaseIndicator):
         params = self.params or {"period": 20, "std_mult": 2.0}
         close = pd.Series(df["close"], dtype=float)
         mid, upper, lower, bandwidth = bollinger(close, params["period"], params["std_mult"])
-        squeeze = bandwidth < 0.04
-        entries = squeeze.shift(1).fillna(False) & (close > upper)
-        exits = (close < mid) | (squeeze.shift(1).fillna(False) & (close < lower))
+        squeeze = (bandwidth < 0.04).astype(bool)
+        prior_squeeze = squeeze.shift(1, fill_value=False)
+        entries = prior_squeeze & (close > upper)
+        exits = (close < mid) | (prior_squeeze & (close < lower))
         strength = ((0.04 - bandwidth).clip(lower=0.0) / 0.04).clip(0.0, 1.0)
         return finalize_signal(df.index, entries, exits, strength, "long", self.name(), params)

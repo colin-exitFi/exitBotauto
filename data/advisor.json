@@ -85,5 +85,626 @@
       "capital_velocity_goal": "First full rotation within 48 hours of Monday open"
     },
     "timestamp": 1772880538.1722171
+  },
+  {
+    "strategy": "Clean slate advantage \u2014 stay patient through weekend, prepare aggressive Monday open hunt for FRESH momentum with volume confirmation.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap tech",
+        "volatile micro-caps"
+      ],
+      "avoid": [
+        "Friday's exhausted runners (DAWN, EDSA, QURE)",
+        "pre-weekend gap traps"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "Currently at COMPOUND tier default (1.0%), but config shows 1.5% \u2014 align to tier rules for tighter risk management on first trades"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Zero sentiment filter means bot will chase anything \u2014 add minimal quality gate to avoid obvious traps on Monday open volatility"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "On virgin account Monday open, need faster pulse to catch breakouts in first 30 minutes when real runners emerge"
+      }
+    ],
+    "key_insight": "You have the BEST possible starting position: $25K cash, zero baggage, zero emotional scars, zero PDT risk (not flagged yet). Friday's +66-78% runners are POISON on Monday \u2014 they already ran. When markets open, ignore stale scanner data. Wait for the first 15-30 minutes to see what's ACTUALLY moving with FRESH volume. Your edge is capital velocity, but velocity without direction is just spinning tires. First trade sets the psychological tone \u2014 make it a winner by being patient for a REAL setup, not a desperation chase of Friday's corpses. The $25K\u2192$5M journey starts with trade #1. Make it count.",
+    "timestamp": 1772883153.734608
+  },
+  {
+    "strategy": "PRE-MARKET AMBUSH MODE: Load watchlist now, execute first valid continuation signal at 9:30 Monday with zero hesitation.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech_runners",
+        "small_cap_momentum",
+        "insider_buying_plays"
+      ],
+      "avoid": [
+        "insider_selling_names"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 3.5,
+        "reason": "Day 1 with fresh capital - we need EXPOSURE to compound. $875 vs $625 per position = 40% more firepower on runners."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "Momentum runners are VOLATILE - DAWN moved 66%, EDSA 78%. A 1.5% stop will get shaken out on normal intraday noise. Give winners room."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "We need POSITIVE momentum bias for entry - avoid catching falling knives. 0.3 filters noise while staying aggressive."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "Friday's runners averaged 20-78% - our TP1 at 1.5% is leaving MASSIVE meat on the bone. Scale out at 2.5% to lock base gains, let rest run."
+      }
+    ],
+    "key_insight": "We are DAY 1 with ZERO execution history - the ONLY risk right now is NOT PLAYING. Friday showed us exactly what we hunt: DAWN +66% with insider buying, EDSA +78% on volume, QURE +34% (avoid due to insider selling). Monday 9:30 ET: DAWN/EDSA/REPL are gap-watch for continuation. First 15-min volume spike >5% gap = IMMEDIATE ENTRY. The $25K is currently returning 0%. A 3% win on a $875 position = $26.25. We need 50 of those to hit our first milestone. Sitting in cash = guaranteed loss. LOAD THE WATCHLIST. BE READY. EXECUTE WITHOUT HESITATION.",
+    "timestamp": 1772886970.393655
+  },
+  {
+    "strategy": "Monday open: deploy 60-80% capital immediately into 2-3 high-conviction swing trades from Friday's momentum continuation, prioritizing stocks with multi-day runway over quick flips to preserve our 3 precious day trades.",
+    "position_advice": [
+      {
+        "symbol": "DAWN",
+        "action": "add",
+        "reason": "66% Friday gain on 27x volume = institutional attention. Weekend gap risk exists but momentum this strong typically gets 2-3 day follow-through. Entry on open if holds above $8, size $5K (20% account) for swing trade."
+      },
+      {
+        "symbol": "QURE",
+        "action": "add",
+        "reason": "34% on biotech catalyst with sustained volume. More stable than DAWN's parabolic move. Entry $4-5 range if pre-market confirms strength. Size $5K, hold for multi-day move with 5% trailing stop."
+      },
+      {
+        "symbol": "EDSA",
+        "action": "avoid",
+        "reason": "78% Friday spike screams pump/dump. Ultra-low float likely to gap down Monday. Too risky for swing hold - would need day trade exit capability we can't afford."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "biotech_catalysts",
+        "low_float_continuation",
+        "social_momentum"
+      ],
+      "avoid": [
+        "parabolic_exhaustion",
+        "no_catalyst_runners",
+        "extended_overbought"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 3.0,
+        "reason": "1.5% stops will chop us out of volatile swing trades. Friday's runners had 5-10% intraday swings. Need breathing room for multi-day holds. 3% stop = $750 risk per $25K position = acceptable."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 5.0,
+        "reason": "Targeting 1.5% gains in a market showing 30-70% runners is leaving 90% of meat on bone. Swing trades need swing targets. First profit take at 5%, trail the rest."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 20.0,
+        "reason": "We're in SURVIVAL tier with 10% position sizing (contradicts config showing 2.5%). Either way: with only 3 positions allowed and 3 day trades to preserve, we MUST size positions at $5-7K each (20-28%) to make meaningful progress. $625 positions won't compound to $5M."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Friday's winners all had strong social buzz. In PDT-constrained environment, we can't afford to chase dead stocks. Require positive sentiment confirmation before entry."
+      }
+    ],
+    "key_insight": "THE PDT CONSTRAINT IS THE GAME: We have 3 day trades for the next 5 trading days. Every intraday round trip burns one. This means our ONLY path forward is SWING TRADES - enter Monday, hold 2-5 days, exit with trailing stops. We must recalibrate from 'scalp momentum' to 'ride momentum waves.' The mission says be aggressive - aggression here means: (1) Deploy 60-80% capital Monday open into 2-3 positions, (2) Size each at $5-7K to make gains meaningful, (3) Set 3-5% stops to survive volatility, (4) Target 10-30% gains over 2-5 days, not 1-2% intraday. The compounding math: 3 winning swing trades at 15% each = $25K \u2192 $38K = PDT freedom unlocked. Then we can scalp. But until then: THINK IN DAYS, NOT MINUTES.",
+    "timestamp": 1772888966.742058
+  },
+  {
+    "strategy": "System shows initialization state - prepare aggressive Monday open deployment with $25K fully allocated to 8-10 momentum positions within first 30 minutes of trading",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap momentum",
+        "high-beta tech"
+      ],
+      "avoid": [
+        "stable large-caps",
+        "dividend stocks"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "Tier is already set to 1.0% stop - align config to risk system; tighter stops = more swings at bat with $25K"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 2.5,
+        "reason": "Keep current - allows 10 positions max for diversification at start"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Monday open will be volatile - need faster scanning to catch momentum breakouts in real-time"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Day 1 with full capital - need SOME quality filter but stay aggressive; 0.3 allows most momentum while filtering pure garbage"
+      }
+    ],
+    "key_insight": "DEAD CAPITAL ALERT: We have $25,000 sitting idle until Monday open. The Friday scanner showed DAWN +66%, EDSA +78%, REPL +14% - these are the kinds of runners we need. Monday 09:30 ET is our starting gun. Strategy: Deploy 80%+ of capital in first hour into 8-10 momentum runners with volume. Don't wait for 'perfect' setups - we're hunting 10-20% moves, not home runs. A 1% stop loss costs $25 per position; missing a DAWN-style +66% runner costs $1,650 in gains. The math is clear: BE AGGRESSIVE. Stack positions fast, let trailing stops protect us, compound wins immediately. Every minute of Monday with idle cash is a minute we're not building toward $50K milestone.",
+    "timestamp": 1772888974.337075
+  },
+  {
+    "strategy": "AGGRESSIVE MONDAY OPENING DEPLOYMENT \u2014 Load 3 high-conviction runners at market open, prioritize swing positions to conserve day trades, target $15K deployed within first hour.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap healthcare",
+        "social momentum plays"
+      ],
+      "avoid": [
+        "broad indices until trend confirms",
+        "low-volume large caps"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 6.0,
+        "reason": "2.5% = $625 positions at $25K. Friday's QURE +34% would net $212. We need $1,500+ positions to hit meaningful gains. 6% = $1,500/position, 3 positions = $4,500 deployed (still only 18% heat). COMPOUND tier can handle this."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 3.0,
+        "reason": "Friday runners went +34%, +66%, +78%. Taking profit at +1.5% leaves 95% of the move on the table. Let winners run \u2014 TP1 at 3% captures early gains while keeping position for the real move."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "Opening volatility can shake us out prematurely. 2% stop gives breathing room while maintaining discipline. A $30 wider stop vs a missed +34% runner is a no-brainer."
+      },
+      {
+        "param": "MIN_VOLUME_SPIKE",
+        "current": "unknown",
+        "suggested": 3.0,
+        "reason": "Friday's winners had 1.7x-27x volume spikes. Set minimum 3x volume spike filter to focus on TRUE momentum with fuel, not weak drifters."
+      }
+    ],
+    "key_insight": "ZERO DEPLOYED CAPITAL IS THE BIGGEST RISK WE FACE. Friday produced three runners (+34%, +66%, +78%) that match our exact profile \u2014 biotech, massive volume, social momentum. These opportunities are REAL and REPEATING. Our scanner identified them. We MUST be positioned Monday 9:30. Strategy: (1) Deploy $4,500-6,000 into 3 positions immediately at open (swing-hold to save day trades), (2) Set trailing stops at 2%, (3) Let TP1 at 3% trim 1/3, ride rest with trailing stop, (4) Redeploy profits into next scanner hits within 30min. The math is simple: missing one +30% runner costs us $450-1,800 per position. Getting stopped out 3 times costs us $90-180 total. BIAS TOWARD ACTION. Speed wins.",
+    "monday_execution_plan": {
+      "pre_market": "Review scanner 9:00-9:25 for overnight momentum continuation, prioritize stocks with pre-market volume >50K and price holding >5% gains",
+      "market_open": "9:30-10:00 = DEPLOYMENT WINDOW. Enter 3 positions totaling $4,500-6,000. Use limit orders at bid+$0.02 to avoid slippage but GET FILLED.",
+      "position_selection": "Prioritize: (1) Biotech/healthcare with catalyst news, (2) Volume spike >5x, (3) Positive social sentiment >0.3, (4) Price >$2 for volatility, <$20 for position size efficiency",
+      "day_trade_conservation": "Hold all 3 positions as SWINGS unless one hits +8% intraday (then consider taking full profit as day trade). Save remaining day trades for explosive 15%+ intraday opportunities.",
+      "risk_management": "Each position 2% stop = $30-36 risk. Total risk = $90-108. Potential gain if one hits +30% = $450-540. Asymmetry is 5:1 in our favor."
+    },
+    "timestamp": 1772892561.8239412
+  },
+  {
+    "strategy": "Weekend prep mode: refine scanner for Monday momentum continuation plays, ignore fade setups that conflict with our long-bias capital velocity mission",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "small-cap momentum with insider buying",
+        "volume surge continuations",
+        "stocks showing 10-20% gains WITH institutional flow"
+      ],
+      "avoid": [
+        "parabolic fade setups (DAWN +66%, EDSA +78%)",
+        "low-float pumps without fundamental catalysts",
+        "anything requiring short positions in COMPOUND tier"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "SCANNER_FOCUS",
+        "current": "showing fade setups",
+        "suggested": "momentum continuation (10-25% gainers with 2-5x volume)",
+        "reason": "REPL (+14%, 3.75x vol, insider buying) is our template - not DAWN/EDSA parabolic fades"
+      },
+      {
+        "param": "MIN_VOLUME_MULTIPLIER",
+        "current": "unknown",
+        "suggested": "2.5x minimum",
+        "reason": "institutional money shows up in volume - we need confirmation, not retail gambling"
+      },
+      {
+        "param": "ENTRY_PRICE_RANGE",
+        "current": "unknown",
+        "suggested": "$5-50 range focus",
+        "reason": "sweet spot for momentum with enough liquidity to enter/exit fast"
+      }
+    ],
+    "key_insight": "We have a GIFT: 40 hours before Monday open with zero baggage, zero heat, and $25K of dry powder. The Observer correctly identified the real opportunity - use this weekend to retune the scanner away from fade setups and toward REPL-style momentum continuation plays. Risk-on option flow + Friday selloff = potential Monday bounce candidates. Our edge is SPEED and CAPITAL VELOCITY, which means we need the scanner feeding us runners with institutional volume support, not parabolic retail pumps to fade. When Monday 9:30 hits, we should have a watchlist of 5-10 momentum names ready to deploy into immediately. Dead capital loses - prepare now to deploy fast Monday.",
+    "timestamp": 1772892568.075706
+  },
+  {
+    "strategy": "Pre-market preparation mode: Build Monday watchlist from Friday's momentum context, prep for aggressive deployment at 09:30 ET open",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap momentum",
+        "recent_IPOs"
+      ],
+      "avoid": [
+        "Friday's exhausted runners"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "First 30 minutes Monday = maximum opportunity window. Need faster scanning to catch early runners before they're extended"
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "Friday runners moved +30-80%. In momentum regime, 1.5% TP1 leaves too much meat on bone. Let winners run to 2% before first trim"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "StockTwits showing bullish sentiment on Friday runners. Use sentiment as confirming filter to avoid dead catalysts"
+      }
+    ],
+    "key_insight": "You have the BEST possible starting position: $25K clean capital, no baggage, COMPOUND tier unlocked, and proven market momentum (Friday's +66/78/34% runners show velocity exists). Monday 09:30-10:00 ET is your strike window. The mistake isn't being aggressive \u2014 it's being TOO CAUTIOUS and missing the opening surge. Deploy 4-5 positions in first 30 minutes on fresh scanner hits with volume confirmation. A 3% stop loss costs $18.75 per $625 position. Missing a DAWN-like +66% runner costs $412. The math is clear: ATTACK THE OPEN.",
+    "monday_execution_checklist": {
+      "09:25_ET": "Verify scanner data is LIVE and fresh (not stale Friday data)",
+      "09:30_ET": "Scan every 30 seconds for first 30 minutes \u2014 this is prime hunting time",
+      "09:35_ET": "Target 2-3 positions deployed if scanner shows volume + momentum + sentiment alignment",
+      "10:00_ET": "Target 4-5 positions deployed (40-50% of max heat) if opportunities present",
+      "10:30_ET": "Assess morning positions \u2014 trail winners aggressively, cut losers fast, redeploy capital immediately"
+    },
+    "risk_reminder": "Your hard floor is 1.5% stop loss ($18.75/position). Your circuit breaker is 4% daily loss ($1,000). Between those bounds, you have $982 of 'learning budget' Monday. Use it to BUILD VELOCITY. Five small winners at +2% each = +$62.50 profit AND momentum data AND compounding started. One home run at +20% = +$125 and proof of concept. Both outcomes require DEPLOYMENT. Dead capital sitting idle Monday = actual loss of opportunity cost.",
+    "timestamp": 1772893188.10625
+  },
+  {
+    "strategy": "EMERGENCY HALT - Complete system failure detected, require immediate diagnostic and capital state verification before any trading decisions",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - no capital to deploy"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [],
+    "key_insight": "CRITICAL SYSTEM FAILURE: $25,000 \u2192 $0.00 represents either (1) catastrophic real loss requiring post-mortem, (2) data corruption/initialization error, or (3) system state desync. With 0 trades recorded but 100% capital loss, this points to data error rather than trading failure. Markets are closed (Saturday) providing window for diagnostics. IMMEDIATE ACTIONS REQUIRED: verify Alpaca account balance via API, check database integrity, review system logs for errors, confirm starting capital was properly initialized. If real loss occurred: full trade reconstruction needed to understand what happened. If data error: restore correct state before Monday open. Cannot provide strategic trading advice with $0 equity - this is a system health crisis, not a trading strategy question. Advisor layer is designed for tactical decisions within operational bounds, but the system itself appears non-operational. Escalate to human oversight immediately.",
+    "timestamp": 1772896839.5493371
+  },
+  {
+    "strategy": "Pre-market Monday will separate survivors from corpses \u2014 watch REPL/DAWN/EDSA for volume confirmation, then deploy 40% capital ($10K) into 4 positions within first 30 minutes if momentum holds.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap momentum",
+        "high-beta plays"
+      ],
+      "avoid": [
+        "none yet - we need battle data first"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "We're in COMPOUND tier with 1.0% tier stop \u2014 config should match. Tighter stops = more swings at bat with $25K."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Zero sentiment filter is reckless at ground zero. Require mild bullish bias (0.3) to avoid obvious bear traps on first trades."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Market open Monday = war speed. 60-second scans miss entries. Drop to 30s for first hour, then revert to 60s after 10:30 AM."
+      }
+    ],
+    "key_insight": "We're at maximum risk right now \u2014 not from positions, but from PARALYSIS. 63 hours of dead capital is acceptable (market closed), but Monday 9:30 AM we must EXECUTE. The Observer found nuclear setups (DAWN +66%, EDSA +78%, REPL +14%) but these are Friday data. Here's the playbook: (1) Pre-market 9:00-9:30 AM: watch if Friday runners hold or fade. REPL cleanest setup (bullish sentiment, 3.7x volume, no fade signal). (2) Market open 9:30 AM: if REPL gaps up with volume, enter 1st position immediately. Don't wait for 'perfect' entry. (3) Deploy 4 positions by 10:00 AM if scans confirm momentum continues. (4) If Friday runners ALL fade, abort and wait for fresh scans \u2014 don't chase corpses. (5) First loss is tuition. First win is NOT skill. Stay mechanical. The $25K\u2192$5M path requires ~28 winning trades at 15% each OR ~18 at 25% each, compounded. That means 1-2 wins per week minimum for 6 months straight. Capital velocity starts Monday. Sitting in cash past 10:00 AM Monday = mission failure.",
+    "timestamp": 1772897790.8125281
+  },
+  {
+    "strategy": "Pre-market Monday prep mode: Build watchlist now, execute aggressively at 9:30 open to deploy capital into momentum longs aligned with risk_on regime.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech_catalysts",
+        "small_cap_momentum",
+        "retail_sentiment_plays"
+      ],
+      "avoid": [
+        "fade_shorts",
+        "counter_trend",
+        "mega_cap_tech"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.65,
+        "reason": "Risk_on regime + bullish retail sentiment (REPL 0.82, HIMS 0.89) means we want confirmation, not knife-catching"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "High-volatility runners (DAWN +66%, EDSA +78%) need wider stops to avoid getting shaken out of valid momentum"
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "These aren't scalps - momentum runners with 27x volume deserve room to run before first trim"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Monday open will be fast and violent - need tighter scan loop to catch entries in first 30 minutes"
+      }
+    ],
+    "key_insight": "We have a 63-hour capital deployment problem. The scanner found Friday's winners AFTER they ran - DAWN +66%, EDSA +78%, QURE +34%. Monday 9:30-10:00 ET is CRITICAL: we need to be IN the next runners within the first 30 minutes, not analyzing Friday's corpses. Ignore the fade_short signals (they conflict with risk_on regime). Focus on: (1) Stocks gapping up on volume at open, (2) StockTwits sentiment >0.70, (3) Insider buying confirmation. First 3 positions should deploy $18,750 (75% of capital) in the opening hour. Dead capital over the weekend cost us nothing, but dead capital Monday 10 AM - 4 PM will cost us everything. The scanner works - now we need EXECUTION SPEED at the open.",
+    "timestamp": 1772899816.224117
+  },
+  {
+    "strategy": "Weekend prep mode: Markets closed but Friday's biotech explosion (DAWN +66%, EDSA +78%, QURE +34%) gives us our Monday hunting ground - premarket watchlist these + momentum continuation plays at open.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap momentum",
+        "high-volume breakouts"
+      ],
+      "avoid": [
+        "low-volume grinders",
+        "indices during initial volatility"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "We're in COMPOUND tier (1.0% stops per risk status). Config shows 1.5% - tighten to tier default. With 2.5% positions, a 1% stop = $6.25 loss vs potential 20-50% runners. Bias toward action."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "Friday's runners all had strong StockTwits bullish sentiment. Requiring 0.3+ filters out noise while still catching momentum. DAWN/EDSA/QURE would've passed this threshold."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "With explosive biotech runners moving 20%+ in minutes, 60-second scans = missed entries. Cut to 30s during market hours. Speed wins in momentum trading."
+      }
+    ],
+    "key_insight": "We're at T+0 with $25K in cash and ZERO trades executed. Friday gave us a perfect preview: biotech sector is HOT (DAWN 27x volume, EDSA 19x volume) with risk-on regime confirmed by options flow despite red indices. Monday 9:30 AM is our starting gun. Premarket action on Friday's runners (DAWN, EDSA, QURE, REPL) will show us if they're continuation plays or gap-and-fade shorts. Our first trade sets psychological tone - scanner is feeding us explosive setups, we need to EXECUTE with conviction. A $250 stop-out on our first trade is irrelevant; missing a DAWN-style +66% runner because we hesitated costs $1,650 in unrealized gains. The game plan: premarket watchlist \u2192 volume confirmation \u2192 ENTER on momentum \u2192 trail with stops \u2192 take profits \u2192 REDEPLOY immediately. Capital velocity starts Monday morning.",
+    "timestamp": 1772902530.733479
+  },
+  {
+    "strategy": "HOLD FIRE until Monday open \u2014 use weekend to calibrate watchlist and entry triggers for immediate deployment at 9:30 AM ET",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "healthcare",
+        "speculative micro-caps"
+      ],
+      "avoid": []
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.0,
+        "reason": "Keep neutral \u2014 we need to enter ANY momentum runner fast, sentiment filtering will slow us down"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.5,
+        "reason": "Appropriate for micro-cap volatility \u2014 tight enough to preserve capital, loose enough to avoid noise stops"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "On Monday open we need SPEED \u2014 runners move in seconds, 60s is too slow for initial deployment window (9:30-10:00 AM)"
+      }
+    ],
+    "key_insight": "We're at T-minus 62 hours to market open with $25K in dead cash. Friday's runners (DAWN +66%, EDSA +78%) are HISTORICAL DATA \u2014 they already moved. Monday morning 9:30-10:30 AM is our DEPLOYMENT WINDOW. The bot must be configured to POUNCE on the first 3-5 qualifying runners within the first hour. Capital velocity starts with rapid initial deployment. Scanner should be primed to fire immediately at open, not wait for 'perfect' setups. First 10% position allocation in the first 30 minutes Monday is the goal.",
+    "timestamp": 1772902588.14749
+  },
+  {
+    "strategy": "Monday 9:30 AM is our LAUNCH POINT \u2014 deploy aggressively into continuation momentum or fresh breakouts with 3 immediate positions to eliminate idle capital penalty.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech_movers",
+        "low_float_runners",
+        "high_social_sentiment"
+      ],
+      "avoid": [
+        "broad_index_plays",
+        "low_volume_value"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 8.0,
+        "reason": "At $25K with 3 max positions in SURVIVAL tier, 2.5% = $625/position = only $1,875 deployed (7.5% utilization). We're leaving 92.5% idle. With 10% tier size and 3 positions, we should deploy ~8% per position = $2K each = $6K total (24% deployed). Still conservative but 3x more velocity."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "Friday's runners had 5-10% intraday volatility. A 1.5% stop on DAWN would've stopped us out before the +66% move. We need breathing room for momentum volatility. 2.5% stop = $50 risk per $2K position = $150 total risk (0.6% account) across 3 positions \u2014 totally acceptable."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "DAWN moved +66%, EDSA +78%, QURE +34% \u2014 taking 1.5% profit is leaving 95%+ of the move on the table. Raise TP1 to 2.5% to let winners breathe while still locking something."
+      },
+      {
+        "param": "TAKE_PROFIT_2_PCT",
+        "current": 3.0,
+        "suggested": 5.0,
+        "reason": "If we're in a runner doing +30-60%, TP2 at 3% is pathetically early. Raise to 5% so trailing stops do the real work on the back half."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "At market open with fresh capital and high urgency, we need faster refresh to catch the first 5-minute momentum burst. 30-second scans for the first 2 hours, then can throttle back."
+      }
+    ],
+    "key_insight": "We are at ZERO VELOCITY with $25K idle. Friday's missed opportunity cost: $16,500+ on DAWN alone. Monday 9:30-10:00 AM is our highest-leverage window \u2014 premarket will show if DAWN/EDSA/REPL are gapping for continuation or fade setups. Our ONLY job is to deploy 3 positions in the first 30 minutes into the strongest momentum signals (high volume + social sentiment + technical breakout). A stopped-out $2K position costs $50. Missing another +50% runner costs $1,000. The math is clear: BE AGGRESSIVE AT THE OPEN. Set alerts for 9:29 AM, watch scanner, deploy immediately into top 3 signals. Idle capital is our enemy.",
+    "timestamp": 1772905212.082714
+  },
+  {
+    "strategy": "Monday premarket: Deploy immediately into top 3 gappers with volume confirmation\u2014prioritize first 30min momentum over waiting for 'perfect' entry",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "small-cap momentum",
+        "previous day continuation plays"
+      ],
+      "avoid": [
+        "indices",
+        "low-volume large-caps"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 3.5,
+        "reason": "SURVIVAL tier = 10% position sizing, but 2.5% means deploying only 25% of available capital with 3 positions max. Need 3.33% to reach full deployment (10% tier limit)"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.0,
+        "reason": "Friday's movers had 60-78% ranges\u20141.5% stop too tight for these volatility levels, will get shaken out of winners. Match tier default."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.3,
+        "reason": "DAWN/EDSA/QURE all had strong StockTwits bullish signals\u2014use sentiment as confirmation filter, not barrier"
+      }
+    ],
+    "key_insight": "ZERO trades executed = strategy unvalidated. Monday 9:30-10:00 ET is CRITICAL\u2014scanner found 3 runners Friday (DAWN +66%, EDSA +78%, QURE +34%), proving detection works. Problem is EXECUTION. Bot must enter trades Monday morning. Check: (1) Is Alpaca API connected? (2) Are there code blocks preventing order submission? (3) Scanner running at 9:30 ET sharp? A $750 position in any Friday runner would be $1,245-$1,335 now. The cost of inaction is 10x higher than a stopped trade. GET IN THE GAME MONDAY.",
+    "timestamp": 1772906587.952693
+  },
+  {
+    "strategy": "Monday 9:30 ET = GO TIME. Deploy 3 positions within first 30 minutes using premarket gappers + social momentum setups. No hesitation.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "biotech",
+        "healthcare",
+        "high-beta tech"
+      ],
+      "avoid": [
+        "Friday's extended runners (DAWN/EDSA already +66%/+78% - late entry traps)"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 8.0,
+        "reason": "At 2.5% we deploy $625/position = 4 positions to hit max deployment. At 8% we deploy $2K/position = 3 positions fills our tier limit. Faster deployment = faster compounding. We have 3 day trades - use them."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "Volatile momentum runners need breathing room. REPL moved 14% intraday - a 1.5% stop gets shaken out on normal volatility. 2.5% stop = $50 risk per $2K position = acceptable for 10-30% upside targets."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 1.5,
+        "suggested": 2.5,
+        "reason": "Scanner finding +30-70% runners. Taking 50% at 1.5% (+$15) leaves huge gains on table. 2.5% (+$50) better captures the momentum we're targeting while still locking partials."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.65,
+        "reason": "HIMS has 89% bullish, REPL has 82% bullish - these work. Neutral sentiment (50%) stocks lack the social fuel for momentum runs. Require 65%+ bullish to align with our edge."
+      }
+    ],
+    "key_insight": "WEEKEND = PREPARATION PHASE. Monday playbook: (1) Scan premarket 9:00-9:25 for overnight runners with volume, (2) Prioritize REPL if it gaps up or HIMS if it breaks resistance with volume, (3) EXECUTE ALL 3 POSITIONS by 10:00 AM - dead capital is the only real risk. A $50 stop loss is nothing vs sitting on $25K earning zero. The bot has found 66%+ runners - the scanner WORKS. Now we need to LET IT TRADE. Bias toward action Monday open.",
+    "timestamp": 1772907131.308016
   }
 ]
