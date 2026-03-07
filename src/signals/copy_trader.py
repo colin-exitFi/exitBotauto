@@ -30,9 +30,13 @@ FULL_EXIT_HINTS = (" sold ", " exit ", " exited ", " out of ", " cover ", " cove
 EXIT_HINTS = TRIM_HINTS + FULL_EXIT_HINTS
 STREAM_RULE_TAG = "velox_copy_trader_v2"
 
+# Weights calibrated from 1-year backtest (data/backtest_results/copy_trader_backtest.json)
+# InvestorsLive: 80% WR on 3d holds, +43.9% total, PF 2.17 — proven edge
+# TraderStewie: Negative all hold periods, shorts especially bad (-164% on 5d)
+# Others: Not yet backtested — keep at 1.0 baseline until data available
 TRACKED_TRADERS = [
-    {"handle": "TraderStewie", "name": "Gil Morales", "tier": "tier_1", "style": "momentum_swing", "weight": 1.0},
-    {"handle": "InvestorsLive", "name": "Nathan Michaud", "tier": "tier_1", "style": "momentum", "weight": 1.0},
+    {"handle": "TraderStewie", "name": "Gil Morales", "tier": "tier_1", "style": "momentum_swing", "weight": 0.5, "filter_shorts": True},
+    {"handle": "InvestorsLive", "name": "Nathan Michaud", "tier": "tier_1", "style": "momentum", "weight": 2.0},
     {"handle": "markminervini", "name": "Mark Minervini", "tier": "tier_1", "style": "swing_growth", "weight": 1.0},
     {"handle": "PeterLBrandt", "name": "Peter Brandt", "tier": "tier_1", "style": "swing_classical", "weight": 1.0},
     {"handle": "alphatrends", "name": "Brian Shannon", "tier": "tier_1", "style": "momentum_swing", "weight": 1.0},
@@ -631,6 +635,12 @@ class CopyTraderMonitor:
 
         handle = str(tweet.get("handle", "")).lower()
         trader = self._traders.get(handle, {})
+
+        # Filter shorts for traders whose backtest shows negative short performance
+        if side == "short" and trader.get("filter_shorts", False):
+            logger.debug(f"Copy trader: filtering short from @{handle} (backtest-driven)")
+            return []
+
         confidence = 0.62
         if any(char.isdigit() for char in text):
             confidence += 0.08
