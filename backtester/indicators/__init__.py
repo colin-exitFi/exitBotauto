@@ -17,6 +17,13 @@ from backtester.indicators.wavetrend import WaveTrendIndicator
 from backtester.indicators.ichimoku import IchimokuIndicator
 from backtester.indicators.smi import SMIIndicator
 from backtester.indicators.rsi_ema_combo import RSIEMAComboIndicator
+from backtester.indicators.mean_reversion_zscore import MeanReversionZScoreIndicator
+from backtester.indicators.volume_breakout import VolumeBreakoutIndicator
+from backtester.indicators.atr_channel_breakout import ATRChannelBreakoutIndicator
+from backtester.indicators.multi_factor_momentum import MultiFactorMomentumIndicator
+from backtester.indicators.donchian_breakout import DonchianBreakoutIndicator
+from backtester.indicators.elder_ray import ElderRayIndicator
+from backtester.indicators.obv_divergence import OBVDivergenceIndicator
 
 __all__ = [
     "BaseIndicator",
@@ -37,4 +44,11 @@ __all__ = [
     "IchimokuIndicator",
     "SMIIndicator",
     "RSIEMAComboIndicator",
+    "MeanReversionZScoreIndicator",
+    "VolumeBreakoutIndicator",
+    "ATRChannelBreakoutIndicator",
+    "MultiFactorMomentumIndicator",
+    "DonchianBreakoutIndicator",
+    "ElderRayIndicator",
+    "OBVDivergenceIndicator",
 ]

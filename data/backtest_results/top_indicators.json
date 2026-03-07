@@ -4,36 +4,51 @@
     "params": {
       "std_mult": 1.0
     },
-    "score": 59.3,
-    "win_rate": 0.5167,
-    "sharpe": 0.9304,
-    "profit_factor": 1.179,
+    "score": 83.27,
+    "win_rate": 0.5345,
+    "sharpe": 3.3645,
+    "profit_factor": 1.7275,
     "side": "long",
-    "recommended_weight": 0.59
+    "recommended_weight": 0.83
   },
   {
     "name": "vwap_bands",
     "params": {
       "std_mult": 1.5
     },
-    "score": 59.3,
-    "win_rate": 0.5167,
-    "sharpe": 0.9304,
-    "profit_factor": 1.179,
+    "score": 83.27,
+    "win_rate": 0.5345,
+    "sharpe": 3.3645,
+    "profit_factor": 1.7275,
     "side": "long",
-    "recommended_weight": 0.59
+    "recommended_weight": 0.83
   },
   {
     "name": "vwap_bands",
     "params": {
       "std_mult": 2.0
     },
-    "score": 59.3,
-    "win_rate": 0.5167,
-    "sharpe": 0.9304,
-    "profit_factor": 1.179,
+    "score": 83.27,
+    "win_rate": 0.5345,
+    "sharpe": 3.3645,
+    "profit_factor": 1.7275,
     "side": "long",
-    "recommended_weight": 0.59
+    "recommended_weight": 0.83
+  },
+  {
+    "name": "wavetrend_c10_a21",
+    "params": {
+      "channel_length": 10,
+      "avg_length": 21,
+      "ob_level": 53,
+      "os_level": -53
+    },
+    "score": 0.0,
+    "win_rate": 1.0,
+    "sharpe": 1751.5503,
+    "profit_factor": 796.5323,
+    "side": "long",
+    "recommended_weight": 0.25
   },
   {
     "name": "rsi_divergence",
@@ -57,77 +72,63 @@
     },
     "score": 0.0,
     "win_rate": 1.0,
-    "sharpe": 28.3301,
-    "profit_factor": 1213.6888,
+    "sharpe": 531.098,
+    "profit_factor": 628.4033,
     "side": "long",
     "recommended_weight": 0.25
   },
   {
-    "name": "rsi_divergence",
+    "name": "mean_rev_z14_e2.0",
     "params": {
-      "period": 14
+      "lookback": 14,
+      "entry_z": -2.0,
+      "exit_z": 0.0
     },
     "score": 0.0,
     "win_rate": 1.0,
-    "sharpe": 24.684,
-    "profit_factor": 469.6333,
+    "sharpe": 464.5319,
+    "profit_factor": 640.4941,
     "side": "long",
     "recommended_weight": 0.25
   },
   {
-    "name": "wavetrend_c9_a12",
+    "name": "atr_channel_e50_a20_m2.0",
     "params": {
-      "channel_length": 9,
-      "avg_length": 12,
-      "ob_level": 53,
-      "os_level": -53
+      "ema_period": 50,
+      "atr_period": 20,
+      "atr_mult": 2.0
     },
     "score": 0.0,
     "win_rate": 1.0,
-    "sharpe": 20.5739,
-    "profit_factor": 552.4454,
+    "sharpe": 398.6764,
+    "profit_factor": 1422.4379,
     "side": "long",
     "recommended_weight": 0.25
   },
   {
-    "name": "keltner_channel",
+    "name": "atr_channel_e10_a10_m2.0",
     "params": {
-      "ema_period": 20,
-      "atr_mult": 2.0,
-      "atr_period": 20
+      "ema_period": 10,
+      "atr_period": 10,
+      "atr_mult": 2.0
     },
     "score": 0.0,
     "win_rate": 1.0,
-    "sharpe": 20.1761,
-    "profit_factor": 244.194,
+    "sharpe": 194.3407,
+    "profit_factor": 400.9097,
     "side": "long",
     "recommended_weight": 0.25
   },
   {
-    "name": "rsi_divergence",
+    "name": "obv_div_l20_s10",
     "params": {
-      "period": 7
+      "lookback": 20,
+      "smooth": 10
     },
     "score": 0.0,
     "win_rate": 1.0,
-    "sharpe": 15.563,
-    "profit_factor": 366.656,
-    "side": "long",
-    "recommended_weight": 0.25
-  },
-  {
-    "name": "smi_k14_d3",
-    "params": {
-      "k_length": 14,
-      "d_length": 3,
-      "smooth_length": 3,
-      "ob": 40,
-      "os": -40
-    },
-    "score": 0.0,
-    "win_rate": 1.0,
-    "sharpe": 15.5325,
-    "profit_factor": 359.5574,
+    "sharpe": 164.5968,
+    "profit_factor": 2949.5944,
     "side": "long",
     "recommended_weight": 0.25
   }
