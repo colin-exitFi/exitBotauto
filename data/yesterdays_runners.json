@@ -39,7 +39,7 @@
     {
       "symbol": "DAWN",
       "date": "2026-03-07",
-      "change_pct": 66.01,
+      "change_pct": 66.1189358372457,
       "close_price": 21.2,
       "volume": 78372872.0,
       "volume_spike": 27.096594773023742,
@@ -48,21 +48,39 @@
     {
       "symbol": "EDSA",
       "date": "2026-03-07",
-      "change_pct": 77.99,
+      "change_pct": 80.8864265927978,
       "close_price": 6.52,
       "volume": 32193581.0,
       "volume_spike": 18.86536490911135,
       "sentiment_at_peak": 0.4286
     },
     {
+      "symbol": "ATRA",
+      "date": "2026-03-07",
+      "change_pct": 62.19999999999999,
+      "close_price": 5.17,
+      "volume": 3201173.0,
+      "volume_spike": 41.8822677406995,
+      "sentiment_at_peak": 0.0909
+    },
+    {
       "symbol": "RVI",
       "date": "2026-03-07",
-      "change_pct": 599.83,
+      "change_pct": 625.6666666666666,
       "close_price": 21,
       "volume": 4787827.0,
       "volume_spike": 0.8792870465392524,
       "sentiment_at_peak": 0.8
+    },
+    {
+      "symbol": "QURE",
+      "date": "2026-03-07",
+      "change_pct": 102.32300469483566,
+      "close_price": 14.27,
+      "volume": 17626304.0,
+      "volume_spike": 1.811968006772288,
+      "sentiment_at_peak": 0.5385
     }
   ],
-  "updated_at": "2026-03-07T04:05:13.799645"
+  "updated_at": "2026-03-07T04:40:47.975006"
 }

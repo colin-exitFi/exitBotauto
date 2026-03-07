@@ -3,6 +3,8 @@ Technical Agent 📊 - AI-powered momentum analysis.
 Uses Claude Sonnet for nuanced technical reads.
 """
 
+import json
+from pathlib import Path
 from typing import Dict
 from loguru import logger
 
@@ -28,6 +30,9 @@ SPREAD: {spread_pct}%
 EVIDENCE:
 {price_action}
 
+VALIDATED INDICATORS:
+{validated_indicators}
+
 Interpretation framework:
 - Identify whether momentum is intact, exhausting, or reversing.
 - Weigh RSI, EMA structure, VWAP relation, day-range location, and volume acceleration together.
@@ -42,6 +47,46 @@ Output mapping:
 
 Respond with ONLY valid JSON:
 {{"signal": "BUY" or "SELL" or "HOLD", "confidence": 0-100, "key_levels": {{"support": number, "resistance": number}}, "momentum": "accelerating" or "decelerating", "timeframe": "minutes" or "hours" or "days"}}"""
+
+
+_TOP_INDICATORS_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "backtest_results" / "top_indicators.json"
+
+
+def _load_validated_indicators(limit: int = 5):
+    try:
+        raw = json.loads(_TOP_INDICATORS_FILE.read_text()) if _TOP_INDICATORS_FILE.exists() else []
+        if not isinstance(raw, list):
+            return []
+        return raw[: max(0, int(limit or 0))]
+    except Exception:
+        return []
+
+
+def _format_validated_indicators(signals: Dict) -> str:
+    live_rows = signals.get("validated_indicator_signals") or []
+    if isinstance(live_rows, list) and live_rows:
+        rows = []
+        for row in live_rows[:5]:
+            if not isinstance(row, dict):
+                continue
+            rows.append(
+                f"- {row.get('name', 'indicator')}: {row.get('signal', 'NEUTRAL')} "
+                f"strength={row.get('strength', 0)} score={row.get('score', 0)}"
+            )
+        if rows:
+            return "\n".join(rows)
+
+    ranked = _load_validated_indicators(limit=5)
+    if not ranked:
+        return "None"
+    rows = []
+    for row in ranked:
+        params = ", ".join(f"{k}={v}" for k, v in (row.get("params", {}) or {}).items()) or "-"
+        rows.append(
+            f"- {row.get('name', 'indicator')} ({params}) score={row.get('score', 0)} "
+            f"wr={float(row.get('win_rate', 0) or 0):.0%} sharpe={float(row.get('sharpe', 0) or 0):.2f}"
+        )
+    return "\n".join(rows)
 
 
 async def analyze(symbol: str, price: float, signals: Dict) -> Dict:
@@ -83,6 +128,7 @@ async def analyze(symbol: str, price: float, signals: Dict) -> Dict:
             volume_spike=signals.get("volume_spike", 1.0),
             spread_pct=signals.get("spread_pct", "N/A"),
             price_action=price_action,
+            validated_indicators=_format_validated_indicators(signals),
         )
 
         result = await call_claude(prompt, max_tokens=300)

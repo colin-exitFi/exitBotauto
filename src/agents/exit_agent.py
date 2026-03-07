@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from src.agents.base_agent import call_claude
+from src.exit.order_conflicts import cancel_conflicting_exit_orders
 
 
 DEFAULT_ACTION = {
@@ -61,6 +62,7 @@ class ExitAgent:
         self._running = False
         self._last_briefs: Dict[str, Dict] = {}  # symbol -> latest agent briefs
         self._last_check: Dict[str, float] = {}  # symbol -> last check timestamp
+        self._processed_advisor_actions = set()
         self._task: Optional[asyncio.Task] = None
 
     def update_briefs(self, symbol: str, briefs: Dict):
@@ -102,6 +104,8 @@ class ExitAgent:
                     symbol = pos.get("symbol", "")
                     if not symbol:
                         continue
+                    if pos.get("halted"):
+                        continue
                     # Don't check more than once per 2 minutes per position
                     last = self._last_check.get(symbol, 0)
                     if time.time() - last < 120:
@@ -132,6 +136,14 @@ class ExitAgent:
         entry_price = pos.get("entry_price", 0)
         if entry_price <= 0:
             return None
+
+        if pos.get("luld_at_risk") and not pos.get("halted"):
+            tightened = max(1.0, min(float(pos.get("trail_pct", 3.0) or 3.0), 1.5))
+            return {
+                "action": "TIGHTEN",
+                "new_trail_pct": tightened,
+                "reasoning": "LULD band is tightening near entry; reducing room proactively",
+            }
 
         # Get current price
         current_price = entry_price  # fallback
@@ -276,39 +288,71 @@ class ExitAgent:
                 pos.pop("_trail_adjusting", None)  # Always clear the flag
 
     async def _cancel_conflicting_exit_orders(self, symbol: str, side: str = "long") -> int:
-        """Cancel open orders that would reserve the same position quantity needed for EXIT_NOW."""
-        if not hasattr(self.broker, "get_orders") or not hasattr(self.broker, "cancel_order"):
-            return 0
-
         exit_side = "buy" if side == "short" else "sell"
-        try:
-            open_orders = await asyncio.get_event_loop().run_in_executor(
-                None, self.broker.get_orders, "open"
-            )
-        except Exception:
-            return 0
+        return await cancel_conflicting_exit_orders(self.broker, symbol, exit_side)
 
-        target_symbol = str(symbol or "").upper()
-        cancel_ids = []
-        for order in open_orders or []:
-            if str(order.get("symbol", "")).upper() != target_symbol:
-                continue
-            if str(order.get("side", "")).lower() != exit_side:
-                continue
-            order_id = str(order.get("id", "") or "").strip()
-            if order_id:
-                cancel_ids.append(order_id)
+    async def _check_advisor_recommendations(self, positions: List[Dict], advisor) -> List[Dict]:
+        """Apply advisor-issued trim/exit suggestions conservatively."""
+        if not advisor:
+            return []
 
-        canceled = 0
-        for order_id in sorted(set(cancel_ids)):
-            ok = await asyncio.get_event_loop().run_in_executor(
-                None, self.broker.cancel_order, order_id
+        actions = advisor.get_position_actions()
+        if not actions:
+            return []
+
+        held = {str(pos.get("symbol", "")).upper(): pos for pos in positions or []}
+        applied = []
+        for rec in actions:
+            symbol = str(rec.get("symbol", "")).upper()
+            pos = held.get(symbol)
+            if not pos or pos.get("halted"):
+                continue
+
+            rec_key = (symbol, str(rec.get("action", "")), float(rec.get("timestamp", 0) or 0))
+            if rec_key in self._processed_advisor_actions:
+                continue
+
+            if self.risk_manager and hasattr(self.risk_manager, "can_exit_position"):
+                if not self.risk_manager.can_exit_position(pos, reason="advisor_recommendation", log_block=False):
+                    continue
+
+            urgency = str(rec.get("urgency", "medium") or "medium").lower()
+            action = str(rec.get("action", "trim") or "trim").lower()
+            old_trail = float(pos.get("trail_pct", 3.0) or 3.0)
+            if action == "exit" and urgency == "high":
+                new_trail = min(old_trail, 1.0)
+            elif action == "exit":
+                new_trail = min(old_trail, 1.5)
+            else:
+                new_trail = min(old_trail, 1.5)
+            new_trail = max(0.5, min(5.0, new_trail))
+
+            if new_trail >= old_trail:
+                self._processed_advisor_actions.add(rec_key)
+                continue
+
+            await self._execute_action(
+                symbol,
+                pos,
+                {
+                    "action": "TIGHTEN",
+                    "new_trail_pct": new_trail,
+                    "reasoning": f"Advisor {action}/{urgency}: {rec.get('reason', '')[:120]}",
+                },
             )
-            if ok:
-                canceled += 1
-        if canceled:
-            await asyncio.sleep(0.25)
-        return canceled
+            pos["advisor_action"] = action
+            pos["advisor_action_reason"] = rec.get("reason", "")
+            pos["advisor_action_at"] = float(rec.get("timestamp", time.time()) or time.time())
+            self._processed_advisor_actions.add(rec_key)
+            applied.append({"symbol": symbol, "action": action, "new_trail_pct": new_trail})
+            try:
+                from src.dashboard.dashboard import log_activity
+
+                log_activity("ai", f"🎯 Advisor tightened {symbol} trail to {new_trail:.1f}% ({action}/{urgency})")
+            except Exception:
+                pass
+
+        return applied
 
 
 def _brief_summary(brief: Dict) -> str:

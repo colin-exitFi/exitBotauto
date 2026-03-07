@@ -8,8 +8,9 @@ Persists config changes to data/config_state.json.
 import asyncio
 import json
 import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 from loguru import logger
 
 import anthropic
@@ -20,6 +21,7 @@ from .trade_history import get_analytics
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 MODEL = getattr(settings, "CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 CONFIG_STATE_FILE = DATA_DIR / "config_state.json"
+IMPACT_STATE_FILE = DATA_DIR / "tuner_impact.json"
 
 from src.ai.mission import MISSION
 
@@ -82,9 +84,11 @@ class Tuner:
         self._last_run = 0.0
         self._last_output: Optional[Dict] = None
         self._change_history: list = []
+        self._impact_history: list = []
         DATA_DIR.mkdir(exist_ok=True)
         # Load persisted config state on startup
         self._load_config_state()
+        self._load_impact_state()
 
     async def run(self, bot, advisor_output: Optional[Dict] = None) -> Optional[Dict]:
         """Run tuning cycle. Returns changes applied or None."""
@@ -118,6 +122,7 @@ class Tuner:
             return None
 
         try:
+            impact_updates = await self.measure_impact()
             risk_status = bot.risk_manager.get_status() if bot.risk_manager else {}
             trade_analytics = get_analytics()
             recent_trades = bot.exit_manager.get_history(30) if bot.exit_manager else []
@@ -151,6 +156,9 @@ RECENT TRADES:
 
 PREVIOUS TUNER CHANGES (track what worked):
 {json.dumps(self._change_history[-10:], indent=2, default=str)}
+
+IMPACT HISTORY (what worked and what didn't):
+{json.dumps(self._impact_history[-10:], indent=2, default=str)}
 
 What parameters should change?"""
 
@@ -188,23 +196,44 @@ What parameters should change?"""
                 old_value = getattr(settings, param, None)
                 if old_value is None:
                     continue
+                if self._was_hurtful_change(param, typed_value):
+                    logger.info(f"🔧 Tuner: skipping {param} → {typed_value}; same change recently hurt")
+                    continue
 
                 # Apply to settings module
+                snapshot = self._snapshot_performance()
                 setattr(settings, param, typed_value)
-                applied.append({
-                    "param": param,
-                    "old": old_value,
-                    "new": typed_value,
-                    "reason": reason,
-                    "timestamp": time.time(),
-                })
+                change = ParameterChange(
+                    param=param,
+                    old_value=old_value,
+                    new_value=typed_value,
+                    reason=reason,
+                    timestamp=time.time(),
+                    snapshot_win_rate=float(snapshot.get("win_rate", 0) or 0),
+                    snapshot_pnl=float(snapshot.get("total_pnl", 0) or 0),
+                    snapshot_sharpe=float(snapshot.get("sharpe", 0) or 0),
+                    snapshot_trade_count=int(snapshot.get("trade_count", 0) or 0),
+                )
+                change_row = asdict(change)
+                applied.append(
+                    {
+                        "param": param,
+                        "old": old_value,
+                        "new": typed_value,
+                        "reason": reason,
+                        "timestamp": change.timestamp,
+                    }
+                )
+                self._impact_history.append(change_row)
                 logger.info(f"🔧 Tuner: {param}: {old_value} → {typed_value} ({reason[:60]})")
 
             if applied:
                 self._change_history.extend(applied)
                 self._save_config_state()
+                self._save_impact_state()
 
             result["applied"] = applied
+            result["impact_updates"] = impact_updates
             self._last_output = result
             self._save(result)
             return result
@@ -250,6 +279,86 @@ What parameters should change?"""
         except Exception as e:
             logger.warning(f"Failed to load config state: {e}")
 
+    def _load_impact_state(self):
+        if not IMPACT_STATE_FILE.exists():
+            return
+        try:
+            raw = json.loads(IMPACT_STATE_FILE.read_text())
+            self._impact_history = raw if isinstance(raw, list) else []
+        except Exception as e:
+            logger.warning(f"Failed to load tuner impact state: {e}")
+
+    def _save_impact_state(self):
+        try:
+            IMPACT_STATE_FILE.write_text(json.dumps(self._impact_history[-100:], indent=2, default=str))
+        except Exception as e:
+            logger.warning(f"Failed to save tuner impact state: {e}")
+
+    def _snapshot_performance(self) -> Dict:
+        analytics = get_analytics()
+        recent = analytics.get("recent_20", {}) or {}
+        overall = analytics.get("overall", {}) or {}
+        return {
+            "win_rate": float(analytics.get("win_rate", overall.get("win_rate_pct", 0) / 100.0) or 0),
+            "total_pnl": float(analytics.get("total_pnl", overall.get("total_pnl", 0)) or 0),
+            "sharpe": float(analytics.get("sharpe_ratio", overall.get("sharpe_ratio", 0)) or 0),
+            "trade_count": int(analytics.get("total_trades", 0) or 0),
+            "recent_20_win_rate": float(recent.get("win_rate_pct", 0) or 0),
+            "recent_20_pnl": float(recent.get("pnl", 0) or 0),
+        }
+
+    async def measure_impact(self) -> List[Dict]:
+        snapshot = self._snapshot_performance()
+        measured = []
+        changed = False
+        for row in self._impact_history:
+            if not isinstance(row, dict):
+                continue
+            if row.get("impact_measured_at"):
+                continue
+            trades_since = int(snapshot.get("trade_count", 0) or 0) - int(row.get("snapshot_trade_count", 0) or 0)
+            if trades_since < 15:
+                continue
+
+            post_win_rate = float(snapshot.get("win_rate", 0) or 0)
+            post_pnl = float(snapshot.get("total_pnl", 0) or 0)
+            post_sharpe = float(snapshot.get("sharpe", 0) or 0)
+            pre_win_rate = float(row.get("snapshot_win_rate", 0) or 0)
+            pre_pnl = float(row.get("snapshot_pnl", 0) or 0)
+            pre_sharpe = float(row.get("snapshot_sharpe", 0) or 0)
+
+            verdict = "neutral"
+            if post_win_rate > pre_win_rate and post_pnl > pre_pnl and post_sharpe >= pre_sharpe:
+                verdict = "helped"
+            elif post_win_rate < (pre_win_rate - 0.05) or (post_pnl < pre_pnl and post_sharpe < pre_sharpe):
+                verdict = "hurt"
+
+            row["post_win_rate"] = post_win_rate
+            row["post_pnl"] = post_pnl
+            row["post_sharpe"] = post_sharpe
+            row["post_trade_count"] = int(snapshot.get("trade_count", 0) or 0)
+            row["impact_measured_at"] = time.time()
+            row["verdict"] = verdict
+            row["trades_since_change"] = trades_since
+            measured.append(row)
+            changed = True
+
+        if changed:
+            self._save_impact_state()
+        return measured
+
+    def _was_hurtful_change(self, param: str, new_value: Any) -> bool:
+        for row in reversed(self._impact_history):
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("param", "")) != str(param):
+                continue
+            if row.get("verdict") != "hurt":
+                continue
+            if row.get("new_value") == new_value:
+                return True
+        return False
+
     def _save(self, result: Dict):
         result["timestamp"] = time.time()
         tuner_file = DATA_DIR / "tuner.json"
@@ -260,6 +369,25 @@ What parameters should change?"""
         history.append(result)
         history = history[-50:]
         tuner_file.write_text(json.dumps(history, indent=2))
+
+
+@dataclass
+class ParameterChange:
+    param: str
+    old_value: Any
+    new_value: Any
+    reason: str
+    timestamp: float
+    snapshot_win_rate: float
+    snapshot_pnl: float
+    snapshot_sharpe: float
+    snapshot_trade_count: int
+    post_win_rate: Optional[float] = None
+    post_pnl: Optional[float] = None
+    post_sharpe: Optional[float] = None
+    post_trade_count: Optional[int] = None
+    impact_measured_at: Optional[float] = None
+    verdict: Optional[str] = None
 
 
 def _parse_json(text: str) -> dict:

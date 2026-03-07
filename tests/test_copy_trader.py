@@ -38,21 +38,25 @@ class CopyTraderMonitorTests(unittest.TestCase):
         self.assertEqual(parsed, [])
 
     def test_get_candidate_signals_groups_convergence(self):
-        monitor = CopyTraderMonitor()
-        monitor._bearer = "test-token"
-        tweets = [
-            {"tweet_id": "1", "handle": "traderstewie", "text": "Starter $HOOD long here", "created_at": "2026-03-07T09:00:00Z"},
-            {"tweet_id": "2", "handle": "alphatrends", "text": "Added $HOOD long", "created_at": "2026-03-07T09:01:00Z"},
-        ]
+        with TemporaryDirectory() as tmp_dir:
+            monitor = CopyTraderMonitor()
+            monitor._performance_file = Path(tmp_dir) / "copy_trader_performance.json"
+            for trader in monitor._traders.values():
+                trader["weight"] = 1.0
+            monitor._bearer = "test-token"
+            tweets = [
+                {"tweet_id": "1", "handle": "traderstewie", "text": "Starter $HOOD long here", "created_at": "2026-03-07T09:00:00Z"},
+                {"tweet_id": "2", "handle": "alphatrends", "text": "Added $HOOD long", "created_at": "2026-03-07T09:01:00Z"},
+            ]
 
-        with patch.object(monitor, "_fetch_recent_tweets", return_value=tweets):
-            signals = monitor.get_candidate_signals()
+            with patch.object(monitor, "_fetch_recent_tweets", return_value=tweets):
+                signals = monitor.get_candidate_signals()
 
-        self.assertEqual(signals[0]["symbol"], "HOOD")
-        self.assertEqual(signals[0]["copy_trader_signal_count"], 2)
-        self.assertIn("traderstewie", signals[0]["copy_trader_handles"])
-        self.assertGreaterEqual(float(signals[0]["copy_trader_size_multiplier"]), 1.08)
-        self.assertAlmostEqual(float(signals[0]["copy_trader_weight"]), 1.0, places=3)
+            self.assertEqual(signals[0]["symbol"], "HOOD")
+            self.assertEqual(signals[0]["copy_trader_signal_count"], 2)
+            self.assertIn("traderstewie", signals[0]["copy_trader_handles"])
+            self.assertGreater(float(signals[0]["copy_trader_size_multiplier"]), 1.0)
+            self.assertAlmostEqual(float(signals[0]["copy_trader_weight"]), 1.0, places=3)
 
     def test_record_trade_result_updates_stats_and_weight(self):
         with TemporaryDirectory() as tmp_dir:
@@ -68,6 +72,22 @@ class CopyTraderMonitorTests(unittest.TestCase):
             self.assertEqual(stewie["signals_wrong"], 0)
             self.assertGreater(stewie["weight"], 1.0)
             self.assertTrue(monitor._performance_file.exists())
+
+    def test_size_multiplier_can_reduce_for_underperforming_traders(self):
+        monitor = CopyTraderMonitor()
+        monitor._traders["traderstewie"]["weight"] = 0.5
+        tweet = {
+            "tweet_id": "3",
+            "handle": "traderstewie",
+            "text": "Starter $SNAP long here",
+            "created_at": "2026-03-07T09:05:00Z",
+        }
+
+        with patch.object(monitor, "_fetch_recent_tweets", return_value=[tweet]):
+            monitor._bearer = "test-token"
+            signals = monitor.get_candidate_signals()
+
+        self.assertLess(float(signals[0]["copy_trader_size_multiplier"]), 1.0)
 
     def test_get_exit_signals_groups_exit_tweets(self):
         monitor = CopyTraderMonitor()

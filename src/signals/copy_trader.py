@@ -212,10 +212,10 @@ class CopyTraderMonitor:
     @staticmethod
     def _size_multiplier(signal_count: int, avg_weight: float) -> float:
         multiplier = 1.0 + (0.04 * min(int(signal_count or 0), 3))
-        multiplier += max(0.0, float(avg_weight or 1.0) - 1.0) * 0.12
+        multiplier += (float(avg_weight or 1.0) - 1.0) * 0.25
         if signal_count >= 3:
             multiplier += 0.03
-        return round(max(1.0, min(1.25, multiplier)), 3)
+        return round(max(0.75, min(1.25, multiplier)), 3)
 
     def _load_performance(self):
         try:

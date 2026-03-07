@@ -3,7 +3,7 @@
     "alphatrends": {
       "current_streak": 0,
       "signals_correct": 0,
-      "signals_emitted": 8,
+      "signals_emitted": 12,
       "signals_wrong": 0,
       "weight": 1.0
     },
@@ -31,16 +31,16 @@
     "ripster47": {
       "current_streak": 0,
       "signals_correct": 0,
-      "signals_emitted": 0,
+      "signals_emitted": 15,
       "signals_wrong": 0,
       "weight": 1.0
     },
     "traderstewie": {
       "current_streak": 0,
       "signals_correct": 0,
-      "signals_emitted": 8,
+      "signals_emitted": 21,
       "signals_wrong": 0,
-      "weight": 1.0
+      "weight": 0.5
     }
   }
 }

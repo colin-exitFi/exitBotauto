@@ -69,18 +69,49 @@ class GameFilmDisableThresholdTests(unittest.TestCase):
             "avg_winner_hold_min": 5,
             "avg_loser_hold_min": 8,
             "by_strategy_tag": {
-                "social_momentum_long": {"trades": 38, "win_rate_pct": 35.0, "pnl": -142.0, "avg_pnl": -3.7},
-                "pharma_event_long": {"trades": 18, "win_rate_pct": 30.0, "pnl": -70.0, "avg_pnl": -3.9},
-                "breakout_fast_path": {"trades": 40, "win_rate_pct": 52.0, "pnl": 90.0, "avg_pnl": 2.2},
+                "social_momentum_long": {
+                    "trades": 38,
+                    "win_rate_pct": 25.0,
+                    "pnl": -142.0,
+                    "avg_pnl": -3.7,
+                    "first_half": {"pnl": -70.0},
+                    "second_half": {"pnl": -72.0},
+                },
+                "pharma_event_long": {
+                    "trades": 22,
+                    "win_rate_pct": 31.0,
+                    "pnl": -70.0,
+                    "avg_pnl": -3.2,
+                    "first_half": {"pnl": -30.0},
+                    "second_half": {"pnl": -40.0},
+                },
+                "copy_trader_long": {
+                    "trades": 12,
+                    "win_rate_pct": 32.0,
+                    "pnl": -18.0,
+                    "avg_pnl": -1.5,
+                    "first_half": {"pnl": -10.0},
+                    "second_half": {"pnl": 2.0},
+                },
+                "breakout_fast_path": {
+                    "trades": 40,
+                    "win_rate_pct": 52.0,
+                    "pnl": 90.0,
+                    "avg_pnl": 2.2,
+                    "first_half": {"pnl": 20.0},
+                    "second_half": {"pnl": 70.0},
+                },
             },
         }
         recs = film._generate_recommendations(insights)
-        disables = recs.get("disable_strategies", [])
-        tags = {r.get("strategy_tag") for r in disables}
+        hard_tags = {r.get("strategy_tag") for r in recs.get("disable_strategies", [])}
+        soft_tags = {r.get("strategy_tag") for r in recs.get("soft_disable_strategies", [])}
+        watch_tags = {r.get("strategy_tag") for r in recs.get("watch_list_strategies", [])}
 
-        self.assertIn("social_momentum_long", tags)
-        self.assertNotIn("pharma_event_long", tags)   # not enough samples
-        self.assertNotIn("breakout_fast_path", tags)  # profitable / win rate above threshold
+        self.assertIn("social_momentum_long", hard_tags)
+        self.assertIn("pharma_event_long", soft_tags)
+        self.assertIn("copy_trader_long", watch_tags)
+        self.assertNotIn("breakout_fast_path", hard_tags | soft_tags | watch_tags)
 
 
 if __name__ == "__main__":

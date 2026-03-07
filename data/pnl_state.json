@@ -1,16 +1,8 @@
 {
-  "today_realized_pnl": 1433.6649292799998,
-  "today_date": "2026-03-05",
-  "peak_equity": 25052.7,
-  "total_realized_pnl": 1433.6649292799998,
-  "total_trades": 10,
-  "winning_trades": 3,
-  "losing_trades": 3,
-  "best_trade": 1393.0,
-  "worst_trade": -1.6799999999999642,
-  "starting_equity": 25000.0,
-  "options_total_realized_pnl": 1393.0,
-  "options_total_trades": 1,
-  "options_winning_trades": 1,
-  "options_losing_trades": 0
+  "options_total_realized_pnl": 0.0,
+  "options_total_trades": 0,
+  "options_winning_trades": 0,
+  "options_losing_trades": 0,
+  "today_realized_pnl": 0.0,
+  "today_date": "2026-03-07"
 }

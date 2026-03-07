@@ -4,74 +4,74 @@
       "sector": "Technology",
       "price": 137.26,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLF": {
       "sector": "Financials",
       "price": 50.57,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLE": {
       "sector": "Energy",
       "price": 56.555,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLV": {
       "sector": "Healthcare",
       "price": 152.72,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLY": {
       "sector": "Consumer Discretionary",
       "price": 114.46,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLP": {
       "sector": "Consumer Staples",
       "price": 85.76,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLI": {
       "sector": "Industrials",
       "price": 169.935,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLB": {
       "sector": "Materials",
       "price": 49.865,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLRE": {
       "sector": "Real Estate",
       "price": 42.89,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLU": {
       "sector": "Utilities",
       "price": 46.735,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "XLC": {
       "sector": "Communication",
       "price": 117.48,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     },
     "SPY": {
       "sector": "S&P 500 (benchmark)",
       "price": 672.24,
       "change_pct": 0,
-      "updated": 1772877283.311091
+      "updated": 1772881104.054065
     }
   },
-  "updated_at": 1772877283.8717282
+  "updated_at": 1772881104.639164
 }

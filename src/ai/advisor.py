@@ -150,6 +150,38 @@ What's your strategic advice?"""
     def get_last_output(self) -> Optional[Dict]:
         return self._last_output
 
+    def get_position_actions(self) -> list:
+        """Extract actionable exit/trim recommendations from the latest advisor output."""
+        output = self._last_output or self._load_last_output()
+        if not isinstance(output, dict):
+            return []
+
+        actions = []
+        timestamp = float(output.get("timestamp", 0) or 0)
+        for row in output.get("position_advice", []) or []:
+            if not isinstance(row, dict):
+                continue
+            symbol = str(row.get("symbol", "") or "").upper().strip()
+            action = str(row.get("action", "hold") or "hold").lower().strip()
+            reason = str(row.get("reason", "") or "").strip()
+            urgency = str(row.get("urgency", "") or "").lower().strip()
+            if not symbol or action not in {"exit", "trim"}:
+                continue
+            if urgency not in {"high", "medium", "low"}:
+                urgency = self._infer_urgency(action, reason)
+            if action == "exit" and urgency not in {"high", "medium"}:
+                continue
+            actions.append(
+                {
+                    "symbol": symbol,
+                    "action": action,
+                    "reason": reason,
+                    "urgency": urgency,
+                    "timestamp": timestamp,
+                }
+            )
+        return actions
+
     def _save(self, result: Dict):
         result["timestamp"] = time.time()
         adv_file = DATA_DIR / "advisor.json"
@@ -161,6 +193,32 @@ What's your strategic advice?"""
         history.append(result)
         history = history[-50:]
         adv_file.write_text(json.dumps(history, indent=2))
+
+    @staticmethod
+    def _infer_urgency(action: str, reason: str) -> str:
+        text = f"{action} {reason}".lower()
+        if any(term in text for term in ("urgent", "immediate", "broken", "thesis broken", "exit now", "high conviction")):
+            return "high"
+        if action == "trim":
+            return "medium"
+        if any(term in text for term in ("trim", "reduce", "tighten", "cautious")):
+            return "medium"
+        return "low"
+
+    def _load_last_output(self) -> Optional[Dict]:
+        adv_file = DATA_DIR / "advisor.json"
+        if not adv_file.exists():
+            return None
+        try:
+            raw = json.loads(adv_file.read_text())
+        except Exception:
+            return None
+        if isinstance(raw, list) and raw:
+            last = raw[-1]
+            return last if isinstance(last, dict) else None
+        if isinstance(raw, dict):
+            return raw
+        return None
 
 
 def _parse_json(text: str) -> dict:

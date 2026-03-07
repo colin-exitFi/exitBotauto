@@ -1,0 +1,247 @@
+{
+  "trades": [
+    {
+      "fund": "ARKK",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "WGS",
+      "isin": "US81663L2007",
+      "name": "GeneDx Holdings Corp",
+      "shares": 5153,
+      "weight_pct": 0.0065,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "WGS",
+      "isin": "US81663L2007",
+      "name": "GeneDx Holdings Corp",
+      "shares": 3960,
+      "weight_pct": 0.029,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKK",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "TXG",
+      "isin": "US88025U1097",
+      "name": "10X Genomics Inc",
+      "shares": 75007,
+      "weight_pct": 0.0237,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKW",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "ROKU",
+      "isin": "US77543R1023",
+      "name": "Roku Inc",
+      "shares": 27061,
+      "weight_pct": 0.1588,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKF",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "ROKU",
+      "isin": "US77543R1023",
+      "name": "Roku Inc",
+      "shares": 5243,
+      "weight_pct": 0.0596,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKX",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "PRNT",
+      "isin": "US00214Q5009",
+      "name": "3D Printing ETF",
+      "shares": 300,
+      "weight_pct": 0.0009,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKW",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "PD",
+      "isin": "US69553P1003",
+      "name": "PagerDuty Inc",
+      "shares": 901,
+      "weight_pct": 0.0004,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKW",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "NXDR",
+      "isin": "US65345M1080",
+      "name": "Nextdoor Holdings Inc",
+      "shares": 23100,
+      "weight_pct": 0.0022,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "LAB",
+      "isin": "US34385P1084",
+      "name": "Standard BioTools Inc",
+      "shares": 397382,
+      "weight_pct": 0.0338,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKX",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "JOBY",
+      "isin": "KYG651631007",
+      "name": "Joby Aviation Inc",
+      "shares": 104506,
+      "weight_pct": 0.1394,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKQ",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "JOBY",
+      "isin": "KYG651631007",
+      "name": "Joby Aviation Inc",
+      "shares": 184911,
+      "weight_pct": 0.0894,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKX",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "IRDM",
+      "isin": "US46269C1027",
+      "name": "Iridium Communications Inc",
+      "shares": 53914,
+      "weight_pct": 0.1804,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKQ",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "IRDM",
+      "isin": "US46269C1027",
+      "name": "Iridium Communications Inc",
+      "shares": 32976,
+      "weight_pct": 0.04,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "INCY",
+      "isin": "US45337C1027",
+      "name": "Incyte Corp",
+      "shares": 93,
+      "weight_pct": 0.0008,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKW",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "HOOD",
+      "isin": "US7707001027",
+      "name": "Robinhood Markets Inc",
+      "shares": 2104,
+      "weight_pct": 0.0097,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKK",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "HOOD",
+      "isin": "US7707001027",
+      "name": "Robinhood Markets Inc",
+      "shares": 16570,
+      "weight_pct": 0.019,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKF",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "HOOD",
+      "isin": "US7707001027",
+      "name": "Robinhood Markets Inc",
+      "shares": 532,
+      "weight_pct": 0.0048,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKX",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "DSY",
+      "isin": "FR0014003TT8",
+      "name": "Dassault Systemes SE",
+      "shares": 600,
+      "weight_pct": 0.0018,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKW",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "DKNG",
+      "isin": "US26142V1052",
+      "name": "Draftkings Inc",
+      "shares": 10600,
+      "weight_pct": 0.0158,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKF",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "CNTN",
+      "isin": "US4327053090",
+      "name": "Canton Strategic Holdings Inc",
+      "shares": 42500,
+      "weight_pct": 0.0223,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-06",
+      "direction": "buy",
+      "ticker": "CERS",
+      "isin": "US1570851014",
+      "name": "Cerus Corp",
+      "shares": 84004,
+      "weight_pct": 0.0142,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-06",
+      "direction": "sell",
+      "ticker": "CAI",
+      "isin": "US1421521071",
+      "name": "Caris Life Sciences Inc",
+      "shares": 93,
+      "weight_pct": 0.0002,
+      "source": "ark_trades"
+    }
+  ],
+  "fetched_at": 1772880169.850322
+}

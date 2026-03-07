@@ -16,6 +16,9 @@ _DEFAULT_CONTROLS = {
     "hard_disabled": {},
     "manual_enabled": {},
     "manual_disabled": {},
+    "soft_disabled": {},
+    "size_reductions": {},
+    "probation": {},
 }
 
 
@@ -98,13 +101,113 @@ def apply_auto_disables(recommendations: List, controls: Dict) -> Dict:
     return merged
 
 
+def apply_recommendations(recommendations: Dict, controls: Dict) -> Dict:
+    merged = _normalize_controls(controls)
+    if not isinstance(recommendations, dict):
+        return merged
+
+    merged = apply_auto_disables(recommendations.get("disable_strategies", []), merged)
+    manual_enabled = merged["manual_enabled"]
+
+    for rec in recommendations.get("soft_disable_strategies", []) or []:
+        tag = str(rec.get("strategy_tag") or "").strip()
+        if not tag or tag in manual_enabled:
+            continue
+        merged["soft_disabled"][tag] = {
+            "reason": str(rec.get("reason") or "").strip() or "Soft disabled by game film",
+            "disabled_at": _utc_now_iso(),
+            "disabled_by": "game_film",
+            "trades": int(rec.get("trades", 0) or 0),
+            "win_rate_pct": float(rec.get("win_rate_pct", 0) or 0),
+            "pnl": float(rec.get("pnl", 0) or 0),
+        }
+
+    for rec in recommendations.get("size_reductions", []) or []:
+        tag = str(rec.get("strategy_tag") or "").strip()
+        if not tag:
+            continue
+        merged["size_reductions"][tag] = {
+            "multiplier": max(0.1, min(1.0, float(rec.get("size_multiplier", 1.0) or 1.0))),
+            "reason": str(rec.get("reason") or "").strip(),
+            "updated_at": _utc_now_iso(),
+        }
+
+    for rec in recommendations.get("probation_candidates", []) or []:
+        tag = str(rec.get("strategy_tag") or "").strip()
+        if not tag:
+            continue
+        merged["probation"][tag] = {
+            "started_at": _utc_now_iso(),
+            "size_mult": max(0.1, min(1.0, float(rec.get("probation_size_mult", 0.25) or 0.25))),
+            "reason": str(rec.get("reason") or "").strip(),
+            "status": "active",
+        }
+        merged["hard_disabled"].pop(tag, None)
+        merged["soft_disabled"].pop(tag, None)
+
+    for rec in recommendations.get("probation_passed", []) or []:
+        tag = str(rec.get("strategy_tag") or "").strip()
+        if not tag:
+            continue
+        merged["probation"].pop(tag, None)
+        merged["hard_disabled"].pop(tag, None)
+        merged["soft_disabled"].pop(tag, None)
+        merged["size_reductions"].pop(tag, None)
+
+    for rec in recommendations.get("probation_failed", []) or []:
+        tag = str(rec.get("strategy_tag") or "").strip()
+        if not tag:
+            continue
+        merged["probation"].pop(tag, None)
+        merged["hard_disabled"][tag] = {
+            "reason": str(rec.get("reason") or "").strip() or "Probation failed",
+            "disabled_at": _utc_now_iso(),
+            "disabled_by": "probation_failure",
+            "trades": int(rec.get("trades", 0) or 0),
+            "win_rate_pct": float(rec.get("win_rate_pct", 0) or 0),
+            "pnl": float(rec.get("pnl", 0) or 0),
+        }
+
+    return merged
+
+
 def get_effective_disabled(controls: Dict) -> Set[str]:
-    """Effective disabled set: (hard_disabled U manual_disabled) - manual_enabled."""
+    """Effective disabled set with manual overrides and probation exceptions."""
     normalized = _normalize_controls(controls)
     hard_disabled = set(normalized["hard_disabled"].keys())
+    soft_disabled = set(normalized["soft_disabled"].keys())
     manual_disabled = set(normalized["manual_disabled"].keys())
     manual_enabled = set(normalized["manual_enabled"].keys())
-    return (hard_disabled | manual_disabled) - manual_enabled
+    probation_active = {
+        tag
+        for tag, entry in normalized["probation"].items()
+        if isinstance(entry, dict) and str(entry.get("status", "active")) == "active"
+    }
+    return (hard_disabled | soft_disabled | manual_disabled) - manual_enabled - probation_active
+
+
+def get_size_multiplier(tag: str, controls: Dict) -> float:
+    normalized = _normalize_controls(controls)
+    tag = str(tag or "").strip()
+    if not tag:
+        return 1.0
+
+    multiplier = 1.0
+    reduction = normalized["size_reductions"].get(tag)
+    if isinstance(reduction, dict):
+        try:
+            multiplier *= float(reduction.get("multiplier", 1.0) or 1.0)
+        except Exception:
+            pass
+
+    probation = normalized["probation"].get(tag)
+    if isinstance(probation, dict) and str(probation.get("status", "active")) == "active":
+        try:
+            multiplier *= float(probation.get("size_mult", 0.25) or 0.25)
+        except Exception:
+            pass
+
+    return max(0.1, min(1.0, float(multiplier)))
 
 
 def manual_disable(tag: str, reason: str, controls: Dict) -> Dict:
@@ -135,4 +238,3 @@ def manual_enable(tag: str, reason: str, controls: Dict) -> Dict:
         "enabled_by": "dashboard",
     }
     return merged
-

@@ -1,20 +1,38 @@
 {
-  "last_observation": "Market is CLOSED (Saturday 5:02 AM ET) - this is stale Friday close data showing risk-off regime with indices down -1.31% avg.",
-  "last_advice": null,
+  "last_observation": null,
+  "last_advice": "Pre-market prep mode: Build watchlists now, execute aggressively Monday open to deploy capital immediately into momentum runners",
   "last_tuner_changes": null,
-  "last_game_film_summary": "16 trades, 31.2% WR, $1474.33",
-  "last_position_manager": "healthy | 0 exits | 0 vetoes",
+  "last_game_film_summary": null,
+  "last_position_manager": null,
   "last_consensus": {
-    "symbol": "VRT",
-    "decision": "SKIP",
-    "size_pct": 0,
-    "trail_pct": 1.0,
-    "reasoning": "VRT down 3.1% on average volume in a risk-off macro environment. Technical signals SELL with 72% confidence and decelerating momentum. No catalyst or sentiment data to counter the bearish setup. This isn't a short candidate (move not severe enough, no volume spike) nor a dip-buy opportunity (broad m",
-    "confidence": 75.0,
-    "provider_used": "claude",
-    "timestamp": 1772877893.7787578
+    "symbol": "RVI",
+    "decision": "SHORT",
+    "size_pct": 1.75,
+    "trail_pct": 2.5,
+    "reasoning": "SHORT 2/3 majority. claude=SHORT (Classic fade-the-runner setup. RVI exploded +599.8% yesterday and is n); grok=SHORT (Fade-the-runner setup: +599.8% surge yesterday, now flat (+0.1%) on su)",
+    "confidence": 58.23,
+    "provider_used": "claude,gpt,grok",
+    "consensus_detail": {
+      "votes": {
+        "claude": "SHORT",
+        "gpt": "SKIP",
+        "grok": "SHORT"
+      },
+      "total_models": 3,
+      "agreement": "majority",
+      "size_modifier": 1.0,
+      "confidence": 58.23,
+      "base_size_pct": 1.75,
+      "agreeing_models": [
+        "claude",
+        "grok"
+      ]
+    },
+    "timestamp": 1772880843.51189
   },
-  "scan_regime": "risk_off",
-  "scan_regime_raw": "risk_off",
+  "short_verdicts_blocked": 7,
+  "last_short_block_reason": "RVI gate:market_closed",
+  "scan_regime": "risk_on",
+  "scan_regime_raw": "risk_on",
   "scan_interval_seconds": 300
 }

@@ -4,6 +4,7 @@ File: data/trade_history.json
 """
 
 import json
+import math
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -56,7 +57,14 @@ def get_analytics() -> Dict:
     """Generate structured analytics for AI consumption."""
     history = load_all()
     if not history:
-        return {"total_trades": 0, "message": "No trade history yet."}
+        return {
+            "total_trades": 0,
+            "message": "No trade history yet.",
+            "win_rate": 0.0,
+            "total_pnl": 0.0,
+            "sharpe_ratio": 0.0,
+            "sharpe_ratio_recent_50": 0.0,
+        }
 
     wins = [t for t in history if t.get("pnl", 0) > 0]
     losses = [t for t in history if t.get("pnl", 0) < 0]
@@ -220,9 +228,19 @@ def get_analytics() -> Dict:
     recent = history[-50:]
     recent_wins = len([t for t in recent if t.get("pnl", 0) > 0])
     recent_pnl = sum(t.get("pnl", 0) for t in recent)
+    recent_20 = history[-20:]
+    recent_20_wins = len([t for t in recent_20 if t.get("pnl", 0) > 0])
+    sharpe_ratio = _compute_sharpe(history)
+    sharpe_ratio_recent_50 = _compute_sharpe(recent)
 
     return {
         "total_trades": len(history),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(len(wins) / max(1, len(history)), 4),
+        "total_pnl": round(total_pnl, 2),
+        "sharpe_ratio": round(sharpe_ratio, 4),
+        "sharpe_ratio_recent_50": round(sharpe_ratio_recent_50, 4),
         "overall": {
             "wins": len(wins),
             "losses": len(losses),
@@ -230,6 +248,7 @@ def get_analytics() -> Dict:
             "total_pnl": round(total_pnl, 2),
             "avg_win": round(sum(t.get("pnl", 0) for t in wins) / max(1, len(wins)), 2),
             "avg_loss": round(sum(t.get("pnl", 0) for t in losses) / max(1, len(losses)), 2),
+            "sharpe_ratio": round(sharpe_ratio, 4),
             "avg_signal_to_fill_ms": (
                 round(sum(latency_samples) / len(latency_samples), 1)
                 if latency_samples
@@ -248,9 +267,56 @@ def get_analytics() -> Dict:
             "wins": recent_wins,
             "win_rate_pct": round(recent_wins / max(1, len(recent)) * 100, 1),
             "pnl": round(recent_pnl, 2),
+            "sharpe_ratio": round(sharpe_ratio_recent_50, 4),
+        },
+        "recent_20": {
+            "wins": recent_20_wins,
+            "win_rate_pct": round(recent_20_wins / max(1, len(recent_20)) * 100, 1),
+            "pnl": round(sum(t.get("pnl", 0) for t in recent_20), 2),
         },
     }
 
 
 def _bucket_init():
     return {"trades": 0, "wins": 0, "pnl": 0.0}
+
+
+def _trade_return(trade: Dict) -> Optional[float]:
+    if isinstance(trade.get("pnl_pct"), (int, float)):
+        return float(trade.get("pnl_pct", 0) or 0) / 100.0
+    entry_price = float(trade.get("entry_price", 0) or 0)
+    quantity = float(trade.get("quantity", 0) or 0)
+    if entry_price <= 0 or quantity <= 0:
+        return None
+    notional = entry_price * quantity
+    if notional <= 0:
+        return None
+    return float(trade.get("pnl", 0) or 0) / notional
+
+
+def _compute_sharpe(trades: List[Dict], risk_free_rate: float = 0.05) -> float:
+    returns = [r for r in (_trade_return(t) for t in trades or []) if r is not None]
+    if len(returns) < 2:
+        return 0.0
+    mean_return = sum(returns) / len(returns)
+    variance = sum((r - mean_return) ** 2 for r in returns) / max(1, len(returns) - 1)
+    std_dev = math.sqrt(variance)
+    if std_dev <= 0:
+        return 0.0
+
+    if len(trades) >= 2:
+        timestamps = [float(t.get("exit_time", t.get("recorded_at", 0)) or 0) for t in trades if t.get("exit_time") or t.get("recorded_at")]
+        timestamps = [ts for ts in timestamps if ts > 0]
+        if len(timestamps) >= 2:
+            days = max(1.0, (max(timestamps) - min(timestamps)) / 86400.0)
+        else:
+            days = max(1.0, len(trades) / 2.0)
+    else:
+        days = 1.0
+
+    trades_per_day = max(1.0, len(returns) / days)
+    annualized_return = mean_return * trades_per_day * 252.0
+    annualized_std = std_dev * math.sqrt(trades_per_day * 252.0)
+    if annualized_std <= 0:
+        return 0.0
+    return (annualized_return - risk_free_rate) / annualized_std

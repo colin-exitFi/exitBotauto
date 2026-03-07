@@ -736,7 +736,7 @@ class TradingBot:
                     except Exception as e:
                         logger.debug(f"Insider trades scan failed: {e}")
 
-                # 5f. ARK daily trades (next-day watchlist signal)
+                # 5g. ARK daily trades (next-day watchlist signal)
                 ark_buy_signals = []
                 ark_sell_signals = []
                 if self.ark_trades:
@@ -1075,6 +1075,16 @@ class TradingBot:
                     adv_text = adv.get("strategy", str(adv)[:200])
                     self.ai_layers["last_advice"] = adv_text
                     log_activity("ai", f"🎯 Advisor: {adv_text[:150]}")
+
+                exit_agent = getattr(getattr(self, "orchestrator", None), "exit_agent", None)
+                if self.advisor and exit_agent and self.entry_manager:
+                    try:
+                        await exit_agent._check_advisor_recommendations(
+                            self.entry_manager.get_positions(),
+                            self.advisor,
+                        )
+                    except Exception as e:
+                        logger.debug(f"Advisor exit check failed: {e}")
 
                 # Tuner (every 30 min)
                 tun = await self.tuner.run(self, self.advisor.get_last_output())
@@ -2415,13 +2425,18 @@ class TradingBot:
         """Pause active monitoring on halted positions until trading resumes."""
         if not self.entry_manager:
             return
+        if not hasattr(self.entry_manager, "_halted_symbols"):
+            self.entry_manager._halted_symbols = set()
         pos = self.entry_manager.positions.get(symbol)
-        if not pos:
-            return
-        pos["halted"] = bool(halted)
-        pos["market_status_code"] = status_code
-        pos["market_status_reason"] = reason
-        pos["market_status_updated_at"] = time.time()
+        if halted:
+            self.entry_manager._halted_symbols.add(symbol)
+        else:
+            self.entry_manager._halted_symbols.discard(symbol)
+        if pos is not None:
+            pos["halted"] = bool(halted)
+            pos["market_status_code"] = status_code
+            pos["market_status_reason"] = reason
+            pos["market_status_updated_at"] = time.time()
         if halted:
             log_activity("alert", f"🚨 {symbol} HALTED — monitor paused ({reason or status_code})")
             logger.warning(f"{symbol} halted while held — pausing monitor checks")
@@ -2440,6 +2455,21 @@ class TradingBot:
         pos["luld_upper_band"] = band_data.get("upper_band")
         pos["luld_lower_band"] = band_data.get("lower_band")
         pos["luld_updated_at"] = time.time()
+        side = pos.get("side", "long")
+        entry_price = float(pos.get("entry_price", 0) or 0)
+        lower = float(band_data.get("lower_band", 0) or 0)
+        upper = float(band_data.get("upper_band", 0) or 0)
+        pos["luld_at_risk"] = False
+        if side == "long" and lower > 0 and entry_price > 0:
+            distance_pct = ((entry_price - lower) / entry_price) * 100
+            if distance_pct < 3.0:
+                pos["luld_at_risk"] = True
+                logger.warning(f"⚠️ {symbol} LULD lower band ${lower:.2f} is {distance_pct:.1f}% from entry ${entry_price:.2f}")
+        elif side == "short" and upper > 0 and entry_price > 0:
+            distance_pct = ((upper - entry_price) / entry_price) * 100
+            if distance_pct < 3.0:
+                pos["luld_at_risk"] = True
+                logger.warning(f"⚠️ {symbol} LULD upper band ${upper:.2f} is {distance_pct:.1f}% from short entry ${entry_price:.2f}")
         log_activity(
             "alert",
             f"⚠️ {symbol} LULD bands: {band_data.get('lower_band')} - {band_data.get('upper_band')}",

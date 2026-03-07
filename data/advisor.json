@@ -1,1 +1,89 @@
-{"recommendations":[]}
+[
+  {
+    "strategy": "Pre-market prep mode: Build watchlists now, execute aggressively Monday open to deploy capital immediately into momentum runners",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "energy",
+        "small-cap momentum"
+      ],
+      "avoid": [
+        "avoid nothing - chase what's moving"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": -0.2,
+        "reason": "Current setting already neutral - consider slightly negative to catch early reversals, but 0.0 is fine for pure momentum chasing"
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "Market open Monday will be volatile - faster scanning = faster deployment into runners"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "Already at tier minimum (1.0%) - current 1.5% is actually conservative, but acceptable for first trades to build confidence"
+      }
+    ],
+    "key_insight": "ZERO capital velocity for 60+ hours is acceptable ONLY because markets are closed. The INSTANT markets open Monday 09:30 ET, this $25K must start hunting. Pre-configure scanner filters now for: (1) Gap-ups >5% with volume, (2) Breakouts above previous day high, (3) Sector rotations from Friday's close. First 30 minutes Monday determines if we're serious about velocity or just theorycrafting. Dead money sitting idle Tuesday would be mission failure. Use weekend to ensure scanner is tuned, watchlists are ready, and execution logic is battle-tested. Monday 09:30-10:00 ET is our first real test: can we deploy 3-5 positions into confirmed momentum within 30 minutes? That's the benchmark.",
+    "timestamp": 1772880530.629152
+  },
+  {
+    "strategy": "Pre-market reconnaissance mode: Build Monday morning kill list NOW, deploy aggressively at 4:00 AM ET into 3-5 pre-market runners to establish immediate momentum exposure.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech_momentum",
+        "small_cap_runners",
+        "earnings_gappers"
+      ],
+      "avoid": [
+        "low_volume_weekend_holds"
+      ]
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "Tier stop is 1.0%, config shows 1.5% - align to tier setting for tighter risk management and faster capital recycling"
+      },
+      {
+        "param": "PRE_MARKET_SCAN_ENABLED",
+        "current": "unknown",
+        "suggested": true,
+        "reason": "Must have watchlist ready by 3:45 AM ET Monday - winners are identified BEFORE the open, not after"
+      },
+      {
+        "param": "INITIAL_DEPLOYMENT_TARGET",
+        "current": 0,
+        "suggested": 5,
+        "reason": "Monday 4:00-4:30 AM = deploy into 5 positions immediately ($3,125 deployed = 12.5% heat) to capture pre-market momentum"
+      }
+    ],
+    "key_insight": "Weekend idle time is PREPARATION time, not waiting time. The bot needs a pre-built target list of Monday gap-up candidates (earnings reactions, Friday breakouts, sector rotation plays). At 4:00 AM Monday, we should be EXECUTING on a prepared plan, not scrambling to scan. $25K sitting idle for 47 hours is acceptable ONLY if we're using this time to load the chamber. The real risk isn't a 1% stop loss on Monday - it's missing the first 2 hours of pre-market momentum while cash sits dead. Action item: Run weekend prep scan for stocks with Monday catalysts (earnings, upgrades, breakout patterns) and have 10-15 symbols ready for immediate evaluation at market open.",
+    "weekend_action_items": [
+      "Scan for Monday earnings announcements (pre-market movers)",
+      "Identify Friday late-day breakouts likely to gap up Monday",
+      "Review high-relative-volume stocks from Friday close (continuation candidates)",
+      "Set alerts for pre-market volume >200% average on watchlist symbols",
+      "Verify broker API connectivity and order routing for 4:00 AM execution"
+    ],
+    "monday_execution_plan": {
+      "4:00_AM": "Evaluate pre-market gappers, deploy into top 3 runners with volume confirmation",
+      "9:30_AM": "Regular session open - add 2 more positions if scanner finds qualified momentum",
+      "target_heat": "12.5-15% ($3,125-$3,750 deployed) by 10:00 AM",
+      "capital_velocity_goal": "First full rotation within 48 hours of Monday open"
+    },
+    "timestamp": 1772880538.1722171
+  }
+]

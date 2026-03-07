@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 from config import settings
+from src.exit.order_conflicts import cancel_conflicting_exit_orders
 
 
 class ExitManager:
@@ -204,43 +205,7 @@ class ExitManager:
     # ── Execution ──────────────────────────────────────────────────
 
     async def _cancel_conflicting_exit_orders(self, symbol: str, exit_side: str) -> int:
-        """
-        Cancel open orders that reserve the same shares/contracts needed for a market exit.
-        This avoids Alpaca "insufficient qty available" rejects when a prior sell/buy-to-cover exists.
-        """
-        if not self.broker or not hasattr(self.broker, "get_orders") or not hasattr(self.broker, "cancel_order"):
-            return 0
-
-        try:
-            open_orders = await asyncio.get_event_loop().run_in_executor(
-                None, self.broker.get_orders, "open"
-            )
-        except Exception:
-            return 0
-
-        target_symbol = str(symbol or "").upper()
-        target_side = str(exit_side or "").lower()
-        cancel_ids = []
-        for order in open_orders or []:
-            if str(order.get("symbol", "")).upper() != target_symbol:
-                continue
-            if str(order.get("side", "")).lower() != target_side:
-                continue
-            order_id = str(order.get("id", "") or "").strip()
-            if order_id:
-                cancel_ids.append(order_id)
-
-        canceled = 0
-        for order_id in sorted(set(cancel_ids)):
-            ok = await asyncio.get_event_loop().run_in_executor(
-                None, self.broker.cancel_order, order_id
-            )
-            if ok:
-                canceled += 1
-
-        if canceled:
-            await asyncio.sleep(0.25)
-        return canceled
+        return await cancel_conflicting_exit_orders(self.broker, symbol, exit_side)
 
     async def _execute_exit(self, position: Dict, quantity: int, price: float, reason: str, pnl_pct: float) -> Optional[Dict]:
         """Execute market sell order."""

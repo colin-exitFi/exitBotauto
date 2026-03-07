@@ -1,11 +1,12 @@
 """
 Jury 🗳️ - Synthesizes all 5 agent briefs into a final trade decision.
-ONE AI call (Claude) to make the final call.
+All three configured jury models vote in parallel. 2-of-3 agreement wins.
 """
 
+import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from loguru import logger
 
 from src.agents.base_agent import call_claude, call_gpt, call_grok
@@ -21,6 +22,7 @@ class JuryVerdict:
     confidence: float = 0.0
     provider_used: str = ""
     briefs: Dict = field(default_factory=dict)
+    consensus_detail: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict:
@@ -32,6 +34,7 @@ class JuryVerdict:
             "reasoning": self.reasoning,
             "confidence": self.confidence,
             "provider_used": self.provider_used,
+            "consensus_detail": self.consensus_detail,
             "timestamp": self.timestamp,
         }
 
@@ -135,66 +138,47 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             macro=fmt(briefs.get("macro", {})),
         )
 
-        result = None
-        provider_used = None
-        provider_chain = [
-            ("claude", call_claude),
-            ("gpt", call_gpt),
-            ("grok", call_grok),
-        ]
-        for provider_name, caller in provider_chain:
-            result = await caller(prompt, max_tokens=400)
-            if result and "decision" in result:
-                provider_used = provider_name
-                break
+        provider_names = ["claude", "gpt", "grok"]
+        results = await asyncio.gather(
+            _safe_call("claude", call_claude, prompt),
+            _safe_call("gpt", call_gpt, prompt),
+            _safe_call("grok", call_grok, prompt),
+            return_exceptions=True,
+        )
 
-        if not result or "decision" not in result:
-            logger.warning(f"Jury failed for {symbol} — defaulting to SKIP")
-            return JuryVerdict(
-                symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
-                reasoning="Jury AI chain failed (claude->gpt->grok)",
-                provider_used=provider_used or "",
-                briefs=briefs,
-            )
+        votes = []
+        for provider_name, result in zip(provider_names, results):
+            if isinstance(result, Exception) or not isinstance(result, dict):
+                continue
+            normalized = _normalize_vote(provider_name, result)
+            if normalized:
+                votes.append(normalized)
+
+        verdict = _apply_consensus(symbol, price, votes, briefs)
 
         # Check if risk agent denied — hard override
         risk_brief = briefs.get("risk", {})
         if risk_brief and not risk_brief.get("approved", True) and not risk_brief.get("error"):
-            if result.get("decision") in ("BUY", "SHORT"):
+            if verdict.decision in ("BUY", "SHORT"):
                 logger.info(f"🛡️ Jury overridden by Risk Agent for {symbol}: {risk_brief.get('reasoning', '')}")
                 return JuryVerdict(
                     symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
                     reasoning=f"Risk agent denied: {risk_brief.get('reasoning', 'portfolio risk too high')}",
-                    provider_used=provider_used or "",
+                    provider_used=verdict.provider_used,
                     briefs=briefs,
+                    consensus_detail={**verdict.consensus_detail, "risk_override": True},
                 )
-
-        decision = result.get("decision", "SKIP").upper()
-        if decision not in ("BUY", "SHORT", "SKIP"):
-            decision = "SKIP"
-
-        size_pct = max(0, min(5.0, float(result.get("size_pct", 0))))
-        trail_pct = max(1.0, min(5.0, float(result.get("trail_pct", 3.0))))
 
         # Cap size_pct by risk agent's max
         if risk_brief and risk_brief.get("max_size_pct"):
-            size_pct = min(size_pct, float(risk_brief["max_size_pct"]))
+            verdict.size_pct = min(verdict.size_pct, float(risk_brief["max_size_pct"]))
 
-        verdict = JuryVerdict(
-            symbol=symbol,
-            decision=decision,
-            size_pct=size_pct,
-            trail_pct=trail_pct,
-            reasoning=str(result.get("reasoning", ""))[:300],
-            confidence=max(0, min(100, float(result.get("confidence", 0)))),
-            provider_used=provider_used or "",
-            briefs=briefs,
-        )
-
+        votes_text = verdict.consensus_detail.get("votes", {})
         logger.info(
             f"🗳️ Jury verdict for {symbol}: {verdict.decision} "
             f"size={verdict.size_pct}% trail={verdict.trail_pct}% "
-            f"conf={verdict.confidence}% provider={provider_used or '?'} — {verdict.reasoning[:100]}"
+            f"conf={verdict.confidence}% provider={verdict.provider_used or '?'} "
+            f"votes={votes_text} — {verdict.reasoning[:100]}"
         )
         return verdict
 
@@ -204,3 +188,213 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
             reasoning=f"Jury exception: {e}", briefs=briefs,
         )
+
+
+async def _safe_call(provider_name: str, caller, prompt: str) -> Optional[Dict]:
+    try:
+        return await caller(prompt, max_tokens=400)
+    except Exception as e:
+        logger.warning(f"Jury {provider_name} failed: {e}")
+        return None
+
+
+def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
+    decision = str(result.get("decision", "SKIP") or "SKIP").upper()
+    if decision not in ("BUY", "SHORT", "SKIP"):
+        decision = "SKIP"
+    try:
+        size_pct = max(0.0, min(5.0, float(result.get("size_pct", 0) or 0)))
+    except Exception:
+        size_pct = 0.0
+    try:
+        trail_pct = max(1.0, min(5.0, float(result.get("trail_pct", 3.0) or 3.0)))
+    except Exception:
+        trail_pct = 3.0
+    try:
+        confidence = max(0.0, min(100.0, float(result.get("confidence", 0) or 0)))
+    except Exception:
+        confidence = 0.0
+    return {
+        "provider": provider_name,
+        "decision": decision,
+        "size_pct": size_pct,
+        "trail_pct": trail_pct,
+        "confidence": confidence,
+        "reasoning": str(result.get("reasoning", "") or "")[:220],
+    }
+
+
+def _apply_consensus(symbol: str, price: float, votes: List[Dict], briefs: Dict) -> JuryVerdict:
+    if not votes:
+        return JuryVerdict(
+            symbol=symbol,
+            decision="SKIP",
+            size_pct=0,
+            trail_pct=3.0,
+            reasoning="All jury models failed",
+            provider_used="none",
+            briefs=briefs,
+            consensus_detail={
+                "votes": {},
+                "total_models": 0,
+                "agreement": "none",
+                "size_modifier": 0.0,
+                "confidence": 0.0,
+            },
+        )
+
+    grouped = {"BUY": [], "SHORT": [], "SKIP": []}
+    for vote in votes:
+        grouped[vote["decision"]].append(vote)
+
+    providers_used = [vote["provider"] for vote in votes]
+    vote_map = {vote["provider"]: vote["decision"] for vote in votes}
+    total = len(votes)
+
+    buy_votes = grouped["BUY"]
+    short_votes = grouped["SHORT"]
+    skip_votes = grouped["SKIP"]
+
+    if total == 1:
+        only_vote = votes[0]
+        if only_vote["decision"] == "SKIP":
+            return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "single_skip", "Single model responded with SKIP")
+        return _decision_verdict(
+            symbol=symbol,
+            decision=only_vote["decision"],
+            agreeing_votes=[only_vote],
+            opposing_votes=[],
+            providers_used=providers_used,
+            vote_map=vote_map,
+            briefs=briefs,
+            agreement="single",
+            size_modifier=0.50,
+            confidence_multiplier=0.60,
+        )
+
+    if total == 2:
+        if len(buy_votes) == 2:
+            return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85)
+        if len(short_votes) == 2:
+            return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85)
+        if len(skip_votes) == 2:
+            return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP")
+        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "split", "Two responding models disagreed")
+
+    if len(buy_votes) == 3:
+        return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0)
+    if len(short_votes) == 3:
+        return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0)
+    if len(skip_votes) == 3:
+        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "All jury models SKIPped")
+
+    if len(buy_votes) == 2:
+        conflict = len(short_votes) > 0
+        return _decision_verdict(
+            symbol,
+            "BUY",
+            buy_votes,
+            short_votes,
+            providers_used,
+            vote_map,
+            briefs,
+            "majority_conflict" if conflict else "majority",
+            0.75 if conflict else 1.0,
+            0.85,
+        )
+    if len(short_votes) == 2:
+        conflict = len(buy_votes) > 0
+        return _decision_verdict(
+            symbol,
+            "SHORT",
+            short_votes,
+            buy_votes,
+            providers_used,
+            vote_map,
+            briefs,
+            "majority_conflict" if conflict else "majority",
+            0.75 if conflict else 1.0,
+            0.85,
+        )
+
+    return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "none", "No consensus across jury models")
+
+
+def _decision_verdict(
+    symbol: str,
+    decision: str,
+    agreeing_votes: List[Dict],
+    opposing_votes: List[Dict],
+    providers_used: List[str],
+    vote_map: Dict[str, str],
+    briefs: Dict,
+    agreement: str,
+    size_modifier: float,
+    confidence_multiplier: float,
+) -> JuryVerdict:
+    base_size = sum(vote["size_pct"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
+    trail_pct = sum(vote["trail_pct"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
+    avg_conf = sum(vote["confidence"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
+    consensus_conf = max(0.0, min(100.0, avg_conf * confidence_multiplier))
+    size_pct = max(0.0, min(5.0, base_size * size_modifier))
+
+    reasons = [f"{vote['provider']}={vote['decision']} ({vote['reasoning'][:70]})" for vote in agreeing_votes + opposing_votes]
+    reason_text = "; ".join(reasons[:3])
+    if agreement == "unanimous":
+        summary = f"{decision} unanimous 3/3"
+    elif agreement == "single":
+        summary = f"{decision} single-model fallback"
+    elif agreement == "majority_conflict":
+        summary = f"{decision} 2/3 with direct opposition"
+    elif agreement == "majority_two_model":
+        summary = f"{decision} 2/2"
+    else:
+        summary = f"{decision} 2/3 majority"
+
+    return JuryVerdict(
+        symbol=symbol,
+        decision=decision,
+        size_pct=round(size_pct, 3),
+        trail_pct=round(trail_pct, 3),
+        reasoning=f"{summary}. {reason_text}".strip(),
+        confidence=round(consensus_conf, 2),
+        provider_used=",".join(providers_used),
+        briefs=briefs,
+        consensus_detail={
+            "votes": vote_map,
+            "total_models": len(providers_used),
+            "agreement": agreement,
+            "size_modifier": round(size_modifier, 3),
+            "confidence": round(consensus_conf, 2),
+            "base_size_pct": round(base_size, 3),
+            "agreeing_models": [vote["provider"] for vote in agreeing_votes],
+        },
+    )
+
+
+def _skip_verdict(
+    symbol: str,
+    briefs: Dict,
+    providers_used: List[str],
+    vote_map: Dict[str, str],
+    total_models: int,
+    agreement: str,
+    reasoning: str,
+) -> JuryVerdict:
+    return JuryVerdict(
+        symbol=symbol,
+        decision="SKIP",
+        size_pct=0,
+        trail_pct=3.0,
+        reasoning=reasoning,
+        confidence=0.0,
+        provider_used=",".join(providers_used),
+        briefs=briefs,
+        consensus_detail={
+            "votes": vote_map,
+            "total_models": total_models,
+            "agreement": agreement,
+            "size_modifier": 0.0,
+            "confidence": 0.0,
+        },
+    )

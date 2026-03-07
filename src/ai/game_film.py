@@ -48,9 +48,16 @@ class GameFilm:
 
             insights = self._analyze(history)
             controls = strategy_controls.load_controls()
-            auto_disable_recs = (insights.get("recommendations", {}) or {}).get("disable_strategies", [])
-            if auto_disable_recs:
-                controls = strategy_controls.apply_auto_disables(auto_disable_recs, controls)
+            recommendations = insights.get("recommendations", {}) or {}
+            probation_candidates = self.check_probation_candidates(controls)
+            if probation_candidates:
+                recommendations["probation_candidates"] = probation_candidates
+            probation_updates = self.evaluate_probation(history, controls)
+            for key, rows in probation_updates.items():
+                if rows:
+                    recommendations[key] = rows
+            if recommendations:
+                controls = strategy_controls.apply_recommendations(recommendations, controls)
                 strategy_controls.save_controls(controls)
             self._last_output = insights
             self._save(insights)
@@ -87,7 +94,7 @@ class GameFilm:
 
         # By symbol
         insights["by_symbol"] = self._aggregate(history, lambda t: t.get("symbol", "?"))
-        insights["by_strategy_tag"] = self._aggregate(history, lambda t: t.get("strategy_tag", "unknown"))
+        insights["by_strategy_tag"] = self._aggregate_strategy(history)
 
         # By hour of day (entry time)
         def _hour(t):
@@ -207,35 +214,179 @@ class GameFilm:
         if profitable_reasons:
             recs["best_exit_reasons"] = [r[0] for r in sorted(profitable_reasons, key=lambda x: x[1]["avg_pnl"], reverse=True)[:3]]
 
-        # Hard-disable candidates (no auto re-enable in v1).
         by_strategy = insights.get("by_strategy_tag", {}) or {}
         disable_strategies = []
+        soft_disable = []
+        watch_list = []
+        size_reductions = []
         for tag, bucket in by_strategy.items():
             trades = int(bucket.get("trades", 0) or 0)
             win_rate = float(bucket.get("win_rate_pct", 0) or 0)
             pnl = float(bucket.get("pnl", 0) or 0)
-            if trades < 30:
-                continue
-            if win_rate >= 40.0:
+            first_half = bucket.get("first_half", {}) or {}
+            second_half = bucket.get("second_half", {}) or {}
+            losing_both_halves = (float(first_half.get("pnl", 0) or 0) <= 0) and (float(second_half.get("pnl", 0) or 0) <= 0)
+            if trades < 10:
                 continue
             if pnl >= 0:
                 continue
-            disable_strategies.append(
-                {
-                    "strategy_tag": tag,
-                    "trades": trades,
-                    "win_rate_pct": round(win_rate, 2),
-                    "pnl": round(pnl, 2),
-                    "reason": f"win_rate={win_rate:.1f}%, pnl=${pnl:.2f}, trades={trades}",
-                }
-            )
+            if trades >= 30 and win_rate < 30.0 and losing_both_halves:
+                disable_strategies.append(
+                    {
+                        "strategy_tag": tag,
+                        "trades": trades,
+                        "win_rate_pct": round(win_rate, 2),
+                        "pnl": round(pnl, 2),
+                        "reason": f"Hard disable: {win_rate:.0f}% WR over {trades} trades, ${pnl:.2f} P&L",
+                    }
+                )
+            elif trades >= 20 and win_rate < 33.0 and losing_both_halves:
+                soft_disable.append(
+                    {
+                        "strategy_tag": tag,
+                        "trades": trades,
+                        "win_rate_pct": round(win_rate, 2),
+                        "pnl": round(pnl, 2),
+                        "reason": f"Soft disable: {win_rate:.0f}% WR over {trades} trades, ${pnl:.2f} P&L",
+                    }
+                )
+                size_reductions.append(
+                    {
+                        "strategy_tag": tag,
+                        "size_multiplier": 0.5,
+                        "reason": f"Soft disable throttle: {win_rate:.0f}% WR over {trades} trades",
+                    }
+                )
+            elif trades >= 10 and win_rate < 35.0:
+                watch_list.append(
+                    {
+                        "strategy_tag": tag,
+                        "trades": trades,
+                        "win_rate_pct": round(win_rate, 2),
+                        "pnl": round(pnl, 2),
+                        "reason": f"Warning: {win_rate:.0f}% WR over {trades} trades — reduce size 50%",
+                    }
+                )
+                size_reductions.append(
+                    {
+                        "strategy_tag": tag,
+                        "size_multiplier": 0.5,
+                        "reason": f"Watch list throttle: {win_rate:.0f}% WR over {trades} trades",
+                    }
+                )
         if disable_strategies:
             recs["disable_strategies"] = disable_strategies
+        if soft_disable:
+            recs["soft_disable_strategies"] = soft_disable
+        if watch_list:
+            recs["watch_list_strategies"] = watch_list
+        if size_reductions:
+            recs["size_reductions"] = size_reductions
 
         return recs
+
+    def check_probation_candidates(self, controls: Dict) -> List[Dict]:
+        candidates = []
+        normalized = strategy_controls.load_controls() if controls is None else controls
+        probation = normalized.get("probation", {}) if isinstance(normalized, dict) else {}
+        if not isinstance(probation, dict):
+            probation = {}
+
+        for bucket_name in ("hard_disabled", "soft_disabled"):
+            bucket = normalized.get(bucket_name, {}) if isinstance(normalized, dict) else {}
+            if not isinstance(bucket, dict):
+                continue
+            for tag, entry in bucket.items():
+                if tag in probation:
+                    continue
+                disabled_at = self._parse_iso(entry.get("disabled_at"))
+                if not disabled_at:
+                    continue
+                if time.time() - disabled_at < 5 * 86400:
+                    continue
+                candidates.append(
+                    {
+                        "strategy_tag": tag,
+                        "reason": f"Retesting {tag} after cooldown",
+                        "probation_size_mult": 0.25,
+                    }
+                )
+        return candidates
+
+    def evaluate_probation(self, history: List[Dict], controls: Dict) -> Dict[str, List[Dict]]:
+        updates = {"probation_passed": [], "probation_failed": []}
+        probation = (controls or {}).get("probation", {}) if isinstance(controls, dict) else {}
+        if not isinstance(probation, dict):
+            return updates
+
+        for tag, entry in probation.items():
+            if not isinstance(entry, dict) or str(entry.get("status", "active")) != "active":
+                continue
+            started_at = self._parse_iso(entry.get("started_at"))
+            if not started_at:
+                continue
+            trades = [
+                trade for trade in history
+                if (trade.get("strategy_tag", "unknown") or "unknown") == tag
+                and float(trade.get("exit_time", trade.get("recorded_at", 0)) or 0) >= started_at
+            ]
+            if len(trades) < 10:
+                continue
+            wins = sum(1 for trade in trades if float(trade.get("pnl", 0) or 0) > 0)
+            win_rate = wins / max(1, len(trades)) * 100.0
+            pnl = sum(float(trade.get("pnl", 0) or 0) for trade in trades)
+            row = {
+                "strategy_tag": tag,
+                "trades": len(trades),
+                "win_rate_pct": round(win_rate, 2),
+                "pnl": round(pnl, 2),
+            }
+            if win_rate >= 45.0 and pnl > 0:
+                row["reason"] = f"Probation passed: {win_rate:.0f}% WR over {len(trades)} trades"
+                updates["probation_passed"].append(row)
+            else:
+                row["reason"] = f"Probation failed: {win_rate:.0f}% WR over {len(trades)} trades"
+                updates["probation_failed"].append(row)
+        return updates
 
     def _save(self, insights: Dict):
         try:
             GAME_FILM_FILE.write_text(json.dumps(insights, indent=2))
         except Exception as e:
             logger.warning(f"Failed to save game film: {e}")
+
+    @staticmethod
+    def _parse_iso(value: Any) -> Optional[float]:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return None
+
+    def _aggregate_strategy(self, history: List[Dict]) -> Dict:
+        midpoint = len(history) // 2
+        buckets = defaultdict(lambda: {"trades": 0, "wins": 0, "pnl": 0.0, "first_half": {"trades": 0, "wins": 0, "pnl": 0.0}, "second_half": {"trades": 0, "wins": 0, "pnl": 0.0}})
+        for idx, trade in enumerate(history):
+            tag = trade.get("strategy_tag", "unknown") or "unknown"
+            bucket = buckets[tag]
+            half = "first_half" if idx < midpoint else "second_half"
+            pnl = float(trade.get("pnl", 0) or 0)
+            bucket["trades"] += 1
+            bucket["pnl"] += pnl
+            bucket[half]["trades"] += 1
+            bucket[half]["pnl"] += pnl
+            if pnl > 0:
+                bucket["wins"] += 1
+                bucket[half]["wins"] += 1
+        result = {}
+        for tag, bucket in buckets.items():
+            bucket["win_rate_pct"] = round(bucket["wins"] / max(1, bucket["trades"]) * 100, 1)
+            bucket["avg_pnl"] = round(bucket["pnl"] / max(1, bucket["trades"]), 2)
+            bucket["pnl"] = round(bucket["pnl"], 2)
+            for half_name in ("first_half", "second_half"):
+                half = bucket[half_name]
+                half["win_rate_pct"] = round(half["wins"] / max(1, half["trades"]) * 100, 1)
+                half["pnl"] = round(half["pnl"], 2)
+            result[tag] = bucket
+        return dict(sorted(result.items(), key=lambda x: x[1]["pnl"], reverse=True))

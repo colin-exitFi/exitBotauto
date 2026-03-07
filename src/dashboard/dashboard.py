@@ -1129,12 +1129,13 @@ async function refresh() {
     $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
       const decCls = h.decision==='BUY'?'tag-buy':h.decision==='SHORT'?'tag-short':'tag-skip';
       const reason = (h.reasoning||'').substring(0, 120) + ((h.reasoning||'').length > 120 ? '...' : '');
+      const votes = h.consensus_detail && h.consensus_detail.votes ? Object.entries(h.consensus_detail.votes).map(([k, v]) => `${k}:${v}`).join(' · ') : '';
       return `<tr><td><strong>${h.symbol}</strong></td>
         <td><span class="tag ${decCls}">${h.decision}</span></td>
         <td>${(h.confidence||0).toFixed(0)}%</td>
         <td>${(h.size_pct||0).toFixed(1)}%</td>
         <td>${(h.trail_pct||0).toFixed(1)}%</td>
-        <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reason}</td></tr>`;
+        <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reason}${votes ? `<div style="color:#8b949e;margin-top:4px">${votes}</div>` : ''}</td></tr>`;
     }).join('') : '<tr><td colspan="6" class="empty">No agent decisions yet</td></tr>';
   }
   // Trade History

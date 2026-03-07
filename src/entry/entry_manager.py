@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from config import settings
+from src.data import strategy_controls
 
 
 class EntryManager:
@@ -34,6 +35,7 @@ class EntryManager:
         self.positions: Dict[str, Dict] = {}
         self.last_gate: Dict[str, str] = {}
         self.last_order_error: str = ""
+        self._halted_symbols = set()
         # Load existing brokerage positions on init
         self._load_brokerage_positions()
         logger.info("Entry manager initialized")
@@ -136,7 +138,22 @@ class EntryManager:
             multiplier = float(sentiment_data.get("copy_trader_size_multiplier", 1.0) or 1.0)
         except Exception:
             multiplier = 1.0
-        return max(1.0, min(1.25, multiplier))
+        return max(0.75, min(1.25, multiplier))
+
+    def _apply_strategy_controls(self, symbol: str, sentiment_data: Dict, notional: float) -> Optional[float]:
+        controls = strategy_controls.load_controls()
+        strategy_tag = str(sentiment_data.get("strategy_tag", "unknown") or "unknown")
+        disabled = strategy_controls.get_effective_disabled(controls)
+        if strategy_tag in disabled:
+            logger.warning(f"⛔ Strategy '{strategy_tag}' is disabled — blocking entry for {symbol}")
+            self.last_order_error = "strategy_disabled"
+            return None
+
+        size_mult = strategy_controls.get_size_multiplier(strategy_tag, controls)
+        if size_mult < 1.0:
+            logger.info(f"📉 Strategy '{strategy_tag}' size reduced to {size_mult:.0%} by control plane")
+            notional *= size_mult
+        return notional
 
     async def can_enter(self, symbol: str, sentiment_score: float, current_positions: List[Dict]) -> bool:
         """Check all entry conditions."""
@@ -144,6 +161,10 @@ class EntryManager:
         if not self.is_market_open():
             logger.debug("Market closed, cannot enter")
             return self._set_gate(symbol, False, "market_closed")
+
+        if symbol in getattr(self, "_halted_symbols", set()):
+            logger.info(f"⛔ {symbol} is halted — blocking entry")
+            return self._set_gate(symbol, False, "halted")
 
         if symbol in self.positions:
             logger.info(f"⛔ Already in position: {symbol} — duplicate entry blocked")
@@ -171,6 +192,10 @@ class EntryManager:
             self.last_order_error = "broker_or_polygon_unavailable"
             return None
         self.last_order_error = ""
+        if symbol in getattr(self, "_halted_symbols", set()):
+            logger.warning(f"Entry blocked for halted symbol {symbol}")
+            self.last_order_error = "halted"
+            return None
         if symbol in self.positions:
             logger.warning(f"Duplicate long entry blocked for {symbol}")
             self.last_order_error = "duplicate_position"
@@ -221,6 +246,10 @@ class EntryManager:
         # If options were placed, reduce share notional to keep total risk inside tier budget.
         share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
         notional *= max(0.0, min(1.0, share_mult))
+        adjusted_notional = self._apply_strategy_controls(symbol, sentiment_data, notional)
+        if adjusted_notional is None:
+            return None
+        notional = adjusted_notional
         # Reduce size during extended hours
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
@@ -466,6 +495,10 @@ class EntryManager:
             self.last_order_error = "broker_or_polygon_unavailable"
             return None
         self.last_order_error = ""
+        if symbol in getattr(self, "_halted_symbols", set()):
+            logger.warning(f"Short entry blocked for halted symbol {symbol}")
+            self.last_order_error = "halted"
+            return None
         if symbol in self.positions:
             logger.warning(f"Duplicate short entry blocked for {symbol}")
             self.last_order_error = "duplicate_position"
@@ -505,6 +538,10 @@ class EntryManager:
         notional *= self._copy_trader_size_multiplier(sentiment_data, swing_only)
         share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
         notional *= max(0.0, min(1.0, share_mult))
+        adjusted_notional = self._apply_strategy_controls(symbol, sentiment_data, notional)
+        if adjusted_notional is None:
+            return None
+        notional = adjusted_notional
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
         shares = int(notional / price) if price > 0 else 0
