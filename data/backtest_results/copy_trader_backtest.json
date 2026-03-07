@@ -1,0 +1,2256 @@
+{
+  "generated_at": "2026-03-07T18:27:39.831067",
+  "traders": {
+    "TraderStewie": {
+      "1d": {
+        "total_trades": 44,
+        "win_rate": 0.477,
+        "avg_pnl_pct": -0.61,
+        "total_return_pct": -26.69,
+        "trades": [
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-02-20",
+            "entry_price": 23.33,
+            "exit_price": 23.99,
+            "pnl_pct": 2.83,
+            "likes": 27
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-26",
+            "entry_price": 38.65,
+            "exit_price": 41.35,
+            "pnl_pct": -6.99,
+            "likes": 186
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2026-01-22",
+            "entry_price": 39.99,
+            "exit_price": 35.72,
+            "pnl_pct": -10.68,
+            "likes": 82
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-16",
+            "entry_price": 35.19,
+            "exit_price": 35.46,
+            "pnl_pct": -0.78,
+            "likes": 191
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 160.23,
+            "pnl_pct": -6.8,
+            "likes": 58
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 160.23,
+            "pnl_pct": -6.8,
+            "likes": 58
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-12",
+            "entry_price": 36.66,
+            "exit_price": 36.71,
+            "pnl_pct": -0.15,
+            "likes": 185
+          },
+          {
+            "ticker": "NVDA",
+            "action": "buy",
+            "entry_date": "2026-01-07",
+            "entry_price": 188.57,
+            "exit_price": 185.04,
+            "pnl_pct": -1.87,
+            "likes": 95
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-05",
+            "entry_price": 29.12,
+            "exit_price": 30.26,
+            "pnl_pct": -3.9,
+            "likes": 303
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 21.18,
+            "pnl_pct": 5.74,
+            "likes": 62
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 21.18,
+            "pnl_pct": 5.74,
+            "likes": 62
+          },
+          {
+            "ticker": "TSLA",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 489.88,
+            "exit_price": 485.56,
+            "pnl_pct": 0.88,
+            "likes": 62
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2025-10-30",
+            "entry_price": 258.21,
+            "exit_price": 255.88,
+            "pnl_pct": -0.9,
+            "likes": 150
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-30",
+            "entry_price": 20.35,
+            "exit_price": 19.59,
+            "pnl_pct": -3.73,
+            "likes": 115
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-19",
+            "entry_price": 21.2,
+            "exit_price": 19.82,
+            "pnl_pct": -6.51,
+            "likes": 488
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-09-16",
+            "entry_price": 414.5,
+            "exit_price": 425.86,
+            "pnl_pct": 2.74,
+            "likes": 76
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-09-15",
+            "entry_price": 56.88,
+            "exit_price": 62.26,
+            "pnl_pct": 9.46,
+            "likes": 3
+          },
+          {
+            "ticker": "AEHR",
+            "action": "buy",
+            "entry_date": "2025-09-10",
+            "entry_price": 27.41,
+            "exit_price": 26.57,
+            "pnl_pct": -3.06,
+            "likes": 56
+          },
+          {
+            "ticker": "RKT",
+            "action": "short",
+            "entry_date": "2025-09-08",
+            "entry_price": 20.27,
+            "exit_price": 20.46,
+            "pnl_pct": -0.94,
+            "likes": 284
+          },
+          {
+            "ticker": "AAOI",
+            "action": "short",
+            "entry_date": "2025-08-29",
+            "entry_price": 25.82,
+            "exit_price": 23.35,
+            "pnl_pct": 9.57,
+            "likes": 297
+          },
+          {
+            "ticker": "AMD",
+            "action": "short",
+            "entry_date": "2025-08-26",
+            "entry_price": 168.65,
+            "exit_price": 167.13,
+            "pnl_pct": 0.9,
+            "likes": 24
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-25",
+            "entry_price": 16.01,
+            "exit_price": 16.47,
+            "pnl_pct": -2.87,
+            "likes": 71
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 17.38,
+            "pnl_pct": 10.04,
+            "likes": 208
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 17.38,
+            "pnl_pct": 10.04,
+            "likes": 208
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 16.16,
+            "exit_price": 15.72,
+            "pnl_pct": 2.72,
+            "likes": 77
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-13",
+            "entry_price": 15.24,
+            "exit_price": 14.55,
+            "pnl_pct": 4.53,
+            "likes": 87
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 25.62,
+            "pnl_pct": 2.69,
+            "likes": 96
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 25.62,
+            "pnl_pct": 2.69,
+            "likes": 96
+          },
+          {
+            "ticker": "ALAB",
+            "action": "buy",
+            "entry_date": "2025-08-07",
+            "entry_price": 175.0,
+            "exit_price": 179.28,
+            "pnl_pct": 2.45,
+            "likes": 203
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-05",
+            "entry_price": 13.8,
+            "exit_price": 14.79,
+            "pnl_pct": -7.17,
+            "likes": 362
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2025-07-28",
+            "entry_price": 27.51,
+            "exit_price": 24.11,
+            "pnl_pct": -12.36,
+            "likes": 259
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-07-25",
+            "entry_price": 44.24,
+            "exit_price": 42.34,
+            "pnl_pct": -4.29,
+            "likes": 115
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-06-25",
+            "entry_price": 13.1,
+            "exit_price": 14.36,
+            "pnl_pct": -9.62,
+            "likes": 415
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 38.11,
+            "pnl_pct": -9.06,
+            "likes": 347
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 38.11,
+            "pnl_pct": -9.06,
+            "likes": 15
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-05-20",
+            "entry_price": 413.5,
+            "exit_price": 402.69,
+            "pnl_pct": -2.61,
+            "likes": 100
+          },
+          {
+            "ticker": "IONQ",
+            "action": "short",
+            "entry_date": "2025-05-19",
+            "entry_price": 33.6,
+            "exit_price": 35.31,
+            "pnl_pct": -5.09,
+            "likes": 471
+          },
+          {
+            "ticker": "COIN",
+            "action": "buy",
+            "entry_date": "2025-05-14",
+            "entry_price": 256.86,
+            "exit_price": 244.44,
+            "pnl_pct": -4.83,
+            "likes": 0
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-13",
+            "entry_price": 320.0,
+            "exit_price": 347.68,
+            "pnl_pct": 8.65,
+            "likes": 4
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-08",
+            "entry_price": 279.63,
+            "exit_price": 298.26,
+            "pnl_pct": 6.66,
+            "likes": 1053
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-21",
+            "entry_price": 56.9,
+            "exit_price": 55.31,
+            "pnl_pct": 2.79,
+            "likes": 19
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 58.78,
+            "pnl_pct": 1.04,
+            "likes": 178
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 58.78,
+            "pnl_pct": 1.04,
+            "likes": 178
+          },
+          {
+            "ticker": "MSTR",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 312.22,
+            "exit_price": 311.66,
+            "pnl_pct": 0.18,
+            "likes": 84
+          }
+        ]
+      },
+      "3d": {
+        "total_trades": 44,
+        "win_rate": 0.5,
+        "avg_pnl_pct": -0.96,
+        "total_return_pct": -42.46,
+        "trades": [
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-02-20",
+            "entry_price": 23.33,
+            "exit_price": 23.31,
+            "pnl_pct": -0.09,
+            "likes": 27
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-26",
+            "entry_price": 38.65,
+            "exit_price": 38.07,
+            "pnl_pct": 1.5,
+            "likes": 186
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2026-01-22",
+            "entry_price": 39.99,
+            "exit_price": 37.39,
+            "pnl_pct": -6.5,
+            "likes": 82
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-16",
+            "entry_price": 35.19,
+            "exit_price": 34.74,
+            "pnl_pct": 1.26,
+            "likes": 191
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 160.98,
+            "pnl_pct": -6.37,
+            "likes": 58
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 160.98,
+            "pnl_pct": -6.37,
+            "likes": 58
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-12",
+            "entry_price": 36.66,
+            "exit_price": 35.22,
+            "pnl_pct": 3.91,
+            "likes": 185
+          },
+          {
+            "ticker": "NVDA",
+            "action": "buy",
+            "entry_date": "2026-01-07",
+            "entry_price": 188.57,
+            "exit_price": 184.94,
+            "pnl_pct": -1.93,
+            "likes": 95
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-05",
+            "entry_price": 29.12,
+            "exit_price": 31.94,
+            "pnl_pct": -9.67,
+            "likes": 303
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 20.9,
+            "pnl_pct": 6.99,
+            "likes": 62
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 20.9,
+            "pnl_pct": 6.99,
+            "likes": 62
+          },
+          {
+            "ticker": "TSLA",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 489.88,
+            "exit_price": 475.19,
+            "pnl_pct": 3.0,
+            "likes": 62
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2025-10-30",
+            "entry_price": 258.21,
+            "exit_price": 250.38,
+            "pnl_pct": -3.03,
+            "likes": 150
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-30",
+            "entry_price": 20.35,
+            "exit_price": 17.8,
+            "pnl_pct": -12.53,
+            "likes": 115
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-19",
+            "entry_price": 21.2,
+            "exit_price": 19.59,
+            "pnl_pct": -7.59,
+            "likes": 488
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-09-16",
+            "entry_price": 414.5,
+            "exit_price": 426.07,
+            "pnl_pct": 2.79,
+            "likes": 76
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-09-15",
+            "entry_price": 56.88,
+            "exit_price": 66.81,
+            "pnl_pct": 17.46,
+            "likes": 3
+          },
+          {
+            "ticker": "AEHR",
+            "action": "buy",
+            "entry_date": "2025-09-10",
+            "entry_price": 27.41,
+            "exit_price": 28.78,
+            "pnl_pct": 5.0,
+            "likes": 56
+          },
+          {
+            "ticker": "RKT",
+            "action": "short",
+            "entry_date": "2025-09-08",
+            "entry_price": 20.27,
+            "exit_price": 21.11,
+            "pnl_pct": -4.14,
+            "likes": 284
+          },
+          {
+            "ticker": "AAOI",
+            "action": "short",
+            "entry_date": "2025-08-29",
+            "entry_price": 25.82,
+            "exit_price": 23.32,
+            "pnl_pct": 9.68,
+            "likes": 297
+          },
+          {
+            "ticker": "AMD",
+            "action": "short",
+            "entry_date": "2025-08-26",
+            "entry_price": 168.65,
+            "exit_price": 162.63,
+            "pnl_pct": 3.57,
+            "likes": 24
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-25",
+            "entry_price": 16.01,
+            "exit_price": 16.6,
+            "pnl_pct": -3.69,
+            "likes": 71
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 18.1,
+            "pnl_pct": 6.31,
+            "likes": 208
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 18.1,
+            "pnl_pct": 6.31,
+            "likes": 208
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 16.16,
+            "exit_price": 16.05,
+            "pnl_pct": 0.68,
+            "likes": 77
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-13",
+            "entry_price": 15.24,
+            "exit_price": 16.34,
+            "pnl_pct": -7.22,
+            "likes": 87
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 25.77,
+            "pnl_pct": 2.12,
+            "likes": 96
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 25.77,
+            "pnl_pct": 2.12,
+            "likes": 96
+          },
+          {
+            "ticker": "ALAB",
+            "action": "buy",
+            "entry_date": "2025-08-07",
+            "entry_price": 175.0,
+            "exit_price": 192.0,
+            "pnl_pct": 9.71,
+            "likes": 203
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-05",
+            "entry_price": 13.8,
+            "exit_price": 14.2,
+            "pnl_pct": -2.9,
+            "likes": 362
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2025-07-28",
+            "entry_price": 27.51,
+            "exit_price": 22.87,
+            "pnl_pct": -16.87,
+            "likes": 259
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-07-25",
+            "entry_price": 44.24,
+            "exit_price": 39.88,
+            "pnl_pct": -9.86,
+            "likes": 115
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-06-25",
+            "entry_price": 13.1,
+            "exit_price": 14.6,
+            "pnl_pct": -11.45,
+            "likes": 415
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 40.25,
+            "pnl_pct": -3.95,
+            "likes": 347
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 40.25,
+            "pnl_pct": -3.95,
+            "likes": 15
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-05-20",
+            "entry_price": 413.5,
+            "exit_price": 369.51,
+            "pnl_pct": -10.64,
+            "likes": 100
+          },
+          {
+            "ticker": "IONQ",
+            "action": "short",
+            "entry_date": "2025-05-19",
+            "entry_price": 33.6,
+            "exit_price": 45.79,
+            "pnl_pct": -36.28,
+            "likes": 471
+          },
+          {
+            "ticker": "COIN",
+            "action": "buy",
+            "entry_date": "2025-05-14",
+            "entry_price": 256.86,
+            "exit_price": 263.99,
+            "pnl_pct": 2.78,
+            "likes": 0
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-13",
+            "entry_price": 320.0,
+            "exit_price": 349.98,
+            "pnl_pct": 9.37,
+            "likes": 4
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-08",
+            "entry_price": 279.63,
+            "exit_price": 334.07,
+            "pnl_pct": 19.47,
+            "likes": 1053
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-21",
+            "entry_price": 56.9,
+            "exit_price": 64.55,
+            "pnl_pct": -13.44,
+            "likes": 19
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 54.42,
+            "pnl_pct": 8.38,
+            "likes": 178
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 54.42,
+            "pnl_pct": 8.38,
+            "likes": 178
+          },
+          {
+            "ticker": "MSTR",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 312.22,
+            "exit_price": 317.76,
+            "pnl_pct": -1.77,
+            "likes": 84
+          }
+        ]
+      },
+      "5d": {
+        "total_trades": 44,
+        "win_rate": 0.386,
+        "avg_pnl_pct": -3.74,
+        "total_return_pct": -164.54,
+        "trades": [
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-02-20",
+            "entry_price": 23.33,
+            "exit_price": 24.91,
+            "pnl_pct": 6.77,
+            "likes": 27,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-26",
+            "entry_price": 38.65,
+            "exit_price": 34.8,
+            "pnl_pct": 9.96,
+            "likes": 186,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2026-01-22",
+            "entry_price": 39.99,
+            "exit_price": 39.57,
+            "pnl_pct": -1.05,
+            "likes": 82,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-16",
+            "entry_price": 35.19,
+            "exit_price": 36.18,
+            "pnl_pct": -2.83,
+            "likes": 191,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 160.58,
+            "pnl_pct": -6.6,
+            "likes": 58,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 160.58,
+            "pnl_pct": -6.6,
+            "likes": 58,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-12",
+            "entry_price": 36.66,
+            "exit_price": 35.46,
+            "pnl_pct": 3.26,
+            "likes": 185,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "NVDA",
+            "action": "buy",
+            "entry_date": "2026-01-07",
+            "entry_price": 188.57,
+            "exit_price": 183.14,
+            "pnl_pct": -2.88,
+            "likes": 95,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-05",
+            "entry_price": 29.12,
+            "exit_price": 38.21,
+            "pnl_pct": -31.19,
+            "likes": 303,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 19.59,
+            "pnl_pct": 12.82,
+            "likes": 62,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 19.59,
+            "pnl_pct": 12.82,
+            "likes": 62,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "TSLA",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 489.88,
+            "exit_price": 454.43,
+            "pnl_pct": 7.24,
+            "likes": 62,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2025-10-30",
+            "entry_price": 258.21,
+            "exit_price": 278.47,
+            "pnl_pct": 7.85,
+            "likes": 150,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-30",
+            "entry_price": 20.35,
+            "exit_price": 16.28,
+            "pnl_pct": -20.0,
+            "likes": 115,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-19",
+            "entry_price": 21.2,
+            "exit_price": 19.51,
+            "pnl_pct": -7.97,
+            "likes": 488,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-09-16",
+            "entry_price": 414.5,
+            "exit_price": 425.85,
+            "pnl_pct": 2.74,
+            "likes": 76,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-09-15",
+            "entry_price": 56.88,
+            "exit_price": 71.94,
+            "pnl_pct": 26.48,
+            "likes": 3,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AEHR",
+            "action": "buy",
+            "entry_date": "2025-09-10",
+            "entry_price": 27.41,
+            "exit_price": 28.33,
+            "pnl_pct": 3.36,
+            "likes": 56,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "RKT",
+            "action": "short",
+            "entry_date": "2025-09-08",
+            "entry_price": 20.27,
+            "exit_price": 21.1,
+            "pnl_pct": -4.09,
+            "likes": 284,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AAOI",
+            "action": "short",
+            "entry_date": "2025-08-29",
+            "entry_price": 25.82,
+            "exit_price": 23.63,
+            "pnl_pct": 8.48,
+            "likes": 297,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AMD",
+            "action": "short",
+            "entry_date": "2025-08-26",
+            "entry_price": 168.65,
+            "exit_price": 162.13,
+            "pnl_pct": 3.87,
+            "likes": 24,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-25",
+            "entry_price": 16.01,
+            "exit_price": 15.26,
+            "pnl_pct": 4.68,
+            "likes": 71,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 25.89,
+            "pnl_pct": -34.01,
+            "likes": 208,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 25.89,
+            "pnl_pct": -34.01,
+            "likes": 208,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 16.16,
+            "exit_price": 16.47,
+            "pnl_pct": -1.92,
+            "likes": 77,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-13",
+            "entry_price": 15.24,
+            "exit_price": 15.72,
+            "pnl_pct": -3.15,
+            "likes": 87,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 27.35,
+            "pnl_pct": -3.88,
+            "likes": 96,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 27.35,
+            "pnl_pct": -3.88,
+            "likes": 96,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "ALAB",
+            "action": "buy",
+            "entry_date": "2025-08-07",
+            "entry_price": 175.0,
+            "exit_price": 190.69,
+            "pnl_pct": 8.97,
+            "likes": 203,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-05",
+            "entry_price": 13.8,
+            "exit_price": 14.97,
+            "pnl_pct": -8.48,
+            "likes": 362,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2025-07-28",
+            "entry_price": 27.51,
+            "exit_price": 22.19,
+            "pnl_pct": -19.34,
+            "likes": 259,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-07-25",
+            "entry_price": 44.24,
+            "exit_price": 38.12,
+            "pnl_pct": -13.83,
+            "likes": 115,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-06-25",
+            "entry_price": 13.1,
+            "exit_price": 15.21,
+            "pnl_pct": -16.11,
+            "likes": 415,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 40.1,
+            "pnl_pct": -4.31,
+            "likes": 347,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 40.1,
+            "pnl_pct": -4.31,
+            "likes": 15,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-05-20",
+            "entry_price": 413.5,
+            "exit_price": 364.25,
+            "pnl_pct": -11.91,
+            "likes": 100,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "IONQ",
+            "action": "short",
+            "entry_date": "2025-05-19",
+            "entry_price": 33.6,
+            "exit_price": 48.04,
+            "pnl_pct": -42.98,
+            "likes": 471,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "COIN",
+            "action": "buy",
+            "entry_date": "2025-05-14",
+            "entry_price": 256.86,
+            "exit_price": 258.99,
+            "pnl_pct": 0.83,
+            "likes": 0,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-13",
+            "entry_price": 320.0,
+            "exit_price": 343.82,
+            "pnl_pct": 7.44,
+            "likes": 4,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-08",
+            "entry_price": 279.63,
+            "exit_price": 342.82,
+            "pnl_pct": 22.6,
+            "likes": 1053,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-21",
+            "entry_price": 56.9,
+            "exit_price": 66.08,
+            "pnl_pct": -16.13,
+            "likes": 19,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 60.15,
+            "pnl_pct": -1.26,
+            "likes": 178,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 60.15,
+            "pnl_pct": -1.26,
+            "likes": 178,
+            "trader": "TraderStewie"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 312.22,
+            "exit_price": 345.73,
+            "pnl_pct": -10.73,
+            "likes": 84,
+            "trader": "TraderStewie"
+          }
+        ]
+      },
+      "10d": {
+        "total_trades": 44,
+        "win_rate": 0.409,
+        "avg_pnl_pct": -4.77,
+        "total_return_pct": -210.09,
+        "trades": [
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-02-20",
+            "entry_price": 23.33,
+            "exit_price": 20.39,
+            "pnl_pct": -12.6,
+            "likes": 27
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-26",
+            "entry_price": 38.65,
+            "exit_price": 38.26,
+            "pnl_pct": 1.01,
+            "likes": 186
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2026-01-22",
+            "entry_price": 39.99,
+            "exit_price": 38.13,
+            "pnl_pct": -4.65,
+            "likes": 82
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-16",
+            "entry_price": 35.19,
+            "exit_price": 34.8,
+            "pnl_pct": 1.09,
+            "likes": 191
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 139.63,
+            "pnl_pct": -18.78,
+            "likes": 58
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-16",
+            "entry_price": 171.93,
+            "exit_price": 139.63,
+            "pnl_pct": -18.78,
+            "likes": 58
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-12",
+            "entry_price": 36.66,
+            "exit_price": 41.35,
+            "pnl_pct": -12.81,
+            "likes": 185
+          },
+          {
+            "ticker": "NVDA",
+            "action": "buy",
+            "entry_date": "2026-01-07",
+            "entry_price": 188.57,
+            "exit_price": 184.84,
+            "pnl_pct": -1.98,
+            "likes": 95
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2026-01-05",
+            "entry_price": 29.12,
+            "exit_price": 35.46,
+            "pnl_pct": -21.75,
+            "likes": 303
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 20.06,
+            "pnl_pct": 10.73,
+            "likes": 62
+          },
+          {
+            "ticker": "RIVN",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 22.47,
+            "exit_price": 20.06,
+            "pnl_pct": 10.73,
+            "likes": 62
+          },
+          {
+            "ticker": "TSLA",
+            "action": "short",
+            "entry_date": "2025-12-22",
+            "entry_price": 489.88,
+            "exit_price": 431.41,
+            "pnl_pct": 11.94,
+            "likes": 62
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2025-10-30",
+            "entry_price": 258.21,
+            "exit_price": 262.56,
+            "pnl_pct": 1.68,
+            "likes": 150
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-30",
+            "entry_price": 20.35,
+            "exit_price": 16.92,
+            "pnl_pct": -16.86,
+            "likes": 115
+          },
+          {
+            "ticker": "RKT",
+            "action": "buy",
+            "entry_date": "2025-09-19",
+            "entry_price": 21.2,
+            "exit_price": 17.8,
+            "pnl_pct": -16.04,
+            "likes": 488
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-09-16",
+            "entry_price": 414.5,
+            "exit_price": 444.72,
+            "pnl_pct": 7.29,
+            "likes": 76
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-09-15",
+            "entry_price": 56.88,
+            "exit_price": 64.26,
+            "pnl_pct": 12.97,
+            "likes": 3
+          },
+          {
+            "ticker": "AEHR",
+            "action": "buy",
+            "entry_date": "2025-09-10",
+            "entry_price": 27.41,
+            "exit_price": 32.24,
+            "pnl_pct": 17.62,
+            "likes": 56
+          },
+          {
+            "ticker": "RKT",
+            "action": "short",
+            "entry_date": "2025-09-08",
+            "entry_price": 20.27,
+            "exit_price": 19.82,
+            "pnl_pct": 2.22,
+            "likes": 284
+          },
+          {
+            "ticker": "AAOI",
+            "action": "short",
+            "entry_date": "2025-08-29",
+            "entry_price": 25.82,
+            "exit_price": 29.56,
+            "pnl_pct": -14.48,
+            "likes": 297
+          },
+          {
+            "ticker": "AMD",
+            "action": "short",
+            "entry_date": "2025-08-26",
+            "entry_price": 168.65,
+            "exit_price": 159.54,
+            "pnl_pct": 5.4,
+            "likes": 24
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-25",
+            "entry_price": 16.01,
+            "exit_price": 15.2,
+            "pnl_pct": 5.06,
+            "likes": 71
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 24.52,
+            "pnl_pct": -26.92,
+            "likes": 208
+          },
+          {
+            "ticker": "AEHR",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 19.32,
+            "exit_price": 24.52,
+            "pnl_pct": -26.92,
+            "likes": 208
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-19",
+            "entry_price": 16.16,
+            "exit_price": 14.38,
+            "pnl_pct": 11.01,
+            "likes": 77
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-13",
+            "entry_price": 15.24,
+            "exit_price": 16.7,
+            "pnl_pct": -9.58,
+            "likes": 87
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 26.61,
+            "pnl_pct": -1.09,
+            "likes": 96
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-08-07",
+            "entry_price": 26.33,
+            "exit_price": 26.61,
+            "pnl_pct": -1.09,
+            "likes": 96
+          },
+          {
+            "ticker": "ALAB",
+            "action": "buy",
+            "entry_date": "2025-08-07",
+            "entry_price": 175.0,
+            "exit_price": 177.53,
+            "pnl_pct": 1.45,
+            "likes": 203
+          },
+          {
+            "ticker": "APLD",
+            "action": "short",
+            "entry_date": "2025-08-05",
+            "entry_price": 13.8,
+            "exit_price": 15.34,
+            "pnl_pct": -11.16,
+            "likes": 362
+          },
+          {
+            "ticker": "AAOI",
+            "action": "buy",
+            "entry_date": "2025-07-28",
+            "entry_price": 27.51,
+            "exit_price": 20.86,
+            "pnl_pct": -24.17,
+            "likes": 259
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-07-25",
+            "entry_price": 44.24,
+            "exit_price": 41.85,
+            "pnl_pct": -5.4,
+            "likes": 115
+          },
+          {
+            "ticker": "VSAT",
+            "action": "short",
+            "entry_date": "2025-06-25",
+            "entry_price": 13.1,
+            "exit_price": 15.4,
+            "pnl_pct": -17.56,
+            "likes": 415
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 45.56,
+            "pnl_pct": 8.72,
+            "likes": 347
+          },
+          {
+            "ticker": "IONQ",
+            "action": "buy",
+            "entry_date": "2025-06-24",
+            "entry_price": 41.91,
+            "exit_price": 45.56,
+            "pnl_pct": 8.72,
+            "likes": 15
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-05-20",
+            "entry_price": 413.5,
+            "exit_price": 378.1,
+            "pnl_pct": -8.56,
+            "likes": 100
+          },
+          {
+            "ticker": "IONQ",
+            "action": "short",
+            "entry_date": "2025-05-19",
+            "entry_price": 33.6,
+            "exit_price": 39.81,
+            "pnl_pct": -18.48,
+            "likes": 471
+          },
+          {
+            "ticker": "COIN",
+            "action": "buy",
+            "entry_date": "2025-05-14",
+            "entry_price": 256.86,
+            "exit_price": 248.84,
+            "pnl_pct": -3.12,
+            "likes": 0
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-13",
+            "entry_price": 320.0,
+            "exit_price": 356.9,
+            "pnl_pct": 11.53,
+            "likes": 4
+          },
+          {
+            "ticker": "TSLA",
+            "action": "buy",
+            "entry_date": "2025-05-08",
+            "entry_price": 279.63,
+            "exit_price": 341.04,
+            "pnl_pct": 21.96,
+            "likes": 1053
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-21",
+            "entry_price": 56.9,
+            "exit_price": 72.15,
+            "pnl_pct": -26.8,
+            "likes": 19
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 65.31,
+            "pnl_pct": -9.95,
+            "likes": 178
+          },
+          {
+            "ticker": "ALAB",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 59.4,
+            "exit_price": 65.31,
+            "pnl_pct": -9.95,
+            "likes": 178
+          },
+          {
+            "ticker": "MSTR",
+            "action": "short",
+            "entry_date": "2025-04-15",
+            "entry_price": 312.22,
+            "exit_price": 380.11,
+            "pnl_pct": -21.74,
+            "likes": 84
+          }
+        ]
+      }
+    },
+    "InvestorsLive": {
+      "1d": {
+        "total_trades": 15,
+        "win_rate": 0.333,
+        "avg_pnl_pct": -0.99,
+        "total_return_pct": -14.81,
+        "trades": [
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-02-06",
+            "entry_price": 114.95,
+            "exit_price": 138.44,
+            "pnl_pct": 20.43,
+            "likes": 20
+          },
+          {
+            "ticker": "HL",
+            "action": "short",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 27.19,
+            "pnl_pct": 8.91,
+            "likes": 6
+          },
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 27.19,
+            "pnl_pct": -8.91,
+            "likes": 54
+          },
+          {
+            "ticker": "PLTR",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 178.12,
+            "exit_price": 177.07,
+            "pnl_pct": 0.59,
+            "likes": 4
+          },
+          {
+            "ticker": "NVDA",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 184.32,
+            "exit_price": 187.05,
+            "pnl_pct": -1.48,
+            "likes": 4
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-09",
+            "entry_price": 166.75,
+            "exit_price": 162.23,
+            "pnl_pct": -2.71,
+            "likes": 6
+          },
+          {
+            "ticker": "STX",
+            "action": "short",
+            "entry_date": "2026-01-09",
+            "entry_price": 284.67,
+            "exit_price": 321.48,
+            "pnl_pct": -12.93,
+            "likes": 17
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2026-01-08",
+            "entry_price": 305.88,
+            "exit_price": 304.01,
+            "pnl_pct": -0.61,
+            "likes": 8
+          },
+          {
+            "ticker": "RIVN",
+            "action": "buy",
+            "entry_date": "2025-12-05",
+            "entry_price": 18.08,
+            "exit_price": 17.61,
+            "pnl_pct": -2.6,
+            "likes": 12
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-12-01",
+            "entry_price": 168.26,
+            "exit_price": 181.33,
+            "pnl_pct": 7.77,
+            "likes": 8
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 171.42,
+            "pnl_pct": -6.32,
+            "likes": 41
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 171.42,
+            "pnl_pct": -6.32,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 171.42,
+            "pnl_pct": -6.32,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 171.42,
+            "pnl_pct": -6.32,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-26",
+            "entry_price": 173.69,
+            "exit_price": 177.18,
+            "pnl_pct": 2.01,
+            "likes": 17
+          }
+        ]
+      },
+      "3d": {
+        "total_trades": 15,
+        "win_rate": 0.8,
+        "avg_pnl_pct": 2.93,
+        "total_return_pct": 43.94,
+        "trades": [
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-02-06",
+            "entry_price": 114.95,
+            "exit_price": 126.07,
+            "pnl_pct": 9.67,
+            "likes": 20
+          },
+          {
+            "ticker": "HL",
+            "action": "short",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 22.52,
+            "pnl_pct": 24.56,
+            "likes": 6
+          },
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 22.52,
+            "pnl_pct": -24.56,
+            "likes": 54
+          },
+          {
+            "ticker": "PLTR",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 178.12,
+            "exit_price": 168.53,
+            "pnl_pct": 5.39,
+            "likes": 4
+          },
+          {
+            "ticker": "NVDA",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 184.32,
+            "exit_price": 178.07,
+            "pnl_pct": 3.39,
+            "likes": 4
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-09",
+            "entry_price": 166.75,
+            "exit_price": 179.33,
+            "pnl_pct": 7.54,
+            "likes": 6
+          },
+          {
+            "ticker": "STX",
+            "action": "short",
+            "entry_date": "2026-01-09",
+            "entry_price": 284.67,
+            "exit_price": 312.28,
+            "pnl_pct": -9.7,
+            "likes": 17
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2026-01-08",
+            "entry_price": 305.88,
+            "exit_price": 318.44,
+            "pnl_pct": 4.11,
+            "likes": 8
+          },
+          {
+            "ticker": "RIVN",
+            "action": "buy",
+            "entry_date": "2025-12-05",
+            "entry_price": 18.08,
+            "exit_price": 17.5,
+            "pnl_pct": -3.21,
+            "likes": 12
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-12-01",
+            "entry_price": 168.26,
+            "exit_price": 186.01,
+            "pnl_pct": 10.55,
+            "likes": 8
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 188.39,
+            "pnl_pct": 2.95,
+            "likes": 41
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 188.39,
+            "pnl_pct": 2.95,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 188.39,
+            "pnl_pct": 2.95,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 188.39,
+            "pnl_pct": 2.95,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-26",
+            "entry_price": 173.69,
+            "exit_price": 181.33,
+            "pnl_pct": 4.4,
+            "likes": 17
+          }
+        ]
+      },
+      "5d": {
+        "total_trades": 15,
+        "win_rate": 0.533,
+        "avg_pnl_pct": 1.78,
+        "total_return_pct": 26.72,
+        "trades": [
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-02-06",
+            "entry_price": 114.95,
+            "exit_price": 133.88,
+            "pnl_pct": 16.47,
+            "likes": 20,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "HL",
+            "action": "short",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 23.44,
+            "pnl_pct": 21.47,
+            "likes": 6,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 23.44,
+            "pnl_pct": -21.47,
+            "likes": 54,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "PLTR",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 178.12,
+            "exit_price": 165.9,
+            "pnl_pct": 6.86,
+            "likes": 4,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "NVDA",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 184.32,
+            "exit_price": 184.84,
+            "pnl_pct": -0.28,
+            "likes": 4,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-09",
+            "entry_price": 166.75,
+            "exit_price": 173.71,
+            "pnl_pct": 4.17,
+            "likes": 6,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "STX",
+            "action": "short",
+            "entry_date": "2026-01-09",
+            "entry_price": 284.67,
+            "exit_price": 326.23,
+            "pnl_pct": -14.6,
+            "likes": 17,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2026-01-08",
+            "entry_price": 305.88,
+            "exit_price": 320.32,
+            "pnl_pct": 4.72,
+            "likes": 8,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "RIVN",
+            "action": "buy",
+            "entry_date": "2025-12-05",
+            "entry_price": 18.08,
+            "exit_price": 18.42,
+            "pnl_pct": 1.88,
+            "likes": 12,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-12-01",
+            "entry_price": 168.26,
+            "exit_price": 183.69,
+            "pnl_pct": 9.17,
+            "likes": 8,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 178.99,
+            "pnl_pct": -2.19,
+            "likes": 41,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 178.99,
+            "pnl_pct": -2.19,
+            "likes": 25,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 178.99,
+            "pnl_pct": -2.19,
+            "likes": 25,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 178.99,
+            "pnl_pct": -2.19,
+            "likes": 25,
+            "trader": "InvestorsLive"
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-26",
+            "entry_price": 173.69,
+            "exit_price": 186.01,
+            "pnl_pct": 7.09,
+            "likes": 17,
+            "trader": "InvestorsLive"
+          }
+        ]
+      },
+      "10d": {
+        "total_trades": 15,
+        "win_rate": 0.4,
+        "avg_pnl_pct": 0.88,
+        "total_return_pct": 13.27,
+        "trades": [
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-02-06",
+            "entry_price": 114.95,
+            "exit_price": 123.71,
+            "pnl_pct": 7.62,
+            "likes": 20
+          },
+          {
+            "ticker": "HL",
+            "action": "short",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 22.98,
+            "pnl_pct": 23.02,
+            "likes": 6
+          },
+          {
+            "ticker": "HL",
+            "action": "buy",
+            "entry_date": "2026-01-27",
+            "entry_price": 29.85,
+            "exit_price": 22.98,
+            "pnl_pct": -23.02,
+            "likes": 54
+          },
+          {
+            "ticker": "PLTR",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 178.12,
+            "exit_price": 151.86,
+            "pnl_pct": 14.75,
+            "likes": 4
+          },
+          {
+            "ticker": "NVDA",
+            "action": "short",
+            "entry_date": "2026-01-14",
+            "entry_price": 184.32,
+            "exit_price": 192.51,
+            "pnl_pct": -4.44,
+            "likes": 4
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2026-01-09",
+            "entry_price": 166.75,
+            "exit_price": 160.58,
+            "pnl_pct": -3.7,
+            "likes": 6
+          },
+          {
+            "ticker": "STX",
+            "action": "short",
+            "entry_date": "2026-01-09",
+            "entry_price": 284.67,
+            "exit_price": 358.29,
+            "pnl_pct": -25.86,
+            "likes": 17
+          },
+          {
+            "ticker": "STX",
+            "action": "buy",
+            "entry_date": "2026-01-08",
+            "entry_price": 305.88,
+            "exit_price": 346.1,
+            "pnl_pct": 13.15,
+            "likes": 8
+          },
+          {
+            "ticker": "RIVN",
+            "action": "buy",
+            "entry_date": "2025-12-05",
+            "entry_price": 18.08,
+            "exit_price": 22.45,
+            "pnl_pct": 24.17,
+            "likes": 12
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-12-01",
+            "entry_price": 168.26,
+            "exit_price": 162.08,
+            "pnl_pct": -3.67,
+            "likes": 8
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 176.45,
+            "pnl_pct": -3.57,
+            "likes": 41
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 176.45,
+            "pnl_pct": -3.57,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 176.45,
+            "pnl_pct": -3.57,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-28",
+            "entry_price": 182.99,
+            "exit_price": 176.45,
+            "pnl_pct": -3.57,
+            "likes": 25
+          },
+          {
+            "ticker": "MSTR",
+            "action": "buy",
+            "entry_date": "2025-11-26",
+            "entry_price": 173.69,
+            "exit_price": 183.3,
+            "pnl_pct": 5.53,
+            "likes": 17
+          }
+        ]
+      }
+    }
+  }
+}
