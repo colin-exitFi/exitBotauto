@@ -113,6 +113,29 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(verdict.decision, "SKIP")
         self.assertTrue(verdict.consensus_detail["risk_override"])
 
+    async def test_prompt_includes_uw_news_and_option_chain_confirmation(self):
+        captured = {}
+
+        async def _capture(prompt, max_tokens=400):
+            captured["prompt"] = prompt
+            return _vote("BUY", 82, 1.5, 2.5, "uw aligned")
+
+        with patch.object(jury, "call_claude", new=_capture), \
+             patch.object(jury, "call_gpt", new=_async_return(None)), \
+             patch.object(jury, "call_grok", new=_async_return(None)):
+            await jury.deliberate(
+                "NVDA",
+                120.0,
+                {},
+                {
+                    "uw_news_summary": "2 major UW headlines; bias bullish",
+                    "uw_chain_summary": "chain bias bullish; calls $900,000/1,400 vol",
+                },
+            )
+
+        self.assertIn("UW NEWS: 2 major UW headlines; bias bullish", captured["prompt"])
+        self.assertIn("OPTION CHAIN CONFIRMATION: chain bias bullish; calls $900,000/1,400 vol", captured["prompt"])
+
 
 class JuryRetroContextTests(unittest.TestCase):
     def test_build_retro_feedback_summarizes_recent_matches(self):

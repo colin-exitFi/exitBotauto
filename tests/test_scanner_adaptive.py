@@ -288,3 +288,99 @@ class ScannerUnusualWhalesEnrichmentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(candidates[0]["uw_options_volume_bias"], "bullish")
         self.assertEqual(candidates[0]["uw_iv_context"], "elevated")
         self.assertGreater(candidates[0]["uw_score_adjustment"], 0.0)
+
+    async def test_news_and_chain_confirmation_only_applies_to_top_five(self):
+        class _UW:
+            def __init__(self):
+                self.news_calls = []
+                self.chain_calls = []
+
+            def is_configured(self):
+                return True
+
+            def get_budget_mode(self):
+                return "normal"
+
+            def summarize_news_for_symbol(self, symbol):
+                self.news_calls.append(symbol)
+                return {
+                    "bias": "bullish",
+                    "summary": f"{symbol} supportive headline",
+                    "headlines": [f"{symbol} supportive headline"],
+                }
+
+            def summarize_option_chain_validation(self, symbol, side):
+                self.chain_calls.append((symbol, side))
+                return {
+                    "bias": "bullish",
+                    "summary": f"{symbol} chain confirms",
+                    "top_contracts": [],
+                    "support_strikes": [100.0],
+                    "resistance_strikes": [120.0],
+                    "supports_thesis": True,
+                    "contradicts_thesis": False,
+                }
+
+        uw = _UW()
+        scanner = Scanner(unusual_whales_client=uw)
+        candidates = [{"symbol": f"S{i}", "side": "long", "uw_score_adjustment": 0.0} for i in range(6)]
+
+        await scanner._apply_unusual_whales_news_and_chain_confirmation(candidates)
+
+        self.assertEqual(uw.news_calls, ["S0", "S1", "S2", "S3", "S4"])
+        self.assertEqual([row[0] for row in uw.chain_calls], ["S0", "S1", "S2", "S3", "S4"])
+        self.assertNotIn("uw_news_summary", candidates[5])
+        self.assertNotIn("uw_chain_summary", candidates[5])
+
+    async def test_news_and_chain_confirmation_penalize_contradictions_more_than_they_reward(self):
+        class _UW:
+            def is_configured(self):
+                return True
+
+            def get_budget_mode(self):
+                return "normal"
+
+            def summarize_news_for_symbol(self, symbol):
+                return {
+                    "bias": "bearish" if symbol == "BEAR" else "bullish",
+                    "summary": f"{symbol} news",
+                    "headlines": [f"{symbol} news"],
+                }
+
+            def summarize_option_chain_validation(self, symbol, side):
+                contradictory = symbol == "BEAR"
+                return {
+                    "bias": "bearish" if contradictory else "bullish",
+                    "summary": f"{symbol} chain",
+                    "top_contracts": [],
+                    "support_strikes": [],
+                    "resistance_strikes": [],
+                    "supports_thesis": not contradictory,
+                    "contradicts_thesis": contradictory,
+                }
+
+        scanner = Scanner(unusual_whales_client=_UW())
+        candidates = [
+            {"symbol": "BULL", "side": "long", "uw_score_adjustment": 0.0},
+            {"symbol": "BEAR", "side": "long", "uw_score_adjustment": 0.0},
+        ]
+
+        await scanner._apply_unusual_whales_news_and_chain_confirmation(candidates)
+
+        self.assertEqual(candidates[0]["uw_score_adjustment"], 0.15)
+        self.assertEqual(candidates[1]["uw_score_adjustment"], -0.19)
+
+    async def test_news_and_chain_confirmation_respects_client_critical_mode_without_refresh(self):
+        from src.signals.unusual_whales import UnusualWhalesClient
+
+        client = UnusualWhalesClient(api_token="test-token")
+        client._usage_stats.update({"daily_limit": 50000, "last_request_at": 1.0, "minute_remaining": 15})
+        client._request = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("critical mode should not refresh"))
+        scanner = Scanner(unusual_whales_client=client)
+        candidates = [{"symbol": "AAPL", "side": "long", "uw_score_adjustment": 0.0}]
+
+        await scanner._apply_unusual_whales_news_and_chain_confirmation(candidates)
+
+        self.assertEqual(candidates[0]["uw_budget_mode"], "critical")
+        self.assertNotIn("uw_news_summary", candidates[0])
+        self.assertNotIn("uw_chain_summary", candidates[0])

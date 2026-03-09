@@ -524,6 +524,23 @@ async def get_intelligence():
     if hasattr(_bot, "unusual_whales_stream") and _bot.unusual_whales_stream:
         result["unusual_whales_stream"] = _bot.unusual_whales_stream.get_stats()
 
+    if hasattr(_bot, "scanner") and _bot.scanner:
+        focus_rows = []
+        for candidate in (_bot.scanner.get_cached_candidates() or [])[:5]:
+            news_summary = str(candidate.get("uw_news_summary") or "").strip()
+            chain_summary = str(candidate.get("uw_chain_summary") or "").strip()
+            if not news_summary and not chain_summary:
+                continue
+            focus_rows.append(
+                {
+                    "symbol": candidate.get("symbol", ""),
+                    "budget_mode": candidate.get("uw_budget_mode", "unknown"),
+                    "news_summary": news_summary,
+                    "chain_summary": chain_summary,
+                }
+            )
+        result["unusual_whales_focus"] = focus_rows
+
     # Sector rotation
     if hasattr(_bot, 'sector_model') and _bot.sector_model:
         result["sectors"] = _bot.sector_model.get_dashboard_data()
@@ -960,7 +977,8 @@ tr:hover td{background:#161b2288}
   </div>
   <div class="card">
     <h2><span class="icon">🔍</span> Scanner Candidates</h2>
-    <table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol</th><th>Sent</th><th>Score</th></tr></thead>
+    <div id="candidateMeta" style="font-size:12px;color:#8b949e;margin-bottom:8px"></div>
+    <table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol</th><th>Sent</th><th>Score</th><th>UW</th></tr></thead>
     <tbody id="candidates"></tbody></table>
   </div>
 
@@ -1327,11 +1345,12 @@ async function refresh() {
   // Candidates
   const cand = await api('/api/candidates');
   $('candidates').innerHTML = cand && cand.length ? cand.slice(0,10).map(c => `<tr>
-    <td><strong>${c.symbol}</strong></td><td>$${(c.price||0).toFixed(2)}</td>
+    <td><strong>${c.symbol}</strong>${c.uw_budget_mode ? `<div style="font-size:11px;color:#8b949e">${c.uw_budget_mode}</div>` : ''}</td><td>$${(c.price||0).toFixed(2)}</td>
     <td class="${cls(c.change_pct||0)}">${fmt(c.change_pct||0,1)}%</td>
     <td>${(c.volume_spike||0).toFixed(1)}x</td><td>${(c.sentiment_score||0).toFixed(2)}</td>
     <td><strong>${(c.score||0).toFixed(3)}</strong></td>
-  </tr>`).join('') : '<tr><td colspan="6" class="empty">No candidates yet</td></tr>';
+    <td style="font-size:11px;color:#8b949e;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${((c.uw_news_summary||'') + ' | ' + (c.uw_chain_summary||'')).replace(/"/g,'&quot;')}">${c.uw_chain_summary || c.uw_news_summary || '—'}</td>
+  </tr>`).join('') : '<tr><td colspan="7" class="empty">No candidates yet</td></tr>';
   // Activity Feed
   const activity = await api('/api/activity?limit=30');
   if (activity && activity.length) {
@@ -1379,6 +1398,15 @@ async function refresh() {
   const ctExits = ct.exits || [];
   const ctTraders = ct.traders || [];
   const ark = (intelligence && intelligence.ark_trades) || {};
+  const uwApi = (intelligence && intelligence.unusual_whales_api) || {};
+  const uwFocus = (intelligence && intelligence.unusual_whales_focus) || [];
+  const uwBudget = uwApi.budget_mode || 'unknown';
+  $('candidateMeta').innerHTML = intelligence ? `
+    <span><strong>UW budget:</strong> ${uwBudget}</span>
+    <span style="margin-left:12px"><strong>Minute remaining:</strong> ${uwApi.minute_remaining ?? '—'}</span>
+    <span style="margin-left:12px"><strong>Last path:</strong> ${uwApi.last_request_path || '—'}</span>
+    ${uwFocus.length ? `<div style="margin-top:6px"><strong>Top UW context:</strong> ${uwFocus.map(row => `${row.symbol}: ${row.chain_summary || row.news_summary}`).join(' · ')}</div>` : ''}
+  ` : '';
   $('copyTraderSummary').innerHTML = `
     <div class="summary-item"><div class="val info">${ctSignals.length}</div><div class="lbl">Active Signals</div></div>
     <div class="summary-item"><div class="val negative">${ctExits.length}</div><div class="lbl">Exit Signals</div></div>

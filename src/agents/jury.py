@@ -55,6 +55,8 @@ FADE CONTEXT: {fade_context}
 ECONOMIC CALENDAR: {economic_calendar}
 HUMAN INTEL: {human_intel}
 PRO TRADER CONTEXT: {copy_trader_context}
+UW NEWS: {uw_news}
+OPTION CHAIN CONFIRMATION: {option_chain_confirmation}
 RETRO FEEDBACK: {retro_feedback}
 
 AGENT BRIEFS:
@@ -135,6 +137,8 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             economic_calendar=sd.get("economic_calendar", "None"),
             human_intel=sd.get("human_intel", "None"),
             copy_trader_context=sd.get("copy_trader_context", "None"),
+            uw_news=sd.get("uw_news_summary", "None"),
+            option_chain_confirmation=sd.get("uw_chain_summary", "None"),
             retro_feedback=retro_feedback,
             technical=fmt(briefs.get("technical", {})),
             sentiment=fmt(briefs.get("sentiment", {})),

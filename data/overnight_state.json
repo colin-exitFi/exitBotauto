@@ -1,12 +1,12 @@
 {
   "last_pharma_refresh": 1773022810.978513,
-  "last_news_scan": 1773032531.829559,
+  "last_news_scan": 1773034533.984759,
   "overnight_news": [
-    "**US non-farm payrolls fell 92,000 in Feb 2026, unemployment at 4.4%** (yesterday; signals cooling labor market, boosts rate cut odds but adds volatility; broad market impact).[1]",
-    "**Oil surged above $80/barrel** (recent; highest since 2024, raises inflation fears, Dow dropped >1,000 pts; affects airlines like DAL, UAL).[1]",
-    "**Administration proposed 15% global tariffs** (recent; 20 states suing to block, trade policy swings markets; impacts importers/exporters).[1]",
-    "**SCHD ETF reconstitution upcoming Mar 20** (big for ETF rotation to value/safety amid market shifts; SCHD).[1]",
-    "**Upcoming CPI report Mar 11** (key inflation data; higher CPI could delay Fed cuts, pressure stocks).[1]"
+    "Based on the search results, I cannot provide a definitive list of market-moving news from the last 4 hours (since 1:35 AM UTC) because the results don't contain real-time information with precise timestamps for events occurring in that specific window.",
+    "However, the search results indicate these **significant developments affecting US markets**:",
+    "**Oil surge above $110/barrel** \u2013 Geopolitical tensions in West Asia driving energy costs higher, pressuring equities and airline/travel stocks (DAL, AAL, LUV affected)[4]",
+    "**Dow futures down ~800 points** \u2013 Global market weakness signaling broad market pressure[4]",
+    "**Weak US jobs report (February)** \u2013 Non-farm payrolls fell 92,000, unemployment rose to 4.4%, creating labor market concerns[1]"
   ],
   "last_game_film": 1773022810.978513,
   "last_thesis": 1773029527.0440588,
@@ -102,5 +102,5 @@
       }
     ]
   },
-  "last_premarket_scan": 1773033024.588035
+  "last_premarket_scan": 1773034840.254003
 }

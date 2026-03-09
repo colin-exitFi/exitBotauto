@@ -457,7 +457,16 @@ class Scanner:
                 self._estimate_source_hit_rate(c["signal_sources"], performance) * 100, 1
             )
             c["score_multiplier"] = round(self._performance_multiplier(c, performance), 3)
+            c["_pre_uw_confirmation_score"] = self._calculate_score(c, regime=regime, performance=performance)
+        preliminary_top = sorted(
+            active_candidates,
+            key=lambda row: float(row.get("_pre_uw_confirmation_score", 0.0) or 0.0),
+            reverse=True,
+        )[:5]
+        await self._apply_unusual_whales_news_and_chain_confirmation(preliminary_top)
+        for c in active_candidates:
             c["score"] = self._calculate_score(c, regime=regime, performance=performance)
+            c.pop("_pre_uw_confirmation_score", None)
         active_candidates.sort(key=lambda x: x["score"], reverse=True)
 
         self._cache = active_candidates[:20]  # Keep more candidates for orchestrator diversity
@@ -847,6 +856,9 @@ class Scanner:
         if not candidates or not self.unusual_whales or not getattr(self.unusual_whales, "is_configured", lambda: False)():
             return
         loop = asyncio.get_event_loop()
+        budget_mode = getattr(self.unusual_whales, "get_budget_mode", lambda: "disabled")()
+        for candidate in candidates:
+            candidate["uw_budget_mode"] = budget_mode
         snapshot = self._get_unusual_whales_snapshot()
         flow_alerts = list(snapshot.get("flow_alerts") or [])
         dark_pool = list(snapshot.get("dark_pool") or [])
@@ -913,7 +925,7 @@ class Scanner:
             candidate["uw_score_adjustment"] = round(score_adj, 3)
 
         # Richer per-symbol ticker context for the top names only.
-        for candidate in candidates[:8]:
+        for candidate in candidates[:5]:
             symbol = str(candidate.get("symbol", "")).upper()
             side = str(candidate.get("side", "long")).lower()
             if not symbol:
@@ -994,6 +1006,56 @@ class Scanner:
             candidate["gamma_resistance"] = gamma.get("resistance_strikes", [])
             candidate["gamma_max_strike"] = gamma.get("max_gamma_strike", 0)
             candidate["gamma_levels"] = gamma.get("levels", [])
+
+    async def _apply_unusual_whales_news_and_chain_confirmation(self, candidates: List[Dict]):
+        if not candidates or not self.unusual_whales or not getattr(self.unusual_whales, "is_configured", lambda: False)():
+            return
+        loop = asyncio.get_event_loop()
+        budget_mode = getattr(self.unusual_whales, "get_budget_mode", lambda: "disabled")()
+
+        for candidate in candidates[:5]:
+            symbol = str(candidate.get("symbol", "")).upper()
+            side = str(candidate.get("side", "long")).lower()
+            if not symbol:
+                continue
+
+            candidate["uw_budget_mode"] = budget_mode
+
+            try:
+                news_summary = await loop.run_in_executor(
+                    None, self.unusual_whales.summarize_news_for_symbol, symbol
+                )
+                if news_summary.get("headlines"):
+                    candidate["uw_news_summary"] = news_summary.get("summary", "")
+                    candidate["uw_news_bias"] = news_summary.get("bias", "neutral")
+                    candidate["uw_news_headlines"] = list(news_summary.get("headlines") or [])
+                    news_bias = candidate["uw_news_bias"]
+                    if news_bias == "bullish" and side != "short":
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.05, 3)
+                    elif news_bias == "bearish" and side == "short":
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.05, 3)
+                    elif news_bias in {"bullish", "bearish"}:
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) - 0.07, 3)
+            except Exception as e:
+                logger.debug(f"UW headline enrichment unavailable for {symbol}: {e}")
+
+            try:
+                chain_summary = await loop.run_in_executor(
+                    None, self.unusual_whales.summarize_option_chain_validation, symbol, side
+                )
+                has_chain_signal = bool(chain_summary.get("top_contracts")) or bool(chain_summary.get("supports_thesis")) or bool(chain_summary.get("contradicts_thesis"))
+                if has_chain_signal:
+                    candidate["uw_chain_summary"] = chain_summary.get("summary", "")
+                    candidate["uw_chain_bias"] = chain_summary.get("bias", "neutral")
+                    candidate["uw_chain_top_contracts"] = list(chain_summary.get("top_contracts") or [])
+                    candidate["uw_chain_support_strikes"] = list(chain_summary.get("support_strikes") or [])
+                    candidate["uw_chain_resistance_strikes"] = list(chain_summary.get("resistance_strikes") or [])
+                    if chain_summary.get("supports_thesis"):
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.10, 3)
+                    elif chain_summary.get("contradicts_thesis"):
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) - 0.12, 3)
+            except Exception as e:
+                logger.debug(f"UW option-chain validation unavailable for {symbol}: {e}")
 
     async def _scan_unusual_whales(self) -> List[Dict]:
         """

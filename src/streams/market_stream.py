@@ -227,6 +227,7 @@ class MarketStream:
                     auth_error = self._extract_auth_error(resp_data)
                     if auth_error:
                         if self._is_retryable_auth_error(auth_error):
+                            # Exponential backoff: 5s → 10s → 20s → 40s → 60s → 120s (cap)
                             delay = max(
                                 float(getattr(settings, "MARKET_STREAM_AUTH_LIMIT_RETRY_SECONDS", 5.0) or 5.0),
                                 float(self._reconnect_delay or 1),
@@ -234,7 +235,7 @@ class MarketStream:
                             logger.warning(
                                 f"WS auth limited: {auth_error}. Retrying in {delay:.1f}s..."
                             )
-                            self._reconnect_delay = min(max(delay * 2.0, delay), self._max_reconnect_delay)
+                            self._reconnect_delay = min(delay * 2.0, 120.0)
                             await asyncio.sleep(delay)
                             continue
                         logger.error(f"WS auth error: {auth_error}")

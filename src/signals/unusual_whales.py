@@ -5,6 +5,7 @@ Primary source for whale flow, dark pool, market tide, and congress trades.
 Uses a small in-memory TTL cache to stay under rate limits.
 """
 
+import re
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -63,13 +64,48 @@ class UnusualWhalesClient:
         )
 
     def get_usage_stats(self) -> Dict[str, object]:
-        return dict(self._usage_stats)
+        stats = dict(self._usage_stats)
+        stats["budget_mode"] = self.get_budget_mode()
+        return stats
 
-    def _get_cached(self, cache_key: Tuple, ttl_seconds: int):
+    def get_budget_mode(self) -> str:
+        if not self.is_configured():
+            return "disabled"
+        minute_remaining = self._to_int(self._usage_stats.get("minute_remaining"))
+        last_request_at = float(self._usage_stats.get("last_request_at", 0.0) or 0.0)
+        daily_limit = self._to_int(self._usage_stats.get("daily_limit"))
+        if last_request_at <= 0 or (minute_remaining <= 0 and daily_limit <= 0):
+            return "normal"
+        if minute_remaining <= 15:
+            return "critical"
+        if minute_remaining <= 40:
+            return "conserve"
+        return "normal"
+
+    def allow_request(self, tier: str) -> bool:
+        mode = self.get_budget_mode()
+        normalized_tier = str(tier or "important").strip().lower()
+        if mode == "disabled":
+            return False
+        if mode == "critical":
+            return normalized_tier == "critical"
+        return normalized_tier in {"critical", "important", "optional"}
+
+    def _cache_policy(self, normal_ttl: int, *, tier: str = "important", conserve_ttl: Optional[int] = None) -> Tuple[int, bool]:
+        mode = self.get_budget_mode()
+        effective_ttl = int(normal_ttl)
+        if mode == "conserve":
+            effective_ttl = int(conserve_ttl if conserve_ttl is not None else normal_ttl)
+        allow_stale = mode == "critical" and str(tier or "important").strip().lower() != "critical"
+        return effective_ttl, allow_stale
+
+    def _get_cached(self, cache_key: Tuple, ttl_seconds: int, allow_stale: bool = False):
         cached = self._cache.get(cache_key)
         if not cached:
             return None
         ts, value = cached
+        if allow_stale:
+            return value
         if (time.time() - ts) < ttl_seconds:
             return value
         self._cache.pop(cache_key, None)
@@ -117,6 +153,14 @@ class UnusualWhalesClient:
                 return value
         return ""
 
+    @staticmethod
+    def _infer_option_type_from_symbol(option_symbol: str) -> str:
+        value = str(option_symbol or "").strip().upper()
+        match = re.search(r"([CP])\d{8}$", value)
+        if not match:
+            return "unknown"
+        return "call" if match.group(1) == "C" else "put"
+
     def _normalize_option_type(self, item: Dict) -> str:
         option_type = str(item.get("type") or item.get("option_type") or item.get("contract_type") or "").strip().lower()
         if option_type in ("call", "calls"):
@@ -127,6 +171,11 @@ class UnusualWhalesClient:
             return "call"
         if item.get("is_put") is True:
             return "put"
+        symbol_type = self._infer_option_type_from_symbol(
+            str(item.get("option_symbol") or item.get("contract_symbol") or "")
+        )
+        if symbol_type != "unknown":
+            return symbol_type
         return option_type or "unknown"
 
     def _normalize_sentiment(self, item: Dict, option_type: str = "") -> str:
@@ -517,6 +566,78 @@ class UnusualWhalesClient:
             )
         return normalized
 
+    def _normalize_news_headlines(self, records) -> List[Dict]:
+        rows = records if isinstance(records, list) else ([records] if records else [])
+        normalized = []
+        for record in rows:
+            if not isinstance(record, dict):
+                continue
+            tickers = [
+                str(ticker).strip().upper()
+                for ticker in (record.get("tickers") or [])
+                if str(ticker).strip()
+            ]
+            sentiment = str(record.get("sentiment") or "neutral").strip().lower()
+            if sentiment not in {"bullish", "bearish", "neutral"}:
+                sentiment = "neutral"
+            normalized.append(
+                {
+                    "headline": str(record.get("headline") or record.get("title") or "").strip(),
+                    "source": str(record.get("source") or "").strip(),
+                    "created_at": str(record.get("created_at") or record.get("published_at") or ""),
+                    "tickers": tickers,
+                    "sentiment": sentiment,
+                    "is_major": bool(record.get("is_major")),
+                    "tags": [str(tag).strip() for tag in (record.get("tags") or []) if str(tag).strip()],
+                    "raw": record,
+                }
+            )
+        return normalized
+
+    def _normalize_option_contracts(self, symbol: str, records) -> List[Dict]:
+        rows = records if isinstance(records, list) else ([records] if records else [])
+        ticker = str(symbol or "").upper().strip()
+        normalized = []
+        for record in rows:
+            if not isinstance(record, dict):
+                continue
+            option_symbol = str(record.get("option_symbol") or record.get("contract_symbol") or "").strip().upper()
+            option_type = self._normalize_option_type(record)
+            volume = self._to_int(record.get("volume"))
+            open_interest = self._to_int(record.get("open_interest") or record.get("oi"))
+            ask_side_volume = self._to_int(record.get("ask_volume") or record.get("ask_side_volume"))
+            bid_side_volume = self._to_int(record.get("bid_volume") or record.get("bid_side_volume"))
+            ask_side_pct = round(ask_side_volume / max(volume, 1), 4) if volume > 0 and ask_side_volume > 0 else 0.0
+            bid_side_pct = round(bid_side_volume / max(volume, 1), 4) if volume > 0 and bid_side_volume > 0 else 0.0
+            premium = self._to_float(record.get("total_premium") or record.get("premium"))
+            normalized.append(
+                {
+                    "ticker": ticker,
+                    "contract_symbol": option_symbol,
+                    "type": option_type,
+                    "sentiment": self._normalize_sentiment(record, option_type=option_type),
+                    "premium": premium,
+                    "volume": volume,
+                    "open_interest": open_interest,
+                    "vol_to_oi": round(volume / max(open_interest, 1), 3) if volume > 0 and open_interest > 0 else 0.0,
+                    "is_new_position": bool(volume > 0 and open_interest > 0 and volume > open_interest),
+                    "ask_side_volume": ask_side_volume,
+                    "bid_side_volume": bid_side_volume,
+                    "ask_side_pct": ask_side_pct,
+                    "bid_side_pct": bid_side_pct,
+                    "strike": self._to_float(record.get("strike") or record.get("strike_price")),
+                    "expiry": str(record.get("expiry") or record.get("expiration") or ""),
+                    "last_price": self._to_float(record.get("last_price") or record.get("price")),
+                    "avg_price": self._to_float(record.get("avg_price")),
+                    "nbbo_bid": self._to_float(record.get("nbbo_bid") or record.get("bid")),
+                    "nbbo_ask": self._to_float(record.get("nbbo_ask") or record.get("ask")),
+                    "implied_volatility": self._to_float(record.get("implied_volatility") or record.get("iv")),
+                    "timestamp": str(record.get("last_fill") or ""),
+                    "raw": record,
+                }
+            )
+        return normalized
+
     @staticmethod
     def summarize_option_screener(records: List[Dict]) -> List[Dict]:
         by_ticker: Dict[str, Dict] = {}
@@ -586,9 +707,13 @@ class UnusualWhalesClient:
 
     def get_flow_alerts(self, min_premium: int = 100_000, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         cache_key = ("flow_alerts", min_premium, (symbol or "").upper(), limit)
-        cached = self._get_cached(cache_key, ttl_seconds=60)
+        ttl_seconds, allow_stale = self._cache_policy(60, tier="critical")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("critical"):
+            return []
 
         params = {
             "min_premium": int(min_premium),
@@ -604,9 +729,13 @@ class UnusualWhalesClient:
         if not ticker:
             return []
         cache_key = ("flow_recent", ticker, int(min_premium or 0), str(side or "").lower(), int(limit or 100))
-        cached = self._get_cached(cache_key, ttl_seconds=60)
+        ttl_seconds, allow_stale = self._cache_policy(60, tier="critical")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("critical"):
+            return []
 
         params = {"min_premium": int(min_premium)}
         if side:
@@ -669,9 +798,13 @@ class UnusualWhalesClient:
 
     def get_dark_pool(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         cache_key = ("dark_pool", (symbol or "").upper(), limit)
-        cached = self._get_cached(cache_key, ttl_seconds=60)
+        ttl_seconds, allow_stale = self._cache_policy(60, tier="critical")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("critical"):
+            return []
 
         path = f"/api/darkpool/{str(symbol).upper()}" if symbol else "/api/darkpool/recent"
         params = {"limit": int(limit)} if not symbol else None
@@ -680,18 +813,26 @@ class UnusualWhalesClient:
 
     def get_market_tide(self) -> Dict:
         cache_key = ("market_tide",)
-        cached = self._get_cached(cache_key, ttl_seconds=60)
+        ttl_seconds, allow_stale = self._cache_policy(60, tier="critical")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("critical"):
+            return {}
 
         payload = self._request("/api/market/market-tide", params={"interval_5m": False})
         return self._set_cached(cache_key, self._normalize_market_tide(payload))
 
     def get_congress_trades(self, limit: int = 50) -> List[Dict]:
         cache_key = ("congress_trades", limit)
-        cached = self._get_cached(cache_key, ttl_seconds=900)
+        ttl_seconds, allow_stale = self._cache_policy(900, tier="optional")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("optional"):
+            return []
 
         records = self._request("/api/congress/recent-trades", params={"limit": int(limit)})
         return self._set_cached(cache_key, self._normalize_congress_trades(records))
@@ -725,9 +866,13 @@ class UnusualWhalesClient:
             str(option_type or "").lower(),
             bool(exclude_ex_div_ticker) if exclude_ex_div_ticker is not None else None,
         )
-        cached = self._get_cached(cache_key, ttl_seconds=60)
+        ttl_seconds, allow_stale = self._cache_policy(60, tier="important")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("important"):
+            return []
 
         params: Dict[str, object] = {"limit": int(limit or 50)}
         if ticker_symbol:
@@ -756,7 +901,8 @@ class UnusualWhalesClient:
 
     def get_gamma_exposure(self, symbol: str) -> Dict:
         cache_key = ("gamma_exposure", str(symbol or "").upper())
-        cached = self._get_cached(cache_key, ttl_seconds=300)
+        ttl_seconds, allow_stale = self._cache_policy(300, tier="important")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
 
@@ -764,15 +910,22 @@ class UnusualWhalesClient:
         if not ticker:
             return {"ticker": "", "levels": [], "max_gamma_strike": 0, "support_strikes": [], "resistance_strikes": []}
 
+        if not self.allow_request("important"):
+            return {"ticker": ticker, "levels": [], "max_gamma_strike": 0, "support_strikes": [], "resistance_strikes": []}
+
         records = self._request(f"/api/stock/{ticker}/spot-exposures/strike")
         return self._set_cached(cache_key, self._normalize_gamma_exposure(ticker, records))
 
     def get_insider_trades(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         ticker = str(symbol or "").upper().strip()
         cache_key = ("insider_trades", ticker, int(limit or 50))
-        cached = self._get_cached(cache_key, ttl_seconds=300)
+        ttl_seconds, allow_stale = self._cache_policy(300, tier="optional")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+
+        if not self.allow_request("optional"):
+            return []
 
         path = f"/api/insider/{ticker}/trades" if ticker else "/api/insider/recent-trades"
         records = self._request(path, params={"limit": int(limit)})
@@ -783,9 +936,12 @@ class UnusualWhalesClient:
         if not ticker:
             return []
         cache_key = ("net_premium_ticks", ticker, str(date or ""))
-        cached = self._get_cached(cache_key, ttl_seconds=60)
+        ttl_seconds, allow_stale = self._cache_policy(60, tier="important")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+        if not self.allow_request("important"):
+            return []
         params = {"date": date} if date else None
         records = self._request(f"/api/stock/{ticker}/net-prem-ticks", params=params)
         return self._set_cached(cache_key, self._normalize_net_premium_ticks(records))
@@ -821,9 +977,12 @@ class UnusualWhalesClient:
         if not ticker:
             return []
         cache_key = ("interpolated_iv", ticker, str(date or ""))
-        cached = self._get_cached(cache_key, ttl_seconds=300)
+        ttl_seconds, allow_stale = self._cache_policy(300, tier="optional")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+        if not self.allow_request("optional"):
+            return []
         params = {"date": date} if date else None
         records = self._request(f"/api/stock/{ticker}/interpolated-iv", params=params)
         return self._set_cached(cache_key, self._normalize_interpolated_iv(records))
@@ -855,9 +1014,12 @@ class UnusualWhalesClient:
         if not ticker:
             return []
         cache_key = ("options_volume", ticker, int(limit or 1))
-        cached = self._get_cached(cache_key, ttl_seconds=300)
+        ttl_seconds, allow_stale = self._cache_policy(300, tier="optional")
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
         if cached is not None:
             return cached
+        if not self.allow_request("optional"):
+            return []
         records = self._request(f"/api/stock/{ticker}/options-volume", params={"limit": int(limit or 1)})
         return self._set_cached(cache_key, self._normalize_options_volume(records))
 
@@ -882,4 +1044,216 @@ class UnusualWhalesClient:
                 f"call prem ${row.get('call_premium', 0.0):,.0f}; "
                 f"put prem ${row.get('put_premium', 0.0):,.0f}"
             ),
+        }
+
+    def get_news_headlines(
+        self,
+        ticker: Optional[str] = None,
+        major_only: bool = True,
+        limit: int = 5,
+        search_term: Optional[str] = None,
+        sources: Optional[List[str]] = None,
+    ) -> List[Dict]:
+        cache_key = (
+            "news_headlines",
+            str(ticker or "").upper(),
+            bool(major_only),
+            int(limit or 5),
+            str(search_term or "").strip().lower(),
+            tuple(sources or []),
+        )
+        ttl_seconds, allow_stale = self._cache_policy(120, tier="optional", conserve_ttl=300)
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
+        if cached is not None:
+            return cached
+        if not self.allow_request("optional"):
+            return []
+        params: Dict[str, object] = {"limit": int(limit or 5), "major_only": bool(major_only)}
+        if ticker:
+            params["ticker"] = str(ticker).upper()
+        if search_term:
+            params["search_term"] = str(search_term).strip()
+        if sources:
+            params["sources"] = sources
+        records = self._request("/api/news/headlines", params=params)
+        return self._set_cached(cache_key, self._normalize_news_headlines(records))
+
+    def summarize_news_for_symbol(self, symbol: str) -> Dict:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return {"ticker": "", "bias": "neutral", "summary": "No UW headlines", "headlines": []}
+        headlines = [
+            row for row in self.get_news_headlines(ticker=ticker, major_only=True, limit=5)
+            if ticker in (row.get("tickers") or [])
+        ]
+        if not headlines:
+            return {"ticker": ticker, "bias": "neutral", "summary": "No UW headlines", "headlines": [], "major_count": 0}
+        bullish = sum(1 for row in headlines if row.get("sentiment") == "bullish")
+        bearish = sum(1 for row in headlines if row.get("sentiment") == "bearish")
+        major_count = sum(1 for row in headlines if row.get("is_major"))
+        bias = "neutral"
+        if bullish > bearish:
+            bias = "bullish"
+        elif bearish > bullish:
+            bias = "bearish"
+        return {
+            "ticker": ticker,
+            "bias": bias,
+            "major_count": major_count,
+            "headlines": [row.get("headline", "") for row in headlines[:3]],
+            "records": headlines,
+            "summary": f"{major_count} major UW headlines; bias {bias}; top: {headlines[0].get('headline', '')}",
+        }
+
+    def get_option_contracts(
+        self,
+        symbol: str,
+        option_type: Optional[str] = None,
+        expiry: Optional[str] = None,
+        limit: int = 100,
+        vol_greater_oi: bool = True,
+        exclude_zero_vol_chains: bool = True,
+        exclude_zero_oi_chains: bool = True,
+        maybe_otm_only: bool = True,
+        exclude_zero_dte: bool = True,
+    ) -> List[Dict]:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return []
+        cache_key = (
+            "option_contracts",
+            ticker,
+            str(option_type or "").lower(),
+            str(expiry or ""),
+            int(limit or 100),
+            bool(vol_greater_oi),
+            bool(exclude_zero_vol_chains),
+            bool(exclude_zero_oi_chains),
+            bool(maybe_otm_only),
+            bool(exclude_zero_dte),
+        )
+        ttl_seconds, allow_stale = self._cache_policy(120, tier="important", conserve_ttl=300)
+        cached = self._get_cached(cache_key, ttl_seconds=ttl_seconds, allow_stale=allow_stale)
+        if cached is not None:
+            return cached
+        if not self.allow_request("important"):
+            return []
+        params: Dict[str, object] = {
+            "limit": int(limit or 100),
+            "vol_greater_oi": bool(vol_greater_oi),
+            "exclude_zero_vol_chains": bool(exclude_zero_vol_chains),
+            "exclude_zero_oi_chains": bool(exclude_zero_oi_chains),
+            "maybe_otm_only": bool(maybe_otm_only),
+            "exclude_zero_dte": bool(exclude_zero_dte),
+        }
+        if option_type:
+            params["option_type"] = str(option_type).lower()
+        if expiry:
+            params["expiry"] = str(expiry)
+        records = self._request(f"/api/stock/{ticker}/option-contracts", params=params)
+        return self._set_cached(cache_key, self._normalize_option_contracts(ticker, records))
+
+    def summarize_option_chain_validation(self, symbol: str, side: str) -> Dict:
+        ticker = str(symbol or "").upper().strip()
+        direction = "short" if str(side or "").strip().lower() == "short" else "long"
+        contracts = self.get_option_contracts(ticker)
+        if not contracts:
+            return {
+                "ticker": ticker,
+                "bias": "neutral",
+                "summary": "No option-chain confirmation",
+                "top_contracts": [],
+                "support_strikes": [],
+                "resistance_strikes": [],
+                "supports_thesis": False,
+                "contradicts_thesis": False,
+            }
+
+        calls = [row for row in contracts if row.get("type") == "call"]
+        puts = [row for row in contracts if row.get("type") == "put"]
+        call_premium = sum(float(row.get("premium", 0.0) or 0.0) for row in calls)
+        put_premium = sum(float(row.get("premium", 0.0) or 0.0) for row in puts)
+        call_volume = sum(int(row.get("volume", 0) or 0) for row in calls)
+        put_volume = sum(int(row.get("volume", 0) or 0) for row in puts)
+        call_ask_ratio = sum(int(row.get("ask_side_volume", 0) or 0) for row in calls) / max(call_volume, 1)
+        put_ask_ratio = sum(int(row.get("ask_side_volume", 0) or 0) for row in puts) / max(put_volume, 1)
+
+        bullish_score = 0
+        bearish_score = 0
+        if call_premium > put_premium * 1.15:
+            bullish_score += 2
+        elif put_premium > call_premium * 1.15:
+            bearish_score += 2
+        if call_volume > put_volume * 1.10:
+            bullish_score += 1
+        elif put_volume > call_volume * 1.10:
+            bearish_score += 1
+        if call_ask_ratio >= 0.55:
+            bullish_score += 1
+        if put_ask_ratio >= 0.55:
+            bearish_score += 1
+
+        top_contracts = sorted(contracts, key=lambda row: float(row.get("premium", 0.0) or 0.0), reverse=True)[:5]
+        dominant_calls = sum(1 for row in top_contracts[:3] if row.get("type") == "call")
+        dominant_puts = sum(1 for row in top_contracts[:3] if row.get("type") == "put")
+        if dominant_calls > dominant_puts:
+            bullish_score += 1
+        elif dominant_puts > dominant_calls:
+            bearish_score += 1
+
+        bias = "neutral"
+        if bullish_score > bearish_score:
+            bias = "bullish"
+        elif bearish_score > bullish_score:
+            bias = "bearish"
+
+        top_puts = sorted(
+            puts,
+            key=lambda row: float(row.get("premium", 0.0) or 0.0),
+            reverse=True,
+        )[:10]
+        top_calls = sorted(
+            calls,
+            key=lambda row: float(row.get("premium", 0.0) or 0.0),
+            reverse=True,
+        )[:10]
+        support_strikes = sorted(
+            {
+                float(row.get("strike", 0.0) or 0.0)
+                for row in top_puts
+                if float(row.get("strike", 0.0) or 0.0) > 0
+            },
+            reverse=True,
+        )[:3]
+        resistance_strikes = sorted(
+            {
+                float(row.get("strike", 0.0) or 0.0)
+                for row in top_calls
+                if float(row.get("strike", 0.0) or 0.0) > 0
+            }
+        )[:3]
+
+        supports = (direction == "long" and bias == "bullish") or (direction == "short" and bias == "bearish")
+        contradicts = (direction == "long" and bias == "bearish") or (direction == "short" and bias == "bullish")
+        contract_descriptions = [
+            f"{row.get('type', '?')} {float(row.get('strike', 0.0) or 0.0):.0f} ${float(row.get('premium', 0.0) or 0.0):,.0f}"
+            for row in top_contracts[:3]
+        ]
+        summary = (
+            f"chain bias {bias}; calls ${call_premium:,.0f}/{call_volume:,} vol; "
+            f"puts ${put_premium:,.0f}/{put_volume:,} vol; top {', '.join(contract_descriptions)}"
+        )
+        return {
+            "ticker": ticker,
+            "bias": bias,
+            "summary": summary,
+            "top_contracts": top_contracts[:3],
+            "support_strikes": support_strikes,
+            "resistance_strikes": resistance_strikes,
+            "call_premium": round(call_premium, 2),
+            "put_premium": round(put_premium, 2),
+            "call_volume": call_volume,
+            "put_volume": put_volume,
+            "supports_thesis": supports,
+            "contradicts_thesis": contradicts,
         }

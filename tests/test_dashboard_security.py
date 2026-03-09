@@ -47,9 +47,30 @@ class DashboardSecurityTests(unittest.TestCase):
             unusual_whales = type(
                 "UWClientStub",
                 (),
-                {"get_usage_stats": lambda self: {"daily_request_count": 21, "minute_remaining": 118}},
+                {
+                    "get_usage_stats": lambda self: {
+                        "daily_request_count": 21,
+                        "minute_remaining": 118,
+                        "budget_mode": "normal",
+                        "last_request_path": "/api/market/market-tide",
+                    }
+                },
             )()
             unusual_whales_stream = None
+            scanner = type(
+                "ScannerStub",
+                (),
+                {
+                    "get_cached_candidates": lambda self: [
+                        {
+                            "symbol": "NVDA",
+                            "uw_budget_mode": "normal",
+                            "uw_news_summary": "2 major UW headlines; bias bullish",
+                            "uw_chain_summary": "chain bias bullish; calls dominate",
+                        }
+                    ]
+                },
+            )()
 
         dashboard_module.set_bot(_Bot())
         try:
@@ -60,5 +81,8 @@ class DashboardSecurityTests(unittest.TestCase):
                 payload = resp.json()
                 self.assertIn("unusual_whales_api", payload)
                 self.assertEqual(payload["unusual_whales_api"]["daily_request_count"], 21)
+                self.assertEqual(payload["unusual_whales_api"]["budget_mode"], "normal")
+                self.assertIn("unusual_whales_focus", payload)
+                self.assertEqual(payload["unusual_whales_focus"][0]["symbol"], "NVDA")
         finally:
             dashboard_module.set_bot(None)

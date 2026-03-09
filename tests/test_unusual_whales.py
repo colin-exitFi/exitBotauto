@@ -1,4 +1,5 @@
 import unittest
+import time
 
 from src.signals.unusual_options import UnusualOptionsScanner
 from src.signals.unusual_whales import UnusualWhalesClient
@@ -186,6 +187,125 @@ class UnusualWhalesParsingTests(unittest.TestCase):
         self.assertEqual(stats["daily_request_count"], 21)
         self.assertEqual(stats["minute_remaining"], 118)
         self.assertEqual(stats["request_id"], "abc123")
+
+    def test_budget_mode_thresholds_follow_minute_remaining(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client._usage_stats.update({"daily_limit": 50000, "last_request_at": time.time()})
+
+        client._usage_stats["minute_remaining"] = 41
+        self.assertEqual(client.get_budget_mode(), "normal")
+
+        client._usage_stats["minute_remaining"] = 40
+        self.assertEqual(client.get_budget_mode(), "conserve")
+
+        client._usage_stats["minute_remaining"] = 16
+        self.assertEqual(client.get_budget_mode(), "conserve")
+
+        client._usage_stats["minute_remaining"] = 15
+        self.assertEqual(client.get_budget_mode(), "critical")
+
+    def test_allow_request_respects_budget_tiers(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client._usage_stats.update({"daily_limit": 50000, "last_request_at": time.time()})
+
+        client._usage_stats["minute_remaining"] = 40
+        self.assertTrue(client.allow_request("critical"))
+        self.assertTrue(client.allow_request("important"))
+        self.assertTrue(client.allow_request("optional"))
+
+        client._usage_stats["minute_remaining"] = 15
+        self.assertTrue(client.allow_request("critical"))
+        self.assertFalse(client.allow_request("important"))
+        self.assertFalse(client.allow_request("optional"))
+
+    def test_get_news_headlines_uses_longer_conserve_ttl(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client._usage_stats.update(
+            {"daily_limit": 50000, "last_request_at": time.time(), "minute_remaining": 40}
+        )
+        cache_key = ("news_headlines", "AAPL", True, 5, "", ())
+        cached = [{"headline": "Apple wins contract", "tickers": ["AAPL"], "sentiment": "bullish"}]
+        client._cache[cache_key] = (time.time() - 240, cached)
+        client._request = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("should use conserve cache"))
+
+        headlines = client.get_news_headlines(ticker="AAPL", major_only=True, limit=5)
+
+        self.assertEqual(headlines, cached)
+
+    def test_get_option_contracts_uses_cached_value_in_critical_mode(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client._usage_stats.update(
+            {"daily_limit": 50000, "last_request_at": time.time(), "minute_remaining": 15}
+        )
+        cache_key = ("option_contracts", "NVDA", "", "", 100, True, True, True, True, True)
+        cached = [{"ticker": "NVDA", "type": "call", "strike": 120.0}]
+        client._cache[cache_key] = (time.time() - 3600, cached)
+        client._request = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("critical mode should not refresh"))
+
+        contracts = client.get_option_contracts("NVDA")
+
+        self.assertEqual(contracts, cached)
+
+    def test_summarize_news_for_symbol_extracts_bias_and_headlines(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client.get_news_headlines = lambda ticker=None, major_only=True, limit=5, search_term=None, sources=None: [
+            {
+                "headline": "Apple launches AI event",
+                "tickers": ["AAPL"],
+                "sentiment": "bullish",
+                "is_major": True,
+            },
+            {
+                "headline": "Another Apple supplier upgrade",
+                "tickers": ["AAPL"],
+                "sentiment": "bullish",
+                "is_major": False,
+            },
+        ]
+
+        summary = client.summarize_news_for_symbol("AAPL")
+
+        self.assertEqual(summary["bias"], "bullish")
+        self.assertEqual(summary["major_count"], 1)
+        self.assertIn("Apple launches AI event", summary["headlines"][0])
+
+    def test_summarize_option_chain_validation_detects_contradiction_for_long(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client.get_option_contracts = lambda symbol, **kwargs: [
+            {
+                "ticker": "NVDA",
+                "type": "put",
+                "premium": 600000.0,
+                "volume": 1200,
+                "open_interest": 300,
+                "ask_side_volume": 900,
+                "strike": 118.0,
+            },
+            {
+                "ticker": "NVDA",
+                "type": "put",
+                "premium": 450000.0,
+                "volume": 900,
+                "open_interest": 250,
+                "ask_side_volume": 700,
+                "strike": 115.0,
+            },
+            {
+                "ticker": "NVDA",
+                "type": "call",
+                "premium": 120000.0,
+                "volume": 200,
+                "open_interest": 400,
+                "ask_side_volume": 60,
+                "strike": 130.0,
+            },
+        ]
+
+        summary = client.summarize_option_chain_validation("NVDA", side="long")
+
+        self.assertEqual(summary["bias"], "bearish")
+        self.assertTrue(summary["contradicts_thesis"])
+        self.assertIn(118.0, summary["support_strikes"])
 
 
 if __name__ == "__main__":
