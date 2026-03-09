@@ -4,41 +4,41 @@
       "ticker": "BAK",
       "conviction": 0.95,
       "side": "long",
-      "reason": "Earnings beat: +16.2% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up",
+      "reason": "Earnings beat: +16.2% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
       "sources": "earnings_reaction",
       "added_at": 1772766473.307654,
-      "last_refreshed": 1773029534.46897,
-      "expires_at": 1773288734.46897
+      "last_refreshed": 1773036978.174763,
+      "expires_at": 1773296178.174763
     },
     {
       "ticker": "HMR",
       "conviction": 0.9603,
       "side": "long",
-      "reason": "Earnings beat: +8.7% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up",
+      "reason": "Earnings beat: +8.7% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
       "sources": "earnings_reaction",
       "added_at": 1772766493.8793962,
-      "last_refreshed": 1773029534.470643,
-      "expires_at": 1773288734.470643
+      "last_refreshed": 1773036978.175221,
+      "expires_at": 1773296178.175221
     },
     {
       "ticker": "NVNO",
       "conviction": 0.95,
       "side": "long",
-      "reason": "Earnings beat: +16.6% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 16.6% ($12.57 vs prev $10.79)",
+      "reason": "Earnings beat: +16.6% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 16.6% ($12.57 vs prev $10.79) | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
       "sources": "earnings_reaction + premarket_scan",
       "added_at": 1772766498.782183,
-      "last_refreshed": 1773036662.675013,
-      "expires_at": 1773295862.675013
+      "last_refreshed": 1773036978.175789,
+      "expires_at": 1773296178.175789
     },
     {
       "ticker": "RAIN",
       "conviction": 0.98,
       "side": "long",
-      "reason": "Earnings beat: +7.1% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 7.1% ($2.72 vs prev $2.54)",
+      "reason": "Earnings beat: +7.1% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 7.1% ($2.72 vs prev $2.54) | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
       "sources": "earnings_reaction + premarket_scan",
       "added_at": 1772766838.2943501,
-      "last_refreshed": 1773036662.676248,
-      "expires_at": 1773295862.676248
+      "last_refreshed": 1773036978.175526,
+      "expires_at": 1773296178.175526
     },
     {
       "ticker": "SOTY",
@@ -64,11 +64,11 @@
       "ticker": "USO",
       "conviction": 0.9537000000000001,
       "side": "long",
-      "reason": "StockTwits #30 trending | StockTwits #28 trending | Oil proxy for geopolitical risk; WTI biggest jump in years, highest since 2023[1 | Overnight up 13.6% ($109.44 vs prev $96.33)",
+      "reason": "StockTwits #30 trending | StockTwits #28 trending | Oil proxy for geopolitical risk; WTI biggest jump in years, highest since 2023[1 | Overnight up 13.6% ($109.44 vs prev $96.33) | StockTwits #29 trending",
       "sources": "stocktwits + sunday_analysis + premarket_scan",
       "added_at": 1772945965.218199,
-      "last_refreshed": 1773036662.675262,
-      "expires_at": 1773295862.675262
+      "last_refreshed": 1773036981.913038,
+      "expires_at": 1773123381.913038
     },
     {
       "ticker": "SLS",
@@ -87,18 +87,18 @@
       "reason": "StockTwits #28 trending | StockTwits #22 trending | Overnight up 9.6% ($33.59 vs prev $30.66) | StockTwits #23 trending | StockTwits #24 trending",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1772945965.2195818,
-      "last_refreshed": 1773036662.6760051,
-      "expires_at": 1773295862.6760051
+      "last_refreshed": 1773036981.914932,
+      "expires_at": 1773123381.914932
     },
     {
       "ticker": "INDO",
-      "conviction": 0.9600000000000001,
+      "conviction": 0.98,
       "side": "long",
-      "reason": "StockTwits #11 trending | StockTwits #26 trending | Overnight up 12.1% ($5.65 vs prev $5.04) | StockTwits #17 trending",
+      "reason": "StockTwits #11 trending | StockTwits #26 trending | Overnight up 12.1% ($5.65 vs prev $5.04) | StockTwits #17 trending | StockTwits #28 trending",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1772945965.235017,
-      "last_refreshed": 1773036662.675499,
-      "expires_at": 1773295862.675499
+      "last_refreshed": 1773036981.9135711,
+      "expires_at": 1773123381.9135711
     },
     {
       "ticker": "IOVA",
@@ -131,16 +131,6 @@
       "expires_at": 1773288487.711484
     },
     {
-      "ticker": "QQQ",
-      "conviction": 0.85,
-      "side": "short",
-      "reason": "Nasdaq proxy; -1.51% Friday tech pressure, growth stocks vulnerable[1] | StockTwits #29 trending",
-      "sources": "sunday_analysis + stocktwits",
-      "added_at": 1773029287.714933,
-      "last_refreshed": 1773029534.58664,
-      "expires_at": 1773115934.58664
-    },
-    {
       "ticker": "RCAT",
       "conviction": 0.871,
       "side": "long",
@@ -157,8 +147,8 @@
       "reason": "StockTwits #25 trending | StockTwits #26 trending",
       "sources": "stocktwits",
       "added_at": 1773029311.2500741,
-      "last_refreshed": 1773029534.589349,
-      "expires_at": 1773115934.589349
+      "last_refreshed": 1773036981.914103,
+      "expires_at": 1773123381.914103
     },
     {
       "ticker": "OXY",
@@ -179,8 +169,88 @@
       "added_at": 1773029534.6024761,
       "last_refreshed": 1773036662.676492,
       "expires_at": 1773295862.676492
+    },
+    {
+      "ticker": "TLT",
+      "conviction": 0.85,
+      "side": "long",
+      "reason": "Whale flow bullish: $1,022,487 premium across 4 alerts",
+      "sources": "options_flow",
+      "added_at": 1773036978.2852569,
+      "last_refreshed": 1773036978.2852569,
+      "expires_at": 1773296178.2852569
+    },
+    {
+      "ticker": "BABA",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "StockTwits #25 trending",
+      "sources": "stocktwits",
+      "added_at": 1773036981.914353,
+      "last_refreshed": 1773036981.914353,
+      "expires_at": 1773123381.914353
+    },
+    {
+      "ticker": "GME",
+      "conviction": 0.94,
+      "side": "long",
+      "reason": "StockTwits #24 trending",
+      "sources": "stocktwits",
+      "added_at": 1773036981.9146519,
+      "last_refreshed": 1773036981.9146519,
+      "expires_at": 1773123381.9146519
+    },
+    {
+      "ticker": "BNO",
+      "conviction": 0.9680000000000001,
+      "side": "long",
+      "reason": "StockTwits #18 trending",
+      "sources": "stocktwits",
+      "added_at": 1773036981.915178,
+      "last_refreshed": 1773036981.915178,
+      "expires_at": 1773123381.915178
+    },
+    {
+      "ticker": "DRIP",
+      "conviction": 0.87,
+      "side": "long",
+      "reason": "StockTwits #17 trending",
+      "sources": "stocktwits",
+      "added_at": 1773036981.91545,
+      "last_refreshed": 1773036981.91545,
+      "expires_at": 1773123381.91545
+    },
+    {
+      "ticker": "PL",
+      "conviction": 0.86,
+      "side": "long",
+      "reason": "StockTwits #16 trending",
+      "sources": "stocktwits",
+      "added_at": 1773036981.915713,
+      "last_refreshed": 1773036981.915713,
+      "expires_at": 1773123381.915713
+    },
+    {
+      "ticker": "TNYA",
+      "conviction": 0.9460000000000001,
+      "side": "long",
+      "reason": "Earnings beat: +8.0% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1773036988.3710861,
+      "last_refreshed": 1773036988.3710861,
+      "expires_at": 1773296188.3710861
+    },
+    {
+      "ticker": "FLNT",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "Earnings beat: +11.3% AH gap up",
+      "sources": "earnings_reaction",
+      "added_at": 1773036989.0298822,
+      "last_refreshed": 1773036989.0298822,
+      "expires_at": 1773296189.0298822
     }
   ],
-  "updated_at": "2026-03-09T01:11:02.676850",
-  "count": 18
+  "updated_at": "2026-03-09T01:16:32.516865",
+  "count": 25
 }

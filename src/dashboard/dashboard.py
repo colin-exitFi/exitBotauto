@@ -9,6 +9,9 @@ import time
 import threading
 import hmac
 import socket
+import re
+from collections import deque
+from pathlib import Path
 from typing import Dict, List, Optional
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -16,6 +19,7 @@ import uvicorn
 from loguru import logger
 
 from config import settings
+from src.agents.base_agent import call_claude_text, call_gpt_text, call_perplexity_text
 from src.data import strategy_controls
 
 app = FastAPI(title="Velox", version="2.0.0")
@@ -23,6 +27,15 @@ app = FastAPI(title="Velox", version="2.0.0")
 # Global reference to bot instance (set by main.py)
 _bot = None
 _dashboard_thread = None
+_LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
+_CHAT_HISTORY_LIMIT = 8
+_CHAT_ACTIVITY_LIMIT = 15
+_CHAT_STOPWORDS = {
+    "A", "AN", "AND", "ARE", "AS", "AT", "BE", "BUT", "BY", "DO", "FOR", "FROM",
+    "FRIDAY", "HOURS", "I", "IF", "IN", "IS", "IT", "ITS", "LOOK", "ME", "MONDAY",
+    "MY", "NOT", "NOW", "OF", "ON", "OR", "OUT", "SAW", "SO", "STOCK", "TELL",
+    "THAT", "THE", "THIS", "TO", "UP", "WAS", "WHAT", "WITH", "YOU",
+}
 
 # Activity feed — circular buffer of bot thoughts/actions
 _activity_feed: List[Dict] = []
@@ -62,6 +75,278 @@ def log_activity(category: str, message: str, data: dict = None):
     _activity_feed.append(entry)
     if len(_activity_feed) > _MAX_FEED_SIZE:
         _activity_feed = _activity_feed[-_MAX_FEED_SIZE:]
+
+
+def _extract_query_symbols(text: str) -> List[str]:
+    known_symbols = set()
+    if _bot and getattr(_bot, "scanner", None):
+        known_symbols.update(
+            str(row.get("symbol", "")).upper()
+            for row in (_bot.scanner.get_cached_candidates() or [])
+            if str(row.get("symbol", "")).strip()
+        )
+    if _bot and getattr(_bot, "watchlist", None):
+        known_symbols.update(
+            str(row.get("ticker", "")).upper()
+            for row in (_bot.watchlist.get_all() or [])
+            if str(row.get("ticker", "")).strip()
+        )
+    if _bot and getattr(_bot, "entry_manager", None):
+        known_symbols.update(
+            str(row.get("symbol", "")).upper()
+            for row in (_bot.entry_manager.get_positions() or [])
+            if str(row.get("symbol", "")).strip()
+        )
+    if _bot and getattr(_bot, "human_intel_store", None):
+        known_symbols.update(
+            str(row.get("ticker", "")).upper()
+            for row in (_bot.human_intel_store.list_entries(limit=100) or [])
+            if str(row.get("ticker", "")).strip()
+        )
+
+    symbols: List[str] = []
+    for raw in re.findall(r"\$?[A-Za-z]{1,5}\b", str(text or "")):
+        token = raw.lstrip("$").upper()
+        if not token or token in _CHAT_STOPWORDS:
+            continue
+        if raw.startswith("$") or raw.isupper() or token in known_symbols:
+            if token not in symbols:
+                symbols.append(token)
+    return symbols[:8]
+
+
+def _recent_log_highlights(limit: int = 12) -> List[str]:
+    if not _LOG_DIR.exists():
+        return []
+
+    highlights: List[str] = []
+    seen = set()
+    keywords = ("chg=", "BREAKOUT", "after-hours", "after hours", "runner", "FDA", "PDUFA", "WHALE")
+    paths = sorted(_LOG_DIR.glob("bot*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:2]
+    for path in paths:
+        try:
+            lines = deque(path.read_text(errors="ignore").splitlines(), maxlen=500)
+        except Exception:
+            continue
+        for line in reversed(lines):
+            if not any(keyword.lower() in line.lower() for keyword in keywords):
+                continue
+            cleaned = re.sub(r"^\d{4}-\d{2}-\d{2}.*?\|\s*", "", line).strip()
+            cleaned = re.sub(r"\s+", " ", cleaned)
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            highlights.append(cleaned[:220])
+            if len(highlights) >= limit:
+                return highlights
+    return highlights
+
+
+def _build_copilot_context(message: str, history: List[Dict]) -> Dict:
+    symbols = _extract_query_symbols(message)
+    candidates = []
+    if _bot and getattr(_bot, "scanner", None):
+        rows = _bot.scanner.get_cached_candidates() or []
+        for row in rows:
+            symbol = str(row.get("symbol", "")).upper()
+            if symbols and symbol not in symbols:
+                continue
+            candidates.append(
+                {
+                    "symbol": symbol,
+                    "score": round(float(row.get("score", 0.0) or 0.0), 3),
+                    "price": round(float(row.get("price", 0.0) or 0.0), 2),
+                    "change_pct": round(float(row.get("change_pct", 0.0) or 0.0), 2),
+                    "volume_spike": round(float(row.get("volume_spike", 0.0) or 0.0), 2),
+                    "side": row.get("side", "long"),
+                    "strategy_tag": row.get("strategy_tag", ""),
+                    "uw_news_summary": row.get("uw_news_summary", ""),
+                    "uw_chain_summary": row.get("uw_chain_summary", ""),
+                    "human_intel": row.get("human_intel", ""),
+                }
+            )
+            if len(candidates) >= 8:
+                break
+        if not candidates:
+            candidates = [
+                {
+                    "symbol": str(row.get("symbol", "")).upper(),
+                    "score": round(float(row.get("score", 0.0) or 0.0), 3),
+                    "price": round(float(row.get("price", 0.0) or 0.0), 2),
+                    "change_pct": round(float(row.get("change_pct", 0.0) or 0.0), 2),
+                    "strategy_tag": row.get("strategy_tag", ""),
+                }
+                for row in rows[:8]
+            ]
+
+    watchlist = []
+    if _bot and getattr(_bot, "watchlist", None):
+        for row in (_bot.watchlist.get_all() or []):
+            symbol = str(row.get("ticker", "")).upper()
+            if symbols and symbol not in symbols:
+                continue
+            watchlist.append(
+                {
+                    "ticker": symbol,
+                    "side": row.get("side", "long"),
+                    "conviction": round(float(row.get("conviction", 0.0) or 0.0), 2),
+                    "reason": str(row.get("reason", "") or "")[:160],
+                    "sources": row.get("sources", ""),
+                }
+            )
+            if len(watchlist) >= 8:
+                break
+
+    positions = []
+    if _bot and getattr(_bot, "entry_manager", None):
+        for row in (_bot.entry_manager.get_positions() or []):
+            symbol = str(row.get("symbol", "")).upper()
+            if symbols and symbol not in symbols:
+                continue
+            positions.append(
+                {
+                    "symbol": symbol,
+                    "side": row.get("side", "long"),
+                    "entry_price": round(float(row.get("entry_price", 0.0) or 0.0), 2),
+                    "quantity": round(float(row.get("quantity", 0.0) or 0.0), 4),
+                    "trail_pct": round(float(row.get("trail_pct", 0.0) or 0.0), 2),
+                }
+            )
+
+    intel_entries = []
+    if _bot and getattr(_bot, "human_intel_store", None):
+        rows = _bot.human_intel_store.list_entries(limit=20) or []
+        for row in rows:
+            symbol = str(row.get("ticker", "")).upper()
+            if symbols and symbol not in symbols:
+                continue
+            intel_entries.append(
+                {
+                    "ticker": symbol,
+                    "bias": row.get("bias", "neutral"),
+                    "confidence": round(float(row.get("confidence", 0.0) or 0.0), 2),
+                    "title": str(row.get("title", "") or "")[:120],
+                    "notes": str(row.get("notes", "") or "")[:180],
+                    "source": row.get("source", ""),
+                    "url": row.get("url", ""),
+                }
+            )
+            if len(intel_entries) >= 8:
+                break
+
+    copy_trader = {}
+    if _bot and getattr(_bot, "copy_trader_monitor", None):
+        try:
+            raw = _bot.copy_trader_monitor.get_dashboard_data() or {}
+            copy_trader = {
+                "signals": list(raw.get("signals") or [])[:5],
+                "exits": list(raw.get("exits") or [])[:5],
+                "traders": list(raw.get("traders") or [])[:5],
+            }
+        except Exception:
+            copy_trader = {}
+
+    recent_trades = []
+    try:
+        from src.ai import trade_history
+
+        for row in (trade_history.get_recent(8) or []):
+            symbol = str(row.get("symbol", "")).upper()
+            if symbols and symbol not in symbols:
+                continue
+            recent_trades.append(
+                {
+                    "symbol": symbol,
+                    "pnl": round(float(row.get("pnl", 0.0) or 0.0), 2),
+                    "pnl_pct": round(float(row.get("pnl_pct", 0.0) or 0.0), 2),
+                    "exit_reason": row.get("exit_reason", row.get("reason", "")),
+                    "strategy_tag": row.get("strategy_tag", ""),
+                }
+            )
+            if len(recent_trades) >= 8:
+                break
+    except Exception:
+        recent_trades = []
+
+    activity = [
+        {
+            "time": row.get("time_str", ""),
+            "category": row.get("category", ""),
+            "message": str(row.get("message", "") or "")[:180],
+        }
+        for row in _activity_feed[-_CHAT_ACTIVITY_LIMIT:]
+    ]
+
+    return {
+        "symbols_from_query": symbols,
+        "market_regime": (
+            _bot.scanner.get_last_market_regime()
+            if _bot and getattr(_bot, "scanner", None)
+            else "unknown"
+        ),
+        "candidates": candidates,
+        "watchlist": watchlist,
+        "positions": positions,
+        "human_intel": intel_entries,
+        "copy_trader": copy_trader,
+        "recent_trades": recent_trades,
+        "activity_feed": activity,
+        "recent_log_highlights": _recent_log_highlights(),
+        "chat_history": [
+            {
+                "role": str(row.get("role", "user") or "user"),
+                "content": str(row.get("content", "") or "")[:400],
+            }
+            for row in (history or [])[-_CHAT_HISTORY_LIMIT:]
+            if str(row.get("content", "") or "").strip()
+        ],
+    }
+
+
+async def _generate_copilot_reply(message: str, history: List[Dict]) -> Dict:
+    context = _build_copilot_context(message, history)
+    prompt = f"""You are Velox Operator Copilot.
+
+Your job is to answer the operator's question using the bot's INTERNAL ENGINE CONTEXT first.
+If you make an inference, say that clearly. If the context is insufficient, say what is missing.
+If the operator is trying to remember a ticker, use recent scanner/watchlist/log clues to infer the most likely symbol.
+If the operator mentions a ticker, rumor, article, FDA event, or after-hours move, explain what Velox currently knows and what matters next.
+Do not output JSON. Write a direct operator-facing answer with short paragraphs or flat bullets.
+
+INTERNAL ENGINE CONTEXT:
+{json.dumps(context, indent=2)}
+
+OPERATOR QUESTION:
+{message}
+"""
+
+    provider = ""
+    answer = await call_perplexity_text(prompt, max_tokens=900)
+    if answer:
+        provider = "perplexity"
+    if not answer:
+        answer = await call_claude_text(prompt, max_tokens=900)
+        if answer:
+            provider = "claude"
+    if not answer:
+        answer = await call_gpt_text(prompt, max_tokens=900)
+        if answer:
+            provider = "gpt"
+
+    if not answer:
+        return {
+            "ok": False,
+            "error": "No AI provider available for copilot chat",
+            "context_symbols": context.get("symbols_from_query", []),
+        }
+
+    log_activity("research", f"💬 Copilot question: {str(message or '')[:120]}")
+    return {
+        "ok": True,
+        "answer": answer.strip(),
+        "provider": provider,
+        "context_symbols": context.get("symbols_from_query", []),
+    }
 
 
 def _extract_dashboard_token(request: Request) -> str:
@@ -615,6 +900,27 @@ async def get_human_intel(limit: int = 20):
     return _bot.human_intel_store.list_entries(limit=limit)
 
 
+@app.post("/api/copilot/chat")
+async def copilot_chat(request: Request):
+    """Natural-language operator chat against the live engine context."""
+    if not _bot:
+        return JSONResponse(status_code=503, content={"error": "Bot not connected"})
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    message = str(payload.get("message", "") or "").strip()
+    history = payload.get("history") or []
+    if not message:
+        return JSONResponse(status_code=400, content={"error": "message is required"})
+
+    result = await _generate_copilot_reply(message, history if isinstance(history, list) else [])
+    if not result.get("ok"):
+        return JSONResponse(status_code=503, content=result)
+    return result
+
+
 @app.post("/api/human-intel")
 async def add_human_intel(request: Request):
     """Persist human context and immediately promote it into the watchlist."""
@@ -840,6 +1146,13 @@ tr:hover td{background:#161b2288}
 .intel-notes{font-size:12px;color:#8b949e;line-height:1.5}
 .intel-link{color:#58a6ff;text-decoration:none}
 .mini-btn{padding:4px 8px;background:#0d1117;border:1px solid #30363d;color:#8b949e;border-radius:6px;cursor:pointer;font-size:11px}
+.chat-thread{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:12px;min-height:320px;max-height:440px;overflow-y:auto}
+.chat-bubble{padding:10px 12px;border-radius:10px;margin-bottom:10px;line-height:1.55;font-size:13px;white-space:pre-wrap}
+.chat-bubble.user{background:#1f6feb22;border:1px solid #1f6feb44;margin-left:48px}
+.chat-bubble.assistant{background:#161b22;border:1px solid #30363d;margin-right:48px}
+.chat-role{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.chat-examples{font-size:12px;color:#8b949e;line-height:1.6;margin-bottom:12px}
+.chat-input{width:100%;min-height:96px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#c9d1d9;padding:12px;font-size:13px;resize:vertical}
 </style>
 </head>
 <body>
@@ -848,7 +1161,7 @@ tr:hover td{background:#161b2288}
   <div class="status">
     <span id="statusBadge" class="badge stopped">LOADING</span>
     <div class="controls">
-      <button class="btn btn-intel" onclick="openIntelModal()">🧠 Intel</button>
+      <button class="btn btn-intel" onclick="openCopilotModal()">💬 Ask AI</button>
       <button class="btn btn-start" onclick="api('/api/resume','POST')">▶ Resume</button>
       <button class="btn btn-pause" onclick="api('/api/pause','POST')">⏸ Pause</button>
       <button class="btn btn-stop" onclick="api('/api/stop','POST')">⏹ Stop</button>
@@ -991,6 +1304,27 @@ tr:hover td{background:#161b2288}
 </div>
 <div class="watermark">VELOX v2.0 — autonomous velocity trading</div>
 
+<div id="copilotModal" class="modal-backdrop" onclick="if(event.target===this)closeCopilotModal()">
+  <div class="modal" style="width:min(920px,95vw)">
+    <h3>Ask Velox</h3>
+    <div class="chat-examples">
+      Ask naturally. Examples: "I saw a stock up 550% after hours on Friday, what was it?" ·
+      "Tell me more about the SOTY pharma FDA setup." ·
+      "Check this ticker and tell me if the rumor matters."
+    </div>
+    <div id="copilotMessages" class="chat-thread"></div>
+    <div style="margin-top:12px">
+      <textarea id="copilotInput" class="chat-input" placeholder="Ask about a ticker, a rumor, a catalyst, an after-hours mover, or paste context here..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendCopilotMessage();}"></textarea>
+    </div>
+    <div id="copilotStatus" style="font-size:12px;color:#8b949e;margin-top:8px"></div>
+    <div class="intel-actions">
+      <button class="btn btn-pause" onclick="closeCopilotModal()">Close</button>
+      <button class="btn btn-pause" onclick="closeCopilotModal(); openIntelModal()">Structured Note</button>
+      <button class="btn btn-intel" onclick="sendCopilotMessage()">Ask Velox</button>
+    </div>
+  </div>
+</div>
+
 <div id="intelModal" class="modal-backdrop" onclick="if(event.target===this)closeIntelModal()">
   <div class="modal">
     <h3>Submit Human Intel</h3>
@@ -1015,6 +1349,7 @@ tr:hover td{background:#161b2288}
 <script>
 const $ = s => document.getElementById(s);
 let _prevPnl = null;
+let _copilotHistory = [];
 const _dashToken = new URLSearchParams(window.location.search).get('token') || '';
 function withToken(url) {
   if (!_dashToken) return url;
@@ -1035,8 +1370,52 @@ async function api(url, method='GET', body=null) {
 function cls(v) { return v >= 0 ? 'positive' : 'negative'; }
 function fmt(v, d=2) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—'; }
 function holdStr(secs) { if(!secs) return '—'; const m=Math.floor(secs/60); const h=Math.floor(m/60); return h>0?h+'h '+m%60+'m':m+'m'; }
+function esc(v) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function renderCopilotMessages() {
+  const el = $('copilotMessages');
+  if (!el) return;
+  if (!_copilotHistory.length) {
+    el.innerHTML = '<div class="empty">Ask anything about the live engine, a ticker, a rumor, a catalyst, or a move you vaguely remember.</div>';
+    return;
+  }
+  el.innerHTML = _copilotHistory.map(msg => `
+    <div class="chat-bubble ${msg.role === 'user' ? 'user' : 'assistant'}">
+      <div class="chat-role">${msg.role === 'user' ? 'You' : `Velox${msg.provider ? ' · ' + esc(msg.provider) : ''}`}</div>
+      <div>${esc(msg.content).replace(/\n/g, '<br>')}</div>
+    </div>
+  `).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function openCopilotModal() {
+  $('copilotModal').classList.add('open');
+  renderCopilotMessages();
+  if ($('copilotInput')) $('copilotInput').focus();
+}
+function closeCopilotModal() { $('copilotModal').classList.remove('open'); }
 function openIntelModal() { $('intelModal').classList.add('open'); }
 function closeIntelModal() { $('intelModal').classList.remove('open'); }
+async function sendCopilotMessage() {
+  const input = $('copilotInput');
+  const message = (input && input.value || '').trim();
+  if (!message) return;
+  _copilotHistory.push({role: 'user', content: message});
+  if (input) input.value = '';
+  _copilotHistory.push({role: 'assistant', content: 'Thinking...', provider: '', pending: true});
+  renderCopilotMessages();
+  $('copilotStatus').textContent = 'Querying Velox...';
+  const res = await api('/api/copilot/chat', 'POST', {
+    message,
+    history: _copilotHistory.filter(m => !m.pending).slice(-8),
+  });
+  _copilotHistory = _copilotHistory.filter(m => !m.pending);
+  _copilotHistory.push({
+    role: 'assistant',
+    content: (res && (res.answer || res.error)) || 'No response available.',
+    provider: (res && res.provider) || '',
+  });
+  $('copilotStatus').textContent = res && res.provider ? `Answered via ${res.provider}` : '';
+  renderCopilotMessages();
+}
 async function submitIntel() {
   const ticker = ($('intelTicker').value || '').trim().toUpperCase();
   if (!ticker) return;

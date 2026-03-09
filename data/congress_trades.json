@@ -45,28 +45,6 @@
       }
     },
     {
-      "ticker": "PG",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-26",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "PG",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Procter & Gamble Company (The) Common Stock",
-        "transaction_date": "2026-02-26",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
       "ticker": "KR",
       "member": "John Boozman",
       "transaction": "",
@@ -83,6 +61,28 @@
         "txn_type": "Buy",
         "amounts": "$1,001 - $15,000",
         "notes": "Kroger Company (The) Common Stock",
+        "transaction_date": "2026-02-26",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "PG",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-26",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "PG",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "Procter & Gamble Company (The) Common Stock",
         "transaction_date": "2026-02-26",
         "filed_at_date": "2026-03-06",
         "member_type": "senate"
@@ -111,28 +111,6 @@
       }
     },
     {
-      "ticker": "MA",
-      "member": "Sheldon Whitehouse",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-23",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Sheldon Whitehouse",
-        "ticker": "MA",
-        "issuer": "spouse",
-        "is_active": true,
-        "politician_id": "7a981a50-60bb-4cb9-afaa-3667a221a6ef",
-        "reporter": "Sheldon Whitehouse",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Mastercard Incorporated Common Stock",
-        "transaction_date": "2026-02-23",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
       "ticker": "HD",
       "member": "Sheldon Whitehouse",
       "transaction": "",
@@ -149,6 +127,50 @@
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
         "notes": "Home Depot, Inc. (The) Common Stock",
+        "transaction_date": "2026-02-23",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "PEP",
+      "member": "Sheldon Whitehouse",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-23",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Sheldon Whitehouse",
+        "ticker": "PEP",
+        "issuer": "self",
+        "is_active": true,
+        "politician_id": "7a981a50-60bb-4cb9-afaa-3667a221a6ef",
+        "reporter": "Sheldon Whitehouse",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "PepsiCo, Inc. - Common Stock",
+        "transaction_date": "2026-02-23",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "PEP",
+      "member": "Sheldon Whitehouse",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-23",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Sheldon Whitehouse",
+        "ticker": "PEP",
+        "issuer": "spouse",
+        "is_active": true,
+        "politician_id": "7a981a50-60bb-4cb9-afaa-3667a221a6ef",
+        "reporter": "Sheldon Whitehouse",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "PepsiCo, Inc. - Common Stock",
         "transaction_date": "2026-02-23",
         "filed_at_date": "2026-03-06",
         "member_type": "senate"
@@ -177,7 +199,7 @@
       }
     },
     {
-      "ticker": "PEP",
+      "ticker": "MA",
       "member": "Sheldon Whitehouse",
       "transaction": "",
       "amount": "",
@@ -185,36 +207,14 @@
       "source": "unusual_whales",
       "raw": {
         "name": "Sheldon Whitehouse",
-        "ticker": "PEP",
+        "ticker": "MA",
         "issuer": "spouse",
         "is_active": true,
         "politician_id": "7a981a50-60bb-4cb9-afaa-3667a221a6ef",
         "reporter": "Sheldon Whitehouse",
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
-        "notes": "PepsiCo, Inc. - Common Stock",
-        "transaction_date": "2026-02-23",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "PEP",
-      "member": "Sheldon Whitehouse",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-23",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Sheldon Whitehouse",
-        "ticker": "PEP",
-        "issuer": "self",
-        "is_active": true,
-        "politician_id": "7a981a50-60bb-4cb9-afaa-3667a221a6ef",
-        "reporter": "Sheldon Whitehouse",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "PepsiCo, Inc. - Common Stock",
+        "notes": "Mastercard Incorporated Common Stock",
         "transaction_date": "2026-02-23",
         "filed_at_date": "2026-03-06",
         "member_type": "senate"
@@ -463,28 +463,6 @@
       }
     },
     {
-      "ticker": "BLK",
-      "member": "Shelley Capito",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-10",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Shelley Capito",
-        "ticker": "BLK",
-        "issuer": "spouse",
-        "is_active": true,
-        "politician_id": "32fba3f3-097a-4000-85a2-4eff8543d693",
-        "reporter": "Shelley M Capito",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "BlackRock, Inc. Common Stock",
-        "transaction_date": "2026-02-10",
-        "filed_at_date": "2026-03-04",
-        "member_type": "senate"
-      }
-    },
-    {
       "ticker": "ADI",
       "member": "Shelley Capito",
       "transaction": "",
@@ -501,6 +479,28 @@
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
         "notes": "Analog Devices, Inc. - Common Stock",
+        "transaction_date": "2026-02-10",
+        "filed_at_date": "2026-03-04",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "BLK",
+      "member": "Shelley Capito",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-10",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Shelley Capito",
+        "ticker": "BLK",
+        "issuer": "spouse",
+        "is_active": true,
+        "politician_id": "32fba3f3-097a-4000-85a2-4eff8543d693",
+        "reporter": "Shelley M Capito",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "BlackRock, Inc. Common Stock",
         "transaction_date": "2026-02-10",
         "filed_at_date": "2026-03-04",
         "member_type": "senate"
@@ -538,6 +538,28 @@
       "raw": {
         "name": "Clifford Franklin",
         "ticker": "HSY",
+        "issuer": "undisclosed",
+        "is_active": true,
+        "politician_id": "320094bc-623e-40af-8eef-2cdbf5c67b3c",
+        "reporter": "Hon. Scott Scott Franklin",
+        "txn_type": "Sell",
+        "amounts": "$50,001 - $100,000",
+        "notes": "The Hershey Company Common Stock (HSY) [ST]",
+        "transaction_date": "2026-02-10",
+        "filed_at_date": "2026-02-24",
+        "member_type": "house"
+      }
+    },
+    {
+      "ticker": "HSY",
+      "member": "Clifford Franklin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-10",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Clifford Franklin",
+        "ticker": "HSY",
         "issuer": "spouse",
         "is_active": true,
         "politician_id": "320094bc-623e-40af-8eef-2cdbf5c67b3c",
@@ -566,28 +588,6 @@
         "reporter": "Hon. Scott Scott Franklin",
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
-        "notes": "The Hershey Company Common Stock (HSY) [ST]",
-        "transaction_date": "2026-02-10",
-        "filed_at_date": "2026-02-24",
-        "member_type": "house"
-      }
-    },
-    {
-      "ticker": "HSY",
-      "member": "Clifford Franklin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-10",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Clifford Franklin",
-        "ticker": "HSY",
-        "issuer": "undisclosed",
-        "is_active": true,
-        "politician_id": "320094bc-623e-40af-8eef-2cdbf5c67b3c",
-        "reporter": "Hon. Scott Scott Franklin",
-        "txn_type": "Sell",
-        "amounts": "$50,001 - $100,000",
         "notes": "The Hershey Company Common Stock (HSY) [ST]",
         "transaction_date": "2026-02-10",
         "filed_at_date": "2026-02-24",
@@ -661,28 +661,6 @@
       }
     },
     {
-      "ticker": "CRM",
-      "member": "David Taylor",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-09",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "David Taylor",
-        "ticker": "CRM",
-        "issuer": "undisclosed",
-        "is_active": true,
-        "politician_id": "fc5cc405-303c-4902-b756-7386886fc357",
-        "reporter": "Hon. David J. Taylor",
-        "txn_type": "Buy",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Salesforce, Inc. Common Stock (CRM) [ST]",
-        "transaction_date": "2026-02-09",
-        "filed_at_date": "2026-02-23",
-        "member_type": "house"
-      }
-    },
-    {
       "ticker": "PG",
       "member": "David Taylor",
       "transaction": "",
@@ -705,7 +683,7 @@
       }
     },
     {
-      "ticker": "MSFT",
+      "ticker": "CRM",
       "member": "David Taylor",
       "transaction": "",
       "amount": "",
@@ -713,14 +691,14 @@
       "source": "unusual_whales",
       "raw": {
         "name": "David Taylor",
-        "ticker": "MSFT",
+        "ticker": "CRM",
         "issuer": "undisclosed",
         "is_active": true,
         "politician_id": "fc5cc405-303c-4902-b756-7386886fc357",
         "reporter": "Hon. David J. Taylor",
         "txn_type": "Buy",
         "amounts": "$1,001 - $15,000",
-        "notes": "Microsoft Corporation - Common Stock (MSFT) [ST]",
+        "notes": "Salesforce, Inc. Common Stock (CRM) [ST]",
         "transaction_date": "2026-02-09",
         "filed_at_date": "2026-02-23",
         "member_type": "house"
@@ -749,28 +727,6 @@
       }
     },
     {
-      "ticker": "AMZN",
-      "member": "David Taylor",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-09",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "David Taylor",
-        "ticker": "AMZN",
-        "issuer": "undisclosed",
-        "is_active": true,
-        "politician_id": "fc5cc405-303c-4902-b756-7386886fc357",
-        "reporter": "Hon. David J. Taylor",
-        "txn_type": "Buy",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Amazon.com, Inc. - Common Stock (AMZN) [ST]",
-        "transaction_date": "2026-02-09",
-        "filed_at_date": "2026-02-23",
-        "member_type": "house"
-      }
-    },
-    {
       "ticker": "LLY",
       "member": "David Taylor",
       "transaction": "",
@@ -787,6 +743,28 @@
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
         "notes": "Eli Lilly and Company Common Stock\n(LLY) [ST]",
+        "transaction_date": "2026-02-09",
+        "filed_at_date": "2026-02-23",
+        "member_type": "house"
+      }
+    },
+    {
+      "ticker": "AMZN",
+      "member": "David Taylor",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-09",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "David Taylor",
+        "ticker": "AMZN",
+        "issuer": "undisclosed",
+        "is_active": true,
+        "politician_id": "fc5cc405-303c-4902-b756-7386886fc357",
+        "reporter": "Hon. David J. Taylor",
+        "txn_type": "Buy",
+        "amounts": "$1,001 - $15,000",
+        "notes": "Amazon.com, Inc. - Common Stock (AMZN) [ST]",
         "transaction_date": "2026-02-09",
         "filed_at_date": "2026-02-23",
         "member_type": "house"
@@ -815,7 +793,29 @@
       }
     },
     {
-      "ticker": "UBER",
+      "ticker": "MSFT",
+      "member": "David Taylor",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-09",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "David Taylor",
+        "ticker": "MSFT",
+        "issuer": "undisclosed",
+        "is_active": true,
+        "politician_id": "fc5cc405-303c-4902-b756-7386886fc357",
+        "reporter": "Hon. David J. Taylor",
+        "txn_type": "Buy",
+        "amounts": "$1,001 - $15,000",
+        "notes": "Microsoft Corporation - Common Stock (MSFT) [ST]",
+        "transaction_date": "2026-02-09",
+        "filed_at_date": "2026-02-23",
+        "member_type": "house"
+      }
+    },
+    {
+      "ticker": "GIGB",
       "member": "John Boozman",
       "transaction": "",
       "amount": "",
@@ -823,80 +823,14 @@
       "source": "unusual_whales",
       "raw": {
         "name": "John Boozman",
-        "ticker": "UBER",
+        "ticker": "GIGB",
         "issuer": "joint",
         "is_active": true,
         "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
         "reporter": "John Boozman",
         "txn_type": "Buy",
         "amounts": "$1,001 - $15,000",
-        "notes": "Uber Technologies, Inc. Common Stock",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "IEF",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "IEF",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Buy",
-        "amounts": "$1,001 - $15,000",
-        "notes": "iShares 7-10 Year Treasury Bond ETF",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "MBB",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "MBB",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "iShares MBS ETF",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "JMBS",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "JMBS",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Janus Henderson Mortgage-Backed Securities ETF",
+        "notes": "Goldman Sachs Access Investment Grade Corporate Bond ETF",
         "transaction_date": "2026-02-06",
         "filed_at_date": "2026-03-06",
         "member_type": "senate"
@@ -925,72 +859,6 @@
       }
     },
     {
-      "ticker": "GIGB",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "GIGB",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Buy",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Goldman Sachs Access Investment Grade Corporate Bond ETF",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "SHY",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "SHY",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Sell",
-        "amounts": "$15,001 - $50,000",
-        "notes": "iShares 1-3 Year Treasury Bond ETF",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "XTWO",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "XTWO",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Buy",
-        "amounts": "$15,001 - $50,000",
-        "notes": "BondBloxx Bloomberg Two Year Target Duration US Treasury ETF",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
       "ticker": "AGZ",
       "member": "John Boozman",
       "transaction": "",
@@ -1007,28 +875,6 @@
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
         "notes": "iShares Agency Bond ETF",
-        "transaction_date": "2026-02-06",
-        "filed_at_date": "2026-03-06",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "EMB",
-      "member": "John Boozman",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-06",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "John Boozman",
-        "ticker": "EMB",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
-        "reporter": "John Boozman",
-        "txn_type": "Buy",
-        "amounts": "$1,001 - $15,000",
-        "notes": "iShares J.P. Morgan USD Emerging Markets Bond ETF",
         "transaction_date": "2026-02-06",
         "filed_at_date": "2026-03-06",
         "member_type": "senate"
@@ -1057,6 +903,50 @@
       }
     },
     {
+      "ticker": "EMB",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "EMB",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Buy",
+        "amounts": "$1,001 - $15,000",
+        "notes": "iShares J.P. Morgan USD Emerging Markets Bond ETF",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "XTWO",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "XTWO",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Buy",
+        "amounts": "$15,001 - $50,000",
+        "notes": "BondBloxx Bloomberg Two Year Target Duration US Treasury ETF",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
       "ticker": "TLH",
       "member": "John Boozman",
       "transaction": "",
@@ -1073,6 +963,116 @@
         "txn_type": "Buy",
         "amounts": "$1,001 - $15,000",
         "notes": "iShares 10-20 Year Treasury Bond ETF",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "SHY",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "SHY",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Sell",
+        "amounts": "$15,001 - $50,000",
+        "notes": "iShares 1-3 Year Treasury Bond ETF",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "MBB",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "MBB",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "iShares MBS ETF",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "UBER",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "UBER",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Buy",
+        "amounts": "$1,001 - $15,000",
+        "notes": "Uber Technologies, Inc. Common Stock",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "JMBS",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "JMBS",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "Janus Henderson Mortgage-Backed Securities ETF",
+        "transaction_date": "2026-02-06",
+        "filed_at_date": "2026-03-06",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "IEF",
+      "member": "John Boozman",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-06",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "John Boozman",
+        "ticker": "IEF",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "ea54faca-5fe9-42d2-b536-39a227a2c685",
+        "reporter": "John Boozman",
+        "txn_type": "Buy",
+        "amounts": "$1,001 - $15,000",
+        "notes": "iShares 7-10 Year Treasury Bond ETF",
         "transaction_date": "2026-02-06",
         "filed_at_date": "2026-03-06",
         "member_type": "senate"
@@ -1167,6 +1167,94 @@
       }
     },
     {
+      "ticker": "LRN",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "LRN",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Buy",
+        "amounts": "$15,001 - $50,000",
+        "notes": "Stride, Inc. Common Stock",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "GS",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "GS",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Sell",
+        "amounts": "$15,001 - $50,000",
+        "notes": "Goldman Sachs Group, Inc. (The) Common Stock",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "C",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "C",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Buy",
+        "amounts": "$15,001 - $50,000",
+        "notes": "Citigroup, Inc. Common Stock",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "IRM",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "IRM",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Sell",
+        "amounts": "$1,001 - $15,000",
+        "notes": "Iron Mountain Incorporated (Delaware)Common Stock REIT",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
       "ticker": "COHR",
       "member": "Markwayne Mullin",
       "transaction": "",
@@ -1233,7 +1321,7 @@
       }
     },
     {
-      "ticker": "IRM",
+      "ticker": "AIT",
       "member": "Markwayne Mullin",
       "transaction": "",
       "amount": "",
@@ -1241,14 +1329,80 @@
       "source": "unusual_whales",
       "raw": {
         "name": "Markwayne Mullin",
-        "ticker": "IRM",
+        "ticker": "AIT",
         "issuer": "joint",
         "is_active": true,
         "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
         "reporter": "Markwayne Mullin",
         "txn_type": "Sell",
         "amounts": "$1,001 - $15,000",
-        "notes": "Iron Mountain Incorporated (Delaware)Common Stock REIT",
+        "notes": "Applied Industrial Technologies, Inc. Common Stock",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "FCFS",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "FCFS",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Buy",
+        "amounts": "$15,001 - $50,000",
+        "notes": "FirstCash Holdings, Inc. - Common Stock",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "MTZ",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "MTZ",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Sell",
+        "amounts": "$15,001 - $50,000",
+        "notes": "MasTec, Inc. Common Stock",
+        "transaction_date": "2026-02-04",
+        "filed_at_date": "2026-03-02",
+        "member_type": "senate"
+      }
+    },
+    {
+      "ticker": "AMKR",
+      "member": "Markwayne Mullin",
+      "transaction": "",
+      "amount": "",
+      "date": "2026-02-04",
+      "source": "unusual_whales",
+      "raw": {
+        "name": "Markwayne Mullin",
+        "ticker": "AMKR",
+        "issuer": "joint",
+        "is_active": true,
+        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
+        "reporter": "Markwayne Mullin",
+        "txn_type": "Buy",
+        "amounts": "$15,001 - $50,000",
+        "notes": "Amkor Technology, Inc. - Common Stock",
         "transaction_date": "2026-02-04",
         "filed_at_date": "2026-03-02",
         "member_type": "senate"
@@ -1299,7 +1453,7 @@
       }
     },
     {
-      "ticker": "AMKR",
+      "ticker": "VSEC",
       "member": "Markwayne Mullin",
       "transaction": "",
       "amount": "",
@@ -1307,14 +1461,14 @@
       "source": "unusual_whales",
       "raw": {
         "name": "Markwayne Mullin",
-        "ticker": "AMKR",
+        "ticker": "VSEC",
         "issuer": "joint",
         "is_active": true,
         "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
         "reporter": "Markwayne Mullin",
         "txn_type": "Buy",
         "amounts": "$15,001 - $50,000",
-        "notes": "Amkor Technology, Inc. - Common Stock",
+        "notes": "VSE Corporation - Common Stock",
         "transaction_date": "2026-02-04",
         "filed_at_date": "2026-03-02",
         "member_type": "senate"
@@ -1343,28 +1497,6 @@
       }
     },
     {
-      "ticker": "CRDO",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "CRDO",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Sell",
-        "amounts": "$15,001 - $50,000",
-        "notes": "Credo Technology Group Holding Ltd - Ordinary Shares",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
       "ticker": "APG",
       "member": "Markwayne Mullin",
       "transaction": "",
@@ -1387,7 +1519,7 @@
       }
     },
     {
-      "ticker": "MTZ",
+      "ticker": "CRDO",
       "member": "Markwayne Mullin",
       "transaction": "",
       "amount": "",
@@ -1395,151 +1527,19 @@
       "source": "unusual_whales",
       "raw": {
         "name": "Markwayne Mullin",
-        "ticker": "MTZ",
+        "ticker": "CRDO",
         "issuer": "joint",
         "is_active": true,
         "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
         "reporter": "Markwayne Mullin",
         "txn_type": "Sell",
         "amounts": "$15,001 - $50,000",
-        "notes": "MasTec, Inc. Common Stock",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "VSEC",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "VSEC",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Buy",
-        "amounts": "$15,001 - $50,000",
-        "notes": "VSE Corporation - Common Stock",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "FCFS",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "FCFS",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Buy",
-        "amounts": "$15,001 - $50,000",
-        "notes": "FirstCash Holdings, Inc. - Common Stock",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "AIT",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "AIT",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Sell",
-        "amounts": "$1,001 - $15,000",
-        "notes": "Applied Industrial Technologies, Inc. Common Stock",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "LRN",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "LRN",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Buy",
-        "amounts": "$15,001 - $50,000",
-        "notes": "Stride, Inc. Common Stock",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "GS",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "GS",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Sell",
-        "amounts": "$15,001 - $50,000",
-        "notes": "Goldman Sachs Group, Inc. (The) Common Stock",
-        "transaction_date": "2026-02-04",
-        "filed_at_date": "2026-03-02",
-        "member_type": "senate"
-      }
-    },
-    {
-      "ticker": "C",
-      "member": "Markwayne Mullin",
-      "transaction": "",
-      "amount": "",
-      "date": "2026-02-04",
-      "source": "unusual_whales",
-      "raw": {
-        "name": "Markwayne Mullin",
-        "ticker": "C",
-        "issuer": "joint",
-        "is_active": true,
-        "politician_id": "fd649e86-109f-4906-89cf-8d2294705006",
-        "reporter": "Markwayne Mullin",
-        "txn_type": "Buy",
-        "amounts": "$15,001 - $50,000",
-        "notes": "Citigroup, Inc. Common Stock",
+        "notes": "Credo Technology Group Holding Ltd - Ordinary Shares",
         "transaction_date": "2026-02-04",
         "filed_at_date": "2026-03-02",
         "member_type": "senate"
       }
     }
   ],
-  "fetched_at": 1773029307.63678
+  "fetched_at": 1773036978.412086
 }

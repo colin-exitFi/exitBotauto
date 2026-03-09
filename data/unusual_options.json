@@ -1,13 +1,236 @@
 {
   "options": [
     {
-      "ticker": "TYRA",
+      "ticker": "SPX",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $8,452,210 premium across 6 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 8452210.0,
+      "volume": 45941,
+      "open_interest": 515601
+    },
+    {
+      "ticker": "SPXW",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $5,397,986 premium across 23 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 5397986.0,
+      "volume": 42866,
+      "open_interest": 38740
+    },
+    {
+      "ticker": "IWM",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $4,722,120 premium across 20 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 4722120.0,
+      "volume": 650890,
+      "open_interest": 380840
+    },
+    {
+      "ticker": "SPY",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $3,438,677 premium across 24 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 3438677.0,
+      "volume": 323092,
+      "open_interest": 241238
+    },
+    {
+      "ticker": "AMZN",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $1,893,006 premium across 3 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 1893006.0,
+      "volume": 280743,
+      "open_interest": 23473
+    },
+    {
+      "ticker": "RUTW",
       "type": "call",
       "bias": "bullish",
-      "reason": "Call volume (1,810) exceeds open interest (936) by 1.93x on 2026-03-06[1]",
-      "source": "perplexity",
-      "conviction": 0.5
+      "reason": "Whale flow bullish: $1,172,022 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 1172022.0,
+      "volume": 271,
+      "open_interest": 2
+    },
+    {
+      "ticker": "TLT",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Whale flow bullish: $1,022,487 premium across 4 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.85,
+      "premium": 1022487.0,
+      "volume": 73900,
+      "open_interest": 9228
+    },
+    {
+      "ticker": "NVDA",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Whale flow bullish: $988,155 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.7,
+      "premium": 988155.0,
+      "volume": 14061,
+      "open_interest": 57887
+    },
+    {
+      "ticker": "DIA",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $515,695 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.7,
+      "premium": 515695.0,
+      "volume": 4509,
+      "open_interest": 787
+    },
+    {
+      "ticker": "TSLA",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $369,657 premium across 3 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.7,
+      "premium": 369657.0,
+      "volume": 21234,
+      "open_interest": 5499
+    },
+    {
+      "ticker": "QQQ",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Whale flow bullish: $326,914 premium across 3 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.7,
+      "premium": 326914.0,
+      "volume": 16503,
+      "open_interest": 10433
+    },
+    {
+      "ticker": "GOOGL",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $286,385 premium across 2 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.7,
+      "premium": 286385.0,
+      "volume": 4415,
+      "open_interest": 28194
+    },
+    {
+      "ticker": "MU",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $249,974 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 249974.0,
+      "volume": 831,
+      "open_interest": 2793
+    },
+    {
+      "ticker": "SNOW",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $205,500 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 205500.0,
+      "volume": 150,
+      "open_interest": 442
+    },
+    {
+      "ticker": "COIN",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Whale flow bullish: $201,000 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 201000.0,
+      "volume": 1349,
+      "open_interest": 8853
+    },
+    {
+      "ticker": "META",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $199,991 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 199991.0,
+      "volume": 1092,
+      "open_interest": 293
+    },
+    {
+      "ticker": "AAPL",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $154,425 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 154425.0,
+      "volume": 1211,
+      "open_interest": 3367
+    },
+    {
+      "ticker": "AMD",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Whale flow bullish: $120,000 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 120000.0,
+      "volume": 2815,
+      "open_interest": 9295
+    },
+    {
+      "ticker": "JEF",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $118,470 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 118470.0,
+      "volume": 2362,
+      "open_interest": 608
+    },
+    {
+      "ticker": "AVGO",
+      "type": "put",
+      "bias": "bearish",
+      "reason": "Whale flow bearish: $110,436 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 110436.0,
+      "volume": 76,
+      "open_interest": 1953
+    },
+    {
+      "ticker": "SNDK",
+      "type": "call",
+      "bias": "bullish",
+      "reason": "Whale flow bullish: $103,530 premium across 1 alerts",
+      "source": "unusual_whales",
+      "conviction": 0.55,
+      "premium": 103530.0,
+      "volume": 589,
+      "open_interest": 123
     }
   ],
-  "fetched_at": 1773029306.58252
+  "fetched_at": 1773036978.282272
 }

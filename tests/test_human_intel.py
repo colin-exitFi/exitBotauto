@@ -68,6 +68,23 @@ class HumanIntelStoreTests(unittest.TestCase):
 
         self.assertTrue(scanner._passes_filter(candidate))
 
+    def test_extract_query_symbols_matches_lowercase_known_ticker(self):
+        class _Bot:
+            scanner = type(
+                "ScannerStub",
+                (),
+                {
+                    "get_cached_candidates": lambda self: [{"symbol": "SOTY"}],
+                },
+            )()
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            symbols = dashboard_module._extract_query_symbols("tell me more about soty pharma")
+            self.assertIn("SOTY", symbols)
+        finally:
+            dashboard_module.set_bot(None)
+
 
 class DashboardHumanIntelTests(unittest.TestCase):
     def test_dashboard_human_intel_endpoint_persists_and_promotes_watchlist(self):
@@ -123,6 +140,60 @@ class DashboardHumanIntelTests(unittest.TestCase):
                     self.assertTrue(deleted.json()["ok"])
             finally:
                 dashboard_module.set_bot(None)
+
+    def test_dashboard_copilot_chat_endpoint_uses_engine_context(self):
+        captured = {}
+
+        async def _fake_perplexity(prompt, max_tokens=900):
+            captured["prompt"] = prompt
+            return "Most likely SOTY based on the current scanner context."
+
+        class _Scanner:
+            def get_cached_candidates(self):
+                return [
+                    {
+                        "symbol": "SOTY",
+                        "score": 1.42,
+                        "price": 7.25,
+                        "change_pct": 552.0,
+                        "strategy_tag": "pharma_catalyst",
+                    }
+                ]
+
+            def get_last_market_regime(self):
+                return "risk_on"
+
+        class _Watchlist:
+            def get_all(self):
+                return [{"ticker": "SOTY", "side": "long", "reason": "FDA approval", "conviction": 0.82, "sources": "pharma"}]
+
+        class _EntryManager:
+            def get_positions(self):
+                return []
+
+        class _Bot:
+            scanner = _Scanner()
+            watchlist = _Watchlist()
+            entry_manager = _EntryManager()
+            human_intel_store = type("IntelStub", (), {"list_entries": lambda self, limit=20: []})()
+            copy_trader_monitor = None
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
+                 patch.object(dashboard_module, "call_perplexity_text", new=_fake_perplexity):
+                client = TestClient(dashboard_module.app)
+                resp = client.post(
+                    "/api/copilot/chat?token=secret-token",
+                    json={"message": "I saw soty up huge after hours Friday. What was it?", "history": []},
+                )
+                self.assertEqual(resp.status_code, 200)
+                payload = resp.json()
+                self.assertTrue(payload["ok"])
+                self.assertIn("SOTY", payload["answer"])
+                self.assertIn('"symbol": "SOTY"', captured["prompt"])
+        finally:
+            dashboard_module.set_bot(None)
 
 
 if __name__ == "__main__":

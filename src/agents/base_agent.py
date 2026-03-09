@@ -161,6 +161,36 @@ async def call_claude(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
         return None
 
 
+async def call_claude_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
+    """Call Claude Sonnet and return plain text."""
+    if not settings.ANTHROPIC_API_KEY:
+        return None
+    if not await _await_rate_limit_slot("claude"):
+        return None
+    model = getattr(settings, 'CLAUDE_MODEL', 'claude-sonnet-4-5-20250929')
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": settings.ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            resp.raise_for_status()
+            _api_calls["claude"] += 1
+            return str(resp.json()["content"][0]["text"]).strip()
+    except Exception as e:
+        logger.error(f"Claude API error: {e}")
+        return None
+
+
 async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call GPT-5.2 and return parsed JSON."""
     if not settings.OPENAI_API_KEY:
@@ -186,6 +216,35 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
             _api_calls["gpt"] += 1
             text = resp.json()["choices"][0]["message"]["content"]
             return parse_json(text)
+    except Exception as e:
+        logger.error(f"GPT API error: {e}")
+        return None
+
+
+async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
+    """Call GPT and return plain text."""
+    if not settings.OPENAI_API_KEY:
+        return None
+    if not await _await_rate_limit_slot("gpt"):
+        return None
+    model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.4')
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "max_completion_tokens": max_tokens,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            resp.raise_for_status()
+            _api_calls["gpt"] += 1
+            return str(resp.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         logger.error(f"GPT API error: {e}")
         return None
@@ -247,6 +306,35 @@ async def call_perplexity(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
             _api_calls["perplexity"] += 1
             text = resp.json()["choices"][0]["message"]["content"]
             return parse_json(text)
+    except Exception as e:
+        logger.error(f"Perplexity API error: {e}")
+        return None
+
+
+async def call_perplexity_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
+    """Call Perplexity and return plain text."""
+    if not settings.PERPLEXITY_API_KEY:
+        return None
+    if not await _await_rate_limit_slot("perplexity"):
+        return None
+    model = getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro')
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.post(
+                "https://api.perplexity.ai/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.PERPLEXITY_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            resp.raise_for_status()
+            _api_calls["perplexity"] += 1
+            return str(resp.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         logger.error(f"Perplexity API error: {e}")
         return None
