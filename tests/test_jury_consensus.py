@@ -84,6 +84,39 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(verdict.size_pct, 2.0, places=3)
         self.assertEqual(verdict.consensus_detail["agreement"], "majority_two_model")
 
+    async def test_rate_limited_jury_requires_unanimous_remaining_models(self):
+        with patch.object(jury, "call_claude", new=_async_return(_vote("BUY", 90, 2.0, 2.0))), \
+             patch.object(jury, "call_gpt", new=_async_return(_vote("BUY", 70, 2.0, 4.0))), \
+             patch.object(jury, "call_grok", new=_async_return(None)), \
+             patch.object(jury, "provider_is_backing_off", side_effect=lambda provider: provider == "grok"):
+            verdict = await jury.deliberate("AAPL", 100.0, {}, {})
+
+        self.assertEqual(verdict.decision, "BUY")
+        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_unanimous")
+        self.assertTrue(verdict.consensus_detail["degraded"])
+        self.assertEqual(verdict.consensus_detail["rate_limited_providers"], ["grok"])
+        self.assertAlmostEqual(verdict.size_pct, 1.7, places=3)
+
+    async def test_rate_limited_jury_blocks_single_model_fallback(self):
+        with patch.object(jury, "call_claude", new=_async_return(_vote("BUY", 80, 2.0, 2.5))), \
+             patch.object(jury, "call_gpt", new=_async_return(None)), \
+             patch.object(jury, "call_grok", new=_async_return(None)), \
+             patch.object(jury, "provider_is_backing_off", side_effect=lambda provider: provider in {"gpt", "grok"}):
+            verdict = await jury.deliberate("AAPL", 100.0, {}, {})
+
+        self.assertEqual(verdict.decision, "SKIP")
+        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_insufficient")
+
+    async def test_rate_limited_jury_blocks_split_two_model_vote(self):
+        with patch.object(jury, "call_claude", new=_async_return(_vote("BUY", 80, 2.0, 2.0))), \
+             patch.object(jury, "call_gpt", new=_async_return(_vote("SKIP", 40, 0.0, 3.0))), \
+             patch.object(jury, "call_grok", new=_async_return(None)), \
+             patch.object(jury, "provider_is_backing_off", side_effect=lambda provider: provider == "grok"):
+            verdict = await jury.deliberate("AAPL", 100.0, {}, {})
+
+        self.assertEqual(verdict.decision, "SKIP")
+        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_split")
+
     async def test_two_models_disagree_skip(self):
         with patch.object(jury, "call_claude", new=_async_return(None)), \
              patch.object(jury, "call_gpt", new=_async_return(_vote("BUY", 70, 2.0, 2.0))), \

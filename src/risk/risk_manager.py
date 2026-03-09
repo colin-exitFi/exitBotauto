@@ -51,6 +51,14 @@ SECTOR_MAP = {
     "GE": "Industrials", "RTX": "Industrials", "DE": "Industrials", "LMT": "Industrials",
     "AMT": "Real Estate", "PLD": "Real Estate", "SPG": "Real Estate",
     "LIN": "Materials", "APD": "Materials", "SHW": "Materials", "FCX": "Materials",
+    # Frequently traded single names
+    "IONQ": "Technology", "FSLY": "Technology", "TEAM": "Technology", "IOT": "Technology",
+    "AAOI": "Technology", "QURE": "Healthcare", "DAWN": "Healthcare", "HIMS": "Healthcare",
+    "BHVN": "Healthcare", "DNTH": "Healthcare", "XENE": "Healthcare", "ATRA": "Healthcare",
+    "RLMD": "Healthcare", "CLPT": "Healthcare", "NVAX": "Healthcare", "BATL": "Energy",
+    # ETFs / thematic buckets
+    "IGV": "Technology", "XBI": "Healthcare", "BNO": "Commodities", "USO": "Commodities",
+    "UCO": "Commodities", "TLT": "Fixed Income", "UVIX": "Volatility", "LITX": "Materials",
 }
 
 
@@ -116,6 +124,10 @@ class RiskManager:
     @property
     def equity(self) -> float:
         return self._equity
+
+    @staticmethod
+    def _paper_mode_enabled() -> bool:
+        return bool(getattr(settings, "PAPER_MODE", False) or getattr(settings, "ALPACA_PAPER", False))
 
     def update_equity(self, equity: float, daytrade_count: Optional[int] = None):
         """Called every scan cycle with live Alpaca equity."""
@@ -266,7 +278,7 @@ class RiskManager:
 
     def is_wash_sale(self, symbol: str) -> bool:
         """Check if buying this symbol would trigger a wash sale (sold at loss within 30 days)."""
-        if getattr(settings, "PAPER_MODE", False):
+        if self._paper_mode_enabled():
             return False
         self._clean_expired_wash_sales()
         if symbol in self._wash_sale_list:
@@ -421,7 +433,7 @@ class RiskManager:
 
         # ── Wash sale tracking ──
         symbol = trade.get("symbol", "")
-        if pnl < 0 and symbol and not getattr(settings, "PAPER_MODE", False):
+        if pnl < 0 and symbol and not self._paper_mode_enabled():
             self._wash_sale_list[symbol] = {
                 "loss": pnl,
                 "exit_time": trade.get("exit_time", time.time()),
@@ -557,7 +569,7 @@ class RiskManager:
 
     def can_enter_sector(self, symbol: str, positions: List[Dict]) -> bool:
         """Check if adding this symbol would exceed sector concentration limit."""
-        sector = SECTOR_MAP.get(symbol, "unknown")
+        sector = SECTOR_MAP.get(str(symbol or "").upper(), "unknown")
         if sector == "unknown":
             return True  # Don't block unknown sectors
 
@@ -567,7 +579,7 @@ class RiskManager:
         for p in positions:
             pos_value = p.get("entry_price", 0) * p.get("quantity", 0)
             total_notional += pos_value
-            if SECTOR_MAP.get(p.get("symbol", ""), "unknown") == sector:
+            if SECTOR_MAP.get(str(p.get("symbol", "")).upper(), "unknown") == sector:
                 sector_notional += pos_value
 
         if self._equity <= 0:

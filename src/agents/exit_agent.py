@@ -6,7 +6,7 @@ Uses Claude Sonnet.
 
 import asyncio
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 from src.agents.base_agent import call_claude
@@ -145,17 +145,20 @@ class ExitAgent:
                 "reasoning": "LULD band is tightening near entry; reducing room proactively",
             }
 
-        # Get current price
         current_price = entry_price  # fallback
-        try:
-            if self.broker:
-                alpaca_positions = self.broker.get_positions()
-                for ap in alpaca_positions:
-                    if ap.get("symbol") == symbol:
-                        current_price = float(ap.get("current_price", entry_price))
-                        break
-        except Exception:
-            pass
+        fetched_broker_positions, broker_position = self._lookup_broker_position(symbol)
+        if fetched_broker_positions and broker_position is None:
+            logger.info(f"Exit agent dropping stale tracked position for {symbol}: no Alpaca counterpart")
+            if self.entry_manager and hasattr(self.entry_manager, "remove_position"):
+                self.entry_manager.remove_position(symbol)
+            self._last_briefs.pop(symbol, None)
+            self._last_check.pop(symbol, None)
+            return None
+        if broker_position:
+            try:
+                current_price = float(broker_position.get("current_price", entry_price) or entry_price)
+            except Exception:
+                current_price = entry_price
 
         side = pos.get("side", "long")
         if side == "short":
@@ -237,6 +240,18 @@ class ExitAgent:
             }
         return DEFAULT_ACTION
 
+    def _lookup_broker_position(self, symbol: str) -> Tuple[bool, Optional[Dict]]:
+        if not self.broker:
+            return False, None
+        try:
+            for broker_position in self.broker.get_positions():
+                if broker_position.get("symbol") == symbol:
+                    return True, broker_position
+            return True, None
+        except Exception as e:
+            logger.debug(f"Exit agent broker lookup failed for {symbol}: {e}")
+            return False, None
+
     async def _execute_action(self, symbol: str, pos: Dict, action: Dict):
         """Execute the exit agent's decision — adjust trailing stop or exit."""
         if not self.broker:
@@ -255,15 +270,22 @@ class ExitAgent:
                     canceled = await self._cancel_conflicting_exit_orders(symbol, side=side)
                     if canceled:
                         logger.info(f"Exit agent canceled {canceled} conflicting orders for {symbol} before EXIT_NOW")
+                    order = None
                     if side == "short":
                         # Buy to cover
-                        await asyncio.get_event_loop().run_in_executor(
+                        order = await asyncio.get_event_loop().run_in_executor(
                             None, self.broker.place_market_buy, symbol, qty
                         )
                     else:
-                        await asyncio.get_event_loop().run_in_executor(
+                        order = await asyncio.get_event_loop().run_in_executor(
                             None, self.broker.place_market_sell, symbol, qty
                         )
+                    if order:
+                        pos["_exit_recorded"] = True
+                        if self.entry_manager and hasattr(self.entry_manager, "remove_position"):
+                            self.entry_manager.remove_position(symbol)
+                        self._last_briefs.pop(symbol, None)
+                        self._last_check.pop(symbol, None)
                 except Exception as e:
                     logger.error(f"Exit agent EXIT_NOW failed for {symbol}: {e}")
 

@@ -17,6 +17,7 @@ from alpaca.trading.requests import (
     MarketOrderRequest,
     LimitOrderRequest,
     GetOrdersRequest,
+    ClosePositionRequest,
 )
 from alpaca.trading.enums import OrderSide, TimeInForce, OrderStatus, QueryOrderStatus
 from alpaca.data.historical import StockHistoricalDataClient
@@ -258,13 +259,54 @@ class AlpacaClient:
                 cancelled = self.cancel_related_orders_from_error(symbol, e, preferred_side="sell")
                 if cancelled:
                     time.sleep(0.5)
-                    return self.place_market_sell(
+                    retry = self.place_market_sell(
                         symbol,
                         qty_or_notional,
                         force_notional=force_notional,
                         _retry_on_qty_conflict=False,
                     )
+                    if retry:
+                        return retry
+                if not force_notional:
+                    fallback = self.close_position(symbol, qty=qty_or_notional)
+                    if fallback:
+                        logger.warning(f"Used close_position fallback for {symbol} after market sell rejection")
+                        return fallback
             logger.error(f"Market sell failed ({symbol}): {e}")
+            return None
+
+    def close_position(
+        self,
+        symbol: str,
+        qty: Optional[Union[int, float]] = None,
+        percentage: Optional[float] = None,
+    ) -> Optional[Dict]:
+        """Force-liquidate an Alpaca position using the broker's close-position endpoint."""
+        self._ensure_init()
+        try:
+            close_options = None
+            if qty is not None:
+                executable_qty = self._clamp_exit_qty(symbol, qty, side="sell", whole_only=False)
+                if executable_qty <= 0:
+                    logger.info(f"Close position skipped for {symbol}: no broker position remains")
+                    return {"symbol": symbol, "status": "not_found"}
+                close_options = ClosePositionRequest(qty=str(executable_qty))
+            elif percentage is not None:
+                close_options = ClosePositionRequest(percentage=str(max(0.0, min(100.0, percentage))))
+
+            order = self._trading_client.close_position(symbol, close_options)
+            if isinstance(order, dict):
+                result = dict(order)
+            else:
+                result = self._order_to_dict(order)
+            logger.success(f"Close position: {symbol} → {result.get('id', 'submitted')}")
+            return result
+        except Exception as e:
+            message = str(e or "").lower()
+            if "position does not exist" in message or "not found" in message:
+                logger.info(f"Close position skipped for {symbol}: broker reports no open position")
+                return {"symbol": symbol, "status": "not_found"}
+            logger.error(f"Close position failed ({symbol}): {e}")
             return None
 
     def place_limit_buy(

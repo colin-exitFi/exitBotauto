@@ -213,10 +213,10 @@ class Orchestrator:
         return list(self._history)
 
     def get_stats(self) -> Dict:
-        from src.agents.base_agent import get_api_stats
+        from src.agents.base_agent import get_api_cost_stats, get_api_stats
         total = len(self._history)
         if not total:
-            return {"total": 0, "api_calls": get_api_stats()}
+            return {"total": 0, "api_calls": get_api_stats(), "api_costs": get_api_cost_stats()}
         return {
             "total": total,
             "buys": sum(1 for h in self._history if h["decision"] == "BUY"),
@@ -224,4 +224,5 @@ class Orchestrator:
             "skips": sum(1 for h in self._history if h["decision"] == "SKIP"),
             "avg_confidence": sum(h.get("confidence", 0) for h in self._history) / total,
             "api_calls": get_api_stats(),
+            "api_costs": get_api_cost_stats(),
         }

@@ -9,6 +9,7 @@ class FakeBroker:
         self.cancelled = []
         self.market_sells = []
         self.market_buys = []
+        self.positions = []
 
     def get_orders(self, status="open"):
         if status == "open":
@@ -27,6 +28,17 @@ class FakeBroker:
         self.market_buys.append((symbol, qty))
         return {"id": "mkt-buy"}
 
+    def get_positions(self):
+        return list(self.positions)
+
+
+class _EntryManager:
+    def __init__(self):
+        self.removed = []
+
+    def remove_position(self, symbol):
+        self.removed.append(symbol)
+
 
 class ExitAgentConflictTests(unittest.IsolatedAsyncioTestCase):
     async def test_exit_now_cancels_conflicting_orders_before_market_sell(self):
@@ -37,7 +49,8 @@ class ExitAgentConflictTests(unittest.IsolatedAsyncioTestCase):
                 {"id": "other-sell", "symbol": "MSFT", "side": "sell", "type": "limit"},
             ]
         )
-        agent = ExitAgent(broker=broker, entry_manager=None, risk_manager=None)
+        entry_manager = _EntryManager()
+        agent = ExitAgent(broker=broker, entry_manager=entry_manager, risk_manager=None)
         pos = {
             "symbol": "AAPL",
             "quantity": 4,
@@ -49,6 +62,8 @@ class ExitAgentConflictTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(broker.cancelled, ["sell-stop"])
         self.assertEqual(broker.market_sells, [("AAPL", 4)])
+        self.assertEqual(entry_manager.removed, ["AAPL"])
+        self.assertTrue(pos["_exit_recorded"])
 
 
 if __name__ == "__main__":

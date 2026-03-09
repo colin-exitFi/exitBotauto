@@ -4,8 +4,8 @@ Entry Manager - Validate conditions, size positions, execute via Alpaca.
 
 import asyncio
 import time
-from datetime import datetime
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 from config import settings
@@ -80,6 +80,84 @@ class EntryManager:
             return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
         except Exception:
             return None
+
+    @staticmethod
+    def _carryover_fallback_entry_time() -> float:
+        try:
+            import zoneinfo
+
+            et = zoneinfo.ZoneInfo("US/Eastern")
+        except Exception:
+            from pytz import timezone as tz
+
+            et = tz("US/Eastern")
+
+        now_et = datetime.now(et)
+        if now_et.weekday() == 0:
+            fallback_day = now_et - timedelta(days=3)
+        else:
+            fallback_day = now_et - timedelta(days=1)
+        fallback_midnight = fallback_day.replace(hour=0, minute=0, second=0, microsecond=0)
+        return fallback_midnight.timestamp()
+
+    def _estimate_carryover_entry_time(
+        self,
+        symbol: str,
+        side: str,
+        closed_orders: Optional[List[Dict]],
+    ) -> Tuple[float, str]:
+        fallback = self._carryover_fallback_entry_time()
+        if not closed_orders:
+            return fallback, "broker_fallback"
+
+        deltas = []
+        for order in closed_orders:
+            if str(order.get("symbol", "")).upper() != str(symbol).upper():
+                continue
+            order_side = str(order.get("side", "") or "").lower()
+            if order_side not in ("buy", "sell"):
+                continue
+            try:
+                filled_qty = float(order.get("filled_qty", order.get("qty", 0)) or 0)
+            except Exception:
+                filled_qty = 0.0
+            if filled_qty <= 0:
+                continue
+            ts = self._parse_iso_ts(
+                order.get("filled_at")
+                or order.get("submitted_at")
+                or order.get("created_at")
+            )
+            if ts is None:
+                continue
+            signed_delta = filled_qty if order_side == "buy" else -filled_qty
+            deltas.append((ts, signed_delta))
+
+        if not deltas:
+            return fallback, "broker_fallback"
+
+        deltas.sort(key=lambda item: item[0])
+        net_qty = 0.0
+        entry_time = None
+        for ts, delta in deltas:
+            prev_qty = net_qty
+            net_qty += delta
+            if abs(net_qty) < 1e-6:
+                net_qty = 0.0
+
+            prev_sign = 1 if prev_qty > 0 else (-1 if prev_qty < 0 else 0)
+            new_sign = 1 if net_qty > 0 else (-1 if net_qty < 0 else 0)
+            if new_sign == 0:
+                entry_time = None
+                continue
+            if prev_sign == 0 or prev_sign != new_sign:
+                entry_time = ts
+
+        target_sign = -1 if side == "short" else 1
+        final_sign = 1 if net_qty > 0 else (-1 if net_qty < 0 else 0)
+        if final_sign == target_sign and entry_time is not None:
+            return entry_time, "broker_orders"
+        return fallback, "broker_fallback"
 
     async def _cancel_conflicting_protection_orders(self, symbol: str, side: str) -> int:
         if not self.broker:
@@ -457,11 +535,17 @@ class EntryManager:
             "protection_failed": protection_failed,
             "order_status": order_status,
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "entry_path": sentiment_data.get("entry_path", "jury"),
             "signal_sources": signal_sources,
             "decision_confidence": sentiment_data.get("consensus_confidence", 0),
             "provider_used": sentiment_data.get("provider_used", ""),
             "signal_price": sentiment_data.get("signal_price", price),
             "decision_price": sentiment_data.get("decision_price", price),
+            "intended_notional": float(notional or 0),
+            "actual_notional": actual_notional,
+            "intended_qty": float(requested_qty or 0),
+            "actual_qty": actual_qty,
+            "anomaly_flags": list(sentiment_data.get("anomaly_flags", []) or []),
             "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
             "copy_trader_context": sentiment_data.get("copy_trader_context", ""),
             "copy_trader_handles": list(sentiment_data.get("copy_trader_handles", []) or []),
@@ -684,11 +768,17 @@ class EntryManager:
             "protection_failed": protection_failed,
             "order_status": order_status,
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "entry_path": sentiment_data.get("entry_path", "jury"),
             "signal_sources": signal_sources,
             "decision_confidence": sentiment_data.get("consensus_confidence", 0),
             "provider_used": sentiment_data.get("provider_used", ""),
             "signal_price": sentiment_data.get("signal_price", price),
             "decision_price": sentiment_data.get("decision_price", price),
+            "intended_notional": float(notional or 0),
+            "actual_notional": actual_notional,
+            "intended_qty": float(requested_qty or 0),
+            "actual_qty": actual_qty,
+            "anomaly_flags": list(sentiment_data.get("anomaly_flags", []) or []),
             "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
             "copy_trader_context": sentiment_data.get("copy_trader_context", ""),
             "copy_trader_handles": list(sentiment_data.get("copy_trader_handles", []) or []),
@@ -806,6 +896,10 @@ class EntryManager:
         pos["entry_price"] = new_entry_price
         pos["fill_price"] = add_fill_price
         pos["notional"] = new_entry_price * new_qty
+        pos["actual_notional"] = pos["notional"]
+        pos["actual_qty"] = new_qty
+        pos["intended_notional"] = max(float(pos.get("intended_notional", 0) or 0), float(target_notional or 0))
+        pos["intended_qty"] = max(float(pos.get("intended_qty", 0) or 0), float(new_qty))
         pos["order_id"] = order.get("id", pos.get("order_id", ""))
         pos["entry_order_timestamp"] = entry_order_timestamp
         pos["signal_timestamp"] = pos.get("signal_timestamp", sentiment_data.get("signal_timestamp"))
@@ -874,6 +968,18 @@ class EntryManager:
                 return 0
             brokerage_positions = self.broker.get_positions()
 
+        missing_symbols = [
+            str(p.get("symbol", "")).upper()
+            for p in (brokerage_positions or [])
+            if p.get("symbol") and p.get("symbol") not in self.positions
+        ]
+        closed_orders = None
+        if missing_symbols and self.broker and hasattr(self.broker, "get_orders"):
+            try:
+                closed_orders = self.broker.get_orders(status="closed")
+            except Exception as e:
+                logger.warning(f"Could not fetch closed orders for carryover entry times: {e}")
+
         updates = 0
         for p in brokerage_positions or []:
             sym = p.get("symbol", "")
@@ -897,6 +1003,9 @@ class EntryManager:
                     existing["side"] = side
                     existing["current_price"] = cur_price
                     existing["broker_synced_at"] = time.time()
+                    existing["actual_qty"] = qty
+                    entry_price = float(existing.get("entry_price", avg_price) or avg_price)
+                    existing["actual_notional"] = entry_price * qty
                     if qty < old_qty and qty < 1.0:
                         existing["_dust_remainder"] = True
                     elif qty >= 1.0:
@@ -905,12 +1014,14 @@ class EntryManager:
                     updates += 1
                 continue
 
+            entry_time, entry_time_source = self._estimate_carryover_entry_time(sym, side, closed_orders)
             self.positions[sym] = {
                 "symbol": sym,
                 "side": side,
                 "entry_price": avg_price,
                 "quantity": qty,
-                "entry_time": time.time(),  # approximate — we don't know real entry time
+                "entry_time": entry_time,
+                "entry_time_source": entry_time_source,
                 "signal_timestamp": None,
                 "entry_order_timestamp": None,
                 "fill_timestamp": None,
@@ -921,11 +1032,17 @@ class EntryManager:
                 "partial_exit": False,
                 "from_brokerage": True,
                 "strategy_tag": "carryover",
+                "entry_path": "broker_sync",
                 "signal_sources": ["broker_sync"],
                 "decision_confidence": 0,
                 "provider_used": "",
                 "signal_price": avg_price,
                 "decision_price": avg_price,
+                "intended_notional": avg_price * qty,
+                "actual_notional": avg_price * qty,
+                "intended_qty": qty,
+                "actual_qty": qty,
+                "anomaly_flags": ["carryover_sync"],
                 "scout_escalated": False,
                 "swing_only": False,
                 "_exit_recorded": False,
@@ -935,7 +1052,7 @@ class EntryManager:
             side_tag = "SHORT" if side == "short" else "LONG"
             logger.info(
                 f"📦 Loaded {side_tag} position: {qty:.4f} {sym} @ ${avg_price:.2f} "
-                f"(current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f})"
+                f"(current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f}, entry={entry_time_source})"
             )
             updates += 1
         return updates

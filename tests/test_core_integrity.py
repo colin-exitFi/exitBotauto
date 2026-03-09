@@ -52,6 +52,66 @@ class FakeAlpacaForMonitor:
 
 
 class ExitAccountingTests(unittest.IsolatedAsyncioTestCase):
+    def test_record_realized_exit_freezes_trade_telemetry_from_position(self):
+        pos = {
+            "symbol": "AAPL",
+            "entry_price": 100.0,
+            "quantity": 10.0,
+            "entry_time": time.time() - 360,
+            "side": "long",
+            "entry_path": "jury",
+            "intended_notional": 1000.0,
+            "actual_notional": 1000.0,
+            "intended_qty": 10.0,
+            "actual_qty": 10.0,
+            "anomaly_flags": ["duplicate_entry"],
+            "price_at_1m": 101.0,
+            "price_at_3m": 102.0,
+            "price_at_5m": 103.0,
+            "time_to_green_seconds": 45,
+            "time_to_peak_seconds": 300,
+            "mfe_pct": 3.0,
+            "mae_pct": -0.8,
+            "_exit_recorded": False,
+        }
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.entry_manager = FakeEntryManager(pos, remove_on_exit=True)
+        bot.risk_manager = FakeRiskManager()
+        bot.pnl_state = {}
+
+        with patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
+             patch.object(main_module.persistence, "save_pnl_state"), \
+             patch.object(main_module.persistence, "save_positions"), \
+             patch.object(main_module.persistence, "save_trades"):
+            bot._record_realized_exit(
+                {
+                    "symbol": "AAPL",
+                    "side": "sell",
+                    "entry_price": 100.0,
+                    "exit_price": 104.0,
+                    "quantity": 10.0,
+                    "pnl": 40.0,
+                    "pnl_pct": 4.0,
+                    "reason": "take_profit",
+                    "entry_time": pos["entry_time"],
+                    "exit_time": time.time(),
+                }
+            )
+
+        self.assertEqual(record_trade_mock.call_count, 1)
+        trade = record_trade_mock.call_args[0][0]
+        self.assertEqual(trade["entry_path"], "jury")
+        self.assertEqual(trade["price_at_1m"], 101.0)
+        self.assertEqual(trade["price_at_3m"], 102.0)
+        self.assertEqual(trade["price_at_5m"], 103.0)
+        self.assertEqual(trade["time_to_green_seconds"], 45)
+        self.assertEqual(trade["time_to_peak_seconds"], 360)
+        self.assertEqual(trade["mfe_pct"], 4.0)
+        self.assertEqual(trade["mae_pct"], -0.8)
+        self.assertEqual(trade["intended_notional"], 1000.0)
+        self.assertEqual(trade["actual_notional"], 1000.0)
+        self.assertEqual(trade["anomaly_flags"], ["duplicate_entry"])
+
     def test_ws_trailing_stop_dedupes_duplicate_callbacks(self):
         pos = {
             "symbol": "AAPL",

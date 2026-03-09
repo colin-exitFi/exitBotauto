@@ -6,6 +6,7 @@ File: data/trade_history.json
 import json
 import math
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
@@ -62,14 +63,22 @@ def get_analytics() -> Dict:
             "message": "No trade history yet.",
             "win_rate": 0.0,
             "total_pnl": 0.0,
+            "clean_pnl": 0.0,
             "sharpe_ratio": 0.0,
             "sharpe_ratio_recent_50": 0.0,
+            "today": {
+                "trades": 0,
+                "raw_pnl": 0.0,
+                "clean_pnl": 0.0,
+                "anomaly_count": 0,
+            },
         }
 
     wins = [t for t in history if t.get("pnl", 0) > 0]
     losses = [t for t in history if t.get("pnl", 0) < 0]
     breakevens = [t for t in history if t.get("pnl", 0) == 0]
     total_pnl = sum(t.get("pnl", 0) for t in history)
+    clean_pnl = sum(t.get("pnl", 0) for t in history if not _trade_has_anomaly(t))
     latency_samples = [
         float(t.get("signal_to_fill_ms"))
         for t in history
@@ -131,14 +140,10 @@ def get_analytics() -> Dict:
     for t in history:
         strategy = t.get("strategy_tag", "unknown") or "unknown"
         if strategy not in by_strategy:
-            by_strategy[strategy] = {"trades": 0, "wins": 0, "pnl": 0.0}
-        by_strategy[strategy]["trades"] += 1
-        by_strategy[strategy]["pnl"] += t.get("pnl", 0)
-        if t.get("pnl", 0) > 0:
-            by_strategy[strategy]["wins"] += 1
-    for v in by_strategy.values():
-        v["win_rate"] = round(v["wins"] / max(1, v["trades"]) * 100, 1)
-        v["pnl"] = round(v["pnl"], 2)
+            by_strategy[strategy] = _metric_bucket_init()
+        _update_metric_bucket(by_strategy[strategy], t)
+    for strategy, bucket in list(by_strategy.items()):
+        by_strategy[strategy] = _finalize_metric_bucket(bucket)
 
     # Latency by strategy
     strategy_latency = {}
@@ -232,6 +237,10 @@ def get_analytics() -> Dict:
     recent_20_wins = len([t for t in recent_20 if t.get("pnl", 0) > 0])
     sharpe_ratio = _compute_sharpe(history)
     sharpe_ratio_recent_50 = _compute_sharpe(recent)
+    overall_metrics = _finalize_metric_bucket(_build_metric_bucket(history))
+    today_key = _current_day_key()
+    today_trades = [t for t in history if _trade_day_key(t) == today_key]
+    today_metrics = _finalize_metric_bucket(_build_metric_bucket(today_trades))
 
     return {
         "total_trades": len(history),
@@ -239,6 +248,7 @@ def get_analytics() -> Dict:
         "losses": len(losses),
         "win_rate": round(len(wins) / max(1, len(history)), 4),
         "total_pnl": round(total_pnl, 2),
+        "clean_pnl": round(clean_pnl, 2),
         "sharpe_ratio": round(sharpe_ratio, 4),
         "sharpe_ratio_recent_50": round(sharpe_ratio_recent_50, 4),
         "overall": {
@@ -246,6 +256,7 @@ def get_analytics() -> Dict:
             "losses": len(losses),
             "win_rate_pct": round(len(wins) / max(1, len(history)) * 100, 1),
             "total_pnl": round(total_pnl, 2),
+            "clean_pnl": round(clean_pnl, 2),
             "avg_win": round(sum(t.get("pnl", 0) for t in wins) / max(1, len(wins)), 2),
             "avg_loss": round(sum(t.get("pnl", 0) for t in losses) / max(1, len(losses)), 2),
             "sharpe_ratio": round(sharpe_ratio, 4),
@@ -254,6 +265,14 @@ def get_analytics() -> Dict:
                 if latency_samples
                 else None
             ),
+            "anomaly_count": overall_metrics["anomaly_count"],
+            "first_1m_green_rate_pct": overall_metrics["first_1m_green_rate_pct"],
+            "first_3m_green_rate_pct": overall_metrics["first_3m_green_rate_pct"],
+            "first_5m_green_rate_pct": overall_metrics["first_5m_green_rate_pct"],
+            "avg_mfe_pct": overall_metrics["avg_mfe_pct"],
+            "avg_mae_pct": overall_metrics["avg_mae_pct"],
+            "avg_hold_seconds": overall_metrics["avg_hold_seconds"],
+            "avg_slippage_bps": overall_metrics["avg_slippage_bps"],
         },
         "by_symbol": dict(sorted(by_symbol.items(), key=lambda x: x[1]["pnl"], reverse=True)[:20]),
         "by_hour": by_hour,
@@ -274,11 +293,163 @@ def get_analytics() -> Dict:
             "win_rate_pct": round(recent_20_wins / max(1, len(recent_20)) * 100, 1),
             "pnl": round(sum(t.get("pnl", 0) for t in recent_20), 2),
         },
+        "today": {
+            "date": today_key,
+            "trades": today_metrics["trades"],
+            "raw_pnl": today_metrics["pnl"],
+            "clean_pnl": today_metrics["clean_pnl"],
+            "anomaly_count": today_metrics["anomaly_count"],
+        },
     }
 
 
 def _bucket_init():
     return {"trades": 0, "wins": 0, "pnl": 0.0}
+
+
+def _metric_bucket_init() -> Dict:
+    return {
+        "trades": 0,
+        "wins": 0,
+        "pnl": 0.0,
+        "clean_pnl": 0.0,
+        "anomaly_count": 0,
+        "green_1m_hits": 0,
+        "green_1m_seen": 0,
+        "green_3m_hits": 0,
+        "green_3m_seen": 0,
+        "green_5m_hits": 0,
+        "green_5m_seen": 0,
+        "mfe_sum": 0.0,
+        "mfe_count": 0,
+        "mae_sum": 0.0,
+        "mae_count": 0,
+        "hold_sum": 0.0,
+        "hold_count": 0,
+        "slippage_sum": 0.0,
+        "slippage_count": 0,
+    }
+
+
+def _build_metric_bucket(trades: List[Dict]) -> Dict:
+    bucket = _metric_bucket_init()
+    for trade in trades or []:
+        _update_metric_bucket(bucket, trade)
+    return bucket
+
+
+def _trade_has_anomaly(trade: Dict) -> bool:
+    flags = trade.get("anomaly_flags", [])
+    if isinstance(flags, str):
+        flags = [f.strip() for f in flags.split(",") if f.strip()]
+    return bool(flags)
+
+
+def _update_metric_bucket(bucket: Dict, trade: Dict):
+    pnl = float(trade.get("pnl", 0) or 0)
+    bucket["trades"] += 1
+    bucket["pnl"] += pnl
+    if pnl > 0:
+        bucket["wins"] += 1
+    if _trade_has_anomaly(trade):
+        bucket["anomaly_count"] += 1
+    else:
+        bucket["clean_pnl"] += pnl
+
+    for seconds, price_field, hits_key, seen_key in (
+        (60, "price_at_1m", "green_1m_hits", "green_1m_seen"),
+        (180, "price_at_3m", "green_3m_hits", "green_3m_seen"),
+        (300, "price_at_5m", "green_5m_hits", "green_5m_seen"),
+    ):
+        price = trade.get(price_field)
+        if not isinstance(price, (int, float)):
+            continue
+        bucket[seen_key] += 1
+        if _directional_trade_move_pct(trade, float(price)) > 0:
+            bucket[hits_key] += 1
+
+    mfe_pct = trade.get("mfe_pct")
+    if isinstance(mfe_pct, (int, float)):
+        bucket["mfe_sum"] += float(mfe_pct)
+        bucket["mfe_count"] += 1
+
+    mae_pct = trade.get("mae_pct")
+    if isinstance(mae_pct, (int, float)):
+        bucket["mae_sum"] += float(mae_pct)
+        bucket["mae_count"] += 1
+
+    hold_seconds = trade.get("hold_seconds")
+    if isinstance(hold_seconds, (int, float)):
+        bucket["hold_sum"] += float(hold_seconds)
+        bucket["hold_count"] += 1
+
+    slippage = trade.get("slippage_bps")
+    if isinstance(slippage, (int, float)):
+        bucket["slippage_sum"] += float(slippage)
+        bucket["slippage_count"] += 1
+
+
+def _finalize_metric_bucket(bucket: Dict) -> Dict:
+    trades = int(bucket.get("trades", 0) or 0)
+    wins = int(bucket.get("wins", 0) or 0)
+    return {
+        "trades": trades,
+        "wins": wins,
+        "pnl": round(float(bucket.get("pnl", 0.0) or 0.0), 2),
+        "clean_pnl": round(float(bucket.get("clean_pnl", 0.0) or 0.0), 2),
+        "win_rate": round(wins / max(1, trades) * 100, 1),
+        "anomaly_count": int(bucket.get("anomaly_count", 0) or 0),
+        "first_1m_green_rate_pct": _rate_pct(bucket.get("green_1m_hits", 0), bucket.get("green_1m_seen", 0)),
+        "first_3m_green_rate_pct": _rate_pct(bucket.get("green_3m_hits", 0), bucket.get("green_3m_seen", 0)),
+        "first_5m_green_rate_pct": _rate_pct(bucket.get("green_5m_hits", 0), bucket.get("green_5m_seen", 0)),
+        "avg_mfe_pct": _avg_or_none(bucket.get("mfe_sum", 0.0), bucket.get("mfe_count", 0)),
+        "avg_mae_pct": _avg_or_none(bucket.get("mae_sum", 0.0), bucket.get("mae_count", 0)),
+        "avg_hold_seconds": _avg_or_none(bucket.get("hold_sum", 0.0), bucket.get("hold_count", 0)),
+        "avg_slippage_bps": _avg_or_none(bucket.get("slippage_sum", 0.0), bucket.get("slippage_count", 0)),
+    }
+
+
+def _avg_or_none(total: float, count: int) -> Optional[float]:
+    if not count:
+        return None
+    return round(float(total) / float(count), 4)
+
+
+def _rate_pct(hits: int, seen: int) -> Optional[float]:
+    if not seen:
+        return None
+    return round((float(hits) / float(seen)) * 100.0, 1)
+
+
+def _directional_trade_move_pct(trade: Dict, observed_price: float) -> float:
+    entry_price = float(trade.get("entry_price", 0) or 0)
+    if entry_price <= 0 or observed_price <= 0:
+        return 0.0
+    side = str(trade.get("side", "sell") or "sell").lower()
+    if side in ("sell_short", "short", "buy_to_cover"):
+        return ((entry_price - observed_price) / entry_price) * 100.0
+    return ((observed_price - entry_price) / entry_price) * 100.0
+
+
+def _current_day_key() -> str:
+    try:
+        import zoneinfo
+
+        return datetime.now(zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+    except Exception:
+        return datetime.now().strftime("%Y-%m-%d")
+
+
+def _trade_day_key(trade: Dict) -> str:
+    ts = float(trade.get("exit_time", trade.get("recorded_at", 0)) or 0)
+    if ts <= 0:
+        return ""
+    try:
+        import zoneinfo
+
+        return datetime.fromtimestamp(ts, zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+    except Exception:
+        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
 
 
 def _trade_return(trade: Dict) -> Optional[float]:

@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 from loguru import logger
 from dotenv import load_dotenv
@@ -1715,6 +1715,69 @@ class TradingBot:
             "signal_to_fill_ms": signal_to_fill_ms,
         }
 
+    @staticmethod
+    def _directional_move_pct(position: dict, current_price: float) -> float:
+        entry_price = float(position.get("entry_price", 0) or 0)
+        if entry_price <= 0 or current_price <= 0:
+            return 0.0
+        if position.get("side", "long") == "short":
+            return ((entry_price - current_price) / entry_price) * 100.0
+        return ((current_price - entry_price) / entry_price) * 100.0
+
+    def _update_position_trade_telemetry(
+        self,
+        position: dict,
+        current_price: float,
+        now_ts: Optional[float] = None,
+    ):
+        if not position:
+            return
+        entry_price = float(position.get("entry_price", 0) or 0)
+        entry_time = float(position.get("entry_time", 0) or 0)
+        current_price = float(current_price or 0)
+        if entry_price <= 0 or entry_time <= 0 or current_price <= 0:
+            return
+
+        if now_ts is None:
+            now_ts = time.time()
+        elapsed = max(0.0, float(now_ts) - entry_time)
+        move_pct = self._directional_move_pct(position, current_price)
+        position["current_price"] = current_price
+
+        for seconds, field in ((60, "price_at_1m"), (180, "price_at_3m"), (300, "price_at_5m")):
+            if elapsed >= seconds and position.get(field) is None:
+                position[field] = current_price
+
+        if move_pct > 0 and position.get("time_to_green_seconds") is None:
+            position["time_to_green_seconds"] = int(round(elapsed))
+
+        current_mfe = position.get("mfe_pct")
+        if current_mfe is None or move_pct > float(current_mfe):
+            position["mfe_pct"] = round(move_pct, 4)
+            position["time_to_peak_seconds"] = int(round(elapsed))
+
+        current_mae = position.get("mae_pct")
+        if current_mae is None or move_pct < float(current_mae):
+            position["mae_pct"] = round(move_pct, 4)
+
+    @staticmethod
+    def _merge_anomaly_flags(*sources) -> list:
+        merged = []
+        seen = set()
+        for source in sources:
+            values = source
+            if isinstance(values, str):
+                values = [v.strip() for v in values.split(",") if v.strip()]
+            if not isinstance(values, list):
+                continue
+            for flag in values:
+                key = str(flag or "").strip()
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                merged.append(key)
+        return merged
+
     def _passes_fast_path_deterministic_screen(self, symbol: str, price: float, pct_change: float, volume_spike: float):
         if not getattr(settings, "FAST_PATH_ENABLED", True):
             return False, "disabled"
@@ -1859,6 +1922,8 @@ class TradingBot:
                 "signal_price": price,
                 "decision_price": price,
                 "signal_timestamp": signal_timestamp,
+                "entry_path": "fast_path",
+                "anomaly_flags": [],
                 "change_pct": pct_change,
                 "volume_spike": volume_spike,
             }
@@ -2081,6 +2146,8 @@ class TradingBot:
             sentiment_data["decision_price"] = signal_price
             sentiment_data["signal_sources"] = signal_sources
             sentiment_data["signal_timestamp"] = signal_timestamp
+            sentiment_data["entry_path"] = "jury"
+            sentiment_data["anomaly_flags"] = list(sentiment_data.get("anomaly_flags", []) or [])
             if congress_scanner and not candidate.get("congress_trades"):
                 related_congress = [
                     trade for trade in getattr(congress_scanner, "_trades", [])
@@ -2354,15 +2421,55 @@ class TradingBot:
         if self.entry_manager and symbol and asset_type != "option":
             position = self.entry_manager.positions.get(symbol)
             if position:
-                for field in (
+                exit_price = float(
+                    trade_record.get("exit_price", trade_record.get("fill_price", position.get("current_price", 0)))
+                    or 0
+                )
+                exit_time = float(trade_record.get("exit_time", time.time()) or time.time())
+                if exit_price > 0:
+                    self._update_position_trade_telemetry(position, exit_price, now_ts=exit_time)
+                merge_fields = (
+                    "entry_path",
+                    "intended_notional",
+                    "actual_notional",
+                    "intended_qty",
+                    "actual_qty",
+                    "price_at_1m",
+                    "price_at_3m",
+                    "price_at_5m",
+                    "time_to_green_seconds",
+                    "time_to_peak_seconds",
+                    "mfe_pct",
+                    "mae_pct",
                     "copy_trader_context",
                     "copy_trader_handles",
                     "copy_trader_signal_count",
                     "copy_trader_convergence",
                     "copy_trader_weight",
-                ):
-                    if trade_record.get(field) in (None, "", [], {}):
-                        trade_record[field] = position.get(field)
+                )
+                for field in merge_fields:
+                    pos_value = position.get(field)
+                    current_value = trade_record.get(field)
+                    if pos_value in (None, "", [], {}):
+                        continue
+                    if field == "entry_path":
+                        if current_value in (None, "", "unknown"):
+                            trade_record[field] = pos_value
+                    elif field in ("intended_notional", "actual_notional", "intended_qty", "actual_qty"):
+                        if current_value in (None, "") or float(current_value or 0) <= 0:
+                            trade_record[field] = pos_value
+                    elif field in ("copy_trader_signal_count", "copy_trader_convergence"):
+                        if current_value in (None, "") or int(current_value or 0) <= 0:
+                            trade_record[field] = pos_value
+                    elif field == "copy_trader_weight":
+                        if current_value in (None, "") or float(current_value or 0) == 0:
+                            trade_record[field] = pos_value
+                    elif current_value in (None, "", [], {}):
+                        trade_record[field] = pos_value
+                trade_record["anomaly_flags"] = self._merge_anomaly_flags(
+                    position.get("anomaly_flags", []),
+                    trade_record.get("anomaly_flags", []),
+                )
 
         trade_history.record_trade(trade_record)
         if self.entry_manager and symbol and asset_type != "option":
@@ -2654,6 +2761,19 @@ class TradingBot:
                     broker_qty = float(broker_pos.get("quantity", 0) or 0)
                     if abs(float(pos.get("quantity", 0) or 0) - broker_qty) > 1e-6:
                         pos["quantity"] = broker_qty
+                        pos["actual_qty"] = broker_qty
+                        pos["actual_notional"] = float(pos.get("entry_price", 0) or 0) * broker_qty
+                    broker_price = float(
+                        broker_pos.get("current_price", pos.get("current_price", 0))
+                        or pos.get("current_price", 0)
+                    )
+                    if broker_price <= 0:
+                        broker_price = float(
+                            broker_pos.get("current_price", broker_pos.get("avg_entry_price", pos.get("entry_price", 0)))
+                            or pos.get("entry_price", 0)
+                        )
+                    if broker_price > 0:
+                        self._update_position_trade_telemetry(pos, broker_price)
                 if pos.get("halted"):
                     logger.debug(f"{symbol}: market halted — skipping monitor checks")
                     continue

@@ -11,6 +11,7 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t = dict(trade)
     t.setdefault("asset_type", "equity")
     t.setdefault("strategy_tag", "unknown")
+    t.setdefault("entry_path", "unknown")
 
     sources = t.get("signal_sources", [])
     if isinstance(sources, str):
@@ -18,6 +19,13 @@ def normalize_trade_record(trade: Dict) -> Dict:
     if not isinstance(sources, list):
         sources = []
     t["signal_sources"] = sources or ["unknown"]
+
+    anomaly_flags = t.get("anomaly_flags", [])
+    if isinstance(anomaly_flags, str):
+        anomaly_flags = [f.strip() for f in anomaly_flags.split(",") if f.strip()]
+    if not isinstance(anomaly_flags, list):
+        anomaly_flags = []
+    t["anomaly_flags"] = anomaly_flags
 
     t.setdefault("decision_confidence", 0)
     t.setdefault("provider_used", "")
@@ -31,6 +39,17 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t.setdefault("fill_timestamp_source", "unknown")
     t.setdefault("signal_to_order_ms", None)
     t.setdefault("signal_to_fill_ms", None)
+    t.setdefault("intended_notional", 0.0)
+    t.setdefault("actual_notional", float(t.get("entry_price", 0) or 0) * float(t.get("quantity", 0) or 0))
+    t.setdefault("intended_qty", float(t.get("quantity", 0) or 0))
+    t.setdefault("actual_qty", float(t.get("quantity", 0) or 0))
+    t.setdefault("price_at_1m", None)
+    t.setdefault("price_at_3m", None)
+    t.setdefault("price_at_5m", None)
+    t.setdefault("time_to_green_seconds", None)
+    t.setdefault("time_to_peak_seconds", None)
+    t.setdefault("mfe_pct", None)
+    t.setdefault("mae_pct", None)
     if t.get("asset_type") == "option":
         t.setdefault("contract_symbol", t.get("symbol", ""))
         t.setdefault("entry_premium", t.get("entry_price", 0))

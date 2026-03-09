@@ -23,6 +23,13 @@ _provider_timestamps: Dict[str, list] = {
 _api_calls: Dict[str, int] = {"claude": 0, "gpt": 0, "grok": 0, "perplexity": 0}
 _provider_backoff_until: Dict[str, float] = {}
 _provider_backoff_seconds: Dict[str, int] = {}
+_api_token_usage: Dict[str, Dict[str, float]] = {
+    "claude": {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
+    "gpt": {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
+    "grok": {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
+    "perplexity": {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
+}
+_api_usage_day: str = ""
 
 # Per-provider limits per hour (conservative defaults under actual API limits)
 _PROVIDER_LIMITS: Dict[str, int] = {
@@ -36,7 +43,172 @@ TIMEOUT = 45
 
 
 def get_api_stats() -> Dict:
+    _roll_usage_day_if_needed()
     return dict(_api_calls)
+
+
+def get_api_cost_stats() -> Dict:
+    _roll_usage_day_if_needed()
+    per_provider = {}
+    total_cost = 0.0
+    total_prompt_tokens = 0
+    total_completion_tokens = 0
+    total_reasoning_tokens = 0
+    total_calls = 0
+    for provider in _api_calls:
+        usage = _api_token_usage.get(provider, {})
+        provider_cost = float(usage.get("cost_usd", 0.0) or 0.0)
+        prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
+        completion_tokens = int(usage.get("completion_tokens", 0) or 0)
+        reasoning_tokens = int(usage.get("reasoning_tokens", 0) or 0)
+        calls = int(_api_calls.get(provider, 0) or 0)
+        total_cost += provider_cost
+        total_prompt_tokens += prompt_tokens
+        total_completion_tokens += completion_tokens
+        total_reasoning_tokens += reasoning_tokens
+        total_calls += calls
+        per_provider[provider] = {
+            "calls": calls,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "reasoning_tokens": reasoning_tokens,
+            "estimated_cost_usd": round(provider_cost, 6),
+        }
+    return {
+        "day": _api_usage_day or _current_cost_day(),
+        "total_calls": total_calls,
+        "prompt_tokens": total_prompt_tokens,
+        "completion_tokens": total_completion_tokens,
+        "reasoning_tokens": total_reasoning_tokens,
+        "estimated_cost_usd": round(total_cost, 6),
+        "per_provider": per_provider,
+    }
+
+
+def _current_cost_day() -> str:
+    from datetime import datetime
+
+    try:
+        import zoneinfo
+
+        return datetime.now(zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+    except Exception:
+        return datetime.now().strftime("%Y-%m-%d")
+
+
+def _roll_usage_day_if_needed():
+    global _api_usage_day
+    current = _current_cost_day()
+    if _api_usage_day == current:
+        return
+    _api_usage_day = current
+    for provider in _api_calls:
+        _api_calls[provider] = 0
+        usage = _api_token_usage.setdefault(
+            provider,
+            {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
+        )
+        usage["prompt_tokens"] = 0.0
+        usage["completion_tokens"] = 0.0
+        usage["reasoning_tokens"] = 0.0
+        usage["cost_usd"] = 0.0
+
+
+def _provider_cost_config(provider: str) -> Dict[str, float]:
+    if provider == "claude":
+        return {
+            "input_per_mtok": float(getattr(settings, "CLAUDE_INPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "output_per_mtok": float(getattr(settings, "CLAUDE_OUTPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "request_cost_usd": 0.0,
+        }
+    if provider == "gpt":
+        return {
+            "input_per_mtok": float(getattr(settings, "OPENAI_INPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "output_per_mtok": float(getattr(settings, "OPENAI_OUTPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "request_cost_usd": 0.0,
+        }
+    if provider == "grok":
+        return {
+            "input_per_mtok": float(getattr(settings, "XAI_INPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "output_per_mtok": float(getattr(settings, "XAI_OUTPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "request_cost_usd": 0.0,
+        }
+    if provider == "perplexity":
+        return {
+            "input_per_mtok": float(getattr(settings, "PERPLEXITY_INPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "output_per_mtok": float(getattr(settings, "PERPLEXITY_OUTPUT_COST_PER_MTOK", 0.0) or 0.0),
+            "request_cost_usd": float(getattr(settings, "PERPLEXITY_REQUEST_COST_USD", 0.0) or 0.0),
+        }
+    return {"input_per_mtok": 0.0, "output_per_mtok": 0.0, "request_cost_usd": 0.0}
+
+
+def _extract_usage_metrics(provider: str, payload: Dict) -> Dict[str, float]:
+    usage = payload.get("usage") or {}
+    prompt_tokens = 0.0
+    completion_tokens = 0.0
+    reasoning_tokens = 0.0
+    exact_cost_usd = 0.0
+
+    if provider == "claude":
+        prompt_tokens = float(usage.get("input_tokens", 0) or 0)
+        completion_tokens = float(usage.get("output_tokens", 0) or 0)
+        cache_creation = float(usage.get("cache_creation_input_tokens", 0) or 0)
+        cache_read = float(usage.get("cache_read_input_tokens", 0) or 0)
+        prompt_tokens += cache_creation + cache_read
+    else:
+        prompt_tokens = float(usage.get("prompt_tokens", usage.get("input_tokens", 0)) or 0)
+        completion_tokens = float(usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0)
+
+    completion_details = usage.get("completion_tokens_details") or {}
+    reasoning_tokens = float(
+        completion_details.get("reasoning_tokens", usage.get("reasoning_tokens", 0)) or 0
+    )
+
+    if provider == "grok":
+        cost_ticks = usage.get("cost_in_usd_ticks")
+        if cost_ticks is not None:
+            try:
+                exact_cost_usd = float(cost_ticks) / 1_000_000.0
+            except Exception:
+                exact_cost_usd = 0.0
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "reasoning_tokens": reasoning_tokens,
+        "exact_cost_usd": exact_cost_usd,
+    }
+
+
+def _record_api_usage(provider: str, payload: Dict):
+    _roll_usage_day_if_needed()
+    usage_metrics = _extract_usage_metrics(provider, payload)
+    usage = _api_token_usage.setdefault(
+        provider,
+        {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
+    )
+    usage["prompt_tokens"] += usage_metrics["prompt_tokens"]
+    usage["completion_tokens"] += usage_metrics["completion_tokens"]
+    usage["reasoning_tokens"] += usage_metrics["reasoning_tokens"]
+
+    exact_cost_usd = float(usage_metrics.get("exact_cost_usd", 0.0) or 0.0)
+    if exact_cost_usd > 0:
+        usage["cost_usd"] += exact_cost_usd
+        return
+
+    config = _provider_cost_config(provider)
+    estimated_cost = (
+        usage_metrics["prompt_tokens"] / 1_000_000.0 * config["input_per_mtok"]
+        + usage_metrics["completion_tokens"] / 1_000_000.0 * config["output_per_mtok"]
+        + config["request_cost_usd"]
+    )
+    usage["cost_usd"] += estimated_cost
+
+
+def provider_is_backing_off(provider: str, now: Optional[float] = None) -> bool:
+    if now is None:
+        now = time.time()
+    return float(_provider_backoff_until.get(provider, 0.0) or 0.0) > now
 
 
 def _get_eastern_hour() -> int:
@@ -153,8 +325,11 @@ async def call_claude(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["claude"] += 1
-            text = resp.json()["content"][0]["text"]
+            _record_api_usage("claude", payload)
+            text = payload["content"][0]["text"]
             return parse_json(text)
     except Exception as e:
         logger.error(f"Claude API error: {e}")
@@ -184,8 +359,11 @@ async def call_claude_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["claude"] += 1
-            return str(resp.json()["content"][0]["text"]).strip()
+            _record_api_usage("claude", payload)
+            return str(payload["content"][0]["text"]).strip()
     except Exception as e:
         logger.error(f"Claude API error: {e}")
         return None
@@ -213,8 +391,11 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["gpt"] += 1
-            text = resp.json()["choices"][0]["message"]["content"]
+            _record_api_usage("gpt", payload)
+            text = payload["choices"][0]["message"]["content"]
             return parse_json(text)
     except Exception as e:
         logger.error(f"GPT API error: {e}")
@@ -243,8 +424,11 @@ async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["gpt"] += 1
-            return str(resp.json()["choices"][0]["message"]["content"]).strip()
+            _record_api_usage("gpt", payload)
+            return str(payload["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         logger.error(f"GPT API error: {e}")
         return None
@@ -273,8 +457,11 @@ async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["grok"] += 1
-            text = resp.json()["choices"][0]["message"]["content"]
+            _record_api_usage("grok", payload)
+            text = payload["choices"][0]["message"]["content"]
             return parse_json(text)
     except Exception as e:
         logger.error(f"Grok API error: {e}")
@@ -303,8 +490,11 @@ async def call_perplexity(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["perplexity"] += 1
-            text = resp.json()["choices"][0]["message"]["content"]
+            _record_api_usage("perplexity", payload)
+            text = payload["choices"][0]["message"]["content"]
             return parse_json(text)
     except Exception as e:
         logger.error(f"Perplexity API error: {e}")
@@ -333,8 +523,11 @@ async def call_perplexity_text(prompt: str, max_tokens: int = 900) -> Optional[s
                 },
             )
             resp.raise_for_status()
+            payload = resp.json()
+            _roll_usage_day_if_needed()
             _api_calls["perplexity"] += 1
-            return str(resp.json()["choices"][0]["message"]["content"]).strip()
+            _record_api_usage("perplexity", payload)
+            return str(payload["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         logger.error(f"Perplexity API error: {e}")
         return None

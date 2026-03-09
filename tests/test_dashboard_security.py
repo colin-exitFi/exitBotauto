@@ -86,3 +86,45 @@ class DashboardSecurityTests(unittest.TestCase):
                 self.assertEqual(payload["unusual_whales_focus"][0]["symbol"], "NVDA")
         finally:
             dashboard_module.set_bot(None)
+
+    def test_pnl_endpoint_includes_clean_pnl_and_api_costs(self):
+        class _EntryManager:
+            def get_positions(self):
+                return []
+
+        class _Bot:
+            pnl_state = {
+                "total_realized_pnl": 25.0,
+                "today_realized_pnl": 25.0,
+                "starting_equity": 25000.0,
+                "peak_equity": 25125.0,
+                "total_trades": 2,
+                "winning_trades": 1,
+                "losing_trades": 1,
+                "best_trade": 40.0,
+                "worst_trade": -15.0,
+            }
+            alpaca_client = None
+            entry_manager = _EntryManager()
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
+                 patch("src.ai.trade_history.get_analytics", return_value={
+                     "overall": {"avg_signal_to_fill_ms": 220.0},
+                     "today": {"raw_pnl": 18.0, "clean_pnl": 12.0, "anomaly_count": 1},
+                 }), \
+                 patch("src.dashboard.dashboard.get_api_cost_stats", return_value={
+                     "estimated_cost_usd": 3.75,
+                     "per_provider": {"claude": {"calls": 10}},
+                 }):
+                client = TestClient(dashboard_module.app)
+                resp = client.get("/api/pnl?token=secret-token")
+                self.assertEqual(resp.status_code, 200)
+                payload = resp.json()
+                self.assertEqual(payload["clean_realized"], 12.0)
+                self.assertEqual(payload["raw_realized_today"], 18.0)
+                self.assertEqual(payload["today_anomaly_count"], 1)
+                self.assertEqual(payload["api_cost_estimate_usd"], 3.75)
+        finally:
+            dashboard_module.set_bot(None)

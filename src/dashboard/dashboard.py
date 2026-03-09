@@ -19,7 +19,12 @@ import uvicorn
 from loguru import logger
 
 from config import settings
-from src.agents.base_agent import call_claude_text, call_gpt_text, call_perplexity_text
+from src.agents.base_agent import (
+    call_claude_text,
+    call_gpt_text,
+    call_perplexity_text,
+    get_api_cost_stats,
+)
 from src.data import strategy_controls
 
 app = FastAPI(title="Velox", version="2.0.0")
@@ -855,13 +860,19 @@ async def get_pnl():
     win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     drawdown = ((peak - equity) / peak * 100) if peak > 0 else 0
     roi = ((equity - starting) / starting * 100) if starting > 0 else 0
+    analytics = {}
     avg_signal_to_fill_ms = None
+    api_costs = {}
     try:
         from src.ai import trade_history
         analytics = trade_history.get_analytics()
         avg_signal_to_fill_ms = (analytics.get("overall", {}) or {}).get("avg_signal_to_fill_ms")
     except Exception:
         avg_signal_to_fill_ms = None
+    try:
+        api_costs = get_api_cost_stats()
+    except Exception:
+        api_costs = {}
 
     return {
         "equity": round(equity, 2),
@@ -880,6 +891,11 @@ async def get_pnl():
         "best_trade": round(best, 2),
         "worst_trade": round(worst, 2),
         "avg_signal_to_fill_ms": avg_signal_to_fill_ms,
+        "clean_realized": round((analytics.get("today", {}) or {}).get("clean_pnl", 0.0), 2),
+        "raw_realized_today": round((analytics.get("today", {}) or {}).get("raw_pnl", 0.0), 2),
+        "today_anomaly_count": int((analytics.get("today", {}) or {}).get("anomaly_count", 0) or 0),
+        "api_cost_estimate_usd": round(float(api_costs.get("estimated_cost_usd", 0.0) or 0.0), 6),
+        "api_costs": api_costs,
         "drawdown_pct": round(drawdown, 2),
         "roi_pct": round(roi, 2),
         "open_positions": len(_bot.entry_manager.get_positions()) if _bot and _bot.entry_manager else 0,
@@ -939,6 +955,11 @@ async def get_intelligence():
 
     if hasattr(_bot, "unusual_whales_stream") and _bot.unusual_whales_stream:
         result["unusual_whales_stream"] = _bot.unusual_whales_stream.get_stats()
+
+    try:
+        result["api_costs"] = get_api_cost_stats()
+    except Exception:
+        result["api_costs"] = {}
 
     if hasattr(_bot, "scanner") and _bot.scanner:
         focus_rows = []
