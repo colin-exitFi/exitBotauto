@@ -23,6 +23,16 @@ class UnusualWhalesClient:
         self.timeout = timeout
         self._cache: Dict[Tuple, Tuple[float, object]] = {}
         self._default_flow_premium = 100_000
+        self._usage_stats: Dict[str, object] = {
+            "configured": bool(self.api_token),
+            "last_request_path": "",
+            "last_request_at": 0.0,
+            "daily_request_count": 0,
+            "minute_request_count": 0,
+            "minute_remaining": 0,
+            "minute_reset": 0,
+            "daily_limit": 0,
+        }
         if self.api_token:
             logger.info("Unusual Whales client initialized")
         else:
@@ -36,6 +46,24 @@ class UnusualWhalesClient:
             "Authorization": f"Bearer {self.api_token}",
             "UW-CLIENT-API-ID": self.CLIENT_API_ID,
         }
+
+    def _update_usage_stats(self, headers: Dict[str, str], path: str):
+        self._usage_stats.update(
+            {
+                "configured": bool(self.api_token),
+                "last_request_path": path,
+                "last_request_at": time.time(),
+                "daily_request_count": self._to_int(headers.get("x-uw-daily-req-count")),
+                "minute_request_count": self._to_int(headers.get("x-uw-minute-req-counter")),
+                "minute_remaining": self._to_int(headers.get("x-uw-req-per-minute-remaining")),
+                "minute_reset": self._to_int(headers.get("x-uw-req-per-minute-reset")),
+                "daily_limit": self._to_int(headers.get("x-uw-token-req-limit")),
+                "request_id": str(headers.get("x-request-id") or ""),
+            }
+        )
+
+    def get_usage_stats(self) -> Dict[str, object]:
+        return dict(self._usage_stats)
 
     def _get_cached(self, cache_key: Tuple, ttl_seconds: int):
         cached = self._cache.get(cache_key)
@@ -72,6 +100,7 @@ class UnusualWhalesClient:
         try:
             response = httpx.get(url, headers=self._headers(), params=params or {}, timeout=self.timeout)
             response.raise_for_status()
+            self._update_usage_stats(response.headers, path)
             payload = response.json()
             if isinstance(payload, dict) and "data" in payload:
                 return payload.get("data") or []
@@ -106,6 +135,23 @@ class UnusualWhalesClient:
             return "bullish"
         if raw in ("bear", "bearish", "sell", "sold"):
             return "bearish"
+        tags = item.get("tags") or []
+        if isinstance(tags, list):
+            lowered_tags = {str(tag).strip().lower() for tag in tags}
+            if "bullish" in lowered_tags:
+                return "bullish"
+            if "bearish" in lowered_tags:
+                return "bearish"
+            if "ask_side" in lowered_tags:
+                if option_type == "call":
+                    return "bullish"
+                if option_type == "put":
+                    return "bearish"
+            if "bid_side" in lowered_tags:
+                if option_type == "call":
+                    return "bearish"
+                if option_type == "put":
+                    return "bullish"
         if option_type == "call":
             return "bullish"
         if option_type == "put":
@@ -336,6 +382,208 @@ class UnusualWhalesClient:
             "raw": record,
         }
 
+    def _normalize_option_screener(self, records: List[Dict]) -> List[Dict]:
+        normalized = []
+        for record in records or []:
+            ticker = self._extract_ticker(record)
+            if not ticker:
+                continue
+            option_type = self._normalize_option_type(record)
+            volume = self._to_int(record.get("volume"))
+            open_interest = self._to_int(record.get("open_interest") or record.get("oi"))
+            ask_side_volume = self._to_int(record.get("ask_side_volume") or record.get("ask_vol"))
+            bid_side_volume = self._to_int(record.get("bid_side_volume") or record.get("bid_vol"))
+            ask_side_pct = self._to_float(record.get("ask_side_perc") or record.get("ask_side_perc_7_day"))
+            if ask_side_pct <= 0 and volume > 0 and ask_side_volume > 0:
+                ask_side_pct = ask_side_volume / max(volume, 1)
+            bid_side_pct = self._to_float(record.get("bid_side_perc") or record.get("bid_side_perc_7_day"))
+            if bid_side_pct <= 0 and volume > 0 and bid_side_volume > 0:
+                bid_side_pct = bid_side_volume / max(volume, 1)
+            premium = self._to_float(record.get("premium") or record.get("notional"))
+            normalized.append(
+                {
+                    "ticker": ticker,
+                    "contract_symbol": str(record.get("option_symbol") or record.get("contract_symbol") or ""),
+                    "type": option_type,
+                    "sentiment": self._normalize_sentiment(record, option_type=option_type),
+                    "premium": premium,
+                    "volume": volume,
+                    "open_interest": open_interest,
+                    "vol_to_oi": round(volume / max(open_interest, 1), 3) if volume > 0 and open_interest > 0 else 0.0,
+                    "is_new_position": bool(volume > 0 and open_interest > 0 and volume > open_interest),
+                    "ask_side_volume": ask_side_volume,
+                    "bid_side_volume": bid_side_volume,
+                    "ask_side_pct": round(ask_side_pct, 4) if ask_side_pct else 0.0,
+                    "bid_side_pct": round(bid_side_pct, 4) if bid_side_pct else 0.0,
+                    "strike": self._to_float(record.get("strike") or record.get("strike_price")),
+                    "expiry": str(record.get("expiry") or record.get("expiration") or ""),
+                    "stock_price": self._to_float(record.get("stock_price") or record.get("underlying_price")),
+                    "avg_price": self._to_float(record.get("avg_price") or record.get("price")),
+                    "delta": self._to_float(record.get("delta")),
+                    "implied_volatility": self._to_float(record.get("implied_volatility") or record.get("iv")),
+                    "sector": str(record.get("sector") or ""),
+                    "issue_type": str(record.get("issue_type") or ""),
+                    "next_earnings_date": str(record.get("next_earnings_date") or ""),
+                    "timestamp": str(record.get("last_fill") or record.get("executed_at") or ""),
+                    "raw": record,
+                }
+            )
+        return normalized
+
+    def _normalize_net_premium_ticks(self, records) -> List[Dict]:
+        rows = records if isinstance(records, list) else ([records] if records else [])
+        normalized = []
+        for record in rows:
+            if not isinstance(record, dict):
+                continue
+            normalized.append(
+                {
+                    "date": str(record.get("date") or ""),
+                    "tape_time": str(record.get("tape_time") or record.get("time") or ""),
+                    "call_volume": self._to_int(record.get("call_volume")),
+                    "put_volume": self._to_int(record.get("put_volume")),
+                    "call_volume_ask_side": self._to_int(record.get("call_volume_ask_side")),
+                    "call_volume_bid_side": self._to_int(record.get("call_volume_bid_side")),
+                    "put_volume_ask_side": self._to_int(record.get("put_volume_ask_side")),
+                    "put_volume_bid_side": self._to_int(record.get("put_volume_bid_side")),
+                    "net_call_volume": self._to_float(record.get("net_call_volume")),
+                    "net_put_volume": self._to_float(record.get("net_put_volume")),
+                    "net_call_premium": self._to_float(record.get("net_call_premium")),
+                    "net_put_premium": self._to_float(record.get("net_put_premium")),
+                    "net_delta": self._to_float(record.get("net_delta")),
+                    "raw": record,
+                }
+            )
+        return normalized
+
+    def _normalize_interpolated_iv(self, records) -> List[Dict]:
+        rows = records if isinstance(records, list) else ([records] if records else [])
+        normalized = []
+        for record in rows:
+            if not isinstance(record, dict):
+                continue
+            normalized.append(
+                {
+                    "date": str(record.get("date") or ""),
+                    "days": self._to_int(record.get("days")),
+                    "percentile": self._to_float(record.get("percentile")),
+                    "volatility": self._to_float(record.get("volatility")),
+                    "implied_move_pct": self._to_float(record.get("implied_move_perc")),
+                    "raw": record,
+                }
+            )
+        normalized.sort(key=lambda row: (row.get("days", 0), row.get("date", "")))
+        return normalized
+
+    def _normalize_options_volume(self, records) -> List[Dict]:
+        rows = records if isinstance(records, list) else ([records] if records else [])
+        normalized = []
+        for record in rows:
+            if not isinstance(record, dict):
+                continue
+            call_premium = self._to_float(record.get("call_premium"))
+            put_premium = self._to_float(record.get("put_premium"))
+            bullish_premium = self._to_float(record.get("bullish_premium"))
+            bearish_premium = self._to_float(record.get("bearish_premium"))
+            call_volume = self._to_int(record.get("call_volume"))
+            put_volume = self._to_int(record.get("put_volume"))
+            call_put_ratio = round(call_volume / max(put_volume, 1), 3) if (call_volume > 0 or put_volume > 0) else 0.0
+            premium_ratio = round(call_premium / max(put_premium, 1.0), 3) if (call_premium > 0 or put_premium > 0) else 0.0
+            bias = "neutral"
+            if bullish_premium > bearish_premium * 1.1 or call_premium > put_premium * 1.1:
+                bias = "bullish"
+            elif bearish_premium > bullish_premium * 1.1 or put_premium > call_premium * 1.1:
+                bias = "bearish"
+            normalized.append(
+                {
+                    "date": str(record.get("date") or ""),
+                    "call_volume": call_volume,
+                    "put_volume": put_volume,
+                    "call_volume_ask_side": self._to_int(record.get("call_volume_ask_side")),
+                    "call_volume_bid_side": self._to_int(record.get("call_volume_bid_side")),
+                    "put_volume_ask_side": self._to_int(record.get("put_volume_ask_side")),
+                    "put_volume_bid_side": self._to_int(record.get("put_volume_bid_side")),
+                    "call_premium": call_premium,
+                    "put_premium": put_premium,
+                    "bullish_premium": bullish_premium,
+                    "bearish_premium": bearish_premium,
+                    "call_put_ratio": call_put_ratio,
+                    "premium_ratio": premium_ratio,
+                    "call_open_interest": self._to_int(record.get("call_open_interest")),
+                    "put_open_interest": self._to_int(record.get("put_open_interest")),
+                    "bias": bias,
+                    "raw": record,
+                }
+            )
+        return normalized
+
+    @staticmethod
+    def summarize_option_screener(records: List[Dict]) -> List[Dict]:
+        by_ticker: Dict[str, Dict] = {}
+        for record in records or []:
+            ticker = str(record.get("ticker", "")).upper()
+            if not ticker:
+                continue
+            bucket = by_ticker.setdefault(
+                ticker,
+                {
+                    "ticker": ticker,
+                    "contracts": 0,
+                    "total_premium": 0.0,
+                    "bullish_premium": 0.0,
+                    "bearish_premium": 0.0,
+                    "avg_ask_side_pct": 0.0,
+                    "avg_vol_to_oi": 0.0,
+                    "new_position_contracts": 0,
+                },
+            )
+            bucket["contracts"] += 1
+            premium = float(record.get("premium", 0.0) or 0.0)
+            bucket["total_premium"] += premium
+            bucket["avg_ask_side_pct"] += float(record.get("ask_side_pct", 0.0) or 0.0)
+            bucket["avg_vol_to_oi"] += float(record.get("vol_to_oi", 0.0) or 0.0)
+            if record.get("is_new_position"):
+                bucket["new_position_contracts"] += 1
+            sentiment = str(record.get("sentiment") or "")
+            if sentiment == "bullish":
+                bucket["bullish_premium"] += premium
+            elif sentiment == "bearish":
+                bucket["bearish_premium"] += premium
+
+        summaries = []
+        for ticker, bucket in by_ticker.items():
+            contracts = int(bucket["contracts"] or 0)
+            avg_ask_side_pct = bucket["avg_ask_side_pct"] / max(contracts, 1)
+            avg_vol_to_oi = bucket["avg_vol_to_oi"] / max(contracts, 1)
+            bullish = bucket["bullish_premium"]
+            bearish = bucket["bearish_premium"]
+            bias = "neutral"
+            if bullish > bearish * 1.1:
+                bias = "bullish"
+            elif bearish > bullish * 1.1:
+                bias = "bearish"
+            summaries.append(
+                {
+                    "ticker": ticker,
+                    "contracts": contracts,
+                    "total_premium": round(bucket["total_premium"], 2),
+                    "bullish_premium": round(bullish, 2),
+                    "bearish_premium": round(bearish, 2),
+                    "avg_ask_side_pct": round(avg_ask_side_pct, 3),
+                    "avg_vol_to_oi": round(avg_vol_to_oi, 3),
+                    "new_position_contracts": bucket["new_position_contracts"],
+                    "bias": bias,
+                }
+            )
+        summaries.sort(
+            key=lambda row: (
+                float(row.get("total_premium", 0.0) or 0.0),
+                int(row.get("contracts", 0) or 0),
+            ),
+            reverse=True,
+        )
+        return summaries
+
     def get_flow_alerts(self, min_premium: int = 100_000, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         cache_key = ("flow_alerts", min_premium, (symbol or "").upper(), limit)
         cached = self._get_cached(cache_key, ttl_seconds=60)
@@ -350,6 +598,22 @@ class UnusualWhalesClient:
             params["ticker_symbol"] = str(symbol).upper()
         records = self._request("/api/option-trades/flow-alerts", params=params)
         return self._set_cached(cache_key, self._normalize_flow_alerts(records))
+
+    def get_flow_recent(self, symbol: str, min_premium: int = 100_000, side: Optional[str] = None, limit: int = 100) -> List[Dict]:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return []
+        cache_key = ("flow_recent", ticker, int(min_premium or 0), str(side or "").lower(), int(limit or 100))
+        cached = self._get_cached(cache_key, ttl_seconds=60)
+        if cached is not None:
+            return cached
+
+        params = {"min_premium": int(min_premium)}
+        if side:
+            params["side"] = str(side).lower()
+        records = self._request(f"/api/stock/{ticker}/flow-recent", params=params)
+        normalized = self._normalize_flow_alerts(records)[: int(limit or 100)]
+        return self._set_cached(cache_key, normalized)
 
     def summarize_flow_for_symbol(self, symbol: str, min_premium: Optional[int] = None) -> Dict:
         alerts = self.get_flow_alerts(
@@ -376,6 +640,30 @@ class UnusualWhalesClient:
                 f"{len(alerts)} flow alerts; bullish ${bullish_premium:,.0f}; bearish ${bearish_premium:,.0f}; bias {bias}"
                 if alerts
                 else "No unusual flow"
+            ),
+        }
+
+    def summarize_recent_flow_for_symbol(self, symbol: str, min_premium: Optional[int] = None) -> Dict:
+        flows = self.get_flow_recent(symbol, min_premium=min_premium or self._default_flow_premium, limit=100)
+        bullish_premium = sum(a.get("premium", 0.0) for a in flows if a.get("sentiment") == "bullish")
+        bearish_premium = sum(a.get("premium", 0.0) for a in flows if a.get("sentiment") == "bearish")
+        bias = "neutral"
+        if bullish_premium > bearish_premium * 1.1:
+            bias = "bullish"
+        elif bearish_premium > bullish_premium * 1.1:
+            bias = "bearish"
+        return {
+            "ticker": str(symbol).upper(),
+            "has_flow": bool(flows),
+            "signals": flows,
+            "count": len(flows),
+            "bullish_premium": round(bullish_premium, 2),
+            "bearish_premium": round(bearish_premium, 2),
+            "bias": bias,
+            "summary": (
+                f"{len(flows)} recent flows; bullish ${bullish_premium:,.0f}; bearish ${bearish_premium:,.0f}; bias {bias}"
+                if flows
+                else "No recent ticker flow"
             ),
         }
 
@@ -408,6 +696,64 @@ class UnusualWhalesClient:
         records = self._request("/api/congress/recent-trades", params={"limit": int(limit)})
         return self._set_cached(cache_key, self._normalize_congress_trades(records))
 
+    def get_option_contract_screener(
+        self,
+        *,
+        limit: int = 50,
+        ticker_symbol: Optional[str] = None,
+        is_otm: Optional[bool] = None,
+        min_premium: Optional[int] = None,
+        min_volume: Optional[int] = None,
+        max_dte: Optional[int] = None,
+        min_dte: Optional[int] = None,
+        vol_greater_oi: Optional[bool] = None,
+        issue_types: Optional[List[str]] = None,
+        option_type: Optional[str] = None,
+        exclude_ex_div_ticker: Optional[bool] = None,
+    ) -> List[Dict]:
+        cache_key = (
+            "option_screener",
+            int(limit or 50),
+            str(ticker_symbol or "").upper(),
+            bool(is_otm) if is_otm is not None else None,
+            int(min_premium or 0),
+            int(min_volume or 0),
+            int(max_dte or 0),
+            int(min_dte or 0),
+            bool(vol_greater_oi) if vol_greater_oi is not None else None,
+            tuple(issue_types or []),
+            str(option_type or "").lower(),
+            bool(exclude_ex_div_ticker) if exclude_ex_div_ticker is not None else None,
+        )
+        cached = self._get_cached(cache_key, ttl_seconds=60)
+        if cached is not None:
+            return cached
+
+        params: Dict[str, object] = {"limit": int(limit or 50)}
+        if ticker_symbol:
+            params["ticker_symbol"] = str(ticker_symbol).upper()
+        if is_otm is not None:
+            params["is_otm"] = bool(is_otm)
+        if min_premium is not None:
+            params["min_premium"] = int(min_premium)
+        if min_volume is not None:
+            params["min_volume"] = int(min_volume)
+        if max_dte is not None:
+            params["max_dte"] = int(max_dte)
+        if min_dte is not None:
+            params["min_dte"] = int(min_dte)
+        if vol_greater_oi is not None:
+            params["vol_greater_oi"] = bool(vol_greater_oi)
+        if issue_types:
+            params["issue_types[]"] = issue_types
+        if option_type:
+            params["type"] = str(option_type).lower()
+        if exclude_ex_div_ticker is not None:
+            params["exclude_ex_div_ticker"] = bool(exclude_ex_div_ticker)
+
+        records = self._request("/api/screener/option-contracts", params=params)
+        return self._set_cached(cache_key, self._normalize_option_screener(records))
+
     def get_gamma_exposure(self, symbol: str) -> Dict:
         cache_key = ("gamma_exposure", str(symbol or "").upper())
         cached = self._get_cached(cache_key, ttl_seconds=300)
@@ -431,3 +777,109 @@ class UnusualWhalesClient:
         path = f"/api/insider/{ticker}/trades" if ticker else "/api/insider/recent-trades"
         records = self._request(path, params={"limit": int(limit)})
         return self._set_cached(cache_key, self._normalize_insider_trades(records))
+
+    def get_net_premium_ticks(self, symbol: str, date: Optional[str] = None) -> List[Dict]:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return []
+        cache_key = ("net_premium_ticks", ticker, str(date or ""))
+        cached = self._get_cached(cache_key, ttl_seconds=60)
+        if cached is not None:
+            return cached
+        params = {"date": date} if date else None
+        records = self._request(f"/api/stock/{ticker}/net-prem-ticks", params=params)
+        return self._set_cached(cache_key, self._normalize_net_premium_ticks(records))
+
+    def summarize_net_premium_ticks(self, symbol: str, date: Optional[str] = None) -> Dict:
+        ticks = self.get_net_premium_ticks(symbol, date=date)
+        if not ticks:
+            return {"ticker": str(symbol).upper(), "bias": "neutral", "summary": "No net premium ticks"}
+        last = ticks[-1]
+        call_premium = float(last.get("net_call_premium", 0.0) or 0.0)
+        put_premium = float(last.get("net_put_premium", 0.0) or 0.0)
+        net_delta = float(last.get("net_delta", 0.0) or 0.0)
+        bias = "neutral"
+        if call_premium > abs(put_premium) and net_delta > 0:
+            bias = "bullish"
+        elif abs(put_premium) > abs(call_premium) and net_delta < 0:
+            bias = "bearish"
+        return {
+            "ticker": str(symbol).upper(),
+            "bias": bias,
+            "net_call_premium": round(call_premium, 2),
+            "net_put_premium": round(put_premium, 2),
+            "net_delta": round(net_delta, 2),
+            "latest_tick": last,
+            "summary": (
+                f"net premium bias {bias}; call ${call_premium:,.0f}; "
+                f"put ${put_premium:,.0f}; delta {net_delta:,.0f}"
+            ),
+        }
+
+    def get_interpolated_iv(self, symbol: str, date: Optional[str] = None) -> List[Dict]:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return []
+        cache_key = ("interpolated_iv", ticker, str(date or ""))
+        cached = self._get_cached(cache_key, ttl_seconds=300)
+        if cached is not None:
+            return cached
+        params = {"date": date} if date else None
+        records = self._request(f"/api/stock/{ticker}/interpolated-iv", params=params)
+        return self._set_cached(cache_key, self._normalize_interpolated_iv(records))
+
+    def summarize_interpolated_iv(self, symbol: str, target_days: int = 30, date: Optional[str] = None) -> Dict:
+        profile = self.get_interpolated_iv(symbol, date=date)
+        if not profile:
+            return {"ticker": str(symbol).upper(), "iv_context": "unavailable", "summary": "No interpolated IV"}
+        target = min(profile, key=lambda row: abs(int(row.get("days", 0) or 0) - int(target_days)))
+        percentile = float(target.get("percentile", 0.0) or 0.0)
+        context = "normal"
+        if percentile >= 0.85:
+            context = "elevated"
+        elif 0 < percentile <= 0.25:
+            context = "cheap"
+        return {
+            "ticker": str(symbol).upper(),
+            "days": target.get("days", 0),
+            "percentile": round(percentile, 3),
+            "volatility": round(float(target.get("volatility", 0.0) or 0.0), 3),
+            "implied_move_pct": round(float(target.get("implied_move_pct", 0.0) or 0.0), 4),
+            "iv_context": context,
+            "profile": profile,
+            "summary": f"{target.get('days', 0)}D IV percentile {percentile:.2f} ({context})",
+        }
+
+    def get_options_volume(self, symbol: str, limit: int = 1) -> List[Dict]:
+        ticker = str(symbol or "").upper().strip()
+        if not ticker:
+            return []
+        cache_key = ("options_volume", ticker, int(limit or 1))
+        cached = self._get_cached(cache_key, ttl_seconds=300)
+        if cached is not None:
+            return cached
+        records = self._request(f"/api/stock/{ticker}/options-volume", params={"limit": int(limit or 1)})
+        return self._set_cached(cache_key, self._normalize_options_volume(records))
+
+    def summarize_options_volume(self, symbol: str, limit: int = 1) -> Dict:
+        rows = self.get_options_volume(symbol, limit=limit)
+        if not rows:
+            return {"ticker": str(symbol).upper(), "bias": "neutral", "summary": "No options volume snapshot"}
+        row = rows[0]
+        return {
+            "ticker": str(symbol).upper(),
+            "bias": row.get("bias", "neutral"),
+            "call_volume": row.get("call_volume", 0),
+            "put_volume": row.get("put_volume", 0),
+            "call_put_ratio": row.get("call_put_ratio", 0.0),
+            "call_premium": row.get("call_premium", 0.0),
+            "put_premium": row.get("put_premium", 0.0),
+            "bullish_premium": row.get("bullish_premium", 0.0),
+            "bearish_premium": row.get("bearish_premium", 0.0),
+            "summary": (
+                f"options volume bias {row.get('bias', 'neutral')}; "
+                f"call/put vol {row.get('call_put_ratio', 0.0):.2f}; "
+                f"call prem ${row.get('call_premium', 0.0):,.0f}; "
+                f"put prem ${row.get('put_premium', 0.0):,.0f}"
+            ),
+        }

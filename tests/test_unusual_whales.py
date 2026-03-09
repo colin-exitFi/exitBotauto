@@ -84,6 +84,109 @@ class UnusualWhalesParsingTests(unittest.TestCase):
         self.assertEqual(trades[0]["shares"], 1000)
         self.assertEqual(trades[1]["transaction"], "sell")
 
+    def test_normalize_flow_recent_uses_tags_for_sentiment(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        records = [
+            {
+                "underlying_symbol": "NVDA",
+                "option_type": "put",
+                "premium": "250000",
+                "volume": 700,
+                "open_interest": 200,
+                "tags": ["ask_side", "bearish"],
+            }
+        ]
+
+        flows = client._normalize_flow_alerts(records)
+
+        self.assertEqual(flows[0]["ticker"], "NVDA")
+        self.assertEqual(flows[0]["sentiment"], "bearish")
+
+    def test_option_screener_summary_aggregates_by_ticker(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        records = client._normalize_option_screener(
+            [
+                {
+                    "ticker_symbol": "NVDA",
+                    "type": "call",
+                    "premium": "300000",
+                    "volume": 1200,
+                    "open_interest": 300,
+                    "ask_side_volume": 900,
+                },
+                {
+                    "ticker_symbol": "NVDA",
+                    "type": "call",
+                    "premium": "250000",
+                    "volume": 900,
+                    "open_interest": 200,
+                    "ask_side_volume": 700,
+                },
+            ]
+        )
+
+        summary = client.summarize_option_screener(records)
+
+        self.assertEqual(summary[0]["ticker"], "NVDA")
+        self.assertEqual(summary[0]["bias"], "bullish")
+        self.assertEqual(summary[0]["contracts"], 2)
+        self.assertGreater(summary[0]["avg_vol_to_oi"], 1.0)
+
+    def test_summarize_net_premium_ticks_detects_bearish_bias(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client.get_net_premium_ticks = lambda symbol, date=None: [
+            {
+                "net_call_premium": -100000.0,
+                "net_put_premium": -450000.0,
+                "net_delta": -25000.0,
+            }
+        ]
+
+        summary = client.summarize_net_premium_ticks("NVDA")
+
+        self.assertEqual(summary["bias"], "bearish")
+        self.assertLess(summary["net_delta"], 0)
+
+    def test_summarize_options_volume_detects_bullish_bias(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client.get_options_volume = lambda symbol, limit=1: [
+            {
+                "bias": "bullish",
+                "call_volume": 200000,
+                "put_volume": 100000,
+                "call_put_ratio": 2.0,
+                "call_premium": 5000000.0,
+                "put_premium": 2000000.0,
+                "bullish_premium": 4200000.0,
+                "bearish_premium": 1800000.0,
+            }
+        ]
+
+        summary = client.summarize_options_volume("AAPL")
+
+        self.assertEqual(summary["bias"], "bullish")
+        self.assertGreater(summary["call_put_ratio"], 1.0)
+
+    def test_usage_stats_track_latest_headers(self):
+        client = UnusualWhalesClient(api_token="test-token")
+        client._update_usage_stats(
+            {
+                "x-uw-daily-req-count": "21",
+                "x-uw-minute-req-counter": "2",
+                "x-uw-req-per-minute-remaining": "118",
+                "x-uw-req-per-minute-reset": "4096",
+                "x-uw-token-req-limit": "50000",
+                "x-request-id": "abc123",
+            },
+            "/api/market/market-tide",
+        )
+
+        stats = client.get_usage_stats()
+
+        self.assertEqual(stats["daily_request_count"], 21)
+        self.assertEqual(stats["minute_remaining"], 118)
+        self.assertEqual(stats["request_id"], "abc123")
+
 
 if __name__ == "__main__":
     unittest.main()

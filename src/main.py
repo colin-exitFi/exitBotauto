@@ -539,6 +539,8 @@ class TradingBot:
                     logger.error(f"UW realtime handling error: {e}")
                 if getattr(self, "unusual_whales_stream", None):
                     self.ai_layers["uw_stream"] = self.unusual_whales_stream.get_stats()
+                if getattr(self, "unusual_whales", None):
+                    self.ai_layers["uw_api"] = self.unusual_whales.get_usage_stats()
 
                 # ── EXTENDED HOURS GUARD ──────────────────────────
                 # Ensure every position has protection (trailing stop OR dynamic limit)

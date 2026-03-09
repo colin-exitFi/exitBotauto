@@ -518,6 +518,9 @@ async def get_intelligence():
     if hasattr(_bot, "copy_trader_monitor") and _bot.copy_trader_monitor:
         result["copy_trader"] = _bot.copy_trader_monitor.get_dashboard_data()
 
+    if hasattr(_bot, "unusual_whales") and _bot.unusual_whales:
+        result["unusual_whales_api"] = _bot.unusual_whales.get_usage_stats()
+
     if hasattr(_bot, "unusual_whales_stream") and _bot.unusual_whales_stream:
         result["unusual_whales_stream"] = _bot.unusual_whales_stream.get_stats()
 

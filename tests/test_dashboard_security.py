@@ -41,3 +41,24 @@ class DashboardSecurityTests(unittest.TestCase):
                 self.assertTrue(payload["unusual_whales"]["connected"])
         finally:
             dashboard_module.set_bot(None)
+
+    def test_intelligence_endpoint_includes_unusual_whales_api_usage(self):
+        class _Bot:
+            unusual_whales = type(
+                "UWClientStub",
+                (),
+                {"get_usage_stats": lambda self: {"daily_request_count": 21, "minute_remaining": 118}},
+            )()
+            unusual_whales_stream = None
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"):
+                client = TestClient(dashboard_module.app)
+                resp = client.get("/api/intelligence?token=secret-token")
+                self.assertEqual(resp.status_code, 200)
+                payload = resp.json()
+                self.assertIn("unusual_whales_api", payload)
+                self.assertEqual(payload["unusual_whales_api"]["daily_request_count"], 21)
+        finally:
+            dashboard_module.set_bot(None)

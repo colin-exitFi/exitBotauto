@@ -163,6 +163,18 @@ class ScannerUnusualWhalesEnrichmentTests(unittest.IsolatedAsyncioTestCase):
                     "resistance_strikes": [],
                 }
 
+            def summarize_recent_flow_for_symbol(self, symbol, min_premium=100_000):
+                return {"has_flow": False, "bias": "neutral", "summary": "No recent ticker flow"}
+
+            def summarize_net_premium_ticks(self, symbol, date=None):
+                return {"bias": "neutral", "summary": "No net premium ticks"}
+
+            def summarize_options_volume(self, symbol, limit=1):
+                return {"bias": "neutral", "summary": "No options volume snapshot"}
+
+            def summarize_interpolated_iv(self, symbol, target_days=30, date=None):
+                return {"iv_context": "normal", "summary": "30D IV percentile 0.50 (normal)", "percentile": 0.5}
+
         scanner = Scanner(unusual_whales_client=_UW())
         candidates = [{"symbol": "NVDA", "side": "long"}]
 
@@ -190,6 +202,18 @@ class ScannerUnusualWhalesEnrichmentTests(unittest.IsolatedAsyncioTestCase):
                     "support_strikes": [],
                     "resistance_strikes": [],
                 }
+
+            def summarize_recent_flow_for_symbol(self, symbol, min_premium=100_000):
+                return {"has_flow": False, "bias": "neutral", "summary": "No recent ticker flow"}
+
+            def summarize_net_premium_ticks(self, symbol, date=None):
+                return {"bias": "neutral", "summary": "No net premium ticks"}
+
+            def summarize_options_volume(self, symbol, limit=1):
+                return {"bias": "neutral", "summary": "No options volume snapshot"}
+
+            def summarize_interpolated_iv(self, symbol, target_days=30, date=None):
+                return {"iv_context": "normal", "summary": "30D IV percentile 0.50 (normal)", "percentile": 0.5}
 
         class _UWStream:
             def is_fresh(self):
@@ -227,3 +251,40 @@ class ScannerUnusualWhalesEnrichmentTests(unittest.IsolatedAsyncioTestCase):
         snapshot = scanner._get_unusual_whales_snapshot()
 
         self.assertEqual(snapshot["market_tide"]["bias"], "risk_off")
+
+    async def test_apply_unusual_whales_enrichment_adds_ticker_level_context(self):
+        class _UW:
+            def is_configured(self):
+                return True
+
+            def get_flow_alerts(self, *args, **kwargs):
+                return []
+
+            def get_dark_pool(self, *args, **kwargs):
+                return []
+
+            def get_gamma_exposure(self, symbol):
+                return {"ticker": symbol, "levels": [], "max_gamma_strike": 0, "support_strikes": [], "resistance_strikes": []}
+
+            def summarize_recent_flow_for_symbol(self, symbol, min_premium=100_000):
+                return {"has_flow": True, "bias": "bullish", "summary": "3 recent flows; bullish $900,000; bearish $0; bias bullish"}
+
+            def summarize_net_premium_ticks(self, symbol, date=None):
+                return {"bias": "bullish", "summary": "net premium bias bullish; call $250,000; put $-50,000; delta 15,000"}
+
+            def summarize_options_volume(self, symbol, limit=1):
+                return {"bias": "bullish", "summary": "options volume bias bullish; call/put vol 1.80; call prem $500,000; put prem $120,000"}
+
+            def summarize_interpolated_iv(self, symbol, target_days=30, date=None):
+                return {"iv_context": "elevated", "summary": "30D IV percentile 0.91 (elevated)", "percentile": 0.91}
+
+        scanner = Scanner(unusual_whales_client=_UW())
+        candidates = [{"symbol": "NVDA", "side": "long"}]
+
+        await scanner._apply_unusual_whales_enrichment(candidates)
+
+        self.assertEqual(candidates[0]["uw_recent_flow_bias"], "bullish")
+        self.assertEqual(candidates[0]["uw_net_premium_bias"], "bullish")
+        self.assertEqual(candidates[0]["uw_options_volume_bias"], "bullish")
+        self.assertEqual(candidates[0]["uw_iv_context"], "elevated")
+        self.assertGreater(candidates[0]["uw_score_adjustment"], 0.0)

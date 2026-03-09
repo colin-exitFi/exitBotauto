@@ -72,6 +72,24 @@ class UnusualOptionsScanner:
         # Source 1: Unusual Whales API
         if self.uw and self.uw.is_configured():
             try:
+                screener = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.uw.get_option_contract_screener(
+                        limit=60,
+                        is_otm=True,
+                        min_premium=200_000,
+                        min_volume=500,
+                        vol_greater_oi=True,
+                        max_dte=45,
+                        issue_types=["Common Stock"],
+                        exclude_ex_div_ticker=True,
+                    ),
+                )
+                signals.extend(self._aggregate_uw_screener(screener))
+            except Exception as e:
+                logger.debug(f"Unusual Whales screener fetch failed: {e}")
+
+            try:
                 flow_alerts = await asyncio.get_event_loop().run_in_executor(
                     None, self.uw.get_flow_alerts, 100_000, None, 100
                 )
@@ -96,10 +114,10 @@ class UnusualOptionsScanner:
                 logger.debug(f"Perplexity UOA fetch failed: {e}")
 
         if signals:
-            self._cache = signals
+            self._cache = self._merge_signals(signals)
             self._last_fetch = now
             self._save_cache()
-            logger.info(f"🎯 Unusual options: {len(signals)} signals found")
+            logger.info(f"🎯 Unusual options: {len(self._cache)} signals found")
 
         return self._cache
 
@@ -109,10 +127,21 @@ class UnusualOptionsScanner:
 
         if self.uw and self.uw.is_configured():
             try:
-                flow = await asyncio.get_event_loop().run_in_executor(
-                    None, self.uw.summarize_flow_for_symbol, ticker
+                flow, recent_flow, volume, iv = await asyncio.gather(
+                    asyncio.get_event_loop().run_in_executor(None, self.uw.summarize_flow_for_symbol, ticker),
+                    asyncio.get_event_loop().run_in_executor(None, self.uw.summarize_recent_flow_for_symbol, ticker, 100_000),
+                    asyncio.get_event_loop().run_in_executor(None, self.uw.summarize_options_volume, ticker, 1),
+                    asyncio.get_event_loop().run_in_executor(None, self.uw.summarize_interpolated_iv, ticker, 30, None),
                 )
                 result.update(flow)
+                result["recent_flow"] = recent_flow
+                result["options_volume"] = volume
+                result["iv_summary"] = iv
+                if recent_flow.get("bias") in {"bullish", "bearish"}:
+                    result["bias"] = recent_flow.get("bias")
+                    result["has_unusual"] = True
+                if volume.get("bias") in {"bullish", "bearish"}:
+                    result["options_volume_bias"] = volume.get("bias")
                 return result
             except Exception as e:
                 logger.debug(f"UW ticker flow check failed for {ticker}: {e}")
@@ -222,6 +251,63 @@ class UnusualOptionsScanner:
             )
         signals.sort(key=lambda item: item.get("premium", 0), reverse=True)
         return signals
+
+    @staticmethod
+    def _aggregate_uw_screener(records: List[Dict]) -> List[Dict]:
+        summaries = UnusualWhalesClient.summarize_option_screener(records)
+        signals = []
+        for summary in summaries:
+            contracts = int(summary.get("contracts", 0) or 0)
+            total_premium = float(summary.get("total_premium", 0.0) or 0.0)
+            if contracts < 2 and total_premium < 500_000:
+                continue
+            bias = str(summary.get("bias") or "neutral").lower()
+            if bias not in {"bullish", "bearish"}:
+                continue
+            conviction = 0.65
+            if total_premium >= 1_000_000 or float(summary.get("avg_ask_side_pct", 0.0) or 0.0) >= 0.70:
+                conviction = 0.8
+            signals.append(
+                {
+                    "ticker": summary.get("ticker"),
+                    "type": "call" if bias == "bullish" else "put",
+                    "bias": bias,
+                    "reason": (
+                        f"Hottest contracts {bias}: ${total_premium:,.0f} premium across {contracts} contracts "
+                        f"(ask-side {float(summary.get('avg_ask_side_pct', 0.0) or 0.0):.0%}, "
+                        f"vol/OI {float(summary.get('avg_vol_to_oi', 0.0) or 0.0):.2f})"
+                    ),
+                    "source": "unusual_whales_screener",
+                    "conviction": conviction,
+                    "premium": round(total_premium, 2),
+                    "volume": contracts,
+                    "open_interest": 0,
+                }
+            )
+        return signals
+
+    @staticmethod
+    def _merge_signals(signals: List[Dict]) -> List[Dict]:
+        merged: Dict[str, Dict] = {}
+        for signal in signals or []:
+            ticker = str(signal.get("ticker", "")).upper()
+            if not ticker:
+                continue
+            current = merged.get(ticker)
+            if not current:
+                merged[ticker] = dict(signal)
+                continue
+            if float(signal.get("premium", 0.0) or 0.0) > float(current.get("premium", 0.0) or 0.0):
+                current["premium"] = signal.get("premium", current.get("premium"))
+                current["reason"] = signal.get("reason", current.get("reason"))
+                current["type"] = signal.get("type", current.get("type"))
+                current["bias"] = signal.get("bias", current.get("bias"))
+                current["conviction"] = signal.get("conviction", current.get("conviction"))
+            current["source"] = f"{current.get('source', '')}+{signal.get('source', '')}".strip("+")
+            current["volume"] = int(current.get("volume", 0) or 0) + int(signal.get("volume", 0) or 0)
+        merged_signals = list(merged.values())
+        merged_signals.sort(key=lambda item: float(item.get("premium", 0.0) or 0.0), reverse=True)
+        return merged_signals
 
     async def _fetch_barchart(self) -> List[Dict]:
         """Scrape Barchart for unusual options volume."""

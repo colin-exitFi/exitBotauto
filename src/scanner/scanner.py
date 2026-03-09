@@ -846,15 +846,16 @@ class Scanner:
     async def _apply_unusual_whales_enrichment(self, candidates: List[Dict]):
         if not candidates or not self.unusual_whales or not getattr(self.unusual_whales, "is_configured", lambda: False)():
             return
+        loop = asyncio.get_event_loop()
         snapshot = self._get_unusual_whales_snapshot()
         flow_alerts = list(snapshot.get("flow_alerts") or [])
         dark_pool = list(snapshot.get("dark_pool") or [])
         if not flow_alerts and not dark_pool:
             try:
-                flow_alerts = await asyncio.get_event_loop().run_in_executor(
+                flow_alerts = await loop.run_in_executor(
                     None, self.unusual_whales.get_flow_alerts, 100_000, None, 150
                 )
-                dark_pool = await asyncio.get_event_loop().run_in_executor(
+                dark_pool = await loop.run_in_executor(
                     None, self.unusual_whales.get_dark_pool, None, 150
                 )
             except Exception as e:
@@ -911,13 +912,76 @@ class Scanner:
 
             candidate["uw_score_adjustment"] = round(score_adj, 3)
 
+        # Richer per-symbol ticker context for the top names only.
+        for candidate in candidates[:8]:
+            symbol = str(candidate.get("symbol", "")).upper()
+            side = str(candidate.get("side", "long")).lower()
+            if not symbol:
+                continue
+
+            try:
+                recent_flow = await loop.run_in_executor(
+                    None, self.unusual_whales.summarize_recent_flow_for_symbol, symbol, 100_000
+                )
+                if recent_flow.get("has_flow"):
+                    candidate["uw_recent_flow"] = recent_flow.get("summary")
+                    candidate["uw_recent_flow_bias"] = recent_flow.get("bias", "neutral")
+                    if recent_flow.get("bias") == "bullish" and side != "short":
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.10, 3)
+                    elif recent_flow.get("bias") == "bearish" and side == "short":
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.10, 3)
+                    elif recent_flow.get("bias") in {"bullish", "bearish"}:
+                        candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) - 0.10, 3)
+            except Exception as e:
+                logger.debug(f"UW recent flow enrichment unavailable for {symbol}: {e}")
+
+            try:
+                net_premium = await loop.run_in_executor(
+                    None, self.unusual_whales.summarize_net_premium_ticks, symbol, None
+                )
+                candidate["uw_net_premium"] = net_premium.get("summary")
+                candidate["uw_net_premium_bias"] = net_premium.get("bias", "neutral")
+                if net_premium.get("bias") == "bullish" and side != "short":
+                    candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.06, 3)
+                elif net_premium.get("bias") == "bearish" and side == "short":
+                    candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.06, 3)
+                elif net_premium.get("bias") in {"bullish", "bearish"}:
+                    candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) - 0.06, 3)
+            except Exception as e:
+                logger.debug(f"UW net premium enrichment unavailable for {symbol}: {e}")
+
+            try:
+                options_volume = await loop.run_in_executor(
+                    None, self.unusual_whales.summarize_options_volume, symbol, 1
+                )
+                candidate["uw_options_volume"] = options_volume.get("summary")
+                candidate["uw_options_volume_bias"] = options_volume.get("bias", "neutral")
+                if options_volume.get("bias") == "bullish" and side != "short":
+                    candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.06, 3)
+                elif options_volume.get("bias") == "bearish" and side == "short":
+                    candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.06, 3)
+                elif options_volume.get("bias") in {"bullish", "bearish"}:
+                    candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) - 0.06, 3)
+            except Exception as e:
+                logger.debug(f"UW options volume enrichment unavailable for {symbol}: {e}")
+
+            try:
+                iv_summary = await loop.run_in_executor(
+                    None, self.unusual_whales.summarize_interpolated_iv, symbol, 30, None
+                )
+                candidate["uw_iv_context"] = iv_summary.get("iv_context")
+                candidate["uw_iv_summary"] = iv_summary.get("summary")
+                candidate["uw_iv_percentile"] = iv_summary.get("percentile", 0.0)
+            except Exception as e:
+                logger.debug(f"UW IV enrichment unavailable for {symbol}: {e}")
+
         # Gamma is per-symbol; keep it to the top few candidates to stay under rate limits.
         for candidate in candidates[:10]:
             symbol = str(candidate.get("symbol", "")).upper()
             if not symbol:
                 continue
             try:
-                gamma = await asyncio.get_event_loop().run_in_executor(
+                gamma = await loop.run_in_executor(
                     None, self.unusual_whales.get_gamma_exposure, symbol
                 )
             except Exception as e:
@@ -1023,39 +1087,37 @@ class Scanner:
 
         # ── 2. Options screener: hottest chains (volume >> OI, high premium) ──
         try:
-            screener_records = self.unusual_whales._request(
-                "/api/screener/option-contracts",
-                params={
-                    "limit": 50,
-                    "is_otm": True,
-                    "min_premium": 200_000,
-                    "min_volume": 500,
-                    "vol_greater_oi": True,  # Volume > open interest = new positioning
-                    "max_dte": 45,  # Near-term = conviction, not hedging
-                    "issue_types[]": "Common Stock",
-                },
+            screener_records = await loop.run_in_executor(
+                None,
+                lambda: self.unusual_whales.get_option_contract_screener(
+                    limit=50,
+                    is_otm=True,
+                    min_premium=200_000,
+                    min_volume=500,
+                    vol_greater_oi=True,
+                    max_dte=45,
+                    issue_types=["Common Stock"],
+                    exclude_ex_div_ticker=True,
+                ),
             )
-            screener_tickers: Dict[str, int] = {}
-            for record in screener_records or []:
-                ticker = self.unusual_whales._extract_ticker(record)
+            screener_summaries = self.unusual_whales.summarize_option_screener(screener_records or [])
+
+            # Tickers appearing in 2+ hot chains or with very large total premium.
+            for summary in screener_summaries:
+                ticker = str(summary.get("ticker", "")).upper()
+                count = int(summary.get("contracts", 0) or 0)
+                total_premium = float(summary.get("total_premium", 0.0) or 0.0)
                 if not ticker or not ticker.isalpha() or len(ticker) > 5:
                     continue
-                screener_tickers[ticker] = screener_tickers.get(ticker, 0) + 1
-
-            # Tickers appearing in 2+ hot chains = strong institutional interest
-            for ticker, count in screener_tickers.items():
-                if count < 2 or ticker in seen_tickers:
+                if ticker in seen_tickers:
+                    continue
+                if count < 2 and total_premium < 500_000:
                     continue
 
-                option_type = "call"  # screener was filtered to OTM
-                for record in screener_records or []:
-                    if self.unusual_whales._extract_ticker(record) == ticker:
-                        raw_type = str(record.get("type", "") or "").lower()
-                        if "put" in raw_type:
-                            option_type = "put"
-                        break
-
-                side = "short" if option_type == "put" else "long"
+                bias = str(summary.get("bias", "neutral")).lower()
+                if bias == "neutral":
+                    bias = "bullish"
+                side = "short" if bias == "bearish" else "long"
                 candidates.append({
                     "symbol": ticker,
                     "price": 0,
@@ -1063,16 +1125,26 @@ class Scanner:
                     "volume": 0,
                     "source": "unusual_whales",
                     "side": side,
-                    "sentiment_score": 0.5 if side == "long" else -0.3,
+                    "sentiment_score": 0.65 if side == "long" else -0.45,
                     "uw_hottest_chains": count,
-                    "uw_flow_sentiment": "bullish" if side == "long" else "bearish",
+                    "uw_total_premium": total_premium,
+                    "uw_flow_sentiment": bias,
+                    "uw_screener_summary": (
+                        f"{count} hot contracts; ${total_premium:,.0f} premium; "
+                        f"ask-side {float(summary.get('avg_ask_side_pct', 0.0) or 0.0):.0%}; "
+                        f"vol/OI {float(summary.get('avg_vol_to_oi', 0.0) or 0.0):.2f}"
+                    ),
+                    "uw_screener_new_positions": int(summary.get("new_position_contracts", 0) or 0),
                     "priority": 1,
                 })
                 seen_tickers.add(ticker)
 
-            if screener_tickers:
-                hot_count = sum(1 for c in screener_tickers.values() if c >= 2)
-                logger.debug(f"🔥 Hottest chains: {len(screener_tickers)} tickers, {hot_count} with 2+ hot contracts")
+            if screener_summaries:
+                hot_count = sum(
+                    1 for row in screener_summaries
+                    if int(row.get("contracts", 0) or 0) >= 2 or float(row.get("total_premium", 0.0) or 0.0) >= 500_000
+                )
+                logger.debug(f"🔥 Hottest chains: {len(screener_summaries)} tickers, {hot_count} passed filter")
         except Exception as e:
             logger.debug(f"UW screener scan failed: {e}")
 
