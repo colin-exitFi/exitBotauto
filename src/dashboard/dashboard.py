@@ -1242,7 +1242,7 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .card h2 .icon{font-size:16px}
 .full{grid-column:1/-1}
 .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
+.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
 .metric{text-align:center;padding:12px 8px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s;overflow:hidden}
 .metric:hover{border-color:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .metric .value{font-size:16px;font-weight:800;color:#58a6ff;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1250,7 +1250,7 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .metric .value.negative{color:#f85149}
 .metric .value.animated{animation:countUp .4s ease-out}
 .metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.big-pnl{font-size:28px!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
+.big-pnl{font-size:clamp(18px,2.2vw,28px)!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px solid #21262d}
 td{padding:8px 10px;border-bottom:1px solid #21262d44;font-size:13px;transition:background .2s}
