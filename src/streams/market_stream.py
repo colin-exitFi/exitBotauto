@@ -213,7 +213,7 @@ class MarketStream:
             try:
                 async with websockets.connect(url, ping_interval=20, ping_timeout=10) as ws:
                     self._ws = ws
-                    self._reconnect_delay = 1
+                    # NOTE: do NOT reset _reconnect_delay here — only after successful auth
 
                     # Wait for welcome
                     welcome = await ws.recv()
@@ -241,6 +241,7 @@ class MarketStream:
                         logger.error(f"WS auth error: {auth_error}")
                         return
                     if self._auth_succeeded(resp_data):
+                        self._reconnect_delay = 1  # Reset backoff on successful auth
                         logger.success("📡 Market stream connected + authenticated")
                     else:
                         logger.error(f"WS auth failed: {resp_data}")
