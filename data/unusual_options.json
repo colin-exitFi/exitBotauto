@@ -1,85 +1,13 @@
 {
   "options": [
     {
-      "ticker": "NFLX",
-      "type": "put",
-      "bias": "bullish",
-      "reason": "High volume (726) on Mar 6 '26 95.00 put with bullish sentiment indicated[2]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "SHEL",
+      "ticker": "TYRA",
       "type": "call",
       "bias": "bullish",
-      "reason": "High volume (700) on Mar 6 '26 86.00 call with bullish sentiment[2]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "LBRT",
-      "type": "put",
-      "bias": "bullish",
-      "reason": "High volume (726) on Jan 21 '28 5.00 put with bullish sentiment[2]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "VFC",
-      "type": "put",
-      "bias": "bullish",
-      "reason": "ATM put activity in turnaround stock, suggesting married put strategy for upside protection[1]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "ETSY",
-      "type": "call",
-      "bias": "bullish",
-      "reason": "ATM call volume with cash-secured strategy, share price up 6.5%[1]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "PFE",
-      "type": "put",
-      "bias": "bullish",
-      "reason": "High Vol/OI on March 6 $25.50 put, double bull spread strategy for gains above $28.50[1]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "PSTG",
-      "type": "put",
-      "bias": "",
-      "reason": "High volume (4,146) on Mar 06, 2026 20.50 put[4]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "ZD",
-      "type": "",
-      "bias": "",
-      "reason": "Noteworthy option activity reported[5]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "ULTA",
-      "type": "",
-      "bias": "",
-      "reason": "Noteworthy option activity reported[5]",
-      "source": "perplexity",
-      "conviction": 0.5
-    },
-    {
-      "ticker": "GAP",
-      "type": "",
-      "bias": "",
-      "reason": "Noteworthy option activity reported[5]",
+      "reason": "Call volume (1,810) exceeds open interest (936) by 1.93x on 2026-03-06[1]",
       "source": "perplexity",
       "conviction": 0.5
     }
   ],
-  "fetched_at": 1772766814.01215
+  "fetched_at": 1773029306.58252
 }

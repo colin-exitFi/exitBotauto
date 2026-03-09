@@ -7,6 +7,7 @@ AI layers: observe → advise → tune → manage positions
 
 import asyncio
 import json
+import os
 import signal
 import sys
 import time
@@ -433,7 +434,11 @@ class TradingBot:
                             except Exception as e:
                                 logger.debug(f"Overnight monitor error: {e}")
                         await self._overnight_session(et)
-                        overnight_sleep = max(60, int(getattr(settings, "SCAN_INTERVAL_OVERNIGHT_SECONDS", 600)))
+                        # Faster cycle during pre-market ramp (midnight-4AM ET)
+                        if 0 <= et.hour < 4:
+                            overnight_sleep = max(60, int(getattr(settings, "SCAN_INTERVAL_PREMARKET_SECONDS", 300)))
+                        else:
+                            overnight_sleep = max(60, int(getattr(settings, "SCAN_INTERVAL_OVERNIGHT_SECONDS", 600)))
                         await asyncio.sleep(overnight_sleep)
                         continue
                     # Extended hours: scan AND trade (earnings, FDA, filings drop in AH/PM)
@@ -553,7 +558,10 @@ class TradingBot:
           4. Refresh pharma PDUFA calendar
           5. Build tomorrow's watchlist and thesis
           6. Update fade runner candidates
+          7. Pre-market ramp: intensify research as market open approaches
+          8. Sunday night: Friday close analysis + weekend gap setup
         Runs every 5 min during overnight, but each task has its own throttle.
+        Pre-market ramp (midnight-4AM ET) uses tighter intervals.
         """
         import json
         from pathlib import Path
@@ -573,10 +581,82 @@ class TradingBot:
         last_thesis = state.get("last_thesis", 0)
         last_pharma = state.get("last_pharma_refresh", 0)
         last_news = state.get("last_news_scan", 0)
+        last_premarket_scan = state.get("last_premarket_scan", 0)
         now = time.time()
         hour = et.hour
 
+        # Pre-market ramp: midnight-4AM ET = tighter research intervals
+        premarket_ramp = (0 <= hour < 4)
+        # Sunday night = day of week 6 (Sunday) after 8PM ET, or Monday before 4AM ET
+        is_sunday_night = (et.weekday() == 6 and hour >= 20) or (et.weekday() == 0 and hour < 4)
+
+        # Dynamic throttles based on phase
+        thesis_interval = 2 * 3600 if premarket_ramp else 8 * 3600  # 2h vs 8h
+        news_interval = 30 * 60 if premarket_ramp else 2 * 3600     # 30m vs 2h
+
         tasks_run = []
+
+        # ── SUNDAY NIGHT: Friday close + weekend gap analysis (once per weekend) ──
+        last_sunday_analysis = state.get("last_sunday_analysis", 0)
+        if is_sunday_night and (now - last_sunday_analysis > 12 * 3600):
+            try:
+                log_activity("research", "🗓️ Sunday night: Analyzing Friday close + weekend setup for Monday open...")
+                sunday_thesis = await self._build_sunday_analysis()
+                if sunday_thesis:
+                    state["last_sunday_analysis"] = now
+                    state["sunday_thesis"] = sunday_thesis
+                    tasks_run.append("sunday_analysis")
+
+                    # Add Sunday picks to watchlist
+                    for pick in sunday_thesis.get("monday_watchlist", []):
+                        ticker = pick.get("ticker", "")
+                        if ticker:
+                            side = "short" if pick.get("bias", "").lower() == "bearish" else "long"
+                            self.watchlist.add(
+                                ticker, side=side,
+                                conviction=min(0.9, pick.get("conviction", 0.5)),
+                                source="sunday_analysis",
+                                reason=pick.get("reason", "Monday open setup")[:80],
+                            )
+
+                    bias = sunday_thesis.get("market_bias", "?")
+                    gap = sunday_thesis.get("expected_gap", "?")
+                    count = len(sunday_thesis.get("monday_watchlist", []))
+                    logger.success(f"🗓️ Sunday analysis: bias={bias}, expected_gap={gap}, {count} Monday plays")
+                    log_activity("research", f"🗓️ Monday outlook: {bias} bias, gap {gap} | {count} tickers staged")
+
+                    # Log top picks
+                    for pick in sunday_thesis.get("monday_watchlist", [])[:5]:
+                        log_activity("research", f"  📌 {pick.get('ticker','?')}: {pick.get('reason','')[:100]}")
+            except Exception as e:
+                logger.debug(f"Sunday analysis failed: {e}")
+
+        # ── PRE-MARKET RAMP: Overnight movers + futures check (every 30 min, midnight-4AM) ──
+        if premarket_ramp and (now - last_premarket_scan > 30 * 60):
+            try:
+                log_activity("research", f"🌅 Pre-market ramp ({et.strftime('%H:%M')} ET): Scanning overnight movers + futures...")
+                premarket_intel = await self._scan_premarket_movers()
+                if premarket_intel:
+                    state["last_premarket_scan"] = now
+                    tasks_run.append("premarket_scan")
+
+                    # Add AH/PM movers to watchlist
+                    for mover in premarket_intel.get("movers", []):
+                        ticker = mover.get("ticker", "")
+                        if ticker:
+                            side = "short" if mover.get("direction") == "down" else "long"
+                            self.watchlist.add(
+                                ticker, side=side,
+                                conviction=min(0.85, mover.get("conviction", 0.5)),
+                                source="premarket_scan",
+                                reason=mover.get("reason", "overnight mover")[:80],
+                            )
+
+                    futures = premarket_intel.get("futures_signal", "neutral")
+                    mover_count = len(premarket_intel.get("movers", []))
+                    log_activity("research", f"🌅 Futures: {futures} | {mover_count} overnight movers identified")
+            except Exception as e:
+                logger.debug(f"Pre-market scan failed: {e}")
 
         # ── GAME FILM: Review today's trades (once per night, after 9PM ET) ──
         if hour >= 21 and (now - last_review > 6 * 3600):
@@ -599,8 +679,11 @@ class TradingBot:
             except Exception as e:
                 logger.debug(f"Pharma refresh failed: {e}")
 
-        # ── WATCHLIST + THESIS: Full overnight research (once per night, after 10PM ET) ──
-        if hour >= 22 and (now - last_thesis > 8 * 3600):
+        # ── WATCHLIST + THESIS: Full overnight research (dynamic interval) ──
+        # Pre-market ramp: every 2h. Normal overnight: every 8h after 10PM ET.
+        thesis_ready = (premarket_ramp and (now - last_thesis > thesis_interval)) or \
+                       (not premarket_ramp and hour >= 22 and (now - last_thesis > thesis_interval))
+        if thesis_ready:
             try:
                 # 1. Get Perplexity market thesis + stock picks
                 thesis = await self._build_overnight_thesis()
@@ -916,6 +999,34 @@ class TradingBot:
                 except Exception as e:
                     logger.debug(f"Price validation failed: {e}")
 
+                # ── POPULATE SCANNER CANDIDATES from watchlist for dashboard ──
+                # During overnight, scanner.scan() doesn't run, so the dashboard
+                # shows "No candidates yet". Feed watchlist items into scanner cache
+                # so the operator can see what the bot is researching.
+                try:
+                    watchlist_items = self.watchlist.get_all()
+                    if watchlist_items and self.scanner:
+                        dashboard_candidates = []
+                        for item in watchlist_items[:20]:
+                            ticker = item.get("ticker", "")
+                            # Try to get price data from the snapshot we already fetched
+                            snap = locals().get("price_snaps", {}).get(ticker, {})
+                            dashboard_candidates.append({
+                                "symbol": ticker,
+                                "price": snap.get("price", 0),
+                                "change_pct": snap.get("change_pct", 0),
+                                "volume_spike": 0,
+                                "sentiment_score": item.get("conviction", 0),
+                                "score": item.get("conviction", 0),
+                                "source": item.get("sources", "overnight"),
+                                "side": item.get("side", "long"),
+                                "reason": item.get("reason", "")[:80],
+                            })
+                        self.scanner._cache = dashboard_candidates
+                        logger.info(f"📊 Dashboard candidates: {len(dashboard_candidates)} from overnight watchlist")
+                except Exception as e:
+                    logger.debug(f"Dashboard candidate sync failed: {e}")
+
                 state["last_thesis"] = now
                 tasks_run.append("watchlist_rebuild")
                 tasks_run.append("thesis")
@@ -955,8 +1066,8 @@ class TradingBot:
             except Exception as e:
                 logger.debug(f"EDGAR scan failed: {e}")
 
-        # ── NEWS: Scan overnight news for market-moving events (every 2 hours) ──
-        if now - last_news > 2 * 3600:
+        # ── NEWS: Scan overnight news (30min during pre-market ramp, 2h otherwise) ──
+        if now - last_news > news_interval:
             try:
                 news = await self._scan_overnight_news()
                 if news:
@@ -978,8 +1089,11 @@ class TradingBot:
             except Exception:
                 pass
         else:
-            log_activity("thinking", f"Overnight idle ({et.strftime('%H:%M')} ET) — waiting for next research cycle")
-            logger.debug(f"🌙 Overnight idle ({et.strftime('%H:%M')} ET) — next thesis at 10PM, news in {max(0, int(2*3600 - (now - last_news)))//60}min")
+            phase = "pre-market ramp 🌅" if premarket_ramp else ("sunday prep 🗓️" if is_sunday_night else "overnight")
+            next_news_min = max(0, int(news_interval - (now - last_news)) // 60)
+            next_thesis_min = max(0, int(thesis_interval - (now - last_thesis)) // 60)
+            log_activity("thinking", f"{phase} ({et.strftime('%H:%M')} ET) — news in {next_news_min}m, thesis in {next_thesis_min}m")
+            logger.debug(f"🌙 {phase} ({et.strftime('%H:%M')} ET) — news in {next_news_min}m, thesis refresh in {next_thesis_min}m")
 
     async def _build_overnight_thesis(self) -> dict:
         """Use AI to build tomorrow's trading thesis based on today's data."""
@@ -1025,6 +1139,129 @@ class TradingBot:
         except Exception as e:
             logger.debug(f"Thesis build failed: {e}")
             return {}
+
+    async def _build_sunday_analysis(self) -> dict:
+        """Sunday night special: Analyze Friday's close, weekend news, and Monday setup."""
+        import httpx
+
+        pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
+        if not pplx_key:
+            return {}
+
+        try:
+            async with httpx.AsyncClient(timeout=45) as client:
+                resp = await client.post(
+                    "https://api.perplexity.ai/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {pplx_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro'),
+                        "max_tokens": 2000,
+                        "messages": [{"role": "user", "content":
+                            "It's Sunday night. I need a comprehensive Monday stock market prep. Analyze: "
+                            "1. FRIDAY CLOSE: How did major indices close? What sectors led/lagged? Any notable Friday selloff or rally? "
+                            "2. FRIDAY AFTER-HOURS: Any earnings beats/misses after Friday close? Major AH movers? "
+                            "3. WEEKEND NEWS: Geopolitics, Fed commentary, economic data, corporate news over the weekend "
+                            "4. FUTURES/CRYPTO: Current S&P/Nasdaq futures direction, Bitcoin/crypto moves as risk sentiment proxy "
+                            "5. MONDAY CATALYSTS: Earnings before open, economic data releases, FDA decisions, IPOs "
+                            "6. GAP ANALYSIS: Which stocks are likely to gap up/down Monday based on AH + weekend news? "
+                            "7. TOP 10 MONDAY PLAYS: Specific tickers with entry thesis (momentum runners, gap fills, earnings reactions, sector rotations) "
+                            "Format as JSON with keys: friday_close_summary, ah_movers (array of {ticker, change_pct, reason}), "
+                            "weekend_catalysts, futures_signal (bullish/bearish/neutral), expected_gap (up/down/flat), "
+                            "market_bias, monday_watchlist (array of {ticker, bias (bullish/bearish), conviction (0-1), reason})"}],
+                    },
+                )
+                resp.raise_for_status()
+                text = resp.json()["choices"][0]["message"]["content"]
+
+                import re, json as _json
+                json_match = re.search(r'\{.*\}', text, re.DOTALL)
+                if json_match:
+                    return _json.loads(json_match.group())
+                else:
+                    return {"raw_analysis": text, "market_bias": "unknown", "monday_watchlist": []}
+        except Exception as e:
+            logger.debug(f"Sunday analysis failed: {e}")
+            return {}
+
+    async def _scan_premarket_movers(self) -> dict:
+        """Pre-market ramp: scan for overnight movers, futures, and early pre-market activity."""
+        import httpx
+
+        result = {"movers": [], "futures_signal": "neutral"}
+
+        # 1. Check Alpaca for any AH/PM price moves on our watchlist
+        try:
+            all_tickers = self.watchlist.get_tickers()
+            if all_tickers:
+                import requests as _req
+                _headers = {
+                    'APCA-API-KEY-ID': settings.ALPACA_API_KEY,
+                    'APCA-API-SECRET-KEY': settings.ALPACA_SECRET_KEY,
+                }
+                syms = ','.join(all_tickers[:50])
+                _r = _req.get(
+                    f'https://data.alpaca.markets/v2/stocks/snapshots?symbols={syms}&feed=iex',
+                    headers=_headers, timeout=10
+                )
+                if _r.status_code == 200:
+                    raw_snaps = _r.json()
+                    for sym, data in raw_snaps.items():
+                        lt = data.get('latestTrade', {})
+                        pb = data.get('prevDailyBar', {})
+                        price = lt.get('p', 0)
+                        prev = pb.get('c', 0)
+                        if prev > 0 and price > 0:
+                            chg_pct = (price - prev) / prev * 100
+                            if abs(chg_pct) >= 3.0:  # 3%+ movers
+                                direction = "up" if chg_pct > 0 else "down"
+                                result["movers"].append({
+                                    "ticker": sym,
+                                    "change_pct": round(chg_pct, 1),
+                                    "direction": direction,
+                                    "conviction": min(0.8, 0.4 + abs(chg_pct) / 20),
+                                    "reason": f"Overnight {direction} {abs(chg_pct):.1f}% (${price:.2f} vs prev ${prev:.2f})",
+                                })
+                    result["movers"].sort(key=lambda x: abs(x["change_pct"]), reverse=True)
+                    if result["movers"]:
+                        logger.info(f"🌅 Pre-market movers: {', '.join(m['ticker'] + ' ' + str(m['change_pct']) + '%' for m in result['movers'][:5])}")
+        except Exception as e:
+            logger.debug(f"Pre-market price scan failed: {e}")
+
+        # 2. Get futures/macro direction from Perplexity
+        pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
+        if pplx_key:
+            try:
+                async with httpx.AsyncClient(timeout=20) as client:
+                    resp = await client.post(
+                        "https://api.perplexity.ai/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {pplx_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": getattr(settings, 'PERPLEXITY_MODEL', 'sonar-pro'),
+                            "max_tokens": 500,
+                            "messages": [{"role": "user", "content":
+                                "Quick pre-market check: What are S&P 500 futures, Nasdaq futures, and Bitcoin doing right now? "
+                                "Any breaking overnight news? Give me the direction (bullish/bearish/neutral) and top 3 stocks "
+                                "with unusual pre-market volume or big moves. Keep it brief, one paragraph."}],
+                        },
+                    )
+                    resp.raise_for_status()
+                    text = resp.json()["choices"][0]["message"]["content"]
+                    if "bullish" in text.lower():
+                        result["futures_signal"] = "bullish"
+                    elif "bearish" in text.lower():
+                        result["futures_signal"] = "bearish"
+                    result["futures_summary"] = text[:300]
+                    log_activity("research", f"🌅 Futures: {text[:150]}")
+            except Exception as e:
+                logger.debug(f"Pre-market futures check failed: {e}")
+
+        return result
 
     async def _scan_overnight_news(self) -> list:
         """Scan for market-moving overnight news via Perplexity."""
@@ -2688,6 +2925,19 @@ async def main():
 
 
 if __name__ == "__main__":
+    # ── Single-instance guard via PID file ──
+    import fcntl
+    _lock_path = Path(__file__).parent.parent / "data" / "velox.lock"
+    _lock_path.parent.mkdir(parents=True, exist_ok=True)
+    _lock_fd = open(_lock_path, "w")
+    try:
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _lock_fd.write(str(os.getpid()))
+        _lock_fd.flush()
+    except (IOError, OSError):
+        print(f"⚠️  Velox is already running (lock: {_lock_path}). Exiting duplicate.")
+        sys.exit(0)
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
@@ -2695,3 +2945,10 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal: {e}")
         sys.exit(1)
+    finally:
+        try:
+            fcntl.flock(_lock_fd, fcntl.LOCK_UN)
+            _lock_fd.close()
+            _lock_path.unlink(missing_ok=True)
+        except Exception:
+            pass

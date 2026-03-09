@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 import time
+import requests
 
 import src.main as main_module
 from src.scanner.scanner import Scanner
@@ -151,6 +152,18 @@ class CopyTraderMonitorTests(unittest.TestCase):
             signals = monitor.get_candidate_signals()
 
         self.assertEqual(signals[0]["symbol"], "SNAP")
+
+    def test_stream_429_enters_cooldown(self):
+        monitor = CopyTraderMonitor()
+        monitor._stream_429_cooldown_seconds = 120.0
+        error = requests.HTTPError("429 Too Many Requests")
+        error.response = type("Response", (), {"status_code": 429})()
+
+        backoff = monitor._compute_stream_backoff(error, 5.0)
+
+        self.assertEqual(backoff, 120.0)
+        self.assertGreater(monitor._stream_cooldown_until, time.time())
+        self.assertTrue(monitor._stream_in_cooldown())
 
 
 class CopyTraderScannerTests(unittest.TestCase):

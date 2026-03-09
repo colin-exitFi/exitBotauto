@@ -1,27 +1,27 @@
 {
-  "sp500_futures": "Down -0.95% overnight, trading around 6460-6467 levels. Key support at 6462, 6453, 6429; resistance at 6472, with upside targets 6522, 6540 if reclaimed[1][2][6].",
-  "overnight_news": "S&P 500 futures slipping amid inflation concerns, rising bond yields, surging oil prices due to Middle East tensions, and anticipation of key U.S. jobs report. Recent session closed down -1.33% on weak job market data[2].",
-  "hot_sectors": "Airlines (weakness in ALK, UAL); Technology/Semiconductors (AMAT -6.29%, ADI -4.22%, AVGO); Energy (oil surge); Housing (DHI)[2].",
+  "sp500_futures": "Downward direction, last at 7,023.00 (Micro) / 6,614.25-6,626.25 (E-mini), key levels: Support 6,975.25, Resistance 7,041.25 / 7,075.25 / 7,107.25[1][2][4]",
+  "overnight_news": "Stocks retreated on inflation concerns, weak US job market, rising bond yields, oil surge due to Middle East conflict; Trump comments on no deal with Iran except unconditional surrender; key US jobs report in focus[1][2]",
+  "hot_sectors": "Technology/Semiconductors (AMAT, LRCX down sharply); Airlines/Travel (ALK, UAL); Energy (oil surge); Defense (Iran tensions)[1]",
   "watchlist": [
     {
-      "ticker": "ALK",
-      "reason": "Down -3.42%, leading airline sector weakness[2]"
+      "ticker": "AMAT",
+      "reason": "Down 6.29% amid tech/semiconductor weakness[1]"
     },
     {
-      "ticker": "AMAT",
-      "reason": "Sharp decline -6.29% in semiconductors amid broader tech pressure[2]"
+      "ticker": "LRCX",
+      "reason": "Down 7.15% in semiconductors, futures slip[1]"
+    },
+    {
+      "ticker": "ALK",
+      "reason": "Down 3.42%, airline sector pressure[1]"
     },
     {
       "ticker": "UAL",
-      "reason": "Down -3.52%, airline sector underperformer[2]"
+      "reason": "Down 3.52%, travel/airlines hit[1]"
     },
     {
       "ticker": "MSTR",
-      "reason": "Declining -4.49%, volatile crypto-related play amid risk-off sentiment[2]"
-    },
-    {
-      "ticker": "AVGO",
-      "reason": "Down -0.70%, key semiconductor name to watch with Nasdaq futures weakness[2]"
+      "reason": "Down 4.49%, notable mover amid market retreat[1]"
     }
   ],
   "market_bias": "Bearish"

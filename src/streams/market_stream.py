@@ -82,6 +82,8 @@ class MarketStream:
 
     async def start(self):
         """Start the WebSocket connection in background."""
+        if self._task and not self._task.done():
+            return
         self._running = True
         self._task = asyncio.create_task(self._run_forever())
         logger.info("📡 Market stream starting...")
@@ -185,6 +187,22 @@ class MarketStream:
                 return True
         return False
 
+    @staticmethod
+    def _extract_auth_error(payload) -> Optional[Dict]:
+        messages = payload if isinstance(payload, list) else [payload]
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get("T") == "error":
+                return msg
+        return None
+
+    @staticmethod
+    def _is_retryable_auth_error(error: Optional[Dict]) -> bool:
+        if not isinstance(error, dict):
+            return False
+        code = str(error.get("code", "") or "").strip()
+        message = str(error.get("msg", "") or "").lower()
+        return code == "406" or "connection limit exceeded" in message or "too many requests" in message
+
     # ── Internal ──────────────────────────────────────────────────
 
     async def _run_forever(self):
@@ -206,11 +224,21 @@ class MarketStream:
                     await ws.send(auth_msg)
                     auth_resp = await ws.recv()
                     resp_data = json.loads(auth_resp)
-                    messages = resp_data if isinstance(resp_data, list) else [resp_data]
-                    for r in messages:
-                        if isinstance(r, dict) and r.get("T") == "error":
-                            logger.error(f"WS auth error: {r}")
-                            return
+                    auth_error = self._extract_auth_error(resp_data)
+                    if auth_error:
+                        if self._is_retryable_auth_error(auth_error):
+                            delay = max(
+                                float(getattr(settings, "MARKET_STREAM_AUTH_LIMIT_RETRY_SECONDS", 5.0) or 5.0),
+                                float(self._reconnect_delay or 1),
+                            )
+                            logger.warning(
+                                f"WS auth limited: {auth_error}. Retrying in {delay:.1f}s..."
+                            )
+                            self._reconnect_delay = min(max(delay * 2.0, delay), self._max_reconnect_delay)
+                            await asyncio.sleep(delay)
+                            continue
+                        logger.error(f"WS auth error: {auth_error}")
+                        return
                     if self._auth_succeeded(resp_data):
                         logger.success("📡 Market stream connected + authenticated")
                     else:

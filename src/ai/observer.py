@@ -144,7 +144,8 @@ Analyze this state. What do you see?"""
         result["timestamp"] = time.time()
         obs_file = DATA_DIR / "observations.json"
         try:
-            history = json.loads(obs_file.read_text()) if obs_file.exists() else []
+            raw = json.loads(obs_file.read_text()) if obs_file.exists() else []
+            history = raw if isinstance(raw, list) else []
         except Exception:
             history = []
         history.append(result)

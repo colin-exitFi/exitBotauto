@@ -8,6 +8,7 @@ import json
 import time
 import threading
 import hmac
+import socket
 from typing import Dict, List, Optional
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -21,6 +22,7 @@ app = FastAPI(title="Velox", version="2.0.0")
 
 # Global reference to bot instance (set by main.py)
 _bot = None
+_dashboard_thread = None
 
 # Activity feed — circular buffer of bot thoughts/actions
 _activity_feed: List[Dict] = []
@@ -30,6 +32,21 @@ _MAX_FEED_SIZE = 100
 def set_bot(bot):
     global _bot
     _bot = bot
+
+
+def _dashboard_connect_host(host: str) -> str:
+    host = str(host or "").strip()
+    if host in {"", "0.0.0.0", "::"}:
+        return "127.0.0.1"
+    return host
+
+
+def _dashboard_port_in_use(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((_dashboard_connect_host(host), int(port)), timeout=0.25):
+            return True
+    except OSError:
+        return False
 
 
 def log_activity(category: str, message: str, data: dict = None):
@@ -664,17 +681,47 @@ async def stop():
 # ── Start server in background thread ─────────────────────────────
 
 def start_dashboard(bot=None):
+    global _dashboard_thread
     set_bot(bot)
     host = settings.DASHBOARD_HOST
     port = settings.DASHBOARD_PORT
+    if _dashboard_thread and _dashboard_thread.is_alive():
+        logger.debug(f"Dashboard already running on http://{host}:{port}")
+        return _dashboard_thread
     logger.info(f"📊 Dashboard starting on http://{host}:{port}")
 
     def _run():
-        uvicorn.run(app, host=host, port=port, log_level="warning")
+        retries = max(1, int(getattr(settings, "DASHBOARD_START_RETRIES", 15) or 15))
+        retry_delay = max(0.5, float(getattr(settings, "DASHBOARD_START_RETRY_SECONDS", 1.0) or 1.0))
+        for attempt in range(1, retries + 1):
+            if _dashboard_port_in_use(host, port):
+                logger.warning(
+                    f"Dashboard port {port} already in use; retrying in {retry_delay:.1f}s "
+                    f"({attempt}/{retries})"
+                )
+                time.sleep(retry_delay)
+                continue
+            try:
+                uvicorn.run(app, host=host, port=port, log_level="warning")
+                return
+            except OSError as e:
+                if "address already in use" in str(e).lower() and attempt < retries:
+                    logger.warning(
+                        f"Dashboard bind collision on {host}:{port}; retrying in {retry_delay:.1f}s "
+                        f"({attempt}/{retries})"
+                    )
+                    time.sleep(retry_delay)
+                    continue
+                logger.error(f"Dashboard failed to start: {e}")
+                return
+            except Exception as e:
+                logger.error(f"Dashboard server crashed during startup: {e}")
+                return
+        logger.error(f"Dashboard failed to acquire port {port} after {retries} attempts")
 
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
-    return t
+    _dashboard_thread = threading.Thread(target=_run, daemon=True, name="velox-dashboard")
+    _dashboard_thread.start()
+    return _dashboard_thread
 
 
 # ── Dashboard HTML ─────────────────────────────────────────────────
@@ -710,11 +757,11 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .card h2{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;border-bottom:1px solid #21262d;padding-bottom:10px;display:flex;align-items:center;gap:8px}
 .card h2 .icon{font-size:16px}
 .full{grid-column:1/-1}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
-.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr))}
 .metric{text-align:center;padding:12px 8px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s;overflow:hidden}
 .metric:hover{border-color:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
-.metric .value{font-size:18px;font-weight:800;color:#58a6ff;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric .value{font-size:16px;font-weight:800;color:#58a6ff;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .metric .value.positive{color:#3fb950}
 .metric .value.negative{color:#f85149}
 .metric .value.animated{animation:countUp .4s ease-out}
@@ -1081,7 +1128,7 @@ async function refresh() {
     _prevPnl = m.daily_pnl||0;
     const anim = pnlChanged ? ' animated' : '';
     $('metrics').innerHTML = `
-      <div class="metric"><div class="value" style="color:#d2a8ff;font-size:16px">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
+      <div class="metric"><div class="value" style="color:#d2a8ff">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
       <div class="metric"><div class="value ${m.swing_mode?'negative':'positive'}">${m.swing_mode?'SWING':'NORMAL'}</div><div class="label">Mode</div></div>
       <div class="metric"><div class="value">${m.remaining_day_trades??'—'}</div><div class="label">Day Trades</div></div>
       <div class="metric"><div class="value">${m.consecutive_wins||0}W/${m.consecutive_losses||0}L</div><div class="label">Streak</div></div>

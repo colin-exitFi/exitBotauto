@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from src.streams.market_stream import MarketStream
 from src.streams.trade_stream import TradeStream
@@ -35,6 +36,12 @@ class StreamAuthTests(unittest.TestCase):
                 {"stream": "authorization", "data": {"status": "authorized"}}
             )
         )
+
+    def test_market_stream_detects_retryable_connection_limit_auth_error(self):
+        error = MarketStream._extract_auth_error([{"T": "error", "code": 406, "msg": "connection limit exceeded"}])
+
+        self.assertEqual(error["code"], 406)
+        self.assertTrue(MarketStream._is_retryable_auth_error(error))
 
     def test_market_stream_subscription_includes_statuses_and_lulds(self):
         msg = MarketStream._build_subscription_message(["AAPL", "TSLA"], action="subscribe")

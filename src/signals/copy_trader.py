@@ -68,6 +68,18 @@ class CopyTraderMonitor:
             300,
             int(getattr(settings, "COPY_TRADER_STREAM_RULE_REFRESH_SECONDS", 3600) or 3600),
         )
+        self._stream_base_backoff_seconds = max(
+            5.0,
+            float(getattr(settings, "COPY_TRADER_STREAM_BASE_BACKOFF_SECONDS", 5.0) or 5.0),
+        )
+        self._stream_max_backoff_seconds = max(
+            self._stream_base_backoff_seconds,
+            float(getattr(settings, "COPY_TRADER_STREAM_MAX_BACKOFF_SECONDS", 300.0) or 300.0),
+        )
+        self._stream_429_cooldown_seconds = max(
+            self._stream_base_backoff_seconds,
+            float(getattr(settings, "COPY_TRADER_STREAM_429_COOLDOWN_SECONDS", 300.0) or 300.0),
+        )
         self._seen_tweet_ids = set()
         self._signal_buffer: List[Dict] = []
         self._exit_buffer: List[Dict] = []
@@ -79,6 +91,7 @@ class CopyTraderMonitor:
         self._stream_connected = False
         self._stream_last_event_ts = 0.0
         self._stream_last_error = ""
+        self._stream_cooldown_until = 0.0
         self._stream_rules_checked_ts = 0.0
         self._session = requests.Session()
         self._session.headers.update(self._auth_headers())
@@ -106,6 +119,8 @@ class CopyTraderMonitor:
     def start_stream(self) -> bool:
         if not self._stream_allowed():
             return False
+        if self._stream_in_cooldown():
+            return False
         if self._stream_thread and self._stream_thread.is_alive():
             return True
         self._stream_stop.clear()
@@ -125,8 +140,12 @@ class CopyTraderMonitor:
         self._stream_connected = False
 
     def _ensure_streaming(self):
-        if self._stream_allowed():
+        if self._stream_allowed() and not self._stream_in_cooldown():
             self.start_stream()
+
+    def _stream_in_cooldown(self, now: Optional[float] = None) -> bool:
+        now = float(now or time.time())
+        return now < float(self._stream_cooldown_until or 0.0)
 
     def _stream_is_fresh(self, now: Optional[float] = None) -> bool:
         now = float(now or time.time())
@@ -437,10 +456,25 @@ class CopyTraderMonitor:
             "stream_fresh": self._stream_is_fresh(now),
             "last_stream_event_ts": self._stream_last_event_ts,
             "last_stream_error": self._stream_last_error,
+            "stream_cooldown_remaining": max(0.0, round(float(self._stream_cooldown_until or 0.0) - now, 1)),
             "signals": self.get_candidate_signals()[:5],
             "exits": self.get_exit_signals()[:5],
             "traders": self.get_trader_stats(),
         }
+
+    def _compute_stream_backoff(self, error: Exception, current_backoff: float) -> float:
+        status_code = getattr(getattr(error, "response", None), "status_code", None)
+        if status_code == 429:
+            cooldown = max(self._stream_429_cooldown_seconds, current_backoff)
+            self._stream_cooldown_until = time.time() + cooldown
+            self._stream_last_error = f"rate_limited_429_cooldown_{int(cooldown)}s"
+            return cooldown
+        if status_code == 401:
+            cooldown = min(self._stream_max_backoff_seconds, max(60.0, current_backoff))
+            self._stream_cooldown_until = time.time() + cooldown
+            self._stream_last_error = f"stream_unauthorized_cooldown_{int(cooldown)}s"
+            return cooldown
+        return min(self._stream_max_backoff_seconds, max(self._stream_base_backoff_seconds, current_backoff * 2.0))
 
     def record_trade_result(self, trade_record: Dict):
         handles = trade_record.get("copy_trader_handles") or trade_record.get("copy_trader_handle") or []
@@ -562,8 +596,12 @@ class CopyTraderMonitor:
             return False
 
     def _run_stream_loop(self):
-        backoff_seconds = 5.0
+        backoff_seconds = self._stream_base_backoff_seconds
         while not self._stream_stop.is_set():
+            if self._stream_in_cooldown():
+                wait_for = max(0.5, float(self._stream_cooldown_until or 0.0) - time.time())
+                if self._stream_stop.wait(wait_for):
+                    break
             session = requests.Session()
             session.headers.update(self._auth_headers())
             try:
@@ -584,6 +622,7 @@ class CopyTraderMonitor:
                     response.raise_for_status()
                     self._stream_connected = True
                     self._stream_last_error = ""
+                    self._stream_cooldown_until = 0.0
                     self._stream_last_event_ts = time.time()
                     for line in response.iter_lines(decode_unicode=True):
                         if self._stream_stop.is_set():
@@ -597,14 +636,13 @@ class CopyTraderMonitor:
                             continue
                         self._ingest_stream_payload(payload, now=self._stream_last_event_ts)
                     self._stream_connected = False
-                backoff_seconds = 5.0
+                backoff_seconds = self._stream_base_backoff_seconds
             except Exception as e:
                 self._stream_connected = False
-                self._stream_last_error = str(e)
                 logger.debug(f"Copy trader stream disconnected: {e}")
+                backoff_seconds = self._compute_stream_backoff(e, backoff_seconds)
                 if self._stream_stop.wait(backoff_seconds):
                     break
-                backoff_seconds = min(60.0, backoff_seconds * 2.0)
             finally:
                 try:
                     session.close()

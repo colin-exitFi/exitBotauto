@@ -4841,7 +4841,403 @@
       "eps_estimate": "",
       "market_cap": "$3,430,765",
       "source": "nasdaq"
+    },
+    {
+      "ticker": "ESLT",
+      "company": "Elbit Systems Ltd.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "$3.23",
+      "market_cap": "$40,897,909,086",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "TME",
+      "company": "Tencent Music Entertainment Group",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "$0.21",
+      "market_cap": "$20,863,743,669",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "LULU",
+      "company": "lululemon athletica inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "$4.74",
+      "market_cap": "$19,429,071,300",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ZTO",
+      "company": "ZTO Express (Cayman) Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$18,028,138,861",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "OKLO",
+      "company": "Oklo Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "($0.18)",
+      "market_cap": "$9,692,006,062",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "DOCU",
+      "company": "DocuSign, Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "$0.34",
+      "market_cap": "$9,659,154,250",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "GDS",
+      "company": "GDS Holdings Limited",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "($0.01)",
+      "market_cap": "$7,636,373,682",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "HQY",
+      "company": "HealthEquity, Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "$0.70",
+      "market_cap": "$6,831,058,247",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ORLA",
+      "company": "Orla Mining Ltd.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "$0.36",
+      "market_cap": "$6,235,027,816",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ATAT",
+      "company": "Atour Lifestyle Holdings Limited",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "$0.43",
+      "market_cap": "$5,148,808,534",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ASO",
+      "company": "Academy Sports and Outdoors, Inc.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "$1.99",
+      "market_cap": "$4,026,883,707",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "TTAM",
+      "company": "Titan America SA",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "$0.25",
+      "market_cap": "$3,058,573,294",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "IHS",
+      "company": "IHS Holding Limited",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "$0.17",
+      "market_cap": "$2,697,537,180",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "BOBS",
+      "company": "Bob's Discount Furniture, Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "$0.30",
+      "market_cap": "$2,385,717,198",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "NN",
+      "company": "NextNav Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "($0.13)",
+      "market_cap": "$2,232,769,697",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "QFIN",
+      "company": "Qfin Holdings, Inc. ",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "$1.13",
+      "market_cap": "$1,981,312,000",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "STOK",
+      "company": "Stoke Therapeutics, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.75)",
+      "market_cap": "$1,979,109,248",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "OLMA",
+      "company": "Olema Pharmaceuticals, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.51)",
+      "market_cap": "$1,695,872,063",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "TRVI",
+      "company": "Trevi Therapeutics, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.10)",
+      "market_cap": "$1,677,250,153",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "KMTS",
+      "company": "Kestra Medical Technologies, Ltd.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "($0.60)",
+      "market_cap": "$1,382,872,556",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "TIGR",
+      "company": "UP Fintech Holding Limited",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$1,301,966,537",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "HUYA",
+      "company": "HUYA Inc.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "$0.02",
+      "market_cap": "$775,578,690",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "LX",
+      "company": "LexinFintech Holdings Ltd.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$452,628,818",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "CTRN",
+      "company": "Citi Trends, Inc.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "",
+      "market_cap": "$401,573,911",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ABEO",
+      "company": "Abeona Therapeutics Inc.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "($0.33)",
+      "market_cap": "$263,911,928",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "CBUS",
+      "company": "Cibus, Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "($0.43)",
+      "market_cap": "$217,271,007",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "WHWK",
+      "company": "Whitehawk Therapeutics, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.55)",
+      "market_cap": "$168,248,252",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "TNXP",
+      "company": "Tonix Pharmaceuticals Holding Corp.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($3.16)",
+      "market_cap": "$167,014,164",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "CODA",
+      "company": "Coda Octopus Group, Inc.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "",
+      "market_cap": "$157,562,639",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "PYXS",
+      "company": "Pyxis Oncology, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.35)",
+      "market_cap": "$122,856,094",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "INO",
+      "company": "Inovio Pharmaceuticals, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.37)",
+      "market_cap": "$114,000,415",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "KRRO",
+      "company": "Korro Bio, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($1.93)",
+      "market_cap": "$103,119,380",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "COYA",
+      "company": "Coya Therapeutics, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.08)",
+      "market_cap": "$99,181,921",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "STIM",
+      "company": "Neuronetics, Inc.",
+      "date": "2026-03-17",
+      "timing": "BMO",
+      "eps_estimate": "($0.12)",
+      "market_cap": "$96,565,150",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "INKT",
+      "company": "MiNK Therapeutics, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($0.68)",
+      "market_cap": "$92,524,204",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "XBIT",
+      "company": "XBiotech Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$70,426,659",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "FLD",
+      "company": "Fold Holdings, Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "($0.14)",
+      "market_cap": "$66,859,035",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "SCOR",
+      "company": "comScore, Inc.",
+      "date": "2026-03-17",
+      "timing": "AMC",
+      "eps_estimate": "",
+      "market_cap": "$35,209,961",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "XCUR",
+      "company": "Exicure, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$25,431,737",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "USEA",
+      "company": "United Maritime Corporation",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$18,396,075",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "ATER",
+      "company": "Aterian, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$5,726,446",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "SLXN",
+      "company": "Silexion Therapeutics Corp",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "($1.17)",
+      "market_cap": "$5,495,795",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "XBIO",
+      "company": "Xenetic Biosciences, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$5,200,697",
+      "source": "nasdaq"
+    },
+    {
+      "ticker": "TWAV",
+      "company": "TaoWeave, Inc.",
+      "date": "2026-03-17",
+      "timing": "unknown",
+      "eps_estimate": "",
+      "market_cap": "$3,271,354",
+      "source": "nasdaq"
     }
   ],
-  "fetched_at": 1772902523.523353
+  "fetched_at": 1773028503.379442
 }

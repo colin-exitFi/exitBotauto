@@ -1,37 +1,32 @@
 {
   "last_observation": null,
-  "last_advice": "Pre-market preparation mode: Build Monday watchlist from Friday's momentum context, prep for aggressive deployment at 09:30 ET open",
+  "last_advice": "Monday 09:30 = deployment blitz \u2014 prioritize IMMEDIATE capital deployment into momentum continuation plays, accept 3% risk to capture 20%+ runners.",
   "last_tuner_changes": null,
   "last_game_film_summary": null,
   "last_position_manager": null,
   "last_consensus": {
     "symbol": "RVI",
-    "decision": "SHORT",
-    "size_pct": 1.75,
-    "trail_pct": 2.5,
-    "reasoning": "SHORT 2/3 majority. claude=SHORT (Classic fade-the-runner setup. RVI ran +599.8% yesterday and is now es); grok=SHORT (Fade-the-runner setup after +599.8% prior run; today stalling at +0.1%)",
-    "confidence": 58.23,
+    "decision": "SKIP",
+    "size_pct": 0,
+    "trail_pct": 3.0,
+    "reasoning": "No consensus across jury models",
+    "confidence": 0.0,
     "provider_used": "claude,gpt,grok",
     "consensus_detail": {
       "votes": {
-        "claude": "SHORT",
+        "claude": "SKIP",
         "gpt": "SKIP",
         "grok": "SHORT"
       },
       "total_models": 3,
-      "agreement": "majority",
-      "size_modifier": 1.0,
-      "confidence": 58.23,
-      "base_size_pct": 1.75,
-      "agreeing_models": [
-        "claude",
-        "grok"
-      ]
+      "agreement": "none",
+      "size_modifier": 0.0,
+      "confidence": 0.0
     },
-    "timestamp": 1772893363.5751328
+    "timestamp": 1772975256.7241442
   },
-  "short_verdicts_blocked": 27,
-  "last_short_block_reason": "RVI gate:market_closed",
+  "short_verdicts_blocked": 33,
+  "last_short_block_reason": "ATRA gate:market_closed",
   "scan_regime": "risk_on",
   "scan_regime_raw": "risk_on",
   "scan_interval_seconds": 300
