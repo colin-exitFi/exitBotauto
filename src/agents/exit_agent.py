@@ -193,7 +193,7 @@ class ExitAgent:
         try:
             result = await call_claude(prompt, max_tokens=300)
             if not result or "action" not in result:
-                return DEFAULT_ACTION
+                return self._rule_based_fallback_action(pos, current_price, pnl_pct, hold_seconds)
 
             action = {
                 "action": result.get("action", "HOLD").upper(),
@@ -211,7 +211,31 @@ class ExitAgent:
             return action
         except Exception as e:
             logger.error(f"Exit agent evaluation error for {symbol}: {e}")
-            return DEFAULT_ACTION
+            return self._rule_based_fallback_action(pos, current_price, pnl_pct, hold_seconds)
+
+    @staticmethod
+    def _rule_based_fallback_action(pos: Dict, current_price: float, pnl_pct: float, hold_seconds: float) -> Dict:
+        """Safety fallback when Claude is unavailable or returns invalid output."""
+        current_trail = max(0.5, min(5.0, float(pos.get("trail_pct", 3.0) or 3.0)))
+        if pos.get("protection_failed") or pnl_pct <= -3.0:
+            return {
+                "action": "EXIT_NOW",
+                "new_trail_pct": None,
+                "reasoning": "Rule-based safety exit while AI unavailable",
+            }
+        if pnl_pct >= 5.0:
+            return {
+                "action": "TIGHTEN",
+                "new_trail_pct": min(current_trail, 1.5),
+                "reasoning": "Rule-based profit lock while AI unavailable",
+            }
+        if hold_seconds >= 4 * 3600 and pnl_pct < 0:
+            return {
+                "action": "TIGHTEN",
+                "new_trail_pct": min(current_trail, 1.5),
+                "reasoning": "Rule-based loss control while AI unavailable",
+            }
+        return DEFAULT_ACTION
 
     async def _execute_action(self, symbol: str, pos: Dict, action: Dict):
         """Execute the exit agent's decision — adjust trailing stop or exit."""
@@ -223,7 +247,7 @@ class ExitAgent:
 
         if act == "EXIT_NOW":
             # Immediate market sell
-            qty = int(float(pos.get("quantity", 0)))
+            qty = float(pos.get("quantity", 0) or 0)
             if qty > 0:
                 logger.warning(f"🚨 EXIT_NOW: {symbol} — {action.get('reasoning', '')}")
                 try:

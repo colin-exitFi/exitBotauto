@@ -849,47 +849,7 @@ class EntryManager:
             return
         try:
             brokerage_positions = self.broker.get_positions()
-            for p in brokerage_positions:
-                sym = p.get("symbol", "")
-                if not sym or sym in self.positions:
-                    continue
-                # Note: crypto positions use Coinbase API for pricing
-                raw_qty = float(p.get("quantity", 0) or 0)
-                side = p.get("side")
-                if side not in ("long", "short"):
-                    side = "short" if raw_qty < 0 else "long"
-                qty = abs(raw_qty)
-                if qty <= 0:
-                    continue
-                avg_price = p.get("average_price", 0)
-                cur_price = p.get("current_price", avg_price)
-                self.positions[sym] = {
-                    "symbol": sym,
-                    "side": side,
-                    "entry_price": avg_price,
-                    "quantity": qty,
-                    "entry_time": time.time(),  # approximate — we don't know real entry time
-                    "signal_timestamp": None,
-                    "entry_order_timestamp": None,
-                    "fill_timestamp": None,
-                    "fill_timestamp_source": "unknown",
-                    "sentiment_at_entry": 0,
-                    "peak_price": max(avg_price, cur_price) if side == "long" else min(avg_price, cur_price),
-                    "order_id": "",
-                    "partial_exit": False,
-                    "from_brokerage": True,  # flag so we know this was pre-existing
-                    "strategy_tag": "carryover",
-                    "signal_sources": ["broker_sync"],
-                    "decision_confidence": 0,
-                    "provider_used": "",
-                    "signal_price": avg_price,
-                    "decision_price": avg_price,
-                    "scout_escalated": False,
-                    "swing_only": False,
-                    "_exit_recorded": False,
-                }
-                side_tag = "SHORT" if side == "short" else "LONG"
-                logger.info(f"📦 Loaded {side_tag} position: {qty:.4f} {sym} @ ${avg_price:.2f} (current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f})")
+            self.sync_positions_from_brokerage(brokerage_positions)
             # Check for existing trailing stop orders and mark positions accordingly
             try:
                 open_orders = self.broker.get_orders(status="open")
@@ -906,6 +866,79 @@ class EntryManager:
             logger.success(f"Loaded {len(self.positions)} existing positions from Alpaca")
         except Exception as e:
             logger.error(f"Failed to load brokerage positions: {e}")
+
+    def sync_positions_from_brokerage(self, brokerage_positions: Optional[List[Dict]] = None) -> int:
+        """Upsert Alpaca positions into local tracking and keep quantities in sync."""
+        if brokerage_positions is None:
+            if not self.broker:
+                return 0
+            brokerage_positions = self.broker.get_positions()
+
+        updates = 0
+        for p in brokerage_positions or []:
+            sym = p.get("symbol", "")
+            if not sym:
+                continue
+            raw_qty = float(p.get("quantity", 0) or 0)
+            side = p.get("side")
+            if side not in ("long", "short"):
+                side = "short" if raw_qty < 0 else "long"
+            qty = abs(raw_qty)
+            if qty <= 0:
+                continue
+            avg_price = float(p.get("average_price", 0) or 0)
+            cur_price = float(p.get("current_price", avg_price) or avg_price)
+
+            existing = self.positions.get(sym)
+            if existing:
+                old_qty = float(existing.get("quantity", 0) or 0)
+                if abs(old_qty - qty) > 1e-6:
+                    existing["quantity"] = qty
+                    existing["side"] = side
+                    existing["current_price"] = cur_price
+                    existing["broker_synced_at"] = time.time()
+                    if qty < old_qty and qty < 1.0:
+                        existing["_dust_remainder"] = True
+                    elif qty >= 1.0:
+                        existing.pop("_dust_remainder", None)
+                    logger.warning(f"🔄 Synced {sym} quantity {old_qty:.4f} → {qty:.4f} from Alpaca")
+                    updates += 1
+                continue
+
+            self.positions[sym] = {
+                "symbol": sym,
+                "side": side,
+                "entry_price": avg_price,
+                "quantity": qty,
+                "entry_time": time.time(),  # approximate — we don't know real entry time
+                "signal_timestamp": None,
+                "entry_order_timestamp": None,
+                "fill_timestamp": None,
+                "fill_timestamp_source": "unknown",
+                "sentiment_at_entry": 0,
+                "peak_price": max(avg_price, cur_price) if side == "long" else min(avg_price, cur_price),
+                "order_id": "",
+                "partial_exit": False,
+                "from_brokerage": True,
+                "strategy_tag": "carryover",
+                "signal_sources": ["broker_sync"],
+                "decision_confidence": 0,
+                "provider_used": "",
+                "signal_price": avg_price,
+                "decision_price": avg_price,
+                "scout_escalated": False,
+                "swing_only": False,
+                "_exit_recorded": False,
+                "current_price": cur_price,
+                "broker_synced_at": time.time(),
+            }
+            side_tag = "SHORT" if side == "short" else "LONG"
+            logger.info(
+                f"📦 Loaded {side_tag} position: {qty:.4f} {sym} @ ${avg_price:.2f} "
+                f"(current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f})"
+            )
+            updates += 1
+        return updates
 
     def get_positions(self) -> List[Dict]:
         """Return list of tracked positions."""

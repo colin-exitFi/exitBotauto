@@ -4,6 +4,7 @@ Supports paper/live trading, fractional shares, extended hours.
 """
 
 import json
+import re
 import time
 import uuid
 from pathlib import Path
@@ -34,6 +35,8 @@ class AlpacaClient:
         self._trading_client: Optional[TradingClient] = None
         self._data_client: Optional[StockHistoricalDataClient] = None
         self._initialized = False
+        self._cancel_failures: Dict[str, int] = {}
+        self._cancel_skip_until: Dict[str, float] = {}
 
     def initialize(self) -> bool:
         """Initialize Alpaca trading and data clients."""
@@ -149,6 +152,16 @@ class AlpacaClient:
             logger.error(f"Get positions failed: {e}")
             return []
 
+    def get_position(self, symbol: str) -> Optional[Dict]:
+        """Get a single open position by symbol if present."""
+        target = str(symbol or "").upper().strip()
+        if not target:
+            return None
+        for pos in self.get_positions():
+            if str(pos.get("symbol", "")).upper() == target:
+                return pos
+        return None
+
     # ── Orders ─────────────────────────────────────────────────────
 
     def place_market_buy(self, symbol: str, qty_or_notional: Union[int, float], force_notional: bool = False) -> Optional[Dict]:
@@ -169,9 +182,16 @@ class AlpacaClient:
                     client_order_id=str(uuid.uuid4()),
                 )
             else:
+                executable_qty = qty_or_notional
+                existing_position = self.get_position(symbol)
+                if existing_position and str(existing_position.get("side", "")).lower() == "short":
+                    executable_qty = self._clamp_exit_qty(symbol, qty_or_notional, side="buy", whole_only=False)
+                    if executable_qty <= 0:
+                        logger.warning(f"Market buy skipped for {symbol}: no executable short-cover quantity after broker sync")
+                        return None
                 req = MarketOrderRequest(
                     symbol=symbol,
-                    qty=int(qty_or_notional),
+                    qty=int(executable_qty) if executable_qty == int(executable_qty) else executable_qty,
                     side=OrderSide.BUY,
                     time_in_force=TimeInForce.DAY,
                     client_order_id=str(uuid.uuid4()),
@@ -203,12 +223,13 @@ class AlpacaClient:
         self,
         symbol: str,
         qty_or_notional: Union[int, float],
+        force_notional: bool = False,
         _retry_on_qty_conflict: bool = True,
     ) -> Optional[Dict]:
         """Place a market sell order."""
         self._ensure_init()
         try:
-            is_notional = isinstance(qty_or_notional, float) and (qty_or_notional != int(qty_or_notional) or qty_or_notional < 1)
+            is_notional = bool(force_notional)
             if is_notional:
                 req = MarketOrderRequest(
                     symbol=symbol,
@@ -218,9 +239,13 @@ class AlpacaClient:
                     client_order_id=str(uuid.uuid4()),
                 )
             else:
+                executable_qty = self._clamp_exit_qty(symbol, qty_or_notional, side="sell", whole_only=False)
+                if executable_qty <= 0:
+                    logger.warning(f"Market sell skipped for {symbol}: no executable quantity after broker sync")
+                    return None
                 req = MarketOrderRequest(
                     symbol=symbol,
-                    qty=int(qty_or_notional) if qty_or_notional == int(qty_or_notional) else qty_or_notional,
+                    qty=int(executable_qty) if executable_qty == int(executable_qty) else executable_qty,
                     side=OrderSide.SELL,
                     time_in_force=TimeInForce.DAY,
                     client_order_id=str(uuid.uuid4()),
@@ -229,11 +254,16 @@ class AlpacaClient:
             logger.success(f"Market SELL: {qty_or_notional} {symbol} → order {order.id}")
             return self._order_to_dict(order)
         except Exception as e:
-            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
-                cancelled = self.cancel_open_sells_for_symbol(symbol)
+            if _retry_on_qty_conflict and self._should_retry_exit_error(e):
+                cancelled = self.cancel_related_orders_from_error(symbol, e, preferred_side="sell")
                 if cancelled:
                     time.sleep(0.5)
-                    return self.place_market_sell(symbol, qty_or_notional, _retry_on_qty_conflict=False)
+                    return self.place_market_sell(
+                        symbol,
+                        qty_or_notional,
+                        force_notional=force_notional,
+                        _retry_on_qty_conflict=False,
+                    )
             logger.error(f"Market sell failed ({symbol}): {e}")
             return None
 
@@ -299,11 +329,27 @@ class AlpacaClient:
     def cancel_order(self, order_id: str) -> bool:
         """Cancel an open order by ID."""
         self._ensure_init()
+        if self._cancel_is_temporarily_disabled(order_id):
+            logger.debug(f"Skipping cancel for {order_id}: recent repeated failures")
+            return False
         try:
             self._trading_client.cancel_order_by_id(order_id)
+            self._cancel_failures.pop(order_id, None)
+            self._cancel_skip_until.pop(order_id, None)
             logger.info(f"Order cancelled: {order_id}")
             return True
         except Exception as e:
+            message = str(e or "").lower()
+            if "already canceled" in message or "already filled" in message or "order not found" in message:
+                self._cancel_failures.pop(order_id, None)
+                self._cancel_skip_until.pop(order_id, None)
+                logger.info(f"Order already terminal: {order_id}")
+                return True
+            failures = int(self._cancel_failures.get(order_id, 0) or 0) + 1
+            self._cancel_failures[order_id] = failures
+            if failures >= 3:
+                self._cancel_skip_until[order_id] = time.time() + 900
+                logger.warning(f"Skipping repeated cancel failures for {order_id} for 15m")
             logger.error(f"Cancel order failed ({order_id}): {e}")
             return False
 
@@ -339,6 +385,85 @@ class AlpacaClient:
             or "qty available" in text
         )
 
+    @staticmethod
+    def _is_wash_trade_error(message: object) -> bool:
+        text = str(message or "").lower()
+        return "potential wash trade detected" in text or "use complex orders" in text
+
+    @staticmethod
+    def _is_htb_day_only_error(message: object) -> bool:
+        text = str(message or "").lower()
+        return "only day orders are allowed for hard-to-borrow asset" in text
+
+    @staticmethod
+    def _is_cannot_be_sold_short_error(message: object) -> bool:
+        text = str(message or "").lower()
+        return "cannot be sold short" in text
+
+    @classmethod
+    def _should_retry_exit_error(cls, message: object) -> bool:
+        return (
+            cls._is_qty_conflict_error(message)
+            or cls._is_wash_trade_error(message)
+            or cls._is_htb_day_only_error(message)
+            or cls._is_cannot_be_sold_short_error(message)
+        )
+
+    @staticmethod
+    def _extract_error_payload_ids(message: object) -> List[str]:
+        text = str(message or "")
+        payload = None
+        try:
+            payload = json.loads(text)
+        except Exception:
+            match = re.search(r"(\{.*\})", text)
+            if match:
+                try:
+                    payload = json.loads(match.group(1))
+                except Exception:
+                    payload = None
+        if not isinstance(payload, dict):
+            return []
+        ids = []
+        existing = str(payload.get("existing_order_id", "") or "").strip()
+        if existing:
+            ids.append(existing)
+        for order_id in payload.get("related_orders", []) or []:
+            value = str(order_id or "").strip()
+            if value:
+                ids.append(value)
+        return list(dict.fromkeys(ids))
+
+    def _cancel_is_temporarily_disabled(self, order_id: str) -> bool:
+        until = float(self._cancel_skip_until.get(order_id, 0) or 0)
+        if until and until > time.time():
+            return True
+        if until:
+            self._cancel_skip_until.pop(order_id, None)
+        return False
+
+    def _clamp_exit_qty(self, symbol: str, requested_qty: Union[int, float], side: str = "sell", whole_only: bool = False) -> float:
+        try:
+            requested = float(requested_qty or 0)
+        except Exception:
+            requested = 0.0
+        if requested <= 0:
+            return 0.0
+        position = self.get_position(symbol)
+        if not position:
+            return requested
+        available = float(position.get("quantity", 0) or 0)
+        if available <= 0:
+            return 0.0
+        if whole_only:
+            available = float(int(available))
+        if available <= 0:
+            return 0.0
+        if requested > available + 1e-6:
+            logger.warning(f"Adjusting {symbol} {side} qty from {requested:.4f} to broker-synced {available:.4f}")
+            return available
+        return requested
+
     def _get_open_orders_for_symbol(self, symbol: str) -> List[Dict]:
         self._ensure_init()
         try:
@@ -367,7 +492,7 @@ class AlpacaClient:
         target_side = str(side or "").lower()
         while time.time() < deadline:
             open_orders = self._get_open_orders_for_symbol(symbol)
-            conflicts = [
+            conflicts = list(open_orders) if not target_side else [
                 order for order in open_orders
                 if str(order.get("side", "")).lower() == target_side
             ]
@@ -376,18 +501,20 @@ class AlpacaClient:
             time.sleep(0.2)
         return False
 
-    def _cancel_open_orders_for_symbol(self, symbol: str, side: str) -> int:
+    def _cancel_open_orders_for_symbol(self, symbol: str, side: Optional[str] = None) -> int:
         cancelled = 0
         for order in self._get_open_orders_for_symbol(symbol):
-            if str(order.get("side", "")).lower() != str(side or "").lower():
+            if side and str(order.get("side", "")).lower() != str(side or "").lower():
                 continue
             order_id = str(order.get("id", "") or "").strip()
             if not order_id:
                 continue
+            if self._cancel_is_temporarily_disabled(order_id):
+                continue
             if self.cancel_order(order_id):
                 cancelled += 1
         if cancelled:
-            self._wait_for_open_orders_cleared(symbol, side)
+            self._wait_for_open_orders_cleared(symbol, side or "")
         return cancelled
 
     def cancel_open_sells_for_symbol(self, symbol: str) -> int:
@@ -402,6 +529,32 @@ class AlpacaClient:
         cancelled = self._cancel_open_orders_for_symbol(symbol, "buy")
         if cancelled:
             logger.info(f"Cancelled {cancelled} open buy orders for {symbol}")
+        return cancelled
+
+    def cancel_all_open_orders_for_symbol(self, symbol: str) -> int:
+        """Cancel all open orders for a symbol."""
+        cancelled = self._cancel_open_orders_for_symbol(symbol, None)
+        if cancelled:
+            logger.info(f"Cancelled {cancelled} open orders for {symbol}")
+        return cancelled
+
+    def cancel_related_orders_from_error(self, symbol: str, error: object, preferred_side: Optional[str] = None) -> int:
+        """Cancel specific related orders referenced by broker error payloads."""
+        cancelled = 0
+        seen = set()
+        for order_id in self._extract_error_payload_ids(error):
+            if order_id in seen or self._cancel_is_temporarily_disabled(order_id):
+                continue
+            seen.add(order_id)
+            if self.cancel_order(order_id):
+                cancelled += 1
+        if cancelled:
+            self._wait_for_open_orders_cleared(symbol, preferred_side or "")
+            return cancelled
+        if preferred_side:
+            cancelled += self._cancel_open_orders_for_symbol(symbol, preferred_side)
+        if self._is_wash_trade_error(error) or self._is_cannot_be_sold_short_error(error):
+            cancelled += self._cancel_open_orders_for_symbol(symbol, None)
         return cancelled
 
     # ── Smart Order Execution ─────────────────────────────────────
@@ -461,6 +614,9 @@ class AlpacaClient:
         Smart sell: for position value > $500, try limit at current price first.
         Falls back to market order.
         """
+        qty = self._clamp_exit_qty(symbol, qty, side="sell", whole_only=False)
+        if qty <= 0:
+            return None
         price = self.get_price(symbol)
         if price * qty <= 500 or price <= 0:
             return self.place_market_sell(symbol, qty)
@@ -667,13 +823,17 @@ class AlpacaClient:
         """
         self._ensure_init()
         try:
+            whole_qty = self._clamp_exit_qty(symbol, qty, side="sell", whole_only=True)
+            if whole_qty <= 0:
+                logger.warning(f"Trailing stop skipped for {symbol}: no whole shares available after broker sync")
+                return None
             order_data = {
                 'symbol': symbol,
-                'qty': str(qty),
+                'qty': str(int(whole_qty)),
                 'side': 'sell',
                 'type': 'trailing_stop',
                 'trail_percent': str(trail_percent),
-                'time_in_force': 'gtc',
+                'time_in_force': 'day',
             }
 
             resp = requests.post(
@@ -700,8 +860,8 @@ class AlpacaClient:
                     'hwm': data.get('hwm'),
                     'status': data['status'],
                 }
-            if _retry_on_qty_conflict and self._is_qty_conflict_error(resp.text):
-                cancelled = self.cancel_open_sells_for_symbol(symbol)
+            if _retry_on_qty_conflict and self._should_retry_exit_error(resp.text):
+                cancelled = self.cancel_related_orders_from_error(symbol, resp.text, preferred_side="sell")
                 if cancelled:
                     time.sleep(0.5)
                     return self.place_trailing_stop(
@@ -714,8 +874,8 @@ class AlpacaClient:
             return None
 
         except Exception as e:
-            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
-                cancelled = self.cancel_open_sells_for_symbol(symbol)
+            if _retry_on_qty_conflict and self._should_retry_exit_error(e):
+                cancelled = self.cancel_related_orders_from_error(symbol, e, preferred_side="sell")
                 if cancelled:
                     time.sleep(0.5)
                     return self.place_trailing_stop(
@@ -739,13 +899,17 @@ class AlpacaClient:
         """
         self._ensure_init()
         try:
+            whole_qty = self._clamp_exit_qty(symbol, qty, side="buy", whole_only=True)
+            if whole_qty <= 0:
+                logger.warning(f"Short trailing stop skipped for {symbol}: no whole shares available after broker sync")
+                return None
             order_data = {
                 'symbol': symbol,
-                'qty': str(qty),
+                'qty': str(int(whole_qty)),
                 'side': 'buy',
                 'type': 'trailing_stop',
                 'trail_percent': str(trail_percent),
-                'time_in_force': 'gtc',
+                'time_in_force': 'day',
             }
 
             resp = requests.post(
@@ -773,8 +937,8 @@ class AlpacaClient:
                     'status': data['status'],
                 }
 
-            if _retry_on_qty_conflict and self._is_qty_conflict_error(resp.text):
-                cancelled = self.cancel_open_buys_for_symbol(symbol)
+            if _retry_on_qty_conflict and self._should_retry_exit_error(resp.text):
+                cancelled = self.cancel_related_orders_from_error(symbol, resp.text, preferred_side="buy")
                 if cancelled:
                     time.sleep(0.5)
                     return self.place_trailing_stop_short(
@@ -787,8 +951,8 @@ class AlpacaClient:
             return None
 
         except Exception as e:
-            if _retry_on_qty_conflict and self._is_qty_conflict_error(e):
-                cancelled = self.cancel_open_buys_for_symbol(symbol)
+            if _retry_on_qty_conflict and self._should_retry_exit_error(e):
+                cancelled = self.cancel_related_orders_from_error(symbol, e, preferred_side="buy")
                 if cancelled:
                     time.sleep(0.5)
                     return self.place_trailing_stop_short(

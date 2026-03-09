@@ -2009,8 +2009,8 @@ class TradingBot:
         pos = self.entry_manager.positions.get(symbol)
         if not pos:
             return
-        qty = int(float(pos.get("quantity", 0) or 0))
-        if qty < 1:
+        qty = float(pos.get("quantity", 0) or 0)
+        if qty <= 0:
             return
         side = pos.get("side", "long")
         close_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
@@ -2544,8 +2544,8 @@ class TradingBot:
                             pnl_pct = ((entry_price - current_price) / entry_price) * 100
                         else:
                             pnl_pct = ((current_price - entry_price) / entry_price) * 100
-                    qty = int(float(pos.get("quantity", 0) or 0))
-                    if qty >= 1:
+                    qty = float(pos.get("quantity", 0) or 0)
+                    if qty > 0:
                         await exit_manager._execute_exit(
                             pos,
                             qty,
@@ -2574,7 +2574,11 @@ class TradingBot:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
                 None, self.alpaca_client.get_positions
             )
+            if self.entry_manager and hasattr(self.entry_manager, "sync_positions_from_brokerage"):
+                self.entry_manager.sync_positions_from_brokerage(alpaca_positions)
+                positions = self.entry_manager.get_positions()
             alpaca_symbols = {p["symbol"] for p in alpaca_positions}
+            alpaca_position_map = {p["symbol"]: p for p in alpaca_positions}
         except Exception as e:
             logger.debug(f"Alpaca position sync error: {e}")
             return
@@ -2645,6 +2649,11 @@ class TradingBot:
         for pos in list(positions):
             symbol = pos["symbol"]
             try:
+                broker_pos = alpaca_position_map.get(symbol)
+                if broker_pos:
+                    broker_qty = float(broker_pos.get("quantity", 0) or 0)
+                    if abs(float(pos.get("quantity", 0) or 0) - broker_qty) > 1e-6:
+                        pos["quantity"] = broker_qty
                 if pos.get("halted"):
                     logger.debug(f"{symbol}: market halted — skipping monitor checks")
                     continue
@@ -2806,7 +2815,8 @@ class TradingBot:
                         retry_count = pos.get("_trail_retry_count", 0) + 1
                         pos["_trail_retry_count"] = retry_count
                         logger.warning(f"⚠️ {symbol} has NO trailing stop — attempt {retry_count}/5")
-                        qty = int(float(pos.get("quantity", 0)))
+                        raw_qty = float(pos.get("quantity", 0) or 0)
+                        qty = int(raw_qty)
                         trail_pct = pos.get("trail_pct", 3.0)
                         side = pos.get("side", "long")
                         trail_fn = self.alpaca_client.place_trailing_stop_short if side == "short" and hasattr(self.alpaca_client, "place_trailing_stop_short") else self.alpaca_client.place_trailing_stop
@@ -2823,13 +2833,21 @@ class TradingBot:
                                 # Only emergency sell after 5 failed attempts across 5 scan cycles
                                 logger.error(f"🚨 TRAILING STOP FAILED 5x for {symbol} — FORCED MARKET EXIT for protection")
                                 emergency_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
-                                await asyncio.get_event_loop().run_in_executor(
-                                    None, emergency_fn, symbol, qty
+                                order = await asyncio.get_event_loop().run_in_executor(
+                                    None, emergency_fn, symbol, raw_qty
                                 )
-                                self.entry_manager.remove_position(symbol)
-                                log_activity("alert", f"🚨 Emergency market exit: {symbol} — trailing stop failed 5x")
+                                if order:
+                                    self.entry_manager.remove_position(symbol)
+                                    log_activity("alert", f"🚨 Emergency market exit: {symbol} — trailing stop failed 5x")
                             else:
                                 logger.warning(f"⚠️ Trailing stop failed for {symbol} — will retry next cycle ({retry_count}/5)")
+                        elif pos.get("_dust_remainder") and raw_qty > 0:
+                            logger.warning(f"🧹 {symbol} fractional remainder {raw_qty:.4f} cannot carry trailing stop — liquidating dust")
+                            emergency_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
+                            order = await asyncio.get_event_loop().run_in_executor(None, emergency_fn, symbol, raw_qty)
+                            if order:
+                                self.entry_manager.remove_position(symbol)
+                                log_activity("trade", f"🧹 Dust exit: {symbol} {raw_qty:.4f} shares")
 
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")

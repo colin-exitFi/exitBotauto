@@ -326,10 +326,17 @@ class ExtendedHoursGuard:
         """Place a limit sell order valid for extended hours."""
         try:
             import requests
+            actual_qty = float(qty or 0)
+            if hasattr(self.broker, "get_position"):
+                broker_pos = self.broker.get_position(symbol)
+                if broker_pos:
+                    actual_qty = min(actual_qty, float(broker_pos.get("quantity", actual_qty) or actual_qty))
+            if actual_qty <= 0:
+                return None
             ts = int(time.time() * 1000)
             order_data = {
                 'symbol': symbol,
-                'qty': str(qty),
+                'qty': str(int(actual_qty) if actual_qty == int(actual_qty) else actual_qty),
                 'side': 'sell',
                 'type': 'limit',
                 'limit_price': str(round(price, 2)),
@@ -345,9 +352,13 @@ class ExtendedHoursGuard:
             )
             if resp.status_code in (200, 201):
                 return resp.json()
-            else:
-                logger.error(f"Extended limit sell failed: {resp.status_code} {resp.text[:200]}")
-                return None
+            if hasattr(self.broker, "cancel_related_orders_from_error"):
+                cancelled = self.broker.cancel_related_orders_from_error(symbol, resp.text, preferred_side="sell")
+                if cancelled:
+                    time.sleep(0.5)
+                    return self._place_extended_limit_sell(symbol, actual_qty, price)
+            logger.error(f"Extended limit sell failed: {resp.status_code} {resp.text[:200]}")
+            return None
         except Exception as e:
             logger.error(f"Extended limit sell error for {symbol}: {e}")
             return None
@@ -356,10 +367,17 @@ class ExtendedHoursGuard:
         """Place a limit buy order valid for extended hours (short cover protection)."""
         try:
             import requests
+            actual_qty = float(qty or 0)
+            if hasattr(self.broker, "get_position"):
+                broker_pos = self.broker.get_position(symbol)
+                if broker_pos:
+                    actual_qty = min(actual_qty, float(broker_pos.get("quantity", actual_qty) or actual_qty))
+            if actual_qty <= 0:
+                return None
             ts = int(time.time() * 1000)
             order_data = {
                 'symbol': symbol,
-                'qty': str(qty),
+                'qty': str(int(actual_qty) if actual_qty == int(actual_qty) else actual_qty),
                 'side': 'buy',
                 'type': 'limit',
                 'limit_price': str(round(price, 2)),
@@ -375,6 +393,11 @@ class ExtendedHoursGuard:
             )
             if resp.status_code in (200, 201):
                 return resp.json()
+            if hasattr(self.broker, "cancel_related_orders_from_error"):
+                cancelled = self.broker.cancel_related_orders_from_error(symbol, resp.text, preferred_side="buy")
+                if cancelled:
+                    time.sleep(0.5)
+                    return self._place_extended_limit_buy(symbol, actual_qty, price)
             logger.error(f"Extended limit buy failed: {resp.status_code} {resp.text[:200]}")
             return None
         except Exception as e:
