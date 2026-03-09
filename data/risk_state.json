@@ -1,9 +1,9 @@
 {
-  "equity": 24900.0,
+  "equity": 25000.0,
   "starting_equity": 25000.0,
   "ath_equity": 25000.0,
-  "start_date": 1773033991.509214,
+  "start_date": 1773029746.206378,
   "wash_sale_list": {},
   "round_trips": [],
-  "alpaca_daytrade_count": 3
+  "alpaca_daytrade_count": 0
 }

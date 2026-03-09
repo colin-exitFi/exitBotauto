@@ -155,9 +155,10 @@ class TradingBot:
         self.copy_trader_monitor = CopyTraderMonitor()
         if (
             getattr(self.copy_trader_monitor, "start_stream", None)
-            and str(getattr(self.copy_trader_monitor, "_mode", "auto")) == "stream"
+            and str(getattr(self.copy_trader_monitor, "_mode", "auto")) in ("auto", "stream")
         ):
             self.copy_trader_monitor.start_stream()
+            logger.info("📡 X copy trader stream started")
         self.human_intel_store = HumanIntelStore()
         self.fred_client = FredClient()
         self.finnhub_client = FinnhubClient()
