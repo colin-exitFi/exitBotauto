@@ -648,7 +648,7 @@ class TradingBot:
 
                     # Log top picks
                     for pick in sunday_thesis.get("monday_watchlist", [])[:5]:
-                        log_activity("research", f"  📌 {pick.get('ticker','?')}: {pick.get('reason','')[:100]}")
+                        log_activity("research", f"  📌 {pick.get('ticker','?')}: {pick.get('reason','')[:300]}")
             except Exception as e:
                 logger.debug(f"Sunday analysis failed: {e}")
 
@@ -1068,7 +1068,7 @@ class TradingBot:
                     for f in filings[:5]:
                         ticker = f.get("ticker", "?")
                         form = f.get("form_type", "?")
-                        log_activity("research", f"📋 SEC {form}: {ticker} — {f.get('description', '')[:80]}")
+                        log_activity("research", f"📋 SEC {form}: {ticker} — {f.get('description', '')[:300]}")
                         # Add 8-K filers to watchlist as potential catalysts
                         if form == "8-K" and ticker:
                             self.watchlist.add(ticker, side="long", conviction=0.5,
@@ -1096,7 +1096,7 @@ class TradingBot:
                     state["overnight_news"] = news[:5]
                     tasks_run.append("news")
                     for headline in news[:3]:
-                        log_activity("research", f"📰 {headline[:120]}")
+                        log_activity("research", f"📰 {headline[:300]}")
             except Exception as e:
                 logger.debug(f"News scan failed: {e}")
 
@@ -1278,7 +1278,7 @@ class TradingBot:
                     elif "bearish" in text.lower():
                         result["futures_signal"] = "bearish"
                     result["futures_summary"] = text[:300]
-                    log_activity("research", f"🌅 Futures: {text[:150]}")
+                    log_activity("research", f"🌅 Futures: {text[:300]}")
             except Exception as e:
                 logger.debug(f"Pre-market futures check failed: {e}")
 
@@ -1330,14 +1330,14 @@ class TradingBot:
                 if obs:
                     obs_text = obs.get("market_assessment", str(obs)[:200])
                     self.ai_layers["last_observation"] = obs_text
-                    log_activity("ai", f"🔭 Observer: {obs_text[:150]}")
+                    log_activity("ai", f"🔭 Observer: {obs_text[:300]}")
 
                 # Advisor (every 30 min)
                 adv = await self.advisor.run(self, self.observer.get_last_output())
                 if adv:
                     adv_text = adv.get("strategy", str(adv)[:200])
                     self.ai_layers["last_advice"] = adv_text
-                    log_activity("ai", f"🎯 Advisor: {adv_text[:150]}")
+                    log_activity("ai", f"🎯 Advisor: {adv_text[:300]}")
 
                 exit_agent = getattr(getattr(self, "orchestrator", None), "exit_agent", None)
                 if self.advisor and exit_agent and self.entry_manager:

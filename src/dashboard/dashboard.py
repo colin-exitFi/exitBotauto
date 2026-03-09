@@ -914,7 +914,7 @@ tr:hover td{background:#161b2288}
   <!-- Activity Feed + Watchlist side by side -->
   <div class="card">
     <h2><span class="icon">🧠</span> Bot Activity Feed</h2>
-    <div id="activityFeed" style="max-height:400px;overflow-y:auto;font-size:12px;line-height:1.8;word-wrap:break-word;overflow-wrap:break-word"></div>
+    <div id="activityFeed" style="max-height:600px;overflow-y:auto;font-size:12px;line-height:1.8;word-wrap:break-word;overflow-wrap:break-word"></div>
   </div>
   <div class="card">
     <h2><span class="icon">📋</span> Watchlist <span id="watchlistCount" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
