@@ -1,42 +1,5 @@
 [
   {
-    "strategy": "Pre-market Monday will separate survivors from corpses \u2014 watch REPL/DAWN/EDSA for volume confirmation, then deploy 40% capital ($10K) into 4 positions within first 30 minutes if momentum holds.",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "biotech",
-        "small-cap momentum",
-        "high-beta plays"
-      ],
-      "avoid": [
-        "none yet - we need battle data first"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "STOP_LOSS_PCT",
-        "current": 1.5,
-        "suggested": 1.0,
-        "reason": "We're in COMPOUND tier with 1.0% tier stop \u2014 config should match. Tighter stops = more swings at bat with $25K."
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.0,
-        "suggested": 0.3,
-        "reason": "Zero sentiment filter is reckless at ground zero. Require mild bullish bias (0.3) to avoid obvious bear traps on first trades."
-      },
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "Market open Monday = war speed. 60-second scans miss entries. Drop to 30s for first hour, then revert to 60s after 10:30 AM."
-      }
-    ],
-    "key_insight": "We're at maximum risk right now \u2014 not from positions, but from PARALYSIS. 63 hours of dead capital is acceptable (market closed), but Monday 9:30 AM we must EXECUTE. The Observer found nuclear setups (DAWN +66%, EDSA +78%, REPL +14%) but these are Friday data. Here's the playbook: (1) Pre-market 9:00-9:30 AM: watch if Friday runners hold or fade. REPL cleanest setup (bullish sentiment, 3.7x volume, no fade signal). (2) Market open 9:30 AM: if REPL gaps up with volume, enter 1st position immediately. Don't wait for 'perfect' entry. (3) Deploy 4 positions by 10:00 AM if scans confirm momentum continues. (4) If Friday runners ALL fade, abort and wait for fresh scans \u2014 don't chase corpses. (5) First loss is tuition. First win is NOT skill. Stay mechanical. The $25K\u2192$5M path requires ~28 winning trades at 15% each OR ~18 at 25% each, compounded. That means 1-2 wins per week minimum for 6 months straight. Capital velocity starts Monday. Sitting in cash past 10:00 AM Monday = mission failure.",
-    "timestamp": 1772897790.8125281
-  },
-  {
     "strategy": "Pre-market Monday prep mode: Build watchlist now, execute aggressively at 9:30 open to deploy capital into momentum longs aligned with risk_on regime.",
     "position_advice": [],
     "sector_bias": {
@@ -1978,5 +1941,40 @@
     ],
     "key_insight": "CRITICAL PRE-MARKET WINDOW APPROACHING (opens ~5:40 AM ET). The Observer is right - sitting 100% cash is DEAD CAPITAL. However, DO NOT force trades in the dark. Instead: (1) Have scanner READY to fire at 9:30 AM, (2) First 15 minutes will show us gap-up momentum leaders - THAT's where we deploy hard and fast, (3) Target 3-4 positions by 9:45 AM to get capital working immediately, (4) Today's goal is EXECUTION REPS, not perfection - we need game film data to learn from. A $150 stop-out teaches us more than $25K sitting idle. The path to $5M starts with the first swing. Pre-market prep = watchlist of overnight gap-ups with volume. Market open = aggressive deployment into top 3 movers. Let's hunt.",
     "timestamp": 1773033056.473921
+  },
+  {
+    "strategy": "Pre-market preparation mode: Build watchlist NOW for 9:30 AM deployment blitz",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "energy",
+        "biotech"
+      ],
+      "avoid": []
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "PRE_MARKET_WATCHLIST_MODE",
+        "current": "inactive",
+        "suggested": "active",
+        "reason": "7.5 hours until open is prep time, not dead time - identify gap-ups, earnings movers, pre-market volume leaders NOW"
+      },
+      {
+        "param": "OPEN_DEPLOYMENT_SPEED",
+        "current": "standard",
+        "suggested": "blitz",
+        "reason": "First 30 minutes of Monday open = peak momentum opportunity window - need to deploy $25K-$37.5K in first hour"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 2.5,
+        "suggested": 3.0,
+        "reason": "Day 1 with full capital = maximum aggression warranted - larger positions = faster compounding velocity"
+      }
+    ],
+    "key_insight": "Dead capital is the enemy. You have 7.5 hours to prepare, not wait. Monday opens are volatility goldmines - earnings reports, weekend news gaps, institutional repositioning. The Observer correctly identified the real risk: $25K earning zero while momentum builds. Action items: (1) Scrape pre-market movers and gap scanners, (2) Build 15-20 symbol watchlist ranked by pre-market volume + gap %, (3) Set alerts for 9:20 AM to review top 5 candidates, (4) Plan to deploy 60% of capital ($15K = 5 positions) in first 30 minutes of open. Speed wins on Day 1.",
+    "timestamp": 1773036669.948629
   }
 ]
