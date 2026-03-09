@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -140,6 +141,53 @@ class DashboardHumanIntelTests(unittest.TestCase):
                     self.assertTrue(deleted.json()["ok"])
             finally:
                 dashboard_module.set_bot(None)
+
+    def test_dashboard_copilot_chat_uses_persisted_runners_for_recall_queries(self):
+        called = {"perplexity": False}
+
+        async def _fake_perplexity(prompt, max_tokens=900):
+            called["perplexity"] = True
+            return "Should not be used"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            runners_path = Path(tmp) / "yesterdays_runners.json"
+            watchlist_path = Path(tmp) / "watchlist.json"
+            runners_path.write_text(
+                json.dumps(
+                    {
+                        "runners": [
+                            {
+                                "symbol": "RVI",
+                                "date": "2026-03-06",
+                                "change_pct": 599.83,
+                                "close_price": 21.0,
+                                "volume_spike": 0.87,
+                            }
+                        ]
+                    }
+                )
+            )
+            watchlist_path.write_text(json.dumps({"items": []}))
+
+            dashboard_module.set_bot(None)
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
+                 patch.object(dashboard_module, "_RUNNERS_FILE", runners_path), \
+                 patch.object(dashboard_module, "_WATCHLIST_FILE", watchlist_path), \
+                 patch.object(dashboard_module, "call_perplexity_text", new=_fake_perplexity):
+                client = TestClient(dashboard_module.app)
+                resp = client.post(
+                    "/api/copilot/chat?token=secret-token",
+                    json={
+                        "message": "There was a stock that closed up over 500% on Friday, 3/6 and I can't remember what it was.",
+                        "history": [],
+                    },
+                )
+                self.assertEqual(resp.status_code, 200)
+                payload = resp.json()
+                self.assertTrue(payload["ok"])
+                self.assertEqual(payload["provider"], "local")
+                self.assertIn("RVI", payload["answer"])
+                self.assertFalse(called["perplexity"])
 
     def test_dashboard_copilot_chat_endpoint_uses_engine_context(self):
         captured = {}

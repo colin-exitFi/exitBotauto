@@ -28,6 +28,9 @@ app = FastAPI(title="Velox", version="2.0.0")
 _bot = None
 _dashboard_thread = None
 _LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
+_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+_RUNNERS_FILE = _DATA_DIR / "yesterdays_runners.json"
+_WATCHLIST_FILE = _DATA_DIR / "watchlist.json"
 _CHAT_HISTORY_LIMIT = 8
 _CHAT_ACTIVITY_LIMIT = 15
 _CHAT_STOPWORDS = {
@@ -140,6 +143,91 @@ def _recent_log_highlights(limit: int = 12) -> List[str]:
             if len(highlights) >= limit:
                 return highlights
     return highlights
+
+
+def _load_json_artifact(path: Path) -> Dict:
+    try:
+        raw = json.loads(path.read_text()) if path.exists() else {}
+        return raw if isinstance(raw, dict) else {}
+    except Exception:
+        return {}
+
+
+def _extract_query_dates(text: str) -> List[str]:
+    dates: List[str] = []
+    year = time.localtime().tm_year
+    for month, day in re.findall(r"\b(\d{1,2})/(\d{1,2})(?:/\d{2,4})?\b", str(text or "")):
+        try:
+            dates.append(f"{year:04d}-{int(month):02d}-{int(day):02d}")
+        except Exception:
+            continue
+    return dates[:4]
+
+
+def _persisted_runners_context(message: str, symbols: List[str], limit: int = 8) -> List[Dict]:
+    data = _load_json_artifact(_RUNNERS_FILE)
+    rows = data.get("runners", [])
+    if not isinstance(rows, list):
+        return []
+
+    query_dates = set(_extract_query_dates(message))
+    filtered = []
+    for row in rows:
+        symbol = str(row.get("symbol", "")).upper()
+        if symbols and symbol not in symbols:
+            continue
+        if query_dates and str(row.get("date", "")) not in query_dates:
+            continue
+        filtered.append(
+            {
+                "symbol": symbol,
+                "date": str(row.get("date", "") or ""),
+                "change_pct": round(float(row.get("change_pct", 0.0) or 0.0), 2),
+                "close_price": round(float(row.get("close_price", 0.0) or 0.0), 2),
+                "volume_spike": round(float(row.get("volume_spike", 0.0) or 0.0), 2),
+            }
+        )
+
+    if not filtered:
+        for row in rows:
+            symbol = str(row.get("symbol", "")).upper()
+            if symbols and symbol not in symbols:
+                continue
+            filtered.append(
+                {
+                    "symbol": symbol,
+                    "date": str(row.get("date", "") or ""),
+                    "change_pct": round(float(row.get("change_pct", 0.0) or 0.0), 2),
+                    "close_price": round(float(row.get("close_price", 0.0) or 0.0), 2),
+                    "volume_spike": round(float(row.get("volume_spike", 0.0) or 0.0), 2),
+                }
+            )
+
+    filtered.sort(key=lambda row: (row.get("date", ""), abs(float(row.get("change_pct", 0.0) or 0.0))), reverse=True)
+    return filtered[:limit]
+
+
+def _persisted_watchlist_context(symbols: List[str], limit: int = 8) -> List[Dict]:
+    data = _load_json_artifact(_WATCHLIST_FILE)
+    rows = data.get("items", [])
+    if not isinstance(rows, list):
+        return []
+
+    items = []
+    for row in rows:
+        ticker = str(row.get("ticker", "")).upper()
+        if symbols and ticker not in symbols:
+            continue
+        items.append(
+            {
+                "ticker": ticker,
+                "side": row.get("side", "long"),
+                "conviction": round(float(row.get("conviction", 0.0) or 0.0), 2),
+                "reason": str(row.get("reason", "") or "")[:160],
+                "sources": row.get("sources", ""),
+            }
+        )
+    return items[:limit]
 
 
 def _build_copilot_context(message: str, history: List[Dict]) -> Dict:
@@ -276,6 +364,8 @@ def _build_copilot_context(message: str, history: List[Dict]) -> Dict:
         }
         for row in _activity_feed[-_CHAT_ACTIVITY_LIMIT:]
     ]
+    historical_runners = _persisted_runners_context(message, symbols)
+    persisted_watchlist = _persisted_watchlist_context(symbols)
 
     return {
         "symbols_from_query": symbols,
@@ -290,6 +380,8 @@ def _build_copilot_context(message: str, history: List[Dict]) -> Dict:
         "human_intel": intel_entries,
         "copy_trader": copy_trader,
         "recent_trades": recent_trades,
+        "historical_runners": historical_runners,
+        "persisted_watchlist": persisted_watchlist,
         "activity_feed": activity,
         "recent_log_highlights": _recent_log_highlights(),
         "chat_history": [
@@ -303,13 +395,52 @@ def _build_copilot_context(message: str, history: List[Dict]) -> Dict:
     }
 
 
+def _maybe_answer_from_local_context(message: str, context: Dict) -> Optional[Dict]:
+    lower = str(message or "").lower()
+    recall_query = any(
+        phrase in lower
+        for phrase in ("can't remember", "dont remember", "don't remember", "what was it", "what ticker", "which ticker", "which stock")
+    )
+    if not recall_query:
+        return None
+
+    runners = list(context.get("historical_runners") or [])
+    if not runners:
+        return None
+
+    exact = [row for row in runners if row.get("date") in _extract_query_dates(message)]
+    candidates = exact or runners
+    if not candidates:
+        return None
+
+    best = max(candidates, key=lambda row: abs(float(row.get("change_pct", 0.0) or 0.0)))
+    if abs(float(best.get("change_pct", 0.0) or 0.0)) < 100:
+        return None
+
+    answer = (
+        f"The most likely ticker was {best['symbol']}. "
+        f"I found it in `data/yesterdays_runners.json`: {best['symbol']} closed {best['change_pct']:+.2f}% on {best['date']} "
+        f"at ${best['close_price']:.2f}."
+    )
+    return {
+        "ok": True,
+        "answer": answer,
+        "provider": "local",
+        "context_symbols": context.get("symbols_from_query", []),
+    }
+
+
 async def _generate_copilot_reply(message: str, history: List[Dict]) -> Dict:
     context = _build_copilot_context(message, history)
+    local = _maybe_answer_from_local_context(message, context)
+    if local:
+        log_activity("research", f"💬 Copilot question answered from local context: {str(message or '')[:120]}")
+        return local
     prompt = f"""You are Velox Operator Copilot.
 
 Your job is to answer the operator's question using the bot's INTERNAL ENGINE CONTEXT first.
 If you make an inference, say that clearly. If the context is insufficient, say what is missing.
-If the operator is trying to remember a ticker, use recent scanner/watchlist/log clues to infer the most likely symbol.
+If the operator is trying to remember a ticker, use recent scanner/watchlist/log clues plus persisted artifacts like `historical_runners` and `persisted_watchlist` to infer the most likely symbol.
 If the operator mentions a ticker, rumor, article, FDA event, or after-hours move, explain what Velox currently knows and what matters next.
 Do not output JSON. Write a direct operator-facing answer with short paragraphs or flat bullets.
 
@@ -902,9 +1033,7 @@ async def get_human_intel(limit: int = 20):
 
 @app.post("/api/copilot/chat")
 async def copilot_chat(request: Request):
-    """Natural-language operator chat against the live engine context."""
-    if not _bot:
-        return JSONResponse(status_code=503, content={"error": "Bot not connected"})
+    """Natural-language operator chat against live state plus persisted artifacts."""
     try:
         payload = await request.json()
     except Exception:
