@@ -112,6 +112,28 @@ class UnusualWhalesClient:
             return "bearish"
         return "neutral"
 
+    def _derive_dark_pool_sentiment(self, record: Dict) -> str:
+        raw_side = str(record.get("sentiment") or record.get("side") or record.get("execution_estimate") or "").strip().lower()
+        if raw_side in ("buy", "bullish", "accumulation"):
+            return "bullish"
+        if raw_side in ("sell", "bearish", "distribution"):
+            return "bearish"
+
+        price = self._to_float(record.get("price") or record.get("avg_price"))
+        bid = self._to_float(record.get("nbbo_bid") or record.get("bid"))
+        ask = self._to_float(record.get("nbbo_ask") or record.get("ask"))
+        midpoint = (bid + ask) / 2 if bid > 0 and ask > 0 else 0.0
+        if price > 0 and ask > 0 and price >= ask:
+            return "bullish"
+        if price > 0 and bid > 0 and price <= bid:
+            return "bearish"
+        if price > 0 and midpoint > 0:
+            if price > midpoint:
+                return "bullish"
+            if price < midpoint:
+                return "bearish"
+        return "neutral"
+
     def _normalize_flow_alerts(self, records: List[Dict]) -> List[Dict]:
         normalized = []
         for record in records or []:
@@ -119,6 +141,18 @@ class UnusualWhalesClient:
             if not ticker:
                 continue
             option_type = self._normalize_option_type(record)
+            premium = self._to_float(
+                record.get("total_premium")
+                or record.get("premium")
+                or record.get("premium_price")
+                or record.get("size_total")
+                or record.get("notional")
+            )
+            volume = self._to_int(
+                record.get("volume")
+                or record.get("total_size")
+                or record.get("size")
+            )
             normalized.append(
                 {
                     "ticker": ticker,
@@ -126,15 +160,33 @@ class UnusualWhalesClient:
                     "expiry": str(record.get("expiry") or record.get("expiration") or record.get("expiration_date") or ""),
                     "type": option_type,
                     "sentiment": self._normalize_sentiment(record, option_type=option_type),
-                    "premium": self._to_float(
-                        record.get("premium")
-                        or record.get("premium_price")
-                        or record.get("size_total")
-                        or record.get("notional")
-                    ),
-                    "volume": self._to_int(record.get("volume") or record.get("size")),
+                    "premium": premium,
+                    "volume": volume,
                     "open_interest": self._to_int(record.get("open_interest") or record.get("oi")),
-                    "contract_symbol": str(record.get("contract_symbol") or record.get("symbol") or ""),
+                    "contract_symbol": str(
+                        record.get("contract_symbol")
+                        or record.get("option_chain")
+                        or record.get("option_symbol")
+                        or record.get("symbol")
+                        or ""
+                    ),
+                    "ask_side_premium": self._to_float(
+                        record.get("total_ask_side_prem")
+                        or record.get("ask_side_premium")
+                    ),
+                    "bid_side_premium": self._to_float(
+                        record.get("total_bid_side_prem")
+                        or record.get("bid_side_premium")
+                    ),
+                    "price": self._to_float(record.get("price")),
+                    "underlying_price": self._to_float(record.get("underlying_price")),
+                    "timestamp": str(
+                        record.get("timestamp")
+                        or record.get("executed_at")
+                        or record.get("start_time")
+                        or record.get("created_at")
+                        or ""
+                    ),
                     "raw": record,
                 }
             )
@@ -148,20 +200,18 @@ class UnusualWhalesClient:
                 continue
             price = self._to_float(record.get("price") or record.get("avg_price"))
             size = self._to_int(record.get("size") or record.get("volume") or record.get("shares"))
-            raw_side = str(record.get("sentiment") or record.get("side") or record.get("execution_estimate") or "").strip().lower()
-            if raw_side in ("buy", "bullish", "accumulation"):
-                sentiment = "bullish"
-            elif raw_side in ("sell", "bearish", "distribution"):
-                sentiment = "bearish"
-            else:
-                sentiment = "neutral"
+            premium = self._to_float(record.get("premium"))
+            if premium <= 0 and price > 0 and size > 0:
+                premium = round(price * size, 2)
+            sentiment = self._derive_dark_pool_sentiment(record)
             normalized.append(
                 {
                     "ticker": ticker,
                     "price": price,
                     "size": size,
-                    "premium": round(price * size, 2),
+                    "premium": premium,
                     "sentiment": sentiment,
+                    "timestamp": str(record.get("executed_at") or record.get("timestamp") or ""),
                     "raw": record,
                 }
             )

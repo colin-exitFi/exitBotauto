@@ -42,6 +42,7 @@ from src.signals.short_interest import ShortInterestScanner
 from src.signals.sector_rotation import SectorRotationModel
 from src.streams.market_stream import MarketStream
 from src.streams.trade_stream import TradeStream
+from src.streams.unusual_whales_stream import UnusualWhalesStream
 from src.dashboard.dashboard import log_activity
 from src import persistence
 from src.entry.entry_manager import EntryManager
@@ -77,6 +78,7 @@ class TradingBot:
     earnings_scanner = None
     ark_trades = None
     unusual_whales = None
+    unusual_whales_stream = None
     options_scanner = None
     congress_scanner = None
     short_scanner = None
@@ -92,9 +94,11 @@ class TradingBot:
         self.paused = False
         self.start_time = time.time()
         self._breakout_queue = asyncio.Queue(maxsize=20)
+        self._uw_signal_queue = asyncio.Queue(maxsize=50)
         self._fast_path_pending = set()
         self._jury_vetoed_symbols: Dict[str, float] = {}
         self._fast_path_eval_queue = asyncio.Queue(maxsize=50)
+        self._recent_uw_signal_keys: Dict[str, float] = {}
         self._last_daily_reset_date = None
         self._processed_copy_trader_exit_ids = set()
 
@@ -199,6 +203,9 @@ class TradingBot:
         # Congressional trading scanner
         self.congress_scanner = CongressScanner(uw_client=self.unusual_whales)
 
+        # Unusual Whales realtime stream
+        self.unusual_whales_stream = UnusualWhalesStream(rest_client=self.unusual_whales)
+
         # Short interest / squeeze detector
         self.short_scanner = ShortInterestScanner()
 
@@ -226,6 +233,7 @@ class TradingBot:
             fade_scanner=self.fade_scanner,
             grok_x_trending=self.grok_x_trending,
             unusual_whales_client=self.unusual_whales,
+            unusual_whales_stream=self.unusual_whales_stream,
             human_intel_store=self.human_intel_store,
             watchlist_provider=self.watchlist,
             copy_trader_monitor=self.copy_trader_monitor,
@@ -296,6 +304,7 @@ class TradingBot:
             "last_consensus": None,
             "short_verdicts_blocked": 0,
             "last_short_block_reason": None,
+            "last_uw_stream_signal": None,
         }
 
         # ── Restore persisted state ─────────────────────────────────
@@ -353,6 +362,10 @@ class TradingBot:
         self.trade_stream.set_fill_callback(self._on_trade_update_fill)
         self.trade_stream.set_stop_callback(self._on_trailing_stop_filled)
         await self.trade_stream.start()
+
+        # Unusual Whales realtime stream: live flow alerts + dark pool prints
+        self.unusual_whales_stream.set_signal_callback(self._on_unusual_whales_signal)
+        await self.unusual_whales_stream.start()
 
         # Fetch initial earnings calendar
         try:
@@ -518,6 +531,14 @@ class TradingBot:
                     await self._process_copy_trader_exit_signals()
                 except Exception as e:
                     logger.error(f"Copy trader exit handling error: {e}")
+
+                # ── UNUSUAL WHALES REALTIME SIGNALS ──────────────
+                try:
+                    await self._process_unusual_whales_signal_queue()
+                except Exception as e:
+                    logger.error(f"UW realtime handling error: {e}")
+                if getattr(self, "unusual_whales_stream", None):
+                    self.ai_layers["uw_stream"] = self.unusual_whales_stream.get_stats()
 
                 # ── EXTENDED HOURS GUARD ──────────────────────────
                 # Ensure every position has protection (trailing stop OR dynamic limit)
@@ -1458,6 +1479,166 @@ class TradingBot:
             logger.info(f"⚡ FAST-PATH evaluating: {symbol} @ ${candidate['price']:.2f} ({candidate['change_pct']:+.1f}%, {candidate['volume_spike']:.1f}x vol)")
             
             # Run through the same orchestrator pipeline as normal candidates
+            await self._process_candidates([candidate])
+            processed += 1
+
+    def _prune_uw_signal_dedupe(self):
+        cutoff = time.time() - max(
+            60,
+            int(getattr(settings, "UW_STREAM_SIGNAL_WINDOW_SECONDS", 300) or 300),
+        )
+        self._recent_uw_signal_keys = {
+            key: ts for key, ts in getattr(self, "_recent_uw_signal_keys", {}).items() if ts >= cutoff
+        }
+
+    @staticmethod
+    def _summarize_uw_flow_event(event: Dict) -> str:
+        premium = float(event.get("premium", 0.0) or 0.0)
+        sentiment = str(event.get("sentiment", "neutral") or "neutral")
+        option_type = str(event.get("type", "unknown") or "unknown")
+        contract = str(event.get("contract_symbol", "") or "")
+        return (
+            f"live UW flow {sentiment} {option_type} "
+            f"${premium:,.0f} {contract}".strip()
+        )
+
+    @staticmethod
+    def _summarize_uw_dark_pool_event(event: Dict) -> str:
+        premium = float(event.get("premium", 0.0) or 0.0)
+        price = float(event.get("price", 0.0) or 0.0)
+        size = float(event.get("size", 0.0) or 0.0)
+        sentiment = str(event.get("sentiment", "neutral") or "neutral")
+        return (
+            f"live UW dark pool {sentiment} ${premium:,.0f} "
+            f"({size:,.0f} @ ${price:.2f})"
+        )
+
+    @staticmethod
+    def _build_uw_signal_key(symbol: str, event_type: str, side: str) -> str:
+        return f"{str(symbol).upper()}:{event_type}:{side}"
+
+    def _build_uw_candidate(self, event: Dict) -> Dict:
+        symbol = str(event.get("ticker", "") or event.get("symbol", "") or "").upper().strip()
+        if not symbol:
+            return {}
+
+        event_type = str(event.get("event_type", "") or "")
+        signal_price = float(event.get("underlying_price") or event.get("price") or 0.0)
+        premium = float(event.get("premium", 0.0) or 0.0)
+
+        if event_type == "flow_alert":
+            if premium < float(getattr(settings, "UW_STREAM_MIN_FLOW_PREMIUM", 100000.0) or 100000.0):
+                return {}
+            side = "short" if str(event.get("sentiment", "")).lower() == "bearish" else "long"
+            sentiment_score = -0.55 if side == "short" else 0.65
+            context = self._summarize_uw_flow_event(event)
+            return {
+                "symbol": symbol,
+                "price": signal_price,
+                "change_pct": 0.0,
+                "volume": float(event.get("volume", 0.0) or 0.0),
+                "source": "unusual_whales_stream",
+                "side": side,
+                "sentiment_score": sentiment_score,
+                "score": 1.0,
+                "priority": 1,
+                "signal_timestamp": time.time(),
+                "signal_sources": ["unusual_whales", "unusual_whales_stream"],
+                "uw_flow_sentiment": event.get("sentiment", "neutral"),
+                "uw_total_premium": premium,
+                "uw_flow_alerts": 1,
+                "unusual_options": context,
+                "uw_stream_channel": event.get("stream_channel", "flow-alerts"),
+                "uw_stream_event": dict(event),
+            }
+
+        if event_type == "dark_pool":
+            if premium < float(getattr(settings, "UW_STREAM_MIN_DARK_POOL_PREMIUM", 250000.0) or 250000.0):
+                return {}
+            sentiment = str(event.get("sentiment", "neutral") or "neutral").lower()
+            if sentiment == "neutral":
+                return {}
+            side = "short" if sentiment == "bearish" else "long"
+            sentiment_score = -0.45 if side == "short" else 0.45
+            context = self._summarize_uw_dark_pool_event(event)
+            return {
+                "symbol": symbol,
+                "price": signal_price,
+                "change_pct": 0.0,
+                "volume": float(event.get("size", 0.0) or 0.0),
+                "source": "unusual_whales_stream",
+                "side": side,
+                "sentiment_score": sentiment_score,
+                "score": 0.9,
+                "priority": 1,
+                "signal_timestamp": time.time(),
+                "signal_sources": ["unusual_whales", "unusual_whales_stream"],
+                "uw_dark_pool_bias": sentiment,
+                "dark_pool": context,
+                "uw_stream_channel": event.get("stream_channel", "off_lit_trades"),
+                "uw_stream_event": dict(event),
+            }
+
+        return {}
+
+    async def _on_unusual_whales_signal(self, event: Dict):
+        event_type = str(event.get("event_type", "") or "")
+        if event_type == "market_tide":
+            return
+
+        candidate = self._build_uw_candidate(event)
+        if not candidate:
+            return
+
+        symbol = candidate["symbol"]
+        side = candidate.get("side", "long")
+        dedupe_key = self._build_uw_signal_key(symbol, event_type, side)
+        self._prune_uw_signal_dedupe()
+        if dedupe_key in self._recent_uw_signal_keys:
+            return
+        self._recent_uw_signal_keys[dedupe_key] = time.time()
+
+        queue = getattr(self, "_uw_signal_queue", None)
+        if not queue:
+            return
+        try:
+            queue.put_nowait(candidate)
+        except asyncio.QueueFull:
+            logger.debug(f"UW signal queue full — dropping {symbol} {event_type}")
+            return
+
+        summary = candidate.get("unusual_options") or candidate.get("dark_pool") or event_type
+        self.ai_layers["last_uw_stream_signal"] = f"{symbol} {summary}"
+        logger.info(f"🐋 Queued UW realtime candidate: {symbol} {event_type} {side}")
+        log_activity(
+            "scan",
+            f"🐋 UW realtime: {symbol} {side} — {summary}",
+            {"symbol": symbol, "event_type": event_type, "side": side},
+        )
+
+    async def _process_unusual_whales_signal_queue(self):
+        queue = getattr(self, "_uw_signal_queue", None)
+        if not queue or queue.empty():
+            return
+        if not self.risk_manager.can_trade():
+            return
+
+        processed = 0
+        while not queue.empty() and processed < 3:
+            try:
+                candidate = queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+            symbol = str(candidate.get("symbol", "") or "").upper()
+            held_symbols = {p.get("symbol") for p in self.entry_manager.get_positions()}
+            if symbol in held_symbols:
+                continue
+
+            logger.info(
+                f"🐋 Processing UW realtime candidate: {symbol} "
+                f"({candidate.get('side', 'long')}, src={candidate.get('uw_stream_channel', '?')})"
+            )
             await self._process_candidates([candidate])
             processed += 1
 
@@ -2883,6 +3064,8 @@ class TradingBot:
             await self.market_stream.stop()
         if self.trade_stream:
             await self.trade_stream.stop()
+        if getattr(self, "unusual_whales_stream", None):
+            await self.unusual_whales_stream.stop()
         if getattr(self, "copy_trader_monitor", None) and getattr(self.copy_trader_monitor, "stop_stream", None):
             self.copy_trader_monitor.stop_stream()
         # Save final state

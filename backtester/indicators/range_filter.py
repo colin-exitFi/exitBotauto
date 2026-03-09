@@ -60,8 +60,8 @@ class RangeFilterIndicator(BaseIndicator):
         rf_down = rf < rf.shift(1)
 
         # Entries: filter direction changes to up
-        entries = rf_up & (~rf_up.shift(1).fillna(False))
-        exits = rf_down & (~rf_down.shift(1).fillna(False))
+        entries = rf_up & (~rf_up.shift(1, fill_value=False))
+        exits = rf_down & (~rf_down.shift(1, fill_value=False))
 
         # Strength: distance from filter line
         strength = ((close - rf).abs() / close).clip(0, 0.1).mul(10).fillna(0)

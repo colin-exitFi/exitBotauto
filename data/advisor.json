@@ -1,64 +1,5 @@
 [
   {
-    "strategy": "Pre-market preparation mode: Build Monday watchlist from Friday's momentum context, prep for aggressive deployment at 09:30 ET open",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [
-        "biotech",
-        "small-cap momentum",
-        "recent_IPOs"
-      ],
-      "avoid": [
-        "Friday's exhausted runners"
-      ]
-    },
-    "aggression_level": "increase",
-    "parameter_suggestions": [
-      {
-        "param": "SCAN_INTERVAL_SECONDS",
-        "current": 60,
-        "suggested": 30,
-        "reason": "First 30 minutes Monday = maximum opportunity window. Need faster scanning to catch early runners before they're extended"
-      },
-      {
-        "param": "TAKE_PROFIT_1_PCT",
-        "current": 1.5,
-        "suggested": 2.0,
-        "reason": "Friday runners moved +30-80%. In momentum regime, 1.5% TP1 leaves too much meat on bone. Let winners run to 2% before first trim"
-      },
-      {
-        "param": "MIN_ENTRY_SENTIMENT",
-        "current": 0.0,
-        "suggested": 0.3,
-        "reason": "StockTwits showing bullish sentiment on Friday runners. Use sentiment as confirming filter to avoid dead catalysts"
-      }
-    ],
-    "key_insight": "You have the BEST possible starting position: $25K clean capital, no baggage, COMPOUND tier unlocked, and proven market momentum (Friday's +66/78/34% runners show velocity exists). Monday 09:30-10:00 ET is your strike window. The mistake isn't being aggressive \u2014 it's being TOO CAUTIOUS and missing the opening surge. Deploy 4-5 positions in first 30 minutes on fresh scanner hits with volume confirmation. A 3% stop loss costs $18.75 per $625 position. Missing a DAWN-like +66% runner costs $412. The math is clear: ATTACK THE OPEN.",
-    "monday_execution_checklist": {
-      "09:25_ET": "Verify scanner data is LIVE and fresh (not stale Friday data)",
-      "09:30_ET": "Scan every 30 seconds for first 30 minutes \u2014 this is prime hunting time",
-      "09:35_ET": "Target 2-3 positions deployed if scanner shows volume + momentum + sentiment alignment",
-      "10:00_ET": "Target 4-5 positions deployed (40-50% of max heat) if opportunities present",
-      "10:30_ET": "Assess morning positions \u2014 trail winners aggressively, cut losers fast, redeploy capital immediately"
-    },
-    "risk_reminder": "Your hard floor is 1.5% stop loss ($18.75/position). Your circuit breaker is 4% daily loss ($1,000). Between those bounds, you have $982 of 'learning budget' Monday. Use it to BUILD VELOCITY. Five small winners at +2% each = +$62.50 profit AND momentum data AND compounding started. One home run at +20% = +$125 and proof of concept. Both outcomes require DEPLOYMENT. Dead capital sitting idle Monday = actual loss of opportunity cost.",
-    "timestamp": 1772893188.10625
-  },
-  {
-    "strategy": "EMERGENCY HALT - Complete system failure detected, require immediate diagnostic and capital state verification before any trading decisions",
-    "position_advice": [],
-    "sector_bias": {
-      "favor": [],
-      "avoid": [
-        "ALL - no capital to deploy"
-      ]
-    },
-    "aggression_level": "decrease",
-    "parameter_suggestions": [],
-    "key_insight": "CRITICAL SYSTEM FAILURE: $25,000 \u2192 $0.00 represents either (1) catastrophic real loss requiring post-mortem, (2) data corruption/initialization error, or (3) system state desync. With 0 trades recorded but 100% capital loss, this points to data error rather than trading failure. Markets are closed (Saturday) providing window for diagnostics. IMMEDIATE ACTIONS REQUIRED: verify Alpaca account balance via API, check database integrity, review system logs for errors, confirm starting capital was properly initialized. If real loss occurred: full trade reconstruction needed to understand what happened. If data error: restore correct state before Monday open. Cannot provide strategic trading advice with $0 equity - this is a system health crisis, not a trading strategy question. Advisor layer is designed for tactical decisions within operational bounds, but the system itself appears non-operational. Escalate to human oversight immediately.",
-    "timestamp": 1772896839.5493371
-  },
-  {
     "strategy": "Pre-market Monday will separate survivors from corpses \u2014 watch REPL/DAWN/EDSA for volume confirmation, then deploy 40% capital ($10K) into 4 positions within first 30 minutes if momentum holds.",
     "position_advice": [],
     "sector_bias": {
@@ -1967,5 +1908,75 @@
     ],
     "key_insight": "Markets open in 9 hours. Critical first-hour game plan: (1) Scanner must deliver 3-5 candidates by 9:35 AM - if empty, data feed issue needs immediate fix. (2) Deploy first position within 5 minutes of open - momentum waits for no one. (3) Target 3-4 positions by 10:00 AM to establish velocity baseline. (4) Day 1 is data collection day - we need 5-10 trades minimum to train the game film engine. Bias toward action: a 1% stop loss costs $62.50, but missing the first runner that goes +25% costs $1,562. The only way we learn if this system works is by RUNNING it. Empty scanner at open = red alert requiring human intervention.",
     "timestamp": 1773030881.0249338
+  },
+  {
+    "strategy": "Pre-market aggression protocol: Deploy 60%+ of capital within first 90 minutes of open into 5-8 momentum runners with volume confirmation.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "energy",
+        "biotech"
+      ],
+      "avoid": []
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": -0.2,
+        "reason": "Zero trades after market hours = scanner too conservative. Lower threshold to catch early momentum before consensus forms."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "First 2 hours of trading are critical for momentum capture. Faster scanning = earlier entries on runners."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "COMPOUND tier already has 1.0% stops - config mismatch. Align to tier rules for tighter risk control."
+      }
+    ],
+    "key_insight": "DEPLOYMENT URGENCY: We're at T+0 with 100% idle capital. The $25K\u2192$5M path requires ~175 consecutive 2.5% compounding wins. Every trading day missed = 5-10 potential entry opportunities lost forever. Monday open is our FIRST strike zone. Pre-market scanner must identify 8-12 candidates by 9:30 AM. Target: 5 positions filled by 10:30 AM with $15K+ deployed. A 'wait and see' approach guarantees failure - we need IMMEDIATE capital velocity. The only bad trade today is NO trade.",
+    "timestamp": 1773032559.6729898
+  },
+  {
+    "strategy": "Pre-market preparation mode: Build aggressive watchlist NOW for 9:30 AM momentum capture window",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [
+        "tech",
+        "biotech",
+        "small-cap runners"
+      ],
+      "avoid": []
+    },
+    "aggression_level": "increase",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 60,
+        "suggested": 30,
+        "reason": "First 30 minutes of market open = highest velocity window. Need faster scanning to catch breakouts before they run 10%+"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 0.0,
+        "reason": "Keep neutral - Day 1 we need exposure to establish patterns. Don't filter aggressively yet."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 1.5,
+        "suggested": 1.0,
+        "reason": "Matches COMPOUND tier safety (1.0%). Tighter stops = more swings at bat with $25K capital"
+      }
+    ],
+    "key_insight": "CRITICAL PRE-MARKET WINDOW APPROACHING (opens ~5:40 AM ET). The Observer is right - sitting 100% cash is DEAD CAPITAL. However, DO NOT force trades in the dark. Instead: (1) Have scanner READY to fire at 9:30 AM, (2) First 15 minutes will show us gap-up momentum leaders - THAT's where we deploy hard and fast, (3) Target 3-4 positions by 9:45 AM to get capital working immediately, (4) Today's goal is EXECUTION REPS, not perfection - we need game film data to learn from. A $150 stop-out teaches us more than $25K sitting idle. The path to $5M starts with the first swing. Pre-market prep = watchlist of overnight gap-ups with volume. Market open = aggressive deployment into top 3 movers. Let's hunt.",
+    "timestamp": 1773033056.473921
   }
 ]

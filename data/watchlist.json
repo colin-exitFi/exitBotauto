@@ -27,8 +27,8 @@
       "reason": "Earnings beat: +16.6% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 16.6% ($12.57 vs prev $10.79)",
       "sources": "earnings_reaction + premarket_scan",
       "added_at": 1772766498.782183,
-      "last_refreshed": 1773031156.76914,
-      "expires_at": 1773290356.76914
+      "last_refreshed": 1773033029.050565,
+      "expires_at": 1773292229.050565
     },
     {
       "ticker": "RAIN",
@@ -37,8 +37,8 @@
       "reason": "Earnings beat: +7.1% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 7.1% ($2.72 vs prev $2.54)",
       "sources": "earnings_reaction + premarket_scan",
       "added_at": 1772766838.2943501,
-      "last_refreshed": 1773031156.771518,
-      "expires_at": 1773290356.771518
+      "last_refreshed": 1773033029.052035,
+      "expires_at": 1773292229.052035
     },
     {
       "ticker": "SOTY",
@@ -57,8 +57,8 @@
       "reason": "Earnings beat: +39.8% AH gap up | Overnight up 39.8% ($3.30 vs prev $2.36)",
       "sources": "earnings_reaction + premarket_scan",
       "added_at": 1772855426.3275661,
-      "last_refreshed": 1773031156.767174,
-      "expires_at": 1773290356.767174
+      "last_refreshed": 1773033029.047096,
+      "expires_at": 1773292229.047096
     },
     {
       "ticker": "USO",
@@ -67,8 +67,8 @@
       "reason": "StockTwits #30 trending | StockTwits #28 trending | Oil proxy for geopolitical risk; WTI biggest jump in years, highest since 2023[1 | Overnight up 13.6% ($109.44 vs prev $96.33)",
       "sources": "stocktwits + sunday_analysis + premarket_scan",
       "added_at": 1772945965.218199,
-      "last_refreshed": 1773031156.7697432,
-      "expires_at": 1773290356.7697432
+      "last_refreshed": 1773033029.051018,
+      "expires_at": 1773292229.051018
     },
     {
       "ticker": "SLS",
@@ -77,8 +77,8 @@
       "reason": "StockTwits #29 trending | StockTwits #25 trending | Overnight up 4.7% ($5.54 vs prev $5.29) | StockTwits #18 trending",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1772945965.2187572,
-      "last_refreshed": 1773031156.772002,
-      "expires_at": 1773290356.772002
+      "last_refreshed": 1773033029.0526469,
+      "expires_at": 1773292229.0526469
     },
     {
       "ticker": "UCO",
@@ -87,28 +87,8 @@
       "reason": "StockTwits #28 trending | StockTwits #22 trending | Overnight up 9.6% ($33.59 vs prev $30.66) | StockTwits #23 trending | StockTwits #24 trending",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1772945965.2195818,
-      "last_refreshed": 1773031156.771274,
-      "expires_at": 1773290356.771274
-    },
-    {
-      "ticker": "BKNG",
-      "conviction": 0.97,
-      "side": "long",
-      "reason": "StockTwits #27 trending",
-      "sources": "stocktwits",
-      "added_at": 1772945965.220216,
-      "last_refreshed": 1772945965.220216,
-      "expires_at": 1773032365.220216
-    },
-    {
-      "ticker": "WIX",
-      "conviction": 0.89,
-      "side": "long",
-      "reason": "StockTwits #19 trending",
-      "sources": "stocktwits",
-      "added_at": 1772945965.2254028,
-      "last_refreshed": 1772945965.2254028,
-      "expires_at": 1773032365.2254028
+      "last_refreshed": 1773033029.0518038,
+      "expires_at": 1773292229.0518038
     },
     {
       "ticker": "INDO",
@@ -117,8 +97,8 @@
       "reason": "StockTwits #11 trending | StockTwits #26 trending | Overnight up 12.1% ($5.65 vs prev $5.04) | StockTwits #17 trending",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1772945965.235017,
-      "last_refreshed": 1773031156.7706099,
-      "expires_at": 1773290356.7706099
+      "last_refreshed": 1773033029.0513191,
+      "expires_at": 1773292229.0513191
     },
     {
       "ticker": "IOVA",
@@ -127,8 +107,8 @@
       "reason": "StockTwits #20 trending | Overnight up 11.7% ($5.14 vs prev $4.60)",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1773022837.519083,
-      "last_refreshed": 1773031156.771022,
-      "expires_at": 1773290356.771022
+      "last_refreshed": 1773033029.05157,
+      "expires_at": 1773292229.05157
     },
     {
       "ticker": "UVIX",
@@ -137,8 +117,8 @@
       "reason": "StockTwits #18 trending | Overnight up 22.8% ($9.04 vs prev $7.36)",
       "sources": "stocktwits + premarket_scan",
       "added_at": 1773022837.5224488,
-      "last_refreshed": 1773031156.768288,
-      "expires_at": 1773290356.768288
+      "last_refreshed": 1773033029.049835,
+      "expires_at": 1773292229.049835
     },
     {
       "ticker": "XLK",
@@ -197,10 +177,10 @@
       "reason": "Down 6.29% amid tech/semiconductor weakness[1] | Overnight down 6.3% ($324.71 vs prev $346.38)",
       "sources": "perplexity + premarket_scan",
       "added_at": 1773029534.6024761,
-      "last_refreshed": 1773031156.771755,
-      "expires_at": 1773290356.771755
+      "last_refreshed": 1773033029.052267,
+      "expires_at": 1773292229.052267
     }
   ],
-  "updated_at": "2026-03-08T23:39:16.772033",
-  "count": 20
+  "updated_at": "2026-03-09T00:10:29.052697",
+  "count": 18
 }

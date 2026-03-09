@@ -29,7 +29,7 @@ class Scanner:
       6. Score & rank
     """
 
-    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None, grok_x_trending=None, unusual_whales_client=None, human_intel_store=None, watchlist_provider=None, copy_trader_monitor=None):
+    def __init__(self, polygon_client=None, sentiment_analyzer=None, stocktwits_client=None, alpaca_client=None, pharma_scanner=None, fade_scanner=None, grok_x_trending=None, unusual_whales_client=None, unusual_whales_stream=None, human_intel_store=None, watchlist_provider=None, copy_trader_monitor=None):
         self.polygon = polygon_client
         self.sentiment = sentiment_analyzer
         self.stocktwits = stocktwits_client
@@ -38,6 +38,7 @@ class Scanner:
         self.fade = fade_scanner
         self.grok_x = grok_x_trending
         self.unusual_whales = unusual_whales_client
+        self.unusual_whales_stream = unusual_whales_stream
         self.human_intel = human_intel_store
         self.watchlist = watchlist_provider
         self.copy_trader = copy_trader_monitor
@@ -67,6 +68,15 @@ class Scanner:
         self._last_runners_record_date = ""
         self._last_market_regime = "mixed"
         logger.info("Scanner initialized")
+
+    def _get_unusual_whales_snapshot(self) -> Dict:
+        stream = getattr(self, "unusual_whales_stream", None)
+        if stream and getattr(stream, "is_fresh", lambda: False)():
+            try:
+                return stream.get_snapshot() or {}
+            except Exception as e:
+                logger.debug(f"UW stream snapshot unavailable: {e}")
+        return {}
 
     async def scan(self) -> List[Dict]:
         """Run a full scan cycle. Returns ranked candidate list."""
@@ -405,9 +415,12 @@ class Scanner:
         self._apply_human_intel_enrichment(active_candidates)
         if self.unusual_whales and getattr(self.unusual_whales, "is_configured", lambda: False)():
             try:
-                market_tide = await asyncio.get_event_loop().run_in_executor(
-                    None, self.unusual_whales.get_market_tide
-                )
+                snapshot = self._get_unusual_whales_snapshot()
+                market_tide = dict(snapshot.get("market_tide") or {})
+                if not market_tide:
+                    market_tide = await asyncio.get_event_loop().run_in_executor(
+                        None, self.unusual_whales.get_market_tide
+                    )
                 market_tide_summary = (
                     f"{market_tide.get('bias', 'mixed')} p/c {float(market_tide.get('put_call_ratio', 0) or 0):.2f}; "
                     f"puts ${float(market_tide.get('net_put_premium', 0) or 0):,.0f}; "
@@ -833,16 +846,20 @@ class Scanner:
     async def _apply_unusual_whales_enrichment(self, candidates: List[Dict]):
         if not candidates or not self.unusual_whales or not getattr(self.unusual_whales, "is_configured", lambda: False)():
             return
-        try:
-            flow_alerts = await asyncio.get_event_loop().run_in_executor(
-                None, self.unusual_whales.get_flow_alerts, 100_000, None, 150
-            )
-            dark_pool = await asyncio.get_event_loop().run_in_executor(
-                None, self.unusual_whales.get_dark_pool, None, 150
-            )
-        except Exception as e:
-            logger.debug(f"Unusual Whales enrichment failed: {e}")
-            return
+        snapshot = self._get_unusual_whales_snapshot()
+        flow_alerts = list(snapshot.get("flow_alerts") or [])
+        dark_pool = list(snapshot.get("dark_pool") or [])
+        if not flow_alerts and not dark_pool:
+            try:
+                flow_alerts = await asyncio.get_event_loop().run_in_executor(
+                    None, self.unusual_whales.get_flow_alerts, 100_000, None, 150
+                )
+                dark_pool = await asyncio.get_event_loop().run_in_executor(
+                    None, self.unusual_whales.get_dark_pool, None, 150
+                )
+            except Exception as e:
+                logger.debug(f"Unusual Whales enrichment failed: {e}")
+                return
 
         flow_by_ticker: Dict[str, List[Dict]] = {}
         for alert in flow_alerts or []:
@@ -926,13 +943,16 @@ class Scanner:
 
         # ── 1. Flow alerts: whale options trades with high premium ──
         try:
-            flow_alerts = await loop.run_in_executor(
-                None,
-                lambda: self.unusual_whales.get_flow_alerts(
-                    min_premium=100_000,  # $100K+ premium trades only
-                    limit=100,
-                ),
-            )
+            snapshot = self._get_unusual_whales_snapshot()
+            flow_alerts = list(snapshot.get("flow_alerts") or [])
+            if not flow_alerts:
+                flow_alerts = await loop.run_in_executor(
+                    None,
+                    lambda: self.unusual_whales.get_flow_alerts(
+                        min_premium=100_000,  # $100K+ premium trades only
+                        limit=100,
+                    ),
+                )
             # Aggregate by ticker — multiple alerts on same ticker = stronger signal
             ticker_flow: Dict[str, Dict] = {}
             for alert in flow_alerts or []:

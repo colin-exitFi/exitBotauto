@@ -31,14 +31,14 @@
     "ripster47": {
       "current_streak": 0,
       "signals_correct": 0,
-      "signals_emitted": 33,
+      "signals_emitted": 35,
       "signals_wrong": 0,
       "weight": 1.0
     },
     "traderstewie": {
       "current_streak": 0,
       "signals_correct": 0,
-      "signals_emitted": 26,
+      "signals_emitted": 34,
       "signals_wrong": 0,
       "weight": 0.5
     }

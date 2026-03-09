@@ -67,12 +67,15 @@ class SqueezeMomentumIndicator(BaseIndicator):
         mom_smooth = momentum.rolling(5).mean()
 
         # Squeeze just fired (was on, now off)
-        squeeze_fire = squeeze_off & squeeze_on.shift(1).fillna(False)
+        squeeze_fire = squeeze_off & squeeze_on.shift(1, fill_value=False)
 
         # Buy: squeeze fires + momentum positive and increasing
         mom_positive = mom_smooth > 0
         mom_increasing = mom_smooth > mom_smooth.shift(1)
-        entries = (squeeze_fire | (squeeze_off & squeeze_on.shift(2).fillna(False))) & mom_positive & mom_increasing
+        entries = (
+            squeeze_fire
+            | (squeeze_off & squeeze_on.shift(2, fill_value=False))
+        ) & mom_positive & mom_increasing
 
         # Sell: momentum turns negative
         exits = (mom_smooth < 0) & (mom_smooth.shift(1) >= 0)

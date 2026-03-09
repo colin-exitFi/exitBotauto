@@ -170,3 +170,60 @@ class ScannerUnusualWhalesEnrichmentTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(candidates[0]["gamma_support"], [120.0])
         self.assertEqual(candidates[0]["gamma_max_strike"], 120.0)
+
+    async def test_apply_unusual_whales_enrichment_prefers_fresh_stream_snapshot(self):
+        class _UW:
+            def is_configured(self):
+                return True
+
+            def get_flow_alerts(self, *args, **kwargs):
+                raise AssertionError("REST flow fallback should not be used when stream is fresh")
+
+            def get_dark_pool(self, *args, **kwargs):
+                raise AssertionError("REST dark pool fallback should not be used when stream is fresh")
+
+            def get_gamma_exposure(self, symbol):
+                return {
+                    "ticker": symbol,
+                    "levels": [],
+                    "max_gamma_strike": 0,
+                    "support_strikes": [],
+                    "resistance_strikes": [],
+                }
+
+        class _UWStream:
+            def is_fresh(self):
+                return True
+
+            def get_snapshot(self):
+                return {
+                    "flow_alerts": [
+                        {"ticker": "NVDA", "sentiment": "bullish", "premium": 600_000},
+                    ],
+                    "dark_pool": [
+                        {"ticker": "NVDA", "sentiment": "bullish", "premium": 900_000},
+                    ],
+                    "market_tide": {"bias": "risk_on"},
+                }
+
+        scanner = Scanner(unusual_whales_client=_UW(), unusual_whales_stream=_UWStream())
+        candidates = [{"symbol": "NVDA", "side": "long"}]
+
+        await scanner._apply_unusual_whales_enrichment(candidates)
+
+        self.assertEqual(candidates[0]["uw_flow_sentiment"], "bullish")
+        self.assertEqual(candidates[0]["uw_dark_pool_bias"], "bullish")
+        self.assertGreater(candidates[0]["uw_score_adjustment"], 0.0)
+
+    def test_get_unusual_whales_snapshot_returns_stream_market_tide_when_fresh(self):
+        class _UWStream:
+            def is_fresh(self):
+                return True
+
+            def get_snapshot(self):
+                return {"market_tide": {"bias": "risk_off", "put_call_ratio": 1.8}}
+
+        scanner = Scanner(unusual_whales_stream=_UWStream())
+        snapshot = scanner._get_unusual_whales_snapshot()
+
+        self.assertEqual(snapshot["market_tide"]["bias"], "risk_off")

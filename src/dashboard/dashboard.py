@@ -518,6 +518,9 @@ async def get_intelligence():
     if hasattr(_bot, "copy_trader_monitor") and _bot.copy_trader_monitor:
         result["copy_trader"] = _bot.copy_trader_monitor.get_dashboard_data()
 
+    if hasattr(_bot, "unusual_whales_stream") and _bot.unusual_whales_stream:
+        result["unusual_whales_stream"] = _bot.unusual_whales_stream.get_stats()
+
     # Sector rotation
     if hasattr(_bot, 'sector_model') and _bot.sector_model:
         result["sectors"] = _bot.sector_model.get_dashboard_data()
@@ -542,6 +545,11 @@ async def get_streams():
     return {
         "market": _bot.market_stream.get_stats() if hasattr(_bot, 'market_stream') and _bot.market_stream else {},
         "trade": _bot.trade_stream.get_stats() if hasattr(_bot, 'trade_stream') and _bot.trade_stream else {},
+        "unusual_whales": (
+            _bot.unusual_whales_stream.get_stats()
+            if hasattr(_bot, "unusual_whales_stream") and _bot.unusual_whales_stream
+            else {}
+        ),
     }
 
 

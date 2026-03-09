@@ -1,12 +1,12 @@
 {
   "last_pharma_refresh": 1773022810.978513,
-  "last_news_scan": 1773030597.38764,
+  "last_news_scan": 1773032531.829559,
   "overnight_news": [
-    "**US Non-Farm Payrolls (Feb 2026)**: Jobs fell 92,000, unemployment rose to 4.4%; signals cooling labor market, boosts Fed rate cut odds but creates volatility.[1]",
-    "**Oil surge above $80/barrel**: Highest since 2024; raises inflation fears, delays rate cuts, hit airlines/travel stocks, Dow dropped 1,000+ points.[1]",
-    "**Proposed 15% global tariffs**: Administration push met by 20 states suing to block; trade policy uncertainty swings markets.[1]",
-    "**SCHD ETF reconstitution upcoming (Mar 20)**: Market rotation to cash-flow stocks like SCHD (up 12% YTD); big for ETF flows.[1]",
-    "**Upcoming CPI report (Mar 11)**: Key inflation data could pressure stocks if high, support rate cuts if low; labor weakness amplifies impact.[1]"
+    "**US non-farm payrolls fell 92,000 in Feb 2026, unemployment at 4.4%** (yesterday; signals cooling labor market, boosts rate cut odds but adds volatility; broad market impact).[1]",
+    "**Oil surged above $80/barrel** (recent; highest since 2024, raises inflation fears, Dow dropped >1,000 pts; affects airlines like DAL, UAL).[1]",
+    "**Administration proposed 15% global tariffs** (recent; 20 states suing to block, trade policy swings markets; impacts importers/exporters).[1]",
+    "**SCHD ETF reconstitution upcoming Mar 20** (big for ETF rotation to value/safety amid market shifts; SCHD).[1]",
+    "**Upcoming CPI report Mar 11** (key inflation data; higher CPI could delay Fed cuts, pressure stocks).[1]"
   ],
   "last_game_film": 1773022810.978513,
   "last_thesis": 1773029527.0440588,
@@ -102,5 +102,5 @@
       }
     ]
   },
-  "last_premarket_scan": 1773031153.065717
+  "last_premarket_scan": 1773033024.588035
 }

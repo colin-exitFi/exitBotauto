@@ -52,8 +52,8 @@ class IchimokuIndicator(BaseIndicator):
         above_cloud = close > cloud_top
         below_cloud = close < cloud_bottom
 
-        entries = above_cloud & (~above_cloud.shift(1).fillna(False))
-        exits = below_cloud & (~below_cloud.shift(1).fillna(False))
+        entries = above_cloud & (~above_cloud.shift(1, fill_value=False))
+        exits = below_cloud & (~below_cloud.shift(1, fill_value=False))
 
         # TK cross adds confirmation
         tk_bullish = tenkan_sen > kijun_sen
