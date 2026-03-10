@@ -1367,10 +1367,10 @@ class TradingBot:
                     )
 
                 # Position Manager (every 2 min)
-                pm = await self.position_manager.run(self)
+                pm = await self.position_manager.run(self, self.advisor.get_last_output())
                 if pm:
                     health = pm.get("portfolio_health", "healthy")
-                    exits = len(pm.get("emergency_exits", []))
+                    exits = len(pm.get("emergency_exits", [])) + len(pm.get("strategic_exits", []))
                     vetoes = len(pm.get("vetoes", []))
                     self.ai_layers["last_position_manager"] = f"{health} | {exits} exits | {vetoes} vetoes"
 
