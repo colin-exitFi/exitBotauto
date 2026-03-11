@@ -1279,6 +1279,9 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .metric .value.animated{animation:countUp .4s ease-out}
 .metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .big-pnl{font-size:clamp(18px,2.2vw,28px)!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
+.recon-banner{display:none;margin:0 0 12px 0;padding:12px 14px;border:1px solid #8b0000;border-radius:10px;background:linear-gradient(145deg,#2a0f12,#1c0b0d);color:#ffb3b3;font-size:12px;line-height:1.45;white-space:normal;word-break:break-word;overflow-wrap:anywhere;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.recon-banner strong{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ff8e8e;margin-bottom:4px}
+.recon-banner .muted{color:#d88f8f}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px solid #21262d}
 td{padding:8px 10px;border-bottom:1px solid #21262d44;font-size:13px;transition:background .2s}
@@ -1351,7 +1354,7 @@ tr:hover td{background:#161b2288}
   <!-- P&L Terminal -->
   <div class="card full">
     <h2><span class="icon">💰</span> P&L Terminal <span id="pnlTimestamp" style="margin-left:auto;color:#484f58;font-size:11px;font-weight:400"></span></h2>
-    <div id="reconBanner" style="display:none;margin:0 0 12px 0;padding:10px 12px;border:1px solid #8b0000;border-radius:8px;background:#2a0f12;color:#ffb3b3;font-size:12px;"></div>
+    <div id="reconBanner" class="recon-banner"></div>
     <div class="metrics pnl-grid" id="pnlMetrics">
       <div class="metric"><div class="value big-pnl" id="totalPnl">$0.00</div><div class="label">Total P&L</div></div>
       <div class="metric"><div class="value" id="equity">$1,000</div><div class="label">Equity</div></div>
@@ -1667,6 +1670,21 @@ async function refresh() {
   // P&L Terminal
   const pnl = await api('/api/pnl');
   if (pnl) {
+    const humanizeReason = (reason) => {
+      const map = {
+        broker_symbols_missing_from_internal: 'broker activity missing from internal history',
+        broker_truth_canary_triggered: 'broker-truth canary triggered',
+        carryover_gap: 'overnight carryover gap detected',
+        internal_closed_trade_subset_only: 'internal analytics only reflect a trade subset',
+        internal_ledgers_diverge: 'internal ledgers disagree',
+        internal_symbols_missing_from_broker_day_bundle: 'internal history missing matching broker day activity',
+        residual_position_drift: 'residual position drift detected',
+        broker_history_unavailable: 'broker portfolio history unavailable',
+      };
+      const key = String(reason || '').trim();
+      if (!key) return '';
+      return map[key] || key.replaceAll('_', ' ');
+    };
     const setPnl = (id, val, prefix='$') => {
       const el = $(id);
       if (!el) return;
@@ -1697,13 +1715,19 @@ async function refresh() {
     const reconBanner = $('reconBanner');
     if (reconBanner) {
       const status = pnl.reconciliation_status || 'unknown';
-      const reasons = (pnl.reconciliation_reasons || []).join(', ');
+      const reasons = (pnl.reconciliation_reasons || []).map(humanizeReason).filter(Boolean);
       if (status && status !== 'ok') {
         reconBanner.style.display = 'block';
-        reconBanner.textContent = `Broker reconciliation ${status}: internal analytics degraded${reasons ? ' [' + reasons + ']' : ''}`;
+        const shownReasons = reasons.slice(0, 3);
+        const extraCount = Math.max(0, reasons.length - shownReasons.length);
+        reconBanner.innerHTML = `<strong>Reconciliation warning</strong>`
+          + `<span>Broker reconciliation is <b>${String(status).replaceAll('_', ' ')}</b>. Internal analytics are degraded.</span>`
+          + (shownReasons.length
+              ? `<span class="muted"> Top causes: ${shownReasons.join(', ')}${extraCount ? ` +${extraCount} more` : ''}.</span>`
+              : '');
       } else {
         reconBanner.style.display = 'none';
-        reconBanner.textContent = '';
+        reconBanner.innerHTML = '';
       }
     }
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString()

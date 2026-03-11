@@ -25,7 +25,7 @@ class Reconciler:
 
     def snapshot(self, trade_date: Optional[str] = None) -> Dict:
         broker = self.get_broker_truth(trade_date=trade_date)
-        internal = self.get_internal_analytics()
+        internal = self.get_internal_analytics(trade_date=trade_date or broker.get("date"))
         reconciliation = self.classify_mismatch(broker, internal)
         payload = {
             "as_of": time.time(),
@@ -103,7 +103,19 @@ class Reconciler:
                         if qty < 1:
                             carryover_fragment_symbols.append(symbol)
 
-        symbols_with_broker_activity = sorted({str(a.get("symbol", "") or "").upper() for a in activities if str(a.get("symbol", "") or "").strip()})
+        broker_open_symbols = sorted({
+            str(p.get("symbol", "") or "").upper()
+            for p in positions
+            if str(p.get("symbol", "") or "").strip()
+        })
+        symbols_with_broker_activity = sorted({
+            str(a.get("symbol", "") or "").upper()
+            for a in activities
+            if str(a.get("symbol", "") or "").strip()
+        })
+        broker_closed_symbols = sorted(
+            set(symbols_with_broker_activity) - set(broker_open_symbols)
+        )
         if not trade_date:
             trade_date = str(account.get("balance_asof") or today_key)
 
@@ -123,37 +135,58 @@ class Reconciler:
             "intraday_realized_estimate": None,
             "fill_count": len(activities),
             "symbols_with_broker_activity": symbols_with_broker_activity,
+            "broker_open_symbols": broker_open_symbols,
+            "broker_closed_symbols": broker_closed_symbols,
             "carryover_symbols": sorted(set(carryover_symbols)),
             "carryover_fragment_symbols": sorted(set(carryover_fragment_symbols)),
             "intraday_symbols": sorted(set(intraday_symbols)),
             "broker_history_available": bool(timestamps and equities),
         }
 
-    def get_internal_analytics(self) -> Dict:
+    def get_internal_analytics(self, trade_date: Optional[str] = None) -> Dict:
         pnl_state = persistence.load_pnl_state()
         analytics = trade_history.get_analytics()
+        history = trade_history.load_all()
+        target_day = trade_date or time.strftime("%Y-%m-%d")
+        today_history = [
+            t for t in history
+            if self._trade_day_key_from_trade(t) == target_day
+        ]
+        today_realized = round(sum(float(t.get("pnl", 0) or 0) for t in today_history), 2)
+        today_trade_count = len(today_history)
+        today_wins = len([t for t in today_history if float(t.get("pnl", 0) or 0) > 0])
+        today_win_rate_pct = round(today_wins / max(1, today_trade_count) * 100.0, 2) if today_trade_count else 0.0
+        today_symbols = sorted({
+            str(t.get("symbol", "") or "").upper()
+            for t in today_history
+            if str(t.get("symbol", "") or "").strip()
+        })
         game_film = self._load_json(DATA_DIR / "game_film.json")
         return {
             "pnl_state_realized": round(float(pnl_state.get("total_realized_pnl", 0) or 0), 2),
             "pnl_state_today_realized": round(float(pnl_state.get("today_realized_pnl", 0) or 0), 2),
             "pnl_state_trade_count": int(pnl_state.get("total_trades", 0) or 0),
-            "trade_history_realized": round(float(analytics.get("total_pnl", 0) or 0), 2),
-            "trade_history_trade_count": int(analytics.get("total_trades", 0) or 0),
-            "trade_history_win_rate_pct": round(float((analytics.get("overall", {}) or {}).get("win_rate_pct", 0) or 0), 2),
+            "trade_history_realized": today_realized,
+            "trade_history_trade_count": today_trade_count,
+            "trade_history_win_rate_pct": today_win_rate_pct,
             "game_film_realized": round(float(game_film.get("total_pnl", 0) or 0), 2) if isinstance(game_film, dict) else 0.0,
             "game_film_trade_count": int(game_film.get("total_trades", 0) or 0) if isinstance(game_film, dict) else 0,
             "game_film_win_rate_pct": round(float(game_film.get("overall_win_rate_pct", 0) or 0), 2) if isinstance(game_film, dict) else 0.0,
-            "symbols_in_trade_history": sorted((analytics.get("by_symbol", {}) or {}).keys()),
+            "symbols_in_trade_history": today_symbols,
             "symbols_in_game_film": sorted((game_film.get("by_symbol", {}) or {}).keys()) if isinstance(game_film, dict) else [],
+            "analytics_total_realized_all_time": round(float(analytics.get("total_pnl", 0) or 0), 2),
         }
 
     def classify_mismatch(self, broker: Dict, internal: Dict) -> Dict:
         equity = float(broker.get("equity", 0) or 0)
         broker_day_pnl = float(broker.get("day_pnl", 0) or 0)
-        pnl_state_realized = float(internal.get("pnl_state_realized", 0) or 0)
+        pnl_state_realized = float(internal.get("pnl_state_today_realized", 0) or 0)
         trade_history_realized = float(internal.get("trade_history_realized", 0) or 0)
-        diff_pnl_state = round(broker_day_pnl - pnl_state_realized, 2)
-        diff_trade_history = round(broker_day_pnl - trade_history_realized, 2)
+        overnight_gap = float(broker.get("overnight_gap_pnl", 0) or 0)
+        current_open_unrealized = float(broker.get("current_open_unrealized", 0) or 0)
+        broker_closed_trade_estimate = round(broker_day_pnl - overnight_gap - current_open_unrealized, 2)
+        diff_pnl_state = round(broker_closed_trade_estimate - pnl_state_realized, 2)
+        diff_trade_history = round(broker_closed_trade_estimate - trade_history_realized, 2)
         effective_diff = max(abs(diff_pnl_state), abs(diff_trade_history))
 
         reasons: List[str] = []
@@ -161,13 +194,16 @@ class Reconciler:
             reasons.append("carryover_gap")
         if abs(pnl_state_realized - trade_history_realized) > 10:
             reasons.append("internal_ledgers_diverge")
-        if broker.get("symbols_with_broker_activity"):
-            missing = sorted(set(broker.get("symbols_with_broker_activity") or []) - set(internal.get("symbols_in_trade_history") or []))
+        if broker.get("broker_closed_symbols"):
+            missing = sorted(set(broker.get("broker_closed_symbols") or []) - set(internal.get("symbols_in_trade_history") or []))
             if missing:
                 reasons.append("broker_symbols_missing_from_internal")
+            internal_missing = sorted(set(internal.get("symbols_in_trade_history") or []) - set(broker.get("symbols_with_broker_activity") or []))
+            if internal_missing:
+                reasons.append("internal_symbols_missing_from_broker_day_bundle")
         if broker.get("carryover_fragment_symbols"):
             reasons.append("residual_position_drift")
-        if effective_diff > 0:
+        if effective_diff > 10:
             reasons.append("internal_closed_trade_subset_only")
         if not broker.get("broker_history_available"):
             reasons.append("broker_history_unavailable")
@@ -185,10 +221,14 @@ class Reconciler:
         elif effective_diff > 5:
             status = "minor_mismatch"
             severity = "warning"
+        elif reasons:
+            status = "warning"
+            severity = "warning"
 
         return {
             "broker_vs_pnl_state_diff": diff_pnl_state,
             "broker_vs_trade_history_diff": diff_trade_history,
+            "broker_closed_trade_estimate": broker_closed_trade_estimate,
             "status": status,
             "severity": severity,
             "reasons": sorted(set(reasons)),
@@ -213,6 +253,13 @@ class Reconciler:
         except Exception:
             return {}
         return {}
+
+    @classmethod
+    def _trade_day_key_from_trade(cls, trade: Dict) -> str:
+        ts = float(trade.get("exit_time", trade.get("recorded_at", 0)) or 0)
+        if ts <= 0:
+            return ""
+        return cls._trade_day_key(ts)
 
     @staticmethod
     def _save(payload: Dict):

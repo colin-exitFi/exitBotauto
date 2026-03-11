@@ -67,6 +67,48 @@ class ReconcilerTests(unittest.TestCase):
         self.assertIn("broker_truth_canary_triggered", snap["reconciliation"]["reasons"])
         self.assertIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
 
+    def test_open_position_activity_is_not_flagged_missing_from_internal(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 10050.0, "last_equity": 10000.0, "cash": 5000.0},
+            positions=[{"symbol": "AAPL", "unrealized_pnl": "50.0"}],
+            activities=[{"symbol": "AAPL", "side": "buy", "qty": "10"}],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 10050.0],
+                "profit_loss": [0.0, 50.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": 0.0}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": 0.0, "total_trades": 0, "overall": {}, "by_symbol": {}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-10")
+
+        self.assertNotIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
+        self.assertEqual(snap["reconciliation"]["status"], "ok")
+
+    def test_carryover_gap_alone_is_warning_not_critical(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9800.0, "last_equity": 10000.0, "cash": 9000.0},
+            positions=[{"symbol": "MSFT", "unrealized_pnl": "-25.0"}],
+            activities=[],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [9825.0, 9800.0],
+                "profit_loss": [-175.0, -200.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": 0.0}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": 0.0, "total_trades": 0, "overall": {}, "by_symbol": {}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-10")
+
+        self.assertIn("carryover_gap", snap["reconciliation"]["reasons"])
+        self.assertEqual(snap["reconciliation"]["status"], "warning")
+
     def test_marks_degraded_when_broker_history_missing(self):
         alpaca = _FakeAlpaca(account={"equity": 1000, "last_equity": 1000}, positions=[], activities=[], portfolio_history={})
         reconciler = Reconciler(alpaca)
