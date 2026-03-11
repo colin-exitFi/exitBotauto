@@ -24,18 +24,23 @@ class Reconciler:
         self.options_engine = options_engine
 
     def snapshot(self, trade_date: Optional[str] = None) -> Dict:
+        previous = self._load_json(RECONCILIATION_FILE)
         broker = self.get_broker_truth(trade_date=trade_date)
         internal = self.get_internal_analytics(trade_date=trade_date or broker.get("date"))
         reconciliation = self.classify_mismatch(broker, internal)
+        canaries = self.build_canaries(broker, internal, reconciliation, previous)
+        trust = self.build_trust_flags(reconciliation)
         payload = {
             "as_of": time.time(),
             "date": trade_date or broker.get("date") or time.strftime("%Y-%m-%d"),
             "broker": broker,
             "internal": internal,
             "reconciliation": reconciliation,
+            "canaries": canaries,
+            "trust": trust,
         }
         self._save(payload)
-        if reconciliation.get("status") != "ok":
+        if reconciliation.get("status") != "healthy":
             logger.warning(
                 "BROKER TRUTH:\n"
                 f"equity={broker.get('equity')} last_equity={broker.get('last_equity')} "
@@ -50,7 +55,8 @@ class Reconciler:
                 f"status={reconciliation.get('status')} "
                 f"broker_vs_pnl_state={reconciliation.get('broker_vs_pnl_state_diff')} "
                 f"broker_vs_trade_history={reconciliation.get('broker_vs_trade_history_diff')} "
-                f"reasons={','.join(reconciliation.get('reasons', []))}"
+                f"reasons={','.join(reconciliation.get('reasons', []))} "
+                f"canaries={','.join(c.get('code', '') for c in canaries)}"
             )
         return payload
 
@@ -141,6 +147,16 @@ class Reconciler:
             "carryover_fragment_symbols": sorted(set(carryover_fragment_symbols)),
             "intraday_symbols": sorted(set(intraday_symbols)),
             "broker_history_available": bool(timestamps and equities),
+            "broker_positions": {
+                str(p.get("symbol", "") or "").upper(): {
+                    "qty": float(p.get("qty", 0) or 0),
+                    "side": str(p.get("side", "") or "").lower(),
+                    "avg_entry_price": float(p.get("avg_entry_price", 0) or 0),
+                    "market_value": float(p.get("market_value", 0) or 0),
+                }
+                for p in positions
+                if str(p.get("symbol", "") or "").strip()
+            },
         }
 
     def get_internal_analytics(self, trade_date: Optional[str] = None) -> Dict:
@@ -162,6 +178,7 @@ class Reconciler:
             if str(t.get("symbol", "") or "").strip()
         })
         game_film = self._load_json(DATA_DIR / "game_film.json")
+        internal_positions = getattr(self.entry_manager, "positions", {}) if self.entry_manager else {}
         return {
             "pnl_state_realized": round(float(pnl_state.get("total_realized_pnl", 0) or 0), 2),
             "pnl_state_today_realized": round(float(pnl_state.get("today_realized_pnl", 0) or 0), 2),
@@ -175,6 +192,14 @@ class Reconciler:
             "symbols_in_trade_history": today_symbols,
             "symbols_in_game_film": sorted((game_film.get("by_symbol", {}) or {}).keys()) if isinstance(game_film, dict) else [],
             "analytics_total_realized_all_time": round(float(analytics.get("total_pnl", 0) or 0), 2),
+            "internal_live_positions": {
+                str(symbol).upper(): {
+                    "qty": float(pos.get("quantity", 0) or 0),
+                    "side": str(pos.get("side", "") or "").lower(),
+                    "entry_price": float(pos.get("entry_price", 0) or 0),
+                }
+                for symbol, pos in (internal_positions or {}).items()
+            },
         }
 
     def classify_mismatch(self, broker: Dict, internal: Dict) -> Dict:
@@ -208,11 +233,11 @@ class Reconciler:
         if not broker.get("broker_history_available"):
             reasons.append("broker_history_unavailable")
 
-        status = "ok"
-        severity = "ok"
+        status = "healthy"
+        severity = "healthy"
         threshold = max(25.0, 0.005 * equity) if equity > 0 else 25.0
         if not broker.get("broker_history_available"):
-            status = "degraded"
+            status = "minor_mismatch"
             severity = "warning"
         elif effective_diff > threshold:
             status = "critical_mismatch"
@@ -222,7 +247,7 @@ class Reconciler:
             status = "minor_mismatch"
             severity = "warning"
         elif reasons:
-            status = "warning"
+            status = "minor_mismatch"
             severity = "warning"
 
         return {
@@ -232,6 +257,117 @@ class Reconciler:
             "status": status,
             "severity": severity,
             "reasons": sorted(set(reasons)),
+        }
+
+    def build_canaries(self, broker: Dict, internal: Dict, reconciliation: Dict, previous: Dict) -> List[Dict]:
+        previous_canaries = {
+            f"{c.get('code','')}::{c.get('symbol','')}": c
+            for c in (previous.get("canaries", []) or [])
+            if isinstance(c, dict)
+        }
+        canaries: List[Dict] = []
+        now_ts = time.time()
+
+        def add_canary(code: str, severity: str, magnitude: float = 0.0, symbol: str = "", recommended_action: str = ""):
+            key = f"{code}::{symbol}"
+            prior = previous_canaries.get(key, {})
+            canaries.append(
+                {
+                    "code": code,
+                    "symbol": symbol or None,
+                    "severity": severity,
+                    "first_seen": float(prior.get("first_seen", now_ts) or now_ts),
+                    "current_magnitude": round(float(magnitude or 0.0), 4),
+                    "recommended_action": recommended_action,
+                }
+            )
+
+        broker_positions = broker.get("broker_positions", {}) or {}
+        internal_positions = internal.get("internal_live_positions", {}) or {}
+        broker_symbols = set(broker_positions.keys())
+        internal_symbols = set(internal_positions.keys())
+
+        for symbol in sorted(broker_symbols - internal_symbols):
+            add_canary(
+                "broker_position_missing_internal",
+                "critical",
+                symbol=symbol,
+                recommended_action="Sync live positions from broker before trusting internal exposure.",
+            )
+        for symbol in sorted(internal_symbols - broker_symbols):
+            add_canary(
+                "internal_position_missing_broker",
+                "critical",
+                symbol=symbol,
+                recommended_action="Drop or repair the orphaned internal position state.",
+            )
+        for symbol in sorted(broker_symbols & internal_symbols):
+            broker_qty = float((broker_positions.get(symbol, {}) or {}).get("qty", 0) or 0)
+            internal_qty = float((internal_positions.get(symbol, {}) or {}).get("qty", 0) or 0)
+            if abs(broker_qty - internal_qty) > 0.001:
+                add_canary(
+                    "position_qty_mismatch",
+                    "critical",
+                    magnitude=abs(broker_qty - internal_qty),
+                    symbol=symbol,
+                    recommended_action="Use broker quantity as canonical and repair internal position sizing.",
+                )
+
+        pnl_gap = max(
+            abs(float(reconciliation.get("broker_vs_pnl_state_diff", 0) or 0)),
+            abs(float(reconciliation.get("broker_vs_trade_history_diff", 0) or 0)),
+        )
+        if pnl_gap > 5:
+            severity = "critical" if reconciliation.get("status") == "critical_mismatch" else "warning"
+            add_canary(
+                "realized_pnl_mismatch",
+                severity,
+                magnitude=pnl_gap,
+                recommended_action="Rebuild internal closed-trade accounting from Alpaca fills/orders.",
+            )
+
+        for symbol in sorted(set(broker.get("broker_closed_symbols", []) or []) - set(internal.get("symbols_in_trade_history", []) or [])):
+            add_canary(
+                "broker_activity_missing_internal_history",
+                "critical",
+                symbol=symbol,
+                recommended_action="Backfill the missing broker close into internal trade history.",
+            )
+
+        if broker.get("overnight_gap_pnl") is not None and abs(float(broker.get("overnight_gap_pnl", 0) or 0)) > 25:
+            add_canary(
+                "overnight_carryover_gap",
+                "warning",
+                magnitude=float(broker.get("overnight_gap_pnl", 0) or 0),
+                recommended_action="Split prior-session carry from same-day realized performance.",
+            )
+
+        if broker.get("carryover_fragment_symbols"):
+            add_canary(
+                "residual_position_drift",
+                "warning",
+                magnitude=len(broker.get("carryover_fragment_symbols", []) or []),
+                recommended_action="Flatten or explicitly classify broker residual fragments.",
+            )
+
+        return canaries
+
+    @staticmethod
+    def build_trust_flags(reconciliation: Dict) -> Dict:
+        status = reconciliation.get("status", "minor_mismatch")
+        broker_only = status == "critical_mismatch"
+        degraded = status != "healthy"
+        return {
+            "topline_source": "broker",
+            "positions_source": "broker",
+            "exposure_source": "broker",
+            "internal_analytics_trusted": not degraded,
+            "internal_analytics_degraded": degraded,
+            "broker_only_mode": broker_only,
+            "show_internal_stats": not broker_only,
+            "dim_internal_stats": degraded and not broker_only,
+            "allow_closed_trade_analytics": not broker_only,
+            "allow_ai_summaries": not broker_only,
         }
 
     @staticmethod

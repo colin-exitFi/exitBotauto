@@ -128,3 +128,81 @@ class DashboardSecurityTests(unittest.TestCase):
                 self.assertEqual(payload["api_cost_estimate_usd"], 3.75)
         finally:
             dashboard_module.set_bot(None)
+
+    def test_pnl_endpoint_exposes_reconciliation_trust_flags(self):
+        class _EntryManager:
+            def get_positions(self):
+                return []
+
+        class _Reconciler:
+            def snapshot(self):
+                return {
+                    "broker": {
+                        "equity": 24000.0,
+                        "last_equity": 25000.0,
+                        "day_pnl": -1000.0,
+                        "day_pnl_pct": -4.0,
+                        "cash": 23000.0,
+                        "current_open_unrealized": -50.0,
+                    },
+                    "internal": {
+                        "game_film_realized": 120.0,
+                        "trade_history_win_rate_pct": 70.0,
+                    },
+                    "reconciliation": {
+                        "status": "critical_mismatch",
+                        "severity": "critical",
+                        "broker_vs_pnl_state_diff": -500.0,
+                        "reasons": ["broker_truth_canary_triggered"],
+                    },
+                    "canaries": [
+                        {
+                            "code": "realized_pnl_mismatch",
+                            "severity": "critical",
+                            "first_seen": 1.0,
+                            "current_magnitude": 500.0,
+                            "recommended_action": "Rebuild from broker fills.",
+                        }
+                    ],
+                    "trust": {
+                        "broker_only_mode": True,
+                        "internal_analytics_trusted": False,
+                        "internal_analytics_degraded": True,
+                        "show_internal_stats": False,
+                    },
+                }
+
+        class _Bot:
+            pnl_state = {
+                "total_realized_pnl": 25.0,
+                "today_realized_pnl": 25.0,
+                "starting_equity": 25000.0,
+                "peak_equity": 25125.0,
+                "total_trades": 2,
+                "winning_trades": 1,
+                "losing_trades": 1,
+                "best_trade": 40.0,
+                "worst_trade": -15.0,
+            }
+            alpaca_client = None
+            entry_manager = _EntryManager()
+            reconciler = _Reconciler()
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
+                 patch("src.ai.trade_history.get_analytics", return_value={
+                     "overall": {"avg_signal_to_fill_ms": 220.0},
+                     "today": {"raw_pnl": 18.0, "clean_pnl": 12.0, "anomaly_count": 1},
+                 }), \
+                 patch("src.dashboard.dashboard.get_api_cost_stats", return_value={"estimated_cost_usd": 0.0}):
+                client = TestClient(dashboard_module.app)
+                resp = client.get("/api/pnl?token=secret-token")
+                self.assertEqual(resp.status_code, 200)
+                payload = resp.json()
+                self.assertEqual(payload["reconciliation_status"], "critical_mismatch")
+                self.assertTrue(payload["trust_flags"]["broker_only_mode"])
+                self.assertFalse(payload["trust_flags"]["show_internal_stats"])
+                self.assertEqual(payload["reconciliation_canaries"][0]["code"], "realized_pnl_mismatch")
+        finally:
+            dashboard_module.set_bot(None)

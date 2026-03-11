@@ -907,6 +907,7 @@ async def get_pnl():
         "internal_realized_pnl": round(total_realized, 2),
         "internal_trade_count": total_trades,
         "internal_game_film_realized": round(float((reconciliation_state.get("internal", {}) or {}).get("game_film_realized", 0) or 0), 2),
+        "internal_win_rate_pct": round(float((reconciliation_state.get("internal", {}) or {}).get("trade_history_win_rate_pct", win_rate) or win_rate), 2),
         "today_realized": round(broker_day_pnl, 2),
         "total_trades": total_trades,
         "winning_trades": wins,
@@ -927,6 +928,8 @@ async def get_pnl():
         "reconciliation_severity": reconciliation.get("severity", "unknown"),
         "reconciliation_diff": round(float(reconciliation.get("broker_vs_pnl_state_diff", 0) or 0), 2),
         "reconciliation_reasons": reconciliation.get("reasons", []) or [],
+        "reconciliation_canaries": reconciliation_state.get("canaries", []) or [],
+        "trust_flags": reconciliation_state.get("trust", {}) or {},
     }
 
 
@@ -1276,6 +1279,7 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .metric .value{font-size:16px;font-weight:800;color:#58a6ff;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .metric .value.positive{color:#3fb950}
 .metric .value.negative{color:#f85149}
+.metric .value.muted{color:#6e7681!important}
 .metric .value.animated{animation:countUp .4s ease-out}
 .metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .big-pnl{font-size:clamp(18px,2.2vw,28px)!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
@@ -1672,12 +1676,18 @@ async function refresh() {
   if (pnl) {
     const humanizeReason = (reason) => {
       const map = {
+        broker_position_missing_internal: 'broker position missing from internal state',
         broker_symbols_missing_from_internal: 'broker activity missing from internal history',
+        broker_activity_missing_internal_history: 'broker activity missing from internal history',
         broker_truth_canary_triggered: 'broker-truth canary triggered',
         carryover_gap: 'overnight carryover gap detected',
+        internal_position_missing_broker: 'internal position missing from broker state',
         internal_closed_trade_subset_only: 'internal analytics only reflect a trade subset',
         internal_ledgers_diverge: 'internal ledgers disagree',
         internal_symbols_missing_from_broker_day_bundle: 'internal history missing matching broker day activity',
+        overnight_carryover_gap: 'overnight carryover gap detected',
+        position_qty_mismatch: 'position quantity mismatch',
+        realized_pnl_mismatch: 'realized P&L mismatch',
         residual_position_drift: 'residual position drift detected',
         broker_history_unavailable: 'broker portfolio history unavailable',
       };
@@ -1691,37 +1701,58 @@ async function refresh() {
       el.textContent = prefix + (typeof val === 'number' ? val.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : val);
       el.className = 'value' + (typeof val === 'number' && val < 0 ? ' negative' : typeof val === 'number' && val > 0 ? ' positive' : '');
     };
+    const setDegradedMetric = (id, text='—') => {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = 'value muted';
+    };
+    const trust = pnl.trust_flags || {};
+    const brokerOnly = !!trust.broker_only_mode;
+    const degradedInternal = !!trust.internal_analytics_degraded;
     $('totalPnl').textContent = '$' + (pnl.total_pnl||0).toFixed(2);
     $('totalPnl').className = 'value big-pnl ' + cls(pnl.total_pnl||0);
     setPnl('equity', pnl.equity||0);
     setPnl('todayPnl', pnl.today_realized||0);
     setPnl('unrealized', pnl.unrealized||0);
-    $('winRate').textContent = (pnl.win_rate||0).toFixed(0) + '%';
-    $('winRate').className = 'value' + ((pnl.win_rate||0) >= 50 ? ' positive' : (pnl.total_trades > 0 ? ' negative' : ''));
-    $('totalTrades').textContent = pnl.total_trades||0;
-    $('totalTrades').className = 'value info';
     $('roi').textContent = (pnl.roi_pct||0).toFixed(1) + '%';
     $('roi').className = 'value ' + cls(pnl.roi_pct||0);
     $('drawdown').textContent = (pnl.drawdown_pct||0).toFixed(1) + '%';
     $('drawdown').className = 'value' + ((pnl.drawdown_pct||0) > 2 ? ' negative' : '');
-    $('bestTrade').textContent = '$' + (pnl.best_trade||0).toFixed(2);
-    $('bestTrade').className = 'value positive';
-    $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
-    $('worstTrade').className = 'value negative';
-    $('avgLatency').textContent = (typeof pnl.avg_signal_to_fill_ms === 'number')
-      ? `${Math.round(pnl.avg_signal_to_fill_ms)}ms`
-      : '—';
-    $('avgLatency').className = 'value info';
+    if (brokerOnly) {
+      setDegradedMetric('winRate', 'DEGRADED');
+      setDegradedMetric('totalTrades', '—');
+      setDegradedMetric('bestTrade', '—');
+      setDegradedMetric('worstTrade', '—');
+      setDegradedMetric('avgLatency', '—');
+    } else {
+      $('winRate').textContent = (pnl.internal_win_rate_pct ?? pnl.win_rate ?? 0).toFixed(0) + '%';
+      $('winRate').className = 'value' + (degradedInternal ? ' muted' : ((pnl.internal_win_rate_pct ?? pnl.win_rate ?? 0) >= 50 ? ' positive' : (pnl.total_trades > 0 ? ' negative' : '')));
+      $('totalTrades').textContent = pnl.internal_trade_count ?? pnl.total_trades ?? 0;
+      $('totalTrades').className = 'value' + (degradedInternal ? ' muted' : ' info');
+      $('bestTrade').textContent = '$' + (pnl.best_trade||0).toFixed(2);
+      $('bestTrade').className = 'value' + (degradedInternal ? ' muted' : ' positive');
+      $('worstTrade').textContent = '$' + (pnl.worst_trade||0).toFixed(2);
+      $('worstTrade').className = 'value' + (degradedInternal ? ' muted' : ' negative');
+      $('avgLatency').textContent = (typeof pnl.avg_signal_to_fill_ms === 'number')
+        ? `${Math.round(pnl.avg_signal_to_fill_ms)}ms`
+        : '—';
+      $('avgLatency').className = 'value' + (degradedInternal ? ' muted' : ' info');
+    }
     const reconBanner = $('reconBanner');
     if (reconBanner) {
       const status = pnl.reconciliation_status || 'unknown';
       const reasons = (pnl.reconciliation_reasons || []).map(humanizeReason).filter(Boolean);
-      if (status && status !== 'ok') {
+      const canaries = (pnl.reconciliation_canaries || []).slice(0, 3);
+      if (status && status !== 'healthy') {
         reconBanner.style.display = 'block';
-        const shownReasons = reasons.slice(0, 3);
-        const extraCount = Math.max(0, reasons.length - shownReasons.length);
+        const shownReasons = canaries.length
+          ? canaries.map((c) => humanizeReason(c.code))
+          : reasons.slice(0, 3);
+        const extraCount = Math.max(0, (canaries.length || reasons.length) - shownReasons.length);
         reconBanner.innerHTML = `<strong>Reconciliation warning</strong>`
-          + `<span>Broker reconciliation is <b>${String(status).replaceAll('_', ' ')}</b>. Internal analytics are degraded.</span>`
+          + `<span>Broker reconciliation is <b>${String(status).replaceAll('_', ' ')}</b>. `
+          + `${brokerOnly ? 'Broker state only; internal analytics are suppressed.' : 'Internal analytics are degraded.'}</span>`
           + (shownReasons.length
               ? `<span class="muted"> Top causes: ${shownReasons.join(', ')}${extraCount ? ` +${extraCount} more` : ''}.</span>`
               : '');
@@ -1732,7 +1763,7 @@ async function refresh() {
     }
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString()
       + ` | Opt R/U: $${(pnl.options_realized_pnl||0).toFixed(2)} / $${(pnl.options_unrealized_pnl||0).toFixed(2)}`
-      + ` | Internal realized: $${(pnl.internal_realized_pnl||0).toFixed(2)}`;
+      + (brokerOnly ? ' | Internal realized: suppressed' : ` | Internal realized: $${(pnl.internal_realized_pnl||0).toFixed(2)}`);
   }
   // Equity curve
   const ec = await api('/api/equity-curve?limit=120');

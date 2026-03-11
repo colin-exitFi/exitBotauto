@@ -66,6 +66,8 @@ class ReconcilerTests(unittest.TestCase):
         self.assertEqual(snap["reconciliation"]["status"], "critical_mismatch")
         self.assertIn("broker_truth_canary_triggered", snap["reconciliation"]["reasons"])
         self.assertIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
+        self.assertTrue(snap["trust"]["broker_only_mode"])
+        self.assertTrue(any(c["code"] == "realized_pnl_mismatch" for c in snap["canaries"]))
 
     def test_open_position_activity_is_not_flagged_missing_from_internal(self):
         alpaca = _FakeAlpaca(
@@ -86,7 +88,8 @@ class ReconcilerTests(unittest.TestCase):
             snap = reconciler.snapshot("2026-03-10")
 
         self.assertNotIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
-        self.assertEqual(snap["reconciliation"]["status"], "ok")
+        self.assertEqual(snap["reconciliation"]["status"], "healthy")
+        self.assertFalse(snap["trust"]["broker_only_mode"])
 
     def test_carryover_gap_alone_is_warning_not_critical(self):
         alpaca = _FakeAlpaca(
@@ -107,7 +110,8 @@ class ReconcilerTests(unittest.TestCase):
             snap = reconciler.snapshot("2026-03-10")
 
         self.assertIn("carryover_gap", snap["reconciliation"]["reasons"])
-        self.assertEqual(snap["reconciliation"]["status"], "warning")
+        self.assertEqual(snap["reconciliation"]["status"], "minor_mismatch")
+        self.assertFalse(snap["trust"]["broker_only_mode"])
 
     def test_marks_degraded_when_broker_history_missing(self):
         alpaca = _FakeAlpaca(account={"equity": 1000, "last_equity": 1000}, positions=[], activities=[], portfolio_history={})
@@ -117,7 +121,7 @@ class ReconcilerTests(unittest.TestCase):
              patch.object(Reconciler, "_load_json", return_value={}):
             snap = reconciler.snapshot("2026-03-10")
 
-        self.assertEqual(snap["reconciliation"]["status"], "degraded")
+        self.assertEqual(snap["reconciliation"]["status"], "minor_mismatch")
         self.assertIn("broker_history_unavailable", snap["reconciliation"]["reasons"])
 
 
