@@ -94,11 +94,13 @@ class AlpacaClient:
                 "cash": float(acct.cash),
                 "buying_power": float(acct.buying_power),
                 "equity": float(acct.equity),
+                "last_equity": float(getattr(acct, "last_equity", acct.equity)),
                 "portfolio_value": float(acct.portfolio_value),
                 "pattern_day_trader": acct.pattern_day_trader,
                 "daytrade_count": acct.daytrade_count,
                 "trading_blocked": acct.trading_blocked,
                 "long_market_value": float(acct.long_market_value),
+                "short_market_value": float(getattr(acct, "short_market_value", 0) or 0),
             }
         except Exception as e:
             logger.error(f"Get account failed: {e}")
@@ -106,11 +108,13 @@ class AlpacaClient:
                 "cash": 0.0,
                 "buying_power": 0.0,
                 "equity": 0.0,
+                "last_equity": 0.0,
                 "portfolio_value": 0.0,
                 "pattern_day_trader": False,
                 "daytrade_count": 0,
                 "trading_blocked": False,
                 "long_market_value": 0.0,
+                "short_market_value": 0.0,
             }
 
     def get_balances(self) -> Dict:
@@ -151,6 +155,64 @@ class AlpacaClient:
             return result
         except Exception as e:
             logger.error(f"Get positions failed: {e}")
+            return []
+
+    def get_portfolio_history(
+        self,
+        period: str = "1D",
+        timeframe: str = "15Min",
+        intraday_reporting: str = "market_hours",
+        pnl_reset: str = "per_day",
+    ) -> Dict:
+        """Get account portfolio history from Alpaca."""
+        self._ensure_init()
+        try:
+            resp = requests.get(
+                f"{self._base_url}/v2/account/portfolio/history",
+                headers=self._rest_headers(),
+                params={
+                    "period": period,
+                    "timeframe": timeframe,
+                    "intraday_reporting": intraday_reporting,
+                    "pnl_reset": pnl_reset,
+                },
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._capture_payload("portfolio_history", data)
+            return data if isinstance(data, dict) else {}
+        except Exception as e:
+            logger.debug(f"Get portfolio history failed: {e}")
+            return {}
+
+    def get_account_activities(
+        self,
+        activity_types: str = "FILL",
+        date: Optional[str] = None,
+        page_size: int = 100,
+    ) -> List[Dict]:
+        """Get Alpaca account activities (fills by default)."""
+        self._ensure_init()
+        params: Dict[str, Union[str, int]] = {
+            "activity_types": activity_types,
+            "page_size": int(page_size),
+        }
+        if date:
+            params["date"] = date
+        try:
+            resp = requests.get(
+                f"{self._base_url}/v2/account/activities",
+                headers=self._rest_headers(),
+                params=params,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            self._capture_payload(f"activities_{activity_types.lower()}", data)
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            logger.debug(f"Get account activities failed ({activity_types}): {e}")
             return []
 
     def get_position(self, symbol: str) -> Optional[Dict]:

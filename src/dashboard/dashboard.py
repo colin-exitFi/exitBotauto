@@ -817,10 +817,8 @@ async def get_pnl():
     if not _bot:
         return {}
 
-    # Realized P&L from persistence
     pnl = getattr(_bot, 'pnl_state', {})
     total_realized = pnl.get("total_realized_pnl", 0)
-    today_realized = pnl.get("today_realized_pnl", 0)
     options_realized = pnl.get("options_total_realized_pnl", 0)
     total_trades = pnl.get("total_trades", 0)
     wins = pnl.get("winning_trades", 0)
@@ -828,24 +826,44 @@ async def get_pnl():
     best = pnl.get("best_trade", 0)
     worst = pnl.get("worst_trade", 0)
 
-    # Account equity + unrealized from Alpaca (source of truth)
     equity = 25000.0
+    last_equity = equity
+    broker_day_pnl = 0.0
+    broker_day_pnl_pct = 0.0
     unrealized = 0
     options_unrealized = 0.0
     starting = pnl.get("starting_equity", 25000.0)
     peak = pnl.get("peak_equity", 25000.0)
-    if _bot.alpaca_client:
+    reconciliation_state = {}
+    broker_truth = {}
+    reconciliation = {}
+    if getattr(_bot, "reconciler", None):
+        try:
+            reconciliation_state = _bot.reconciler.snapshot()
+            broker_truth = reconciliation_state.get("broker", {}) or {}
+            reconciliation = reconciliation_state.get("reconciliation", {}) or {}
+        except Exception:
+            reconciliation_state = {}
+    if broker_truth:
+        equity = float(broker_truth.get("equity", equity) or equity)
+        last_equity = float(broker_truth.get("last_equity", equity) or equity)
+        broker_day_pnl = float(broker_truth.get("day_pnl", 0) or 0)
+        broker_day_pnl_pct = float(broker_truth.get("day_pnl_pct", 0) or 0)
+        unrealized = float(broker_truth.get("current_open_unrealized", 0) or 0)
+    elif _bot.alpaca_client:
         try:
             acct = _bot.alpaca_client.get_account()
             equity = float(acct.get("equity", 25000.0))
-            # Get unrealized directly from Alpaca positions
+            last_equity = float(acct.get("last_equity", equity) or equity)
+            broker_day_pnl = round(equity - last_equity, 2)
+            broker_day_pnl_pct = round((broker_day_pnl / last_equity * 100.0), 2) if last_equity else 0.0
             alpaca_positions = _bot.alpaca_client.get_positions()
             unrealized = sum(float(p.get("unrealized_pnl", p.get("unrealized_pl", p.get("open_pnl", 0)))) for p in alpaca_positions)
-            if equity > peak:
-                peak = equity
-                pnl["peak_equity"] = peak
         except Exception:
             pass
+    if equity > peak:
+        peak = equity
+        pnl["peak_equity"] = peak
 
     if _bot and getattr(_bot, "options_engine", None):
         try:
@@ -854,9 +872,7 @@ async def get_pnl():
         except Exception:
             options_unrealized = 0.0
 
-    # Total P&L = equity - starting (the only truth that matters)
     total_pnl = equity - starting
-    today_pnl = total_pnl - total_realized + today_realized  # approximate today
     win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     drawdown = ((peak - equity) / peak * 100) if peak > 0 else 0
     roi = ((equity - starting) / starting * 100) if starting > 0 else 0
@@ -878,12 +894,20 @@ async def get_pnl():
         "equity": round(equity, 2),
         "starting_equity": round(starting, 2),
         "peak_equity": round(peak, 2),
+        "cash": round(float(broker_truth.get("cash", 0) or 0), 2),
+        "portfolio_value": round(equity, 2),
         "total_pnl": round(total_pnl, 2),
         "total_realized": round(total_realized, 2),
         "unrealized": round(unrealized, 2),
+        "last_equity": round(last_equity, 2),
+        "broker_day_pnl": round(broker_day_pnl, 2),
+        "broker_day_pnl_pct": round(broker_day_pnl_pct, 2),
         "options_realized_pnl": round(options_realized, 2),
         "options_unrealized_pnl": round(options_unrealized, 2),
-        "today_realized": round(total_pnl, 2),  # On day 1, today = total
+        "internal_realized_pnl": round(total_realized, 2),
+        "internal_trade_count": total_trades,
+        "internal_game_film_realized": round(float((reconciliation_state.get("internal", {}) or {}).get("game_film_realized", 0) or 0), 2),
+        "today_realized": round(broker_day_pnl, 2),
         "total_trades": total_trades,
         "winning_trades": wins,
         "losing_trades": losses,
@@ -899,6 +923,10 @@ async def get_pnl():
         "drawdown_pct": round(drawdown, 2),
         "roi_pct": round(roi, 2),
         "open_positions": len(_bot.entry_manager.get_positions()) if _bot and _bot.entry_manager else 0,
+        "reconciliation_status": reconciliation.get("status", "unknown"),
+        "reconciliation_severity": reconciliation.get("severity", "unknown"),
+        "reconciliation_diff": round(float(reconciliation.get("broker_vs_pnl_state_diff", 0) or 0), 2),
+        "reconciliation_reasons": reconciliation.get("reasons", []) or [],
     }
 
 
@@ -1323,10 +1351,11 @@ tr:hover td{background:#161b2288}
   <!-- P&L Terminal -->
   <div class="card full">
     <h2><span class="icon">💰</span> P&L Terminal <span id="pnlTimestamp" style="margin-left:auto;color:#484f58;font-size:11px;font-weight:400"></span></h2>
+    <div id="reconBanner" style="display:none;margin:0 0 12px 0;padding:10px 12px;border:1px solid #8b0000;border-radius:8px;background:#2a0f12;color:#ffb3b3;font-size:12px;"></div>
     <div class="metrics pnl-grid" id="pnlMetrics">
       <div class="metric"><div class="value big-pnl" id="totalPnl">$0.00</div><div class="label">Total P&L</div></div>
       <div class="metric"><div class="value" id="equity">$1,000</div><div class="label">Equity</div></div>
-      <div class="metric"><div class="value" id="todayPnl">$0.00</div><div class="label">Today P&L</div></div>
+      <div class="metric"><div class="value" id="todayPnl">$0.00</div><div class="label">Broker Day P&L</div></div>
       <div class="metric"><div class="value" id="unrealized">$0.00</div><div class="label">Unrealized</div></div>
       <div class="metric"><div class="value" id="roi">0%</div><div class="label">ROI</div></div>
       <div class="metric"><div class="value" id="winRate">0%</div><div class="label">Win Rate</div></div>
@@ -1665,8 +1694,21 @@ async function refresh() {
       ? `${Math.round(pnl.avg_signal_to_fill_ms)}ms`
       : '—';
     $('avgLatency').className = 'value info';
+    const reconBanner = $('reconBanner');
+    if (reconBanner) {
+      const status = pnl.reconciliation_status || 'unknown';
+      const reasons = (pnl.reconciliation_reasons || []).join(', ');
+      if (status && status !== 'ok') {
+        reconBanner.style.display = 'block';
+        reconBanner.textContent = `Broker reconciliation ${status}: internal analytics degraded${reasons ? ' [' + reasons + ']' : ''}`;
+      } else {
+        reconBanner.style.display = 'none';
+        reconBanner.textContent = '';
+      }
+    }
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString()
-      + ` | Opt R/U: $${(pnl.options_realized_pnl||0).toFixed(2)} / $${(pnl.options_unrealized_pnl||0).toFixed(2)}`;
+      + ` | Opt R/U: $${(pnl.options_realized_pnl||0).toFixed(2)} / $${(pnl.options_unrealized_pnl||0).toFixed(2)}`
+      + ` | Internal realized: $${(pnl.internal_realized_pnl||0).toFixed(2)}`;
   }
   // Equity curve
   const ec = await api('/api/equity-curve?limit=120');

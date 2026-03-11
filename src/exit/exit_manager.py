@@ -212,6 +212,9 @@ class ExitManager:
         symbol = position["symbol"]
         if quantity <= 0:
             return None
+        if position.get("exit_pending") and not position.get("exit_recorded"):
+            logger.debug(f"{symbol}: exit already pending with broker — skipping duplicate request")
+            return None
         if self.risk and hasattr(self.risk, "can_exit_position"):
             if not self.risk.can_exit_position(position, reason=reason):
                 logger.info(f"⛔ Exit deferred for {symbol}: {reason}")
@@ -231,6 +234,24 @@ class ExitManager:
             if not order:
                 logger.error(f"Exit order FAILED for {symbol}! Will retry next tick.")
                 return None
+            position["exit_pending"] = True
+            position["exit_order_id"] = order.get("id")
+            position["exit_submitted_at"] = time.time()
+            position["exit_fill_qty"] = 0.0
+            position["exit_finalized_at"] = None
+            position["exit_recorded"] = False
+            position["last_exit_reason"] = reason
+            position["last_exit_attempt_at"] = time.time()
+            return {
+                "symbol": symbol,
+                "side": "buy_to_cover" if side == "short" else "sell",
+                "reason": reason,
+                "quantity": quantity,
+                "exit_price": price,
+                "pnl_pct": round(pnl_pct, 2),
+                "order": order,
+                "status": "exit_pending",
+            }
 
         if side == "short":
             pnl_dollars = (position["entry_price"] - price) * quantity

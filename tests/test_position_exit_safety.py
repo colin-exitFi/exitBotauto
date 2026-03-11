@@ -1,4 +1,6 @@
+import time
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from src.agents.exit_agent import ExitAgent
@@ -60,6 +62,30 @@ class AlpacaExitSafetyTests(unittest.TestCase):
         self.assertEqual(captured["payload"]["time_in_force"], "day")
         self.assertEqual(captured["payload"]["qty"], "12")
 
+    def test_market_sell_falls_back_to_close_position_for_htb_rejection(self):
+        client = AlpacaClient()
+        client._initialized = True
+        client.get_position = lambda symbol: {"symbol": symbol, "quantity": 5.0}
+        client.cancel_related_orders_from_error = lambda symbol, message, preferred_side="sell": 0
+
+        class _TradingClient:
+            def submit_order(self, req):
+                raise RuntimeError("asset BATL cannot be sold short")
+
+            def close_position(self, symbol, close_options=None):
+                self.symbol = symbol
+                self.close_options = close_options
+                return type("OrderStub", (), {"id": "close-1"})()
+
+        client._trading_client = _TradingClient()
+        client._order_to_dict = lambda order: {"id": order.id}
+
+        order = client.place_market_sell("BATL", 5)
+
+        self.assertEqual(order["id"], "close-1")
+        self.assertEqual(client._trading_client.symbol, "BATL")
+        self.assertEqual(client._trading_client.close_options.qty, "5.0")
+
 
 class EntryManagerSyncTests(unittest.TestCase):
     def test_sync_positions_from_brokerage_updates_qty_and_marks_fractional_remainder(self):
@@ -89,6 +115,41 @@ class EntryManagerSyncTests(unittest.TestCase):
         self.assertAlmostEqual(manager.positions["XENE"]["quantity"], 0.11, places=6)
         self.assertTrue(manager.positions["XENE"]["_dust_remainder"])
 
+    def test_sync_positions_from_brokerage_backfills_carryover_entry_time_from_orders(self):
+        t1 = datetime(2026, 3, 6, 14, 0, tzinfo=timezone.utc).timestamp()
+        t2 = datetime(2026, 3, 6, 18, 0, tzinfo=timezone.utc).timestamp()
+        t3 = datetime(2026, 3, 7, 13, 30, tzinfo=timezone.utc).timestamp()
+
+        class _Broker:
+            def get_orders(self, status="open"):
+                self.last_status = status
+                return [
+                    {"symbol": "RLMD", "side": "buy", "filled_qty": "10", "created_at": datetime.fromtimestamp(t1, timezone.utc).isoformat()},
+                    {"symbol": "RLMD", "side": "sell", "filled_qty": "10", "created_at": datetime.fromtimestamp(t2, timezone.utc).isoformat()},
+                    {"symbol": "RLMD", "side": "buy", "filled_qty": "3", "created_at": datetime.fromtimestamp(t3, timezone.utc).isoformat()},
+                ]
+
+        manager = EntryManager.__new__(EntryManager)
+        manager.positions = {}
+        manager.broker = _Broker()
+
+        updates = manager.sync_positions_from_brokerage(
+            [
+                {
+                    "symbol": "RLMD",
+                    "quantity": 3.0,
+                    "side": "long",
+                    "average_price": 6.07,
+                    "current_price": 6.13,
+                    "open_pnl": 0.18,
+                }
+            ]
+        )
+
+        self.assertEqual(updates, 1)
+        self.assertEqual(manager.positions["RLMD"]["entry_time_source"], "broker_orders")
+        self.assertAlmostEqual(manager.positions["RLMD"]["entry_time"], t3, delta=1.0)
+
 
 class ExitAgentFallbackTests(unittest.IsolatedAsyncioTestCase):
     async def test_rule_based_exit_now_when_ai_is_unavailable_and_position_is_losing(self):
@@ -110,6 +171,35 @@ class ExitAgentFallbackTests(unittest.IsolatedAsyncioTestCase):
             action = await agent._evaluate_position(pos)
 
         self.assertEqual(action["action"], "EXIT_NOW")
+
+    async def test_stale_tracked_position_is_removed_before_ai_call(self):
+        class _Broker:
+            def get_positions(self):
+                return []
+
+        class _EntryManager:
+            def __init__(self):
+                self.removed = []
+
+            def remove_position(self, symbol):
+                self.removed.append(symbol)
+
+        entry_manager = _EntryManager()
+        agent = ExitAgent(broker=_Broker(), entry_manager=entry_manager, risk_manager=None)
+        pos = {
+            "symbol": "BHVN",
+            "entry_price": 10.0,
+            "quantity": 0.58,
+            "side": "long",
+            "trail_pct": 3.0,
+            "entry_time": time.time() - 300,
+        }
+
+        with patch("src.agents.exit_agent.call_claude", side_effect=AssertionError("AI should not be called")):
+            action = await agent._evaluate_position(pos)
+
+        self.assertIsNone(action)
+        self.assertEqual(entry_manager.removed, ["BHVN"])
 
 
 if __name__ == "__main__":

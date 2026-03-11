@@ -62,6 +62,7 @@ from src.data.trade_schema import normalize_trade_record
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
 from src.data.technicals import get_cached_rsi
 from src.options.options_monitor import OptionsMonitor
+from src.reconciliation.reconciler import Reconciler
 
 
 class TradingBot:
@@ -88,6 +89,8 @@ class TradingBot:
     watchlist = None
     grok_x_trending = None
     extended_guard = None
+    reconciler = None
+    _recorded_realized_keys = None
 
     def __init__(self):
         self.running = False
@@ -101,6 +104,7 @@ class TradingBot:
         self._recent_uw_signal_keys: Dict[str, float] = {}
         self._last_daily_reset_date = None
         self._processed_copy_trader_exit_ids = set()
+        self._recorded_realized_keys = set()
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -113,6 +117,7 @@ class TradingBot:
         self.exit_manager: ExitManager = None
         self.risk_manager: RiskManager = None
         self.options_monitor: OptionsMonitor = None
+        self.reconciler: Optional[Reconciler] = None
 
         # AI layers
         self.observer: Observer = None
@@ -279,6 +284,12 @@ class TradingBot:
             logger.info("🎯 Options trading ENABLED")
         else:
             logger.info("Options trading disabled (set OPTIONS_ENABLED=true to enable)")
+        if self.alpaca_client:
+            self.reconciler = Reconciler(
+                self.alpaca_client,
+                entry_manager=self.entry_manager,
+                options_engine=self.options_engine,
+            )
 
         # Specialized Agent Orchestrator (new architecture)
         self.orchestrator = Orchestrator(
@@ -405,6 +416,7 @@ class TradingBot:
         last_scan = 0
         last_equity_sync = 0
         last_state_save = 0
+        last_reconciliation = 0
 
         try:
             while self.running:
@@ -471,6 +483,15 @@ class TradingBot:
                         persistence.save_options_positions(self.options_engine.positions)
                     persistence.save_ai_state(self.ai_layers)
                     persistence.save_pnl_state(self.pnl_state)
+
+                if now - last_reconciliation >= 60 and self.reconciler:
+                    last_reconciliation = now
+                    try:
+                        recon_state = self.reconciler.snapshot()
+                        self.ai_layers["reconciliation"] = recon_state.get("reconciliation", {})
+                        self.ai_layers["broker_truth"] = recon_state.get("broker", {})
+                    except Exception as e:
+                        logger.debug(f"Reconciliation snapshot error: {e}")
 
                 # ── SCAN ───────────────────────────────────────────
                 if now - last_scan >= scan_interval:
@@ -1852,6 +1873,74 @@ class TradingBot:
         self.ai_layers["last_short_block_reason"] = f"{symbol} {reason_text}"
         logger.warning(f"🩳 SHORT blocked for {symbol}: {reason_text}")
 
+    @staticmethod
+    def _make_realized_trade_key(trade_record: dict) -> tuple:
+        return (
+            str(trade_record.get("asset_type", "equity") or "equity").lower(),
+            str(trade_record.get("symbol", "") or "").upper(),
+            round(float(trade_record.get("entry_time", 0) or 0), 3),
+            round(float(trade_record.get("quantity", 0) or 0), 6),
+            str(trade_record.get("reason", "") or ""),
+            str(trade_record.get("exit_order_id", trade_record.get("order_id", "")) or ""),
+        )
+
+    def _build_confirmed_exit_trade(
+        self,
+        position: dict,
+        fill_price: float,
+        qty: float,
+        reason: str,
+        exit_time: Optional[float] = None,
+        order: Optional[dict] = None,
+        fill_source: str = "broker",
+    ) -> dict:
+        entry_price = float(position.get("entry_price", fill_price) or fill_price or 0)
+        side = position.get("side", "long")
+        quantity = float(qty or position.get("quantity", 0) or 0)
+        if side == "short":
+            pnl = (entry_price - fill_price) * quantity
+        else:
+            pnl = (fill_price - entry_price) * quantity
+        pnl_pct = ((fill_price - entry_price) / entry_price * 100) if entry_price else 0
+        if side == "short":
+            pnl_pct = -pnl_pct
+        confirmed_exit_time = float(exit_time or time.time())
+        trade_record = {
+            "symbol": position.get("symbol", ""),
+            "side": "sell" if side == "long" else "buy_to_cover",
+            "entry_price": entry_price,
+            "exit_price": float(fill_price or 0),
+            "quantity": quantity,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "reason": reason,
+            "hold_seconds": confirmed_exit_time - float(position.get("entry_time", confirmed_exit_time) or confirmed_exit_time),
+            "entry_time": position.get("entry_time", 0),
+            "exit_time": confirmed_exit_time,
+            "sentiment_at_entry": position.get("sentiment_at_entry", 0),
+            "conviction_level": position.get("conviction_level", "normal"),
+            "risk_tier": self.risk_manager.get_risk_tier().get("name", "?") if self.risk_manager else "?",
+            "strategy_tag": position.get("strategy_tag", "unknown"),
+            "signal_sources": position.get("signal_sources", ["unknown"]),
+            "decision_confidence": position.get("decision_confidence", 0),
+            "provider_used": position.get("provider_used", ""),
+            "signal_price": position.get("signal_price", entry_price),
+            "decision_price": position.get("decision_price", entry_price),
+            "fill_price": float(fill_price or 0),
+            "fill_timestamp": confirmed_exit_time,
+            "fill_timestamp_source": fill_source,
+            "exit_order_id": position.get("exit_order_id"),
+            "slippage_bps": self._compute_entry_slippage_bps(
+                entry_price, position.get("signal_price", entry_price), side
+            ),
+            **self._compute_signal_latency_fields(position),
+        }
+        if isinstance(order, dict):
+            trade_record["order"] = order
+            if order.get("id") and not trade_record.get("exit_order_id"):
+                trade_record["exit_order_id"] = order.get("id")
+        return trade_record
+
     def _handle_fast_path_breakout(self, symbol: str, price: float, pct_change: float, volume_spike: float):
         """Synchronous callback-safe breakout handler (zero network, in-memory checks only)."""
         passes, reason = self._passes_fast_path_deterministic_screen(symbol, price, pct_change, volume_spike)
@@ -2413,13 +2502,41 @@ class TradingBot:
         Centralized to avoid drift between polling and websocket exit paths.
         """
         trade_record = normalize_trade_record(trade_record)
-
-        pnl = float(trade_record.get("pnl", 0))
-        symbol = trade_record.get("symbol", "")
+        symbol = str(trade_record.get("symbol", "") or "")
         asset_type = str(trade_record.get("asset_type", "equity") or "equity").lower()
         position = None
         if self.entry_manager and symbol and asset_type != "option":
             position = self.entry_manager.positions.get(symbol)
+            if position and position.get("exit_recorded"):
+                return
+
+        trade_key = self._make_realized_trade_key(trade_record)
+        recorded_keys = getattr(self, "_recorded_realized_keys", None)
+        if recorded_keys is None:
+            self._recorded_realized_keys = set()
+            recorded_keys = self._recorded_realized_keys
+        if trade_key in recorded_keys:
+            return
+
+        try:
+            for existing in trade_history.load_all():
+                if self._make_realized_trade_key(existing) == trade_key:
+                    recorded_keys.add(trade_key)
+                    if position:
+                        position["exit_recorded"] = True
+                        position["exit_finalized_at"] = float(
+                            trade_record.get("exit_time", time.time()) or time.time()
+                        )
+                    return
+        except Exception:
+            pass
+
+        pnl = float(trade_record.get("pnl", 0))
+        if position:
+            position["exit_recorded"] = True
+            position["exit_finalized_at"] = float(trade_record.get("exit_time", time.time()) or time.time())
+            position["exit_pending"] = False
+            position["exit_fill_qty"] = float(trade_record.get("quantity", 0) or 0)
             if position:
                 exit_price = float(
                     trade_record.get("exit_price", trade_record.get("fill_price", position.get("current_price", 0)))
@@ -2471,6 +2588,7 @@ class TradingBot:
                     trade_record.get("anomaly_flags", []),
                 )
 
+        recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
         if self.entry_manager and symbol and asset_type != "option":
             self.entry_manager.remove_position(symbol)
@@ -2832,56 +2950,37 @@ class TradingBot:
                         continue
                     pos["_exit_recording"] = True
                     try:
-                        entry_price = pos.get("entry_price", 0)
-                        exit_price = float(latest_fill_price or entry_price)
+                        exit_price = float(latest_fill_price or pos.get("entry_price", 0) or 0)
                         logger.info(
                             f"📊 {symbol} exit fill found: ${exit_price:.2f} "
                             f"(type={latest.get('type')}, filled_at={latest_key[:19]})"
                         )
-
-                        qty = pos.get("quantity", 0)
-                        if side == "short":
-                            pnl = (entry_price - exit_price) * qty
-                        else:
-                            pnl = (exit_price - entry_price) * qty
-                        pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
-                        if side == "short":
-                            pnl_pct = -pnl_pct
-
-                        trade_record = {
-                            "symbol": symbol,
-                            "side": "sell" if side == "long" else "buy_to_cover",
-                            "entry_price": entry_price,
-                            "exit_price": exit_price,
-                            "quantity": qty,
-                            "pnl": pnl,
-                            "pnl_pct": pnl_pct,
-                            "reason": "trailing_stop",
-                            "hold_seconds": time.time() - pos.get("entry_time", time.time()),
-                            "entry_time": pos.get("entry_time", 0),
-                            "exit_time": time.time(),
-                            "sentiment_at_entry": pos.get("sentiment_at_entry", 0),
-                            "conviction_level": pos.get("conviction_level", "normal"),
-                            "risk_tier": self.risk_manager.get_risk_tier().get("name", "?"),
-                            "strategy_tag": pos.get("strategy_tag", "unknown"),
-                            "signal_sources": pos.get("signal_sources", ["unknown"]),
-                            "decision_confidence": pos.get("decision_confidence", 0),
-                            "provider_used": pos.get("provider_used", ""),
-                            "signal_price": pos.get("signal_price", entry_price),
-                            "decision_price": pos.get("decision_price", entry_price),
-                            "fill_price": exit_price,
-                            "slippage_bps": self._compute_entry_slippage_bps(
-                                entry_price, pos.get("signal_price", entry_price), side
-                            ),
-                            **self._compute_signal_latency_fields(pos),
-                        }
+                        qty = float(pos.get("exit_fill_qty") or pos.get("quantity", 0) or 0)
+                        if latest.get("filled_qty"):
+                            try:
+                                qty = float(latest.get("filled_qty", qty) or qty)
+                            except Exception:
+                                qty = float(pos.get("quantity", 0) or 0)
+                        reason = str(pos.get("last_exit_reason") or "trailing_stop")
+                        trade_record = self._build_confirmed_exit_trade(
+                            pos,
+                            fill_price=exit_price,
+                            qty=qty,
+                            reason=reason,
+                            exit_time=latest_fill_ts,
+                            order=latest,
+                            fill_source="reconciliation",
+                        )
                         self._record_realized_exit(trade_record)
 
                         pos["_exit_recorded"] = True
+                        pnl = float(trade_record.get("pnl", 0) or 0)
+                        pnl_pct = float(trade_record.get("pnl_pct", 0) or 0)
                         emoji = "✅" if pnl >= 0 else "❌"
-                        logger.info(f"{emoji} TRAILING STOP EXIT: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
-                        log_activity("trade", f"{emoji} {symbol} stopped out: ${pnl:.2f} ({pnl_pct:+.1f}%)")
-                        await self._close_paired_options(symbol, reason="underlying_trailing_stop")
+                        logger.info(f"{emoji} EXIT CONFIRMED: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                        log_activity("trade", f"{emoji} {symbol} exit confirmed: ${pnl:.2f} ({pnl_pct:+.1f}%)")
+                        if reason.startswith("trailing_stop"):
+                            await self._close_paired_options(symbol, reason="underlying_trailing_stop")
                     finally:
                         pos.pop("_exit_recording", None)
                     continue
@@ -3057,6 +3156,31 @@ class TradingBot:
             return
 
         filled_at = self._parse_iso_ts(order.get("filled_at"))
+        order_side = str(order.get("side", "") or "").lower()
+        expected_exit_side = "buy" if pos.get("side", "long") == "short" else "sell"
+        if pos.get("exit_pending") and order_side == expected_exit_side:
+            if pos.get("exit_recorded"):
+                return
+            order_id = str(order.get("id", "") or "")
+            pending_order_id = str(pos.get("exit_order_id", "") or "")
+            if pending_order_id and order_id and pending_order_id != order_id:
+                return
+            fill_price = float(order.get("filled_avg_price", 0) or 0)
+            filled_qty = float(order.get("filled_qty", pos.get("quantity", 0)) or pos.get("quantity", 0) or 0)
+            if fill_price <= 0 or filled_qty <= 0:
+                return
+            pos["exit_fill_qty"] = filled_qty
+            trade_record = self._build_confirmed_exit_trade(
+                pos,
+                fill_price=fill_price,
+                qty=filled_qty,
+                reason=str(pos.get("last_exit_reason", "broker_exit_fill") or "broker_exit_fill"),
+                exit_time=filled_at,
+                order=order,
+                fill_source="trade_update",
+            )
+            self._record_realized_exit(trade_record)
+            return
         if filled_at and not pos.get("fill_timestamp"):
             pos["fill_timestamp"] = filled_at
             pos["fill_timestamp_source"] = "trade_update"

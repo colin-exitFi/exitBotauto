@@ -422,7 +422,7 @@ class RiskManager:
         daily_pct = (self.daily_pnl / self._equity) * 100 if self._equity else 0
         logger.info(
             f"Trade recorded: {trade.get('symbol')} pnl=${pnl:.2f} | "
-            f"Daily: ${self.daily_pnl:.2f} ({daily_pct:+.2f}%) | "
+            f"Internal realized running total: ${self.daily_pnl:.2f} ({daily_pct:+.2f}% of current equity) | "
             f"Tier: {tier['name']} | W/L: {self.winning_trades}/{self.losing_trades} | "
             f"Streak: {self.consecutive_wins}W/{self.consecutive_losses}L"
         )

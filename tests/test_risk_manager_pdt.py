@@ -69,6 +69,26 @@ class RiskManagerPDTTests(unittest.TestCase):
         with patch("src.risk.risk_manager.settings.PAPER_MODE", True):
             self.assertFalse(manager.is_wash_sale("AAPL"))
 
+    def test_alpaca_paper_mode_bypasses_wash_sale_even_if_paper_mode_flag_is_false(self):
+        manager = self._build_manager()
+        manager._wash_sale_list["AAPL"] = {"loss": -12.5, "exit_time": time.time()}
+
+        with patch("src.risk.risk_manager.settings.PAPER_MODE", False), \
+             patch("src.risk.risk_manager.settings.ALPACA_PAPER", True):
+            self.assertFalse(manager.is_wash_sale("AAPL"))
+
+    def test_sector_map_blocks_biotech_cluster_for_new_healthcare_names(self):
+        manager = self._build_manager()
+        manager._equity = 1000.0
+        positions = [
+            {"symbol": "BHVN", "entry_price": 20.0, "quantity": 25.0},
+        ]
+
+        with patch("src.risk.risk_manager.settings.MAX_SECTOR_PCT", 40.0):
+            allowed = manager.can_enter_sector("DAWN", positions)
+
+        self.assertFalse(allowed)
+
 
 if __name__ == "__main__":
     unittest.main()

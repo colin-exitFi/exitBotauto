@@ -1,0 +1,47 @@
+{
+  "as_of": 1773206779.4309812,
+  "date": "2026-03-10",
+  "broker": {
+    "date": "2026-03-10",
+    "equity": 1000.0,
+    "last_equity": 1000.0,
+    "day_pnl": 0.0,
+    "day_pnl_pct": 0.0,
+    "cash": 0.0,
+    "long_market_value": 0.0,
+    "short_market_value": 0.0,
+    "position_market_value": 0.0,
+    "current_open_unrealized": 0,
+    "overnight_gap_pnl": null,
+    "intraday_change_from_open": null,
+    "intraday_realized_estimate": null,
+    "fill_count": 0,
+    "symbols_with_broker_activity": [],
+    "carryover_symbols": [],
+    "carryover_fragment_symbols": [],
+    "intraday_symbols": [],
+    "broker_history_available": false
+  },
+  "internal": {
+    "pnl_state_realized": 0.0,
+    "pnl_state_today_realized": 0.0,
+    "pnl_state_trade_count": 0,
+    "trade_history_realized": 0.0,
+    "trade_history_trade_count": 0,
+    "trade_history_win_rate_pct": 0.0,
+    "game_film_realized": 0.0,
+    "game_film_trade_count": 0,
+    "game_film_win_rate_pct": 0.0,
+    "symbols_in_trade_history": [],
+    "symbols_in_game_film": []
+  },
+  "reconciliation": {
+    "broker_vs_pnl_state_diff": 0.0,
+    "broker_vs_trade_history_diff": 0.0,
+    "status": "degraded",
+    "severity": "warning",
+    "reasons": [
+      "broker_history_unavailable"
+    ]
+  }
+}
