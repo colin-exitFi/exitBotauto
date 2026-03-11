@@ -560,6 +560,8 @@ async def get_status():
         "market_open": _bot.entry_manager.is_market_open() if _bot.entry_manager else False,
         "positions_count": len(positions),
         "uptime_seconds": int(time.time() - _bot.start_time) if hasattr(_bot, 'start_time') else 0,
+        "options_enabled": bool(getattr(settings, "OPTIONS_ENABLED", False)),
+        "options_execution_enabled": bool(getattr(_bot, "options_engine", None)),
         **risk_status,
     }
 
@@ -879,6 +881,7 @@ async def get_pnl():
     analytics = {}
     avg_signal_to_fill_ms = None
     api_costs = {}
+    internal_state = (reconciliation_state.get("internal", {}) or {})
     try:
         from src.ai import trade_history
         analytics = trade_history.get_analytics()
@@ -904,10 +907,10 @@ async def get_pnl():
         "broker_day_pnl_pct": round(broker_day_pnl_pct, 2),
         "options_realized_pnl": round(options_realized, 2),
         "options_unrealized_pnl": round(options_unrealized, 2),
-        "internal_realized_pnl": round(total_realized, 2),
-        "internal_trade_count": total_trades,
-        "internal_game_film_realized": round(float((reconciliation_state.get("internal", {}) or {}).get("game_film_realized", 0) or 0), 2),
-        "internal_win_rate_pct": round(float((reconciliation_state.get("internal", {}) or {}).get("trade_history_win_rate_pct", win_rate) or win_rate), 2),
+        "internal_realized_pnl": round(float(internal_state.get("trade_history_realized", total_realized) or total_realized), 2),
+        "internal_trade_count": int(internal_state.get("trade_history_trade_count", total_trades) or total_trades),
+        "internal_game_film_realized": round(float(internal_state.get("game_film_realized", 0) or 0), 2),
+        "internal_win_rate_pct": round(float(internal_state.get("trade_history_win_rate_pct", win_rate) or win_rate), 2),
         "today_realized": round(broker_day_pnl, 2),
         "total_trades": total_trades,
         "winning_trades": wins,
@@ -1679,6 +1682,7 @@ async function refresh() {
         broker_position_missing_internal: 'broker position missing from internal state',
         broker_symbols_missing_from_internal: 'broker activity missing from internal history',
         broker_activity_missing_internal_history: 'broker activity missing from internal history',
+        broker_fill_ledger_unresolved: 'broker fill ledger unresolved for carryover basis',
         broker_truth_canary_triggered: 'broker-truth canary triggered',
         carryover_gap: 'overnight carryover gap detected',
         internal_position_missing_broker: 'internal position missing from broker state',
@@ -1825,7 +1829,7 @@ async function refresh() {
       <div class="summary-item"><div class="val" style="color:#d2a8ff">${st.shorts||0}</div><div class="lbl">SHORT</div></div>
       <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP</div></div>
       <div class="summary-item" title="${con.last_short_block_reason||''}"><div class="val negative">${con.short_verdicts_blocked||0}</div><div class="lbl">Short Blocked</div></div>
-      <div class="summary-item"><div class="val" style="color:#e3b341">${st.avg_confidence?(st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Avg Conf</div></div>
+      <div class="summary-item"><div class="val" style="color:#e3b341">${(st.actionable_avg_confidence ?? st.avg_confidence)?(st.actionable_avg_confidence ?? st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Action Conf</div></div>
       <div class="summary-item"><div class="val val-sm" style="color:#8b949e">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
     ` : '';
     $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
@@ -1939,7 +1943,13 @@ async function refresh() {
   }
   // Options positions
   const ops = await api('/api/options');
-  if (ops) {
+  if (s && !s.options_enabled) {
+    $('optionsValue').textContent = 'execution disabled';
+    $('optionsPositions').innerHTML = '<tr><td colspan="13" class="empty">Options execution is disabled in runtime config</td></tr>';
+  } else if (s && s.options_enabled && !s.options_execution_enabled) {
+    $('optionsValue').textContent = 'engine unavailable';
+    $('optionsPositions').innerHTML = '<tr><td colspan="13" class="empty">Options are enabled in config but the execution engine did not initialize</td></tr>';
+  } else if (ops) {
     const totalOptPnl = ops.reduce((acc, p) => acc + (p.pnl || 0), 0);
     $('optionsValue').textContent = `${ops.length||0} contracts | Unrealized $${totalOptPnl.toFixed(2)}`;
     $('optionsPositions').innerHTML = ops.length ? ops.map(p => `<tr>

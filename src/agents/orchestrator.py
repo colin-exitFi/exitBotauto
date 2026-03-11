@@ -223,6 +223,10 @@ class Orchestrator:
             "shorts": sum(1 for h in self._history if h["decision"] == "SHORT"),
             "skips": sum(1 for h in self._history if h["decision"] == "SKIP"),
             "avg_confidence": sum(h.get("confidence", 0) for h in self._history) / total,
+            "actionable_avg_confidence": (
+                sum(h.get("confidence", 0) for h in self._history if h.get("decision") in ("BUY", "SHORT"))
+                / max(1, sum(1 for h in self._history if h.get("decision") in ("BUY", "SHORT")))
+            ),
             "api_calls": get_api_stats(),
             "api_costs": get_api_cost_stats(),
         }

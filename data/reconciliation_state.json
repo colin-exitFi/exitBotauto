@@ -1,5 +1,5 @@
 {
-  "as_of": 1773233210.965039,
+  "as_of": 1773235584.389,
   "date": "2026-03-10",
   "broker": {
     "date": "2026-03-10",
@@ -64,7 +64,7 @@
       "code": "broker_position_missing_internal",
       "symbol": "AAPL",
       "severity": "critical",
-      "first_seen": 1773233210.965035,
+      "first_seen": 1773235584.3889961,
       "current_magnitude": 0.0,
       "recommended_action": "Sync live positions from broker before trusting internal exposure."
     }

@@ -114,8 +114,21 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
              patch.object(jury, "provider_is_backing_off", side_effect=lambda provider: provider == "grok"):
             verdict = await jury.deliberate("AAPL", 100.0, {}, {})
 
-        self.assertEqual(verdict.decision, "SKIP")
-        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_split")
+        self.assertEqual(verdict.decision, "BUY")
+        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_actionable_skip")
+        self.assertAlmostEqual(verdict.size_pct, 1.2, places=3)
+        self.assertAlmostEqual(verdict.confidence, 60.0, places=2)
+
+    async def test_two_model_buy_and_skip_allows_small_probe(self):
+        with patch.object(jury, "call_claude", new=_async_return(None)), \
+             patch.object(jury, "call_gpt", new=_async_return(_vote("BUY", 72, 2.0, 2.0))), \
+             patch.object(jury, "call_grok", new=_async_return(_vote("SKIP", 35, 0.0, 3.0))):
+            verdict = await jury.deliberate("NVDA", 100.0, {}, {})
+
+        self.assertEqual(verdict.decision, "BUY")
+        self.assertEqual(verdict.consensus_detail["agreement"], "split_with_skip")
+        self.assertAlmostEqual(verdict.size_pct, 1.2, places=3)
+        self.assertAlmostEqual(verdict.confidence, 54.0, places=2)
 
     async def test_two_models_disagree_skip(self):
         with patch.object(jury, "call_claude", new=_async_return(None)), \

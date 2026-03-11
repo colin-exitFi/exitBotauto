@@ -473,6 +473,38 @@ def _apply_consensus(
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
+        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
+            return _decision_verdict(
+                symbol,
+                "BUY",
+                buy_votes,
+                skip_votes,
+                providers_used,
+                vote_map,
+                briefs,
+                "degraded_actionable_skip",
+                0.60,
+                0.75,
+                degraded=degraded,
+                rate_limited_providers=degraded_providers,
+                failed_providers=failed_providers,
+            )
+        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
+            return _decision_verdict(
+                symbol,
+                "SHORT",
+                short_votes,
+                skip_votes,
+                providers_used,
+                vote_map,
+                briefs,
+                "degraded_actionable_skip",
+                0.60,
+                0.75,
+                degraded=degraded,
+                rate_limited_providers=degraded_providers,
+                failed_providers=failed_providers,
+            )
         return _skip_verdict(
             symbol,
             briefs,
@@ -524,6 +556,10 @@ def _apply_consensus(
             return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
         if len(skip_votes) == 2:
             return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
+            return _decision_verdict(symbol, "BUY", buy_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
+            return _decision_verdict(symbol, "SHORT", short_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
         return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "split", "Two responding models disagreed", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
 
     if len(buy_votes) == 3:
@@ -604,6 +640,10 @@ def _decision_verdict(
         summary = f"{decision} 2/3 with direct opposition"
     elif agreement == "majority_two_model":
         summary = f"{decision} 2/2"
+    elif agreement == "split_with_skip":
+        summary = f"{decision} 1/1 with one abstain"
+    elif agreement == "degraded_actionable_skip":
+        summary = f"{decision} degraded 1/1 with one abstain"
     else:
         summary = f"{decision} 2/3 majority"
 

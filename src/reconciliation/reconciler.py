@@ -11,6 +11,7 @@ from loguru import logger
 
 from src import persistence
 from src.ai import trade_history
+from src.data.trade_schema import normalize_trade_record
 
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
@@ -26,7 +27,7 @@ class Reconciler:
     def snapshot(self, trade_date: Optional[str] = None) -> Dict:
         previous = self._load_json(RECONCILIATION_FILE)
         broker = self.get_broker_truth(trade_date=trade_date)
-        internal = self.get_internal_analytics(trade_date=trade_date or broker.get("date"))
+        internal = self.get_internal_analytics(trade_date=trade_date or broker.get("date"), broker=broker)
         reconciliation = self.classify_mismatch(broker, internal)
         canaries = self.build_canaries(broker, internal, reconciliation, previous)
         trust = self.build_trust_flags(reconciliation)
@@ -124,6 +125,11 @@ class Reconciler:
         )
         if not trade_date:
             trade_date = str(account.get("balance_asof") or today_key)
+        broker_fill_ledger = self._build_broker_fill_ledger(
+            trade_date=trade_date,
+            activities=activities,
+            end_positions=positions,
+        )
 
         return {
             "date": trade_date,
@@ -147,6 +153,7 @@ class Reconciler:
             "carryover_fragment_symbols": sorted(set(carryover_fragment_symbols)),
             "intraday_symbols": sorted(set(intraday_symbols)),
             "broker_history_available": bool(timestamps and equities),
+            "broker_fill_ledger": broker_fill_ledger,
             "broker_positions": {
                 str(p.get("symbol", "") or "").upper(): {
                     "qty": float(p.get("qty", 0) or 0),
@@ -159,7 +166,7 @@ class Reconciler:
             },
         }
 
-    def get_internal_analytics(self, trade_date: Optional[str] = None) -> Dict:
+    def get_internal_analytics(self, trade_date: Optional[str] = None, broker: Optional[Dict] = None) -> Dict:
         pnl_state = persistence.load_pnl_state()
         analytics = trade_history.get_analytics()
         history = trade_history.load_all()
@@ -168,13 +175,25 @@ class Reconciler:
             t for t in history
             if self._trade_day_key_from_trade(t) == target_day
         ]
-        today_realized = round(sum(float(t.get("pnl", 0) or 0) for t in today_history), 2)
-        today_trade_count = len(today_history)
-        today_wins = len([t for t in today_history if float(t.get("pnl", 0) or 0) > 0])
-        today_win_rate_pct = round(today_wins / max(1, today_trade_count) * 100.0, 2) if today_trade_count else 0.0
         today_symbols = sorted({
             str(t.get("symbol", "") or "").upper()
             for t in today_history
+            if str(t.get("symbol", "") or "").strip()
+        })
+        broker_fill_ledger = (broker or {}).get("broker_fill_ledger", {}) if isinstance(broker, dict) else {}
+        supplemental_trades = [
+            normalize_trade_record(t)
+            for t in (broker_fill_ledger.get("trades", []) or [])
+            if str(t.get("symbol", "") or "").upper() not in set(today_symbols)
+        ]
+        effective_today_trades = list(today_history) + supplemental_trades
+        today_realized = round(sum(float(t.get("pnl", 0) or 0) for t in effective_today_trades), 2)
+        today_trade_count = len(effective_today_trades)
+        today_wins = len([t for t in effective_today_trades if float(t.get("pnl", 0) or 0) > 0])
+        today_win_rate_pct = round(today_wins / max(1, today_trade_count) * 100.0, 2) if today_trade_count else 0.0
+        effective_today_symbols = sorted({
+            str(t.get("symbol", "") or "").upper()
+            for t in effective_today_trades
             if str(t.get("symbol", "") or "").strip()
         })
         game_film = self._load_json(DATA_DIR / "game_film.json")
@@ -189,9 +208,13 @@ class Reconciler:
             "game_film_realized": round(float(game_film.get("total_pnl", 0) or 0), 2) if isinstance(game_film, dict) else 0.0,
             "game_film_trade_count": int(game_film.get("total_trades", 0) or 0) if isinstance(game_film, dict) else 0,
             "game_film_win_rate_pct": round(float(game_film.get("overall_win_rate_pct", 0) or 0), 2) if isinstance(game_film, dict) else 0.0,
-            "symbols_in_trade_history": today_symbols,
+            "symbols_in_trade_history": effective_today_symbols,
             "symbols_in_game_film": sorted((game_film.get("by_symbol", {}) or {}).keys()) if isinstance(game_film, dict) else [],
             "analytics_total_realized_all_time": round(float(analytics.get("total_pnl", 0) or 0), 2),
+            "broker_reconstructed_realized": round(float(broker_fill_ledger.get("realized_pnl", 0) or 0), 2),
+            "broker_reconstructed_trade_count": int(broker_fill_ledger.get("trade_count", 0) or 0),
+            "broker_reconstructed_unresolved_symbols": list(broker_fill_ledger.get("unresolved_symbols", []) or []),
+            "broker_supplemental_trade_count": len(supplemental_trades),
             "internal_live_positions": {
                 str(symbol).upper(): {
                     "qty": float(pos.get("quantity", 0) or 0),
@@ -228,6 +251,8 @@ class Reconciler:
                 reasons.append("internal_symbols_missing_from_broker_day_bundle")
         if broker.get("carryover_fragment_symbols"):
             reasons.append("residual_position_drift")
+        if internal.get("broker_reconstructed_unresolved_symbols"):
+            reasons.append("broker_fill_ledger_unresolved")
         if effective_diff > 10:
             reasons.append("internal_closed_trade_subset_only")
         if not broker.get("broker_history_available"):
@@ -258,6 +283,184 @@ class Reconciler:
             "severity": severity,
             "reasons": sorted(set(reasons)),
         }
+
+    def _build_broker_fill_ledger(self, trade_date: str, activities: List[Dict], end_positions: List[Dict]) -> Dict:
+        grouped: Dict[str, List[Dict]] = {}
+        end_signed_qty: Dict[str, float] = {}
+        for pos in end_positions or []:
+            symbol = str(pos.get("symbol", "") or "").upper().strip()
+            if not symbol:
+                continue
+            qty = float(pos.get("qty", pos.get("quantity", 0)) or 0)
+            end_signed_qty[symbol] = qty
+        for row in activities or []:
+            symbol = str(row.get("symbol", "") or "").upper().strip()
+            if not symbol:
+                continue
+            grouped.setdefault(symbol, []).append(dict(row))
+
+        closed_trades: List[Dict] = []
+        unresolved_symbols: List[str] = []
+        reconstructable_closed_symbols: List[str] = []
+
+        for symbol, rows in grouped.items():
+            rows.sort(key=lambda r: self._parse_activity_ts(r))
+            net_delta = sum(self._activity_signed_qty(r) for r in rows)
+            starting_qty = end_signed_qty.get(symbol, 0.0) - net_delta
+            if abs(starting_qty) > 1e-6:
+                unresolved_symbols.append(symbol)
+                continue
+            symbol_trades = self._reconstruct_intraday_trades(symbol, rows, trade_date)
+            if symbol_trades:
+                reconstructable_closed_symbols.append(symbol)
+                closed_trades.extend(symbol_trades)
+
+        realized_pnl = round(sum(float(t.get("pnl", 0) or 0) for t in closed_trades), 2)
+        return {
+            "trade_count": len(closed_trades),
+            "realized_pnl": realized_pnl,
+            "closed_symbols": sorted({str(t.get("symbol", "") or "").upper() for t in closed_trades if str(t.get("symbol", "") or "").strip()}),
+            "reconstructable_closed_symbols": sorted(set(reconstructable_closed_symbols)),
+            "unresolved_symbols": sorted(set(unresolved_symbols)),
+            "trades": closed_trades,
+        }
+
+    def _reconstruct_intraday_trades(self, symbol: str, rows: List[Dict], trade_date: str) -> List[Dict]:
+        trades: List[Dict] = []
+        signed_qty = 0.0
+        avg_cost = 0.0
+        segment = None
+
+        def finalize_segment(exit_ts: float):
+            nonlocal signed_qty, avg_cost, segment, trades
+            if not segment:
+                return
+            open_qty = float(segment.get("opened_qty", 0) or 0)
+            close_qty = float(segment.get("closed_qty", 0) or 0)
+            if open_qty <= 0 or close_qty <= 0:
+                segment = None
+                return
+            entry_price = float(segment.get("open_notional", 0) or 0) / open_qty
+            exit_price = float(segment.get("close_notional", 0) or 0) / close_qty
+            side = segment.get("side", "long")
+            if side == "short":
+                pnl = (entry_price - exit_price) * close_qty
+                order_side = "buy_to_cover"
+            else:
+                pnl = (exit_price - entry_price) * close_qty
+                order_side = "sell"
+            pnl_pct = ((exit_price - entry_price) / entry_price * 100.0) if entry_price else 0.0
+            if side == "short":
+                pnl_pct = -pnl_pct
+            trade = normalize_trade_record({
+                "symbol": symbol,
+                "side": order_side,
+                "entry_price": round(entry_price, 6),
+                "exit_price": round(exit_price, 6),
+                "quantity": round(close_qty, 6),
+                "pnl": round(pnl, 2),
+                "pnl_pct": round(pnl_pct, 2),
+                "reason": "broker_fill_reconstructed",
+                "entry_time": segment.get("entry_time"),
+                "exit_time": exit_ts,
+                "hold_seconds": max(0.0, exit_ts - float(segment.get("entry_time", exit_ts) or exit_ts)),
+                "asset_type": "equity",
+                "strategy_tag": "broker_reconciled",
+                "entry_path": "broker_reconciliation",
+                "signal_sources": ["broker_reconciliation"],
+                "provider_used": "alpaca_reconciler",
+                "decision_confidence": 0,
+                "anomaly_flags": ["broker_reconstructed"],
+                "trade_date": trade_date,
+                "exit_order_id": segment.get("order_ids", [""])[-1] if segment.get("order_ids") else "",
+            })
+            trades.append(trade)
+            segment = None
+
+        for row in rows:
+            qty = abs(float(row.get("qty", 0) or 0))
+            if qty <= 0:
+                continue
+            price = float(row.get("price", 0) or 0)
+            if price <= 0:
+                continue
+            delta = self._activity_signed_qty(row)
+            ts = self._parse_activity_ts(row)
+            if signed_qty == 0:
+                signed_qty = delta
+                avg_cost = price
+                segment = {
+                    "side": "long" if delta > 0 else "short",
+                    "opened_qty": qty,
+                    "open_notional": qty * price,
+                    "closed_qty": 0.0,
+                    "close_notional": 0.0,
+                    "entry_time": ts,
+                    "order_ids": [str(row.get("order_id", "") or "")],
+                }
+                continue
+
+            if signed_qty * delta > 0:
+                total_qty = abs(signed_qty) + qty
+                avg_cost = ((avg_cost * abs(signed_qty)) + (price * qty)) / max(1e-9, total_qty)
+                signed_qty += delta
+                if segment:
+                    segment["opened_qty"] += qty
+                    segment["open_notional"] += qty * price
+                    segment["order_ids"].append(str(row.get("order_id", "") or ""))
+                continue
+
+            close_qty = min(abs(signed_qty), qty)
+            if segment:
+                segment["closed_qty"] += close_qty
+                segment["close_notional"] += close_qty * price
+                segment["order_ids"].append(str(row.get("order_id", "") or ""))
+            if abs(delta) < abs(signed_qty) + 1e-9:
+                signed_qty += delta
+                if abs(signed_qty) <= 1e-9:
+                    finalize_segment(ts)
+                    signed_qty = 0.0
+                    avg_cost = 0.0
+                continue
+
+            # Flip through zero: close the existing segment, then open the remainder.
+            signed_qty = 0.0
+            finalize_segment(ts)
+            leftover = abs(qty - close_qty)
+            if leftover > 1e-9:
+                new_delta = leftover if delta > 0 else -leftover
+                signed_qty = new_delta
+                avg_cost = price
+                segment = {
+                    "side": "long" if new_delta > 0 else "short",
+                    "opened_qty": leftover,
+                    "open_notional": leftover * price,
+                    "closed_qty": 0.0,
+                    "close_notional": 0.0,
+                    "entry_time": ts,
+                    "order_ids": [str(row.get("order_id", "") or "")],
+                }
+
+        if abs(signed_qty) <= 1e-9 and segment:
+            finalize_segment(float(segment.get("entry_time", 0) or 0))
+        return trades
+
+    @staticmethod
+    def _parse_activity_ts(row: Dict) -> float:
+        raw = row.get("transaction_time") or row.get("date") or row.get("created_at")
+        if raw:
+            try:
+                from datetime import datetime
+                return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).timestamp()
+            except Exception:
+                pass
+        return 0.0
+
+    @staticmethod
+    def _activity_signed_qty(row: Dict) -> float:
+        qty = abs(float(row.get("qty", 0) or 0))
+        side = str(row.get("side", "") or "").lower()
+        return qty if side == "buy" else -qty
 
     def build_canaries(self, broker: Dict, internal: Dict, reconciliation: Dict, previous: Dict) -> List[Dict]:
         previous_canaries = {
@@ -332,6 +535,13 @@ class Reconciler:
                 "critical",
                 symbol=symbol,
                 recommended_action="Backfill the missing broker close into internal trade history.",
+            )
+        for symbol in sorted(internal.get("broker_reconstructed_unresolved_symbols", []) or []):
+            add_canary(
+                "broker_fill_ledger_unresolved",
+                "warning",
+                symbol=symbol,
+                recommended_action="Carryover cost basis is missing; reconcile with prior-session broker position basis.",
             )
 
         if broker.get("overnight_gap_pnl") is not None and abs(float(broker.get("overnight_gap_pnl", 0) or 0)) > 25:

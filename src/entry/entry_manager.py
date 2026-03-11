@@ -35,6 +35,7 @@ class EntryManager:
         self.positions: Dict[str, Dict] = {}
         self.last_gate: Dict[str, str] = {}
         self.last_order_error: str = ""
+        self._recently_removed_positions: Dict[str, Dict] = {}
         self._halted_symbols = set()
         # Load existing brokerage positions on init
         self._load_brokerage_positions()
@@ -974,11 +975,16 @@ class EntryManager:
             if p.get("symbol") and p.get("symbol") not in self.positions
         ]
         closed_orders = None
+        open_orders = None
         if missing_symbols and self.broker and hasattr(self.broker, "get_orders"):
             try:
                 closed_orders = self.broker.get_orders(status="closed")
             except Exception as e:
                 logger.warning(f"Could not fetch closed orders for carryover entry times: {e}")
+            try:
+                open_orders = self.broker.get_orders(status="open")
+            except Exception as e:
+                logger.warning(f"Could not fetch open orders for broker resync diagnostics: {e}")
 
         updates = 0
         for p in brokerage_positions or []:
@@ -1015,6 +1021,26 @@ class EntryManager:
                 continue
 
             entry_time, entry_time_source = self._estimate_carryover_entry_time(sym, side, closed_orders)
+            recent_removed = (getattr(self, "_recently_removed_positions", {}) or {}).get(sym)
+            reload_reason = "broker_sync_missing_local"
+            open_exit_order = None
+            if recent_removed:
+                removed_at = float(recent_removed.get("removed_at", 0) or 0)
+                age_seconds = max(0.0, time.time() - removed_at)
+                if age_seconds <= 900:
+                    expected_exit_side = "buy" if str(side).lower() == "short" else "sell"
+                    for order in open_orders or []:
+                        if str(order.get("symbol", "")).upper() != sym:
+                            continue
+                        if str(order.get("side", "")).lower() != expected_exit_side:
+                            continue
+                        open_exit_order = order
+                        break
+                    reload_reason = (
+                        "broker_still_open_after_local_removal_pending_exit"
+                        if open_exit_order
+                        else "broker_still_open_after_local_removal"
+                    )
             self.positions[sym] = {
                 "symbol": sym,
                 "side": side,
@@ -1048,11 +1074,28 @@ class EntryManager:
                 "_exit_recorded": False,
                 "current_price": cur_price,
                 "broker_synced_at": time.time(),
+                "reload_reason": reload_reason,
+                "reloaded_from_broker": bool(recent_removed),
             }
+            if recent_removed:
+                self.positions[sym]["anomaly_flags"] = list({
+                    *self.positions[sym].get("anomaly_flags", []),
+                    "broker_reloaded_after_local_removal",
+                })
+                self.positions[sym]["last_exit_reason"] = recent_removed.get("last_exit_reason", "")
+                self.positions[sym]["last_exit_attempt_at"] = recent_removed.get("removed_at", time.time())
+                if open_exit_order:
+                    self.positions[sym]["exit_pending"] = True
+                    self.positions[sym]["exit_order_id"] = open_exit_order.get("id", "")
+                    self.positions[sym]["exit_submitted_at"] = recent_removed.get("removed_at", time.time())
+                logger.warning(
+                    f"🔁 Reloaded {sym} from broker after local removal "
+                    f"(reason={reload_reason}, qty={qty:.4f}, open_exit_order={open_exit_order.get('id', '') if open_exit_order else 'none'})"
+                )
             side_tag = "SHORT" if side == "short" else "LONG"
             logger.info(
                 f"📦 Loaded {side_tag} position: {qty:.4f} {sym} @ ${avg_price:.2f} "
-                f"(current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f}, entry={entry_time_source})"
+                f"(current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f}, entry={entry_time_source}, reload={reload_reason})"
             )
             updates += 1
         return updates
@@ -1063,7 +1106,17 @@ class EntryManager:
 
     def remove_position(self, symbol: str):
         """Remove a position after full exit."""
-        self.positions.pop(symbol, None)
+        pos = self.positions.pop(symbol, None)
+        if pos:
+            if not hasattr(self, "_recently_removed_positions") or self._recently_removed_positions is None:
+                self._recently_removed_positions = {}
+            self._recently_removed_positions[str(symbol).upper()] = {
+                "removed_at": time.time(),
+                "last_exit_reason": pos.get("last_exit_reason", ""),
+                "exit_order_id": pos.get("exit_order_id", ""),
+                "quantity": pos.get("quantity", 0),
+                "side": pos.get("side", "long"),
+            }
 
     def update_peak_price(self, symbol: str, current_price: float):
         """Update peak price for trailing stop tracking."""

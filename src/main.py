@@ -1874,6 +1874,22 @@ class TradingBot:
         logger.warning(f"🩳 SHORT blocked for {symbol}: {reason_text}")
 
     @staticmethod
+    def _summarize_brief_for_trace(brief: dict) -> str:
+        if not isinstance(brief, dict) or not brief:
+            return "n/a"
+        if brief.get("error"):
+            return "unavailable"
+        if "signal" in brief:
+            return f"{brief.get('signal')}:{brief.get('confidence', 0)}"
+        if "score" in brief:
+            return f"score={brief.get('score', 0)}"
+        if "approved" in brief:
+            return f"approved={brief.get('approved')} size={brief.get('max_size_pct', 0)}"
+        if "regime" in brief:
+            return f"{brief.get('regime')}:{brief.get('confidence', 0)}"
+        return str(brief)[:80]
+
+    @staticmethod
     def _make_realized_trade_key(trade_record: dict) -> tuple:
         return (
             str(trade_record.get("asset_type", "equity") or "equity").lower(),
@@ -2267,6 +2283,10 @@ class TradingBot:
 
             # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
+                logger.info(
+                    f"🧭 ENTRY TRACE {symbol}: blocked before jury by position_manager "
+                    f"strategy={candidate.get('strategy_tag', 'unknown')} side={candidate.get('side', 'long')}"
+                )
                 continue
 
             # Specialized Agent Orchestrator — 5 agents + jury
@@ -2284,6 +2304,22 @@ class TradingBot:
                         if evaluated > 1:
                             await asyncio.sleep(1.5)
                     self.ai_layers["last_consensus"] = verdict.to_dict()
+                    consensus_detail = getattr(verdict, "consensus_detail", {}) or {}
+                    votes = consensus_detail.get("votes", {})
+                    briefs = getattr(verdict, "briefs", {}) or {}
+                    logger.info(
+                        f"🧭 JURY TRACE {symbol}: decision={verdict.decision} conf={verdict.confidence:.1f}% "
+                        f"agreement={consensus_detail.get('agreement', 'unknown')} "
+                        f"votes={votes} degraded={consensus_detail.get('degraded', False)} "
+                        f"rate_limited={consensus_detail.get('rate_limited_providers', [])}"
+                    )
+                    logger.info(
+                        f"🧭 BRIEFS {symbol}: tech={self._summarize_brief_for_trace(briefs.get('technical', {}))} "
+                        f"sent={self._summarize_brief_for_trace(briefs.get('sentiment', {}))} "
+                        f"cat={self._summarize_brief_for_trace(briefs.get('catalyst', {}))} "
+                        f"risk={self._summarize_brief_for_trace(briefs.get('risk', {}))} "
+                        f"macro={self._summarize_brief_for_trace(briefs.get('macro', {}))}"
+                    )
                     if verdict.decision not in ("BUY", "SHORT"):
                         if "cooldown" not in verdict.reasoning.lower():
                             self._record_jury_veto(symbol)
@@ -2340,9 +2376,22 @@ class TradingBot:
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -effective_sentiment_score if direction == "SHORT" else effective_sentiment_score
             can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
-            logger.info(f"🔑 {symbol} can_enter={can} (check_sent={check_sentiment:.2f})")
+            gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
+            risk_status = {}
+            if self.risk_manager and hasattr(self.risk_manager, "get_status"):
+                try:
+                    risk_status = self.risk_manager.get_status() or {}
+                except Exception:
+                    risk_status = {}
+            logger.info(
+                f"🧭 ENTRY GATE {symbol}: allowed={can} reason={gate_reason} "
+                f"direction={direction} conf={float(sentiment_data.get('consensus_confidence', 0) or 0):.1f}% "
+                f"raw_sent={raw_sentiment_score:.2f} check_sent={check_sentiment:.2f} "
+                f"pdt_raw={risk_status.get('alpaca_daytrade_count', 0)} "
+                f"pdt_effective={risk_status.get('effective_daytrade_count', 0)} "
+                f"swing_mode={risk_status.get('swing_mode', False)}"
+            )
             if direction == "SHORT" and not can:
-                gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "entry_gate_block")
                 self._record_short_verdict_block(symbol, gate_reason, "gate")
             if can:
                 logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")

@@ -206,3 +206,35 @@ class DashboardSecurityTests(unittest.TestCase):
                 self.assertEqual(payload["reconciliation_canaries"][0]["code"], "realized_pnl_mismatch")
         finally:
             dashboard_module.set_bot(None)
+
+    def test_status_endpoint_reports_options_execution_state(self):
+        class _Risk:
+            def get_status(self):
+                return {}
+
+        class _Entry:
+            def get_positions(self):
+                return []
+            def is_market_open(self):
+                return True
+
+        class _Bot:
+            running = True
+            paused = False
+            start_time = 0
+            risk_manager = _Risk()
+            entry_manager = _Entry()
+            options_engine = object()
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
+                 patch.object(dashboard_module.settings, "OPTIONS_ENABLED", True):
+                client = TestClient(dashboard_module.app)
+                resp = client.get("/api/status?token=secret-token")
+                self.assertEqual(resp.status_code, 200)
+                payload = resp.json()
+                self.assertTrue(payload["options_enabled"])
+                self.assertTrue(payload["options_execution_enabled"])
+        finally:
+            dashboard_module.set_bot(None)

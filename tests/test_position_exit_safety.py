@@ -150,6 +150,46 @@ class EntryManagerSyncTests(unittest.TestCase):
         self.assertEqual(manager.positions["RLMD"]["entry_time_source"], "broker_orders")
         self.assertAlmostEqual(manager.positions["RLMD"]["entry_time"], t3, delta=1.0)
 
+    def test_sync_positions_from_brokerage_marks_recently_removed_reload_reason(self):
+        class _Broker:
+            def get_orders(self, status="open"):
+                if status == "open":
+                    return [
+                        {"symbol": "CRCL", "side": "buy", "id": "exit-1"},
+                    ]
+                return []
+
+        manager = EntryManager.__new__(EntryManager)
+        manager.positions = {}
+        manager.broker = _Broker()
+        manager._recently_removed_positions = {
+            "CRCL": {
+                "removed_at": time.time(),
+                "last_exit_reason": "advisor_strategic_exit",
+                "exit_order_id": "exit-1",
+                "quantity": 1.0,
+                "side": "short",
+            }
+        }
+
+        updates = manager.sync_positions_from_brokerage(
+            [
+                {
+                    "symbol": "CRCL",
+                    "quantity": -0.65,
+                    "side": "short",
+                    "average_price": 113.65,
+                    "current_price": 118.70,
+                    "open_pnl": -3.30,
+                }
+            ]
+        )
+
+        self.assertEqual(updates, 1)
+        self.assertEqual(manager.positions["CRCL"]["reload_reason"], "broker_still_open_after_local_removal_pending_exit")
+        self.assertTrue(manager.positions["CRCL"]["reloaded_from_broker"])
+        self.assertTrue(manager.positions["CRCL"]["exit_pending"])
+
 
 class ExitAgentFallbackTests(unittest.IsolatedAsyncioTestCase):
     async def test_rule_based_exit_now_when_ai_is_unavailable_and_position_is_losing(self):

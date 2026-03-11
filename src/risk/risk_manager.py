@@ -109,6 +109,7 @@ class RiskManager:
         # Round trip (day trade) tracking: [{symbol, entry_time, exit_time}]
         self._round_trips: List[Dict] = []
         self._alpaca_daytrade_count = 0
+        self._last_pdt_sanity_log = None
 
         # Load persisted state (including wash sales)
         self._load_state()
@@ -140,6 +141,24 @@ class RiskManager:
         if equity > self._ath_equity:
             self._ath_equity = equity
         self._save_state()
+
+    def _effective_daytrade_count(self) -> int:
+        """
+        Prefer Alpaca's rolling PDT count when it looks sane.
+        Some account snapshots appear to expose a lifetime/corrupted count
+        (e.g. 168), which should never drive live gating.
+        """
+        raw = max(0, int(self._alpaca_daytrade_count or 0))
+        internal = self._count_recent_day_trades()
+        if raw <= 4:
+            return raw
+        marker = (raw, internal)
+        if marker != self._last_pdt_sanity_log:
+            logger.warning(
+                f"⚠️ Ignoring suspicious Alpaca daytrade_count={raw}; using internal rolling count={internal} for PDT gating"
+            )
+            self._last_pdt_sanity_log = marker
+        return internal
 
     def get_risk_tier(self, equity: float = None) -> Dict:
         """Returns current tier dict with name included."""
@@ -306,11 +325,12 @@ class RiskManager:
         # PDT awareness: if equity < $25K and at 3 day trades, switch to swing-only mode.
         # We still allow entries; broker blocks same-day exits once the cap is hit.
         if self._equity < 25000:
-            broker_day_trades = max(0, int(self._alpaca_daytrade_count or 0))
+            broker_day_trades = self._effective_daytrade_count()
             internal_day_trades = self._count_recent_day_trades()
-            if broker_day_trades != internal_day_trades:
+            raw_broker_day_trades = max(0, int(self._alpaca_daytrade_count or 0))
+            if raw_broker_day_trades != internal_day_trades:
                 logger.warning(
-                    f"⚠️ PDT count mismatch: Alpaca={broker_day_trades}, internal={internal_day_trades}"
+                    f"⚠️ PDT count mismatch: AlpacaRaw={raw_broker_day_trades}, effective={broker_day_trades}, internal={internal_day_trades}"
                 )
             if broker_day_trades >= 3:
                 logger.warning(
@@ -344,11 +364,11 @@ class RiskManager:
         """Best available PDT budget from Alpaca account state."""
         if self._equity >= 25000:
             return 999
-        return max(0, 3 - int(self._alpaca_daytrade_count or 0))
+        return max(0, 3 - self._effective_daytrade_count())
 
     def is_swing_mode(self) -> bool:
         """Below-PDT-threshold account with no same-day exit budget remaining."""
-        return self._equity < 25000 and int(self._alpaca_daytrade_count or 0) >= 3
+        return self._equity < 25000 and self._effective_daytrade_count() >= 3
 
     @staticmethod
     def _eastern_trading_day(ts: Optional[float] = None) -> str:
@@ -514,6 +534,7 @@ class RiskManager:
                 1,
             ),
             "alpaca_daytrade_count": int(self._alpaca_daytrade_count or 0),
+            "effective_daytrade_count": self._effective_daytrade_count(),
             "internal_daytrade_count": self._count_recent_day_trades(),
             "remaining_day_trades": self.remaining_day_trades(),
             "swing_mode": self.is_swing_mode(),

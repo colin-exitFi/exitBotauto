@@ -42,6 +42,17 @@ class RiskManagerPDTTests(unittest.TestCase):
         self.assertTrue(allowed)
         self.assertEqual(manager.remaining_day_trades(), 1)
 
+    def test_suspicious_alpaca_daytrade_count_falls_back_to_internal(self):
+        manager = self._build_manager()
+        manager._round_trips = []
+        manager.update_equity(24900.0, daytrade_count=168)
+
+        allowed = manager.can_open_position(current_positions=[], symbol="META")
+
+        self.assertTrue(allowed)
+        self.assertEqual(manager.remaining_day_trades(), 3)
+        self.assertFalse(manager.is_swing_mode())
+
     def test_can_open_position_still_blocks_on_max_positions(self):
         manager = self._build_manager()
         manager._round_trips = []
