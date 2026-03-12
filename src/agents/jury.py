@@ -40,10 +40,10 @@ class JuryVerdict:
         }
 
 
-PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox, a momentum trading engine.
+PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox.
 {mission}
 
-Synthesize the briefs from 5 specialized agents into ONE trade decision.
+You receive briefs from 5 specialized agents. Synthesize them into ONE trade decision.
 
 SYMBOL: {symbol} @ ${price:.2f}
 TODAY'S MOVE: {change_pct:+.1f}%
@@ -61,39 +61,37 @@ RETRO FEEDBACK: {retro_feedback}
 
 AGENT BRIEFS:
 
-TECHNICAL:
+📊 TECHNICAL:
 {technical}
 
-SENTIMENT:
+🐦 SENTIMENT:
 {sentiment}
 
-CATALYST:
+🔬 CATALYST:
 {catalyst}
 
-RISK:
+🛡️ RISK:
 {risk}
 
-MACRO:
+🌍 MACRO:
 {macro}
 
 DECISION FRAMEWORK:
-- SKIP is the safe default. Only act when evidence is strong and multiple signals align.
-- BUY requires: (1) price up with genuine volume confirmation (2x+ avg), (2) at least 2 agent briefs supporting entry, (3) risk agent approves, (4) no critical macro headwinds. One signal alone is never enough.
-- SHORT requires: clear downward momentum with volume, technical sell signal, and catalyst/macro support for bearish case. Fade-the-runner setups (big day-1 run, day-2 exhaustion) are valid shorts when RSI is stretched and volume is failing.
-- SKIP when: risk denies, fewer than 2 agents support, volume is weak (<1.5x avg), signals conflict, confidence is below 50, the move looks extended without fresh catalyst, or RETRO FEEDBACK shows this setup has been losing money recently.
-- Trailing stops help manage risk but they can gap through, fail during halts, or not execute in extended hours. Do not assume any fixed maximum loss per trade.
-- After consecutive losses, demand stronger evidence before acting. Size down on marginal setups.
-- If most agents are unavailable (2+ failed), SKIP. Do not trade blind.
-
-CONFIDENCE CALIBRATION:
-- 80-100: High conviction. Multiple strong signals aligned. Would commit significant capital.
-- 50-79: Moderate edge. Some signals support, some neutral. Smaller size warranted.
-- Below 50: Insufficient evidence. Must SKIP regardless of any single strong signal.
+- BIAS TOWARD ACTION. Dead capital is the enemy. Trailing stops manage risk — your job is to find trades, not avoid them.
+- BUY if: Stock is up significantly (+10%+) with volume (1.5x+) and risk approves. Technical BUY is ideal but Technical HOLD with decent confidence (50%+) is also fine if other signals support.
+- SHORT if: Stock is crashing hard (-5%+ down) with volume, Technical says SELL, and macro/catalyst supports bearish case.
+- SHORT if: This is a fade-the-runner setup. A stock that ran big yesterday and is stalling/fading today is a mean-reversion short, not a momentum long.
+- For fade setups, prioritize exhaustion signals: yesterday's huge run, RSI stretched, day-2 volume failing to match day-1, and price trading weak versus the run close.
+- Convergence from multiple Tier-1 pro traders is supportive confirmation, not crowding by itself. Only discount it if retail/FOMO evidence is also obvious.
+- Use RETRO FEEDBACK as calibration, not a blind override. If the same setup has recently lost money, demand cleaner alignment or smaller size. If it has recently worked, don't overreact to weak objections.
+- SKIP ONLY if: Risk explicitly denies, OR the stock has tiny volume (<1x avg), OR the move is clearly over (price reversing against the trend).
+- If some agents are unavailable, MAKE THE CALL with what you have. 3 agents is enough. Don't skip just because sentiment or catalyst is offline.
+- "Decelerating momentum" alone is NOT a reason to skip. Stocks don't go straight up — they consolidate and continue. If price is still up big on volume, the trend is intact.
+- We have trailing stops at 3%. Maximum downside per trade is 3%. The cost of a wrong entry is small. The cost of missing a runner is infinite.
 
 SIZING:
-- size_pct: 0.5% (speculative) to 2.5% (high conviction) of equity. Default 1.5%.
-- trail_pct: 1.5% (tight) to 4% (wide). Default 3%.
-- After losses or in uncertain conditions, reduce size_pct by 30-50%.
+- size_pct: 0.5% (speculative) to 3% (high conviction) of equity
+- trail_pct: 1.5% (tight, lock in gains) to 4% (wide, let it run)
 
 Respond with ONLY valid JSON:
 {{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis of why", "confidence": 0-100}}"""
@@ -187,9 +185,9 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
 
         verdict = _apply_consensus(symbol, price, votes, briefs, provider_results)
 
-        # Check if risk agent denied — hard override (fires on error too since DEFAULT_BRIEF.approved=False)
+        # Check if risk agent denied — hard override
         risk_brief = briefs.get("risk", {})
-        if risk_brief and not risk_brief.get("approved", True):
+        if risk_brief and not risk_brief.get("approved", True) and not risk_brief.get("error"):
             if verdict.decision in ("BUY", "SHORT"):
                 logger.info(f"🛡️ Jury overridden by Risk Agent for {symbol}: {risk_brief.get('reasoning', '')}")
                 return JuryVerdict(
@@ -233,23 +231,39 @@ def _is_rate_limit_error(message: object) -> bool:
 
 
 async def _safe_call(provider_name: str, caller, prompt: str) -> Dict:
-    try:
-        result = await caller(prompt, max_tokens=400)
-        rate_limited = result is None and provider_is_backing_off(provider_name)
-        return {
-            "provider": provider_name,
-            "result": result,
-            "rate_limited": rate_limited,
-            "error": "rate_limited" if rate_limited else ("no_response" if result is None else ""),
-        }
-    except Exception as e:
-        logger.warning(f"Jury {provider_name} failed: {e}")
-        return {
-            "provider": provider_name,
-            "result": None,
-            "rate_limited": provider_is_backing_off(provider_name) or _is_rate_limit_error(e),
-            "error": str(e),
-        }
+    last_error = ""
+    for attempt in range(1, 3):
+        try:
+            result = await caller(prompt, max_tokens=400)
+            rate_limited = result is None and provider_is_backing_off(provider_name)
+            if result is not None or rate_limited or attempt == 2:
+                return {
+                    "provider": provider_name,
+                    "result": result,
+                    "rate_limited": rate_limited,
+                    "error": "rate_limited" if rate_limited else ("no_response" if result is None else last_error),
+                }
+            logger.warning(f"Jury {provider_name} returned no response; retrying once")
+            await asyncio.sleep(0.75)
+        except Exception as e:
+            last_error = str(e)
+            rate_limited = provider_is_backing_off(provider_name) or _is_rate_limit_error(e)
+            if rate_limited or attempt == 2:
+                logger.warning(f"Jury {provider_name} failed: {e}")
+                return {
+                    "provider": provider_name,
+                    "result": None,
+                    "rate_limited": rate_limited,
+                    "error": str(e),
+                }
+            logger.warning(f"Jury {provider_name} transient failure; retrying once: {e}")
+            await asyncio.sleep(0.75)
+    return {
+        "provider": provider_name,
+        "result": None,
+        "rate_limited": provider_is_backing_off(provider_name),
+        "error": last_error or "no_response",
+    }
 
 
 def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
@@ -371,12 +385,17 @@ def _apply_consensus(
     provider_results: Optional[List[Dict]] = None,
 ) -> JuryVerdict:
     provider_results = provider_results or []
+    unavailable_providers = [
+        str(item.get("provider", ""))
+        for item in provider_results
+        if not item.get("result")
+    ]
     degraded_providers = [
         str(item.get("provider", ""))
         for item in provider_results
         if item.get("rate_limited")
     ]
-    degraded = bool(degraded_providers)
+    degraded = bool(unavailable_providers)
     failed_providers = {
         str(item.get("provider", "")): str(item.get("error", "") or "")
         for item in provider_results
@@ -399,6 +418,7 @@ def _apply_consensus(
                 "size_modifier": 0.0,
                 "confidence": 0.0,
                 "degraded": degraded,
+                "unavailable_providers": unavailable_providers,
                 "rate_limited_providers": degraded_providers,
                 "failed_providers": failed_providers,
             },
@@ -425,8 +445,9 @@ def _apply_consensus(
                 vote_map,
                 total,
                 "degraded_insufficient",
-                "Degraded jury: fewer than two models responded while another model was rate-limited",
+                "Degraded jury: fewer than two models responded",
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -443,6 +464,7 @@ def _apply_consensus(
                 0.85,
                 0.80,
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -459,6 +481,7 @@ def _apply_consensus(
                 0.85,
                 0.80,
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -472,6 +495,41 @@ def _apply_consensus(
                 "degraded_unanimous_skip",
                 "Degraded jury: all responding models SKIPped",
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
+                rate_limited_providers=degraded_providers,
+                failed_providers=failed_providers,
+            )
+        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
+            return _decision_verdict(
+                symbol,
+                "BUY",
+                buy_votes,
+                skip_votes,
+                providers_used,
+                vote_map,
+                briefs,
+                "degraded_actionable_skip",
+                0.60,
+                0.75,
+                degraded=degraded,
+                unavailable_providers=unavailable_providers,
+                rate_limited_providers=degraded_providers,
+                failed_providers=failed_providers,
+            )
+        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
+            return _decision_verdict(
+                symbol,
+                "SHORT",
+                short_votes,
+                skip_votes,
+                providers_used,
+                vote_map,
+                briefs,
+                "degraded_actionable_skip",
+                0.60,
+                0.75,
+                degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -481,24 +539,43 @@ def _apply_consensus(
             providers_used,
             vote_map,
             total,
-            "degraded_no_consensus",
-            "Degraded jury: remaining models were not unanimous — SKIP for safety",
+            "degraded_split",
+            "Degraded jury: remaining models were not unanimous",
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
 
     if total == 1:
         only_vote = votes[0]
-        return _skip_verdict(
-            symbol,
-            briefs,
-            providers_used,
-            vote_map,
-            total,
-            "single_model_insufficient",
-            "Single model response is insufficient for action — SKIP for safety",
+        if only_vote["decision"] == "SKIP":
+            return _skip_verdict(
+                symbol,
+                briefs,
+                providers_used,
+                vote_map,
+                total,
+                "single_skip",
+                "Single model responded with SKIP",
+                degraded=degraded,
+                unavailable_providers=unavailable_providers,
+                rate_limited_providers=degraded_providers,
+                failed_providers=failed_providers,
+            )
+        return _decision_verdict(
+            symbol=symbol,
+            decision=only_vote["decision"],
+            agreeing_votes=[only_vote],
+            opposing_votes=[],
+            providers_used=providers_used,
+            vote_map=vote_map,
+            briefs=briefs,
+            agreement="single",
+            size_modifier=0.50,
+            confidence_multiplier=0.60,
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
@@ -510,7 +587,11 @@ def _apply_consensus(
             return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
         if len(skip_votes) == 2:
             return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "two_model_no_consensus", "Two models responded without unanimous agreement — SKIP for safety", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
+            return _decision_verdict(symbol, "BUY", buy_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
+            return _decision_verdict(symbol, "SHORT", short_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "split", "Two responding models disagreed", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
 
     if len(buy_votes) == 3:
         return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
@@ -533,6 +614,7 @@ def _apply_consensus(
             0.75 if conflict else 1.0,
             0.85,
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
@@ -550,11 +632,12 @@ def _apply_consensus(
             0.75 if conflict else 1.0,
             0.85,
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
 
-    return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "none", "No consensus across jury models", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+    return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "none", "No consensus across jury models", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
 
 
 def _decision_verdict(
@@ -569,6 +652,7 @@ def _decision_verdict(
     size_modifier: float,
     confidence_multiplier: float,
     degraded: bool = False,
+    unavailable_providers: Optional[List[str]] = None,
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
 ) -> JuryVerdict:
@@ -580,14 +664,21 @@ def _decision_verdict(
 
     reasons = [f"{vote['provider']}={vote['decision']} ({vote['reasoning'][:70]})" for vote in agreeing_votes + opposing_votes]
     reason_text = "; ".join(reasons[:3])
+    issue_suffix = _provider_issue_suffix(unavailable_providers, rate_limited_providers)
     if agreement == "unanimous":
         summary = f"{decision} unanimous 3/3"
     elif agreement == "degraded_unanimous":
-        summary = f"{decision} degraded unanimous"
+        summary = f"{decision} degraded unanimous{issue_suffix}"
+    elif agreement == "single":
+        summary = f"{decision} single-model fallback{issue_suffix}"
     elif agreement == "majority_conflict":
         summary = f"{decision} 2/3 with direct opposition"
     elif agreement == "majority_two_model":
-        summary = f"{decision} 2/2"
+        summary = f"{decision} 2/2{issue_suffix}"
+    elif agreement == "split_with_skip":
+        summary = f"{decision} 1/1 with one abstain{issue_suffix}"
+    elif agreement == "degraded_actionable_skip":
+        summary = f"{decision} degraded 1/1 with one abstain{issue_suffix}"
     else:
         summary = f"{decision} 2/3 majority"
 
@@ -609,6 +700,7 @@ def _decision_verdict(
             "base_size_pct": round(base_size, 3),
             "agreeing_models": [vote["provider"] for vote in agreeing_votes],
             "degraded": degraded,
+            "unavailable_providers": list(unavailable_providers or []),
             "rate_limited_providers": list(rate_limited_providers or []),
             "failed_providers": dict(failed_providers or {}),
         },
@@ -624,9 +716,12 @@ def _skip_verdict(
     agreement: str,
     reasoning: str,
     degraded: bool = False,
+    unavailable_providers: Optional[List[str]] = None,
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
 ) -> JuryVerdict:
+    if degraded:
+        reasoning = f"{reasoning}{_provider_issue_suffix(unavailable_providers, rate_limited_providers)}"
     return JuryVerdict(
         symbol=symbol,
         decision="SKIP",
@@ -643,7 +738,25 @@ def _skip_verdict(
             "size_modifier": 0.0,
             "confidence": 0.0,
             "degraded": degraded,
+            "unavailable_providers": list(unavailable_providers or []),
             "rate_limited_providers": list(rate_limited_providers or []),
             "failed_providers": dict(failed_providers or {}),
         },
     )
+
+
+def _provider_issue_suffix(
+    unavailable_providers: Optional[List[str]],
+    rate_limited_providers: Optional[List[str]],
+) -> str:
+    unavailable = [str(p) for p in (unavailable_providers or []) if str(p)]
+    rate_limited = [str(p) for p in (rate_limited_providers or []) if str(p)]
+    if not unavailable and not rate_limited:
+        return ""
+    missing = [p for p in unavailable if p not in rate_limited]
+    parts = []
+    if rate_limited:
+        parts.append(f"rate-limited: {', '.join(rate_limited)}")
+    if missing:
+        parts.append(f"missing: {', '.join(missing)}")
+    return f" ({'; '.join(parts)})" if parts else ""

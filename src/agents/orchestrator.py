@@ -40,6 +40,43 @@ class Orchestrator:
         self._history: List[Dict] = []
 
     @staticmethod
+    def _history_signature(entry: Dict) -> tuple:
+        return (
+            str(entry.get("symbol", "")).upper(),
+            str(entry.get("decision", "")),
+            round(float(entry.get("confidence", 0) or 0), 1),
+            round(float(entry.get("size_pct", 0) or 0), 2),
+            round(float(entry.get("trail_pct", 0) or 0), 2),
+            str(entry.get("provider_used", "")),
+            str(entry.get("reasoning", "")),
+        )
+
+    def _append_history(self, verdict: JuryVerdict):
+        entry = verdict.to_dict()
+        if self._history:
+            last = self._history[-1]
+            if self._history_signature(last) == self._history_signature(entry):
+                last_ts = float(last.get("timestamp", 0) or 0)
+                now_ts = float(entry.get("timestamp", 0) or 0)
+                if last_ts > 0 and now_ts > 0 and (now_ts - last_ts) <= 120:
+                    self._history[-1] = entry
+                    return
+        self._history.append(entry)
+        self._history = self._history[-50:]
+
+    def _deduped_history(self) -> List[Dict]:
+        deduped: List[Dict] = []
+        for entry in self._history:
+            if deduped and self._history_signature(deduped[-1]) == self._history_signature(entry):
+                prev_ts = float(deduped[-1].get("timestamp", 0) or 0)
+                curr_ts = float(entry.get("timestamp", 0) or 0)
+                if prev_ts > 0 and curr_ts > 0 and (curr_ts - prev_ts) <= 120:
+                    deduped[-1] = entry
+                    continue
+            deduped.append(entry)
+        return deduped
+
+    @staticmethod
     def _derive_direction(signals_data: Dict) -> str:
         side = str((signals_data or {}).get("side", "") or "").strip().lower()
         strategy_tag = str((signals_data or {}).get("strategy_tag", "") or "").strip().lower()
@@ -164,8 +201,7 @@ class Orchestrator:
         if verdict.decision == "SKIP":
             self._skip_cache[cache_key] = time.time()
 
-        self._history.append(verdict.to_dict())
-        self._history = self._history[-50:]
+        self._append_history(verdict)
 
         return verdict
 
@@ -222,22 +258,23 @@ class Orchestrator:
             logger.debug(f"Macro data enrichment failed: {e}")
 
     def get_history(self) -> List[Dict]:
-        return list(self._history)
+        return self._deduped_history()
 
     def get_stats(self) -> Dict:
         from src.agents.base_agent import get_api_cost_stats, get_api_stats
-        total = len(self._history)
+        history = self._deduped_history()
+        total = len(history)
         if not total:
             return {"total": 0, "api_calls": get_api_stats(), "api_costs": get_api_cost_stats()}
         return {
             "total": total,
-            "buys": sum(1 for h in self._history if h["decision"] == "BUY"),
-            "shorts": sum(1 for h in self._history if h["decision"] == "SHORT"),
-            "skips": sum(1 for h in self._history if h["decision"] == "SKIP"),
-            "avg_confidence": sum(h.get("confidence", 0) for h in self._history) / total,
+            "buys": sum(1 for h in history if h["decision"] == "BUY"),
+            "shorts": sum(1 for h in history if h["decision"] == "SHORT"),
+            "skips": sum(1 for h in history if h["decision"] == "SKIP"),
+            "avg_confidence": sum(h.get("confidence", 0) for h in history) / total,
             "actionable_avg_confidence": (
-                sum(h.get("confidence", 0) for h in self._history if h.get("decision") in ("BUY", "SHORT"))
-                / max(1, sum(1 for h in self._history if h.get("decision") in ("BUY", "SHORT")))
+                sum(h.get("confidence", 0) for h in history if h.get("decision") in ("BUY", "SHORT"))
+                / max(1, sum(1 for h in history if h.get("decision") in ("BUY", "SHORT")))
             ),
             "api_calls": get_api_stats(),
             "api_costs": get_api_cost_stats(),

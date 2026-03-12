@@ -49,6 +49,20 @@ def derive_strategy_tag(candidate: Dict, direction: Optional[str] = None) -> str
 
     if candidate.get("fade_signal") or "fade" in src:
         return "fade_short"
+    if candidate.get("copy_trader_context") or "copy_trader" in src:
+        return "copy_trader_short" if is_short else "copy_trader_long"
+    if candidate.get("watchlist_reason") or candidate.get("watchlist_conviction") or "watchlist" in src:
+        return "watchlist_short" if is_short else "watchlist_long"
+    if (
+        candidate.get("unusual_options")
+        or candidate.get("uw_chain_summary")
+        or candidate.get("uw_recent_flow")
+        or candidate.get("uw_flow_sentiment")
+        or "options_flow" in src
+        or "unusual_options" in src
+        or "unusual_whales" in src
+    ):
+        return "uw_flow_short" if is_short else "uw_flow_long"
     if candidate.get("pharma_signal") or "pharma" in src:
         return "pharma_catalyst"
     if "unusual_whales" in src:

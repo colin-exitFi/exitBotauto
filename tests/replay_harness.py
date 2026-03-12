@@ -1,5 +1,4 @@
 import json
-import tempfile
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -209,13 +208,6 @@ class BotReplayHarness:
             default_quantity=default_quantity,
             entry_quantities=entry_quantities,
         )
-        from src.data import entry_controls
-        self._orig_controls_file = entry_controls.CONTROLS_FILE
-        tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
-        tmp.write(b"{}")
-        tmp.close()
-        self._controls_tmp = tmp.name
-        entry_controls.CONTROLS_FILE = Path(self._controls_tmp)
         self.risk_manager = ReplayRiskManager()
         self.bot = main_module.TradingBot.__new__(main_module.TradingBot)
         self.bot.alpaca_client = self.broker
@@ -226,13 +218,30 @@ class BotReplayHarness:
         self.bot.orchestrator = ReplayOrchestrator(verdicts=verdicts)
         self.bot.ai_layers = {}
         self.bot.pnl_state = {}
-        self.bot._broker_ready = True
+        self.bot.scan_regime = "mixed"
+        self.bot.scan_regime_raw = "mixed"
+        self.bot._tomorrow_thesis_cache = {"market_bias": "mixed", "watchlist": []}
+        self.bot._tomorrow_thesis_cache_at = time.time()
+        self.bot._load_tomorrow_thesis = lambda: {"market_bias": "mixed", "watchlist": []}
 
     async def replay(self, events: List[Dict]):
         for event in events:
             etype = event.get("type")
             if etype == "scan":
-                await self.bot._process_candidates(event.get("candidates", []))
+                candidates = []
+                for candidate in event.get("candidates", []):
+                    row = dict(candidate)
+                    symbol = str(row.get("symbol", "")).upper().strip()
+                    verdict = self.bot.orchestrator._verdicts.get(symbol) if symbol else None
+                    direction = getattr(verdict, "decision", "") if verdict else ""
+                    if not row.get("market_regime"):
+                        if direction == "SHORT" or str(row.get("side", "")).lower() == "short":
+                            row["market_regime"] = "risk_off"
+                        else:
+                            row["market_regime"] = "risk_on"
+                    row.setdefault("signal_timestamp", time.time() - 300)
+                    candidates.append(row)
+                await self.bot._process_candidates(candidates)
             elif etype == "broker_close":
                 self.broker.mark_closed(
                     symbol=event["symbol"],
@@ -314,15 +323,3 @@ class BotReplayHarness:
 def load_transcript_fixture(path: str) -> Dict:
     p = Path(path)
     return json.loads(p.read_text())
-
-
-    def __del__(self):
-        try:
-            from src.data import entry_controls
-            entry_controls.CONTROLS_FILE = self._orig_controls_file
-        except Exception:
-            pass
-        try:
-            Path(self._controls_tmp).unlink(missing_ok=True)
-        except Exception:
-            pass

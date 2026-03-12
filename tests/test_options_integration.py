@@ -309,7 +309,10 @@ def _candidate(symbol="AAPL"):
         "change_pct": 5.1,
         "volume_spike": 3.0,
         "sentiment_score": 0.7,
-        "source": "polygon+grok_x",
+        "source": "polygon+unusual_options",
+        "market_regime": "risk_on",
+        "uw_flow_sentiment": "bullish",
+        "uw_chain_bias": "bullish",
         "score": 0.9,
     }
 

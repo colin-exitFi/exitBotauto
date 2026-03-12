@@ -723,6 +723,20 @@ async def get_candidates():
     return _bot.scanner.get_cached_candidates()
 
 
+@app.get("/api/research-universe")
+async def get_research_universe():
+    if not _bot or not _bot.scanner:
+        return []
+    return _bot.scanner.get_research_universe()
+
+
+@app.get("/api/scan-status")
+async def get_scan_status():
+    if not _bot or not _bot.scanner:
+        return {}
+    return _bot.scanner.get_last_scan_stats()
+
+
 @app.get("/api/history")
 async def get_history(limit: int = 20):
     # Pull from persistent trade history (includes trailing stop exits)
@@ -1542,10 +1556,16 @@ tr:hover td{background:#161b2288}
     <tbody id="positions"></tbody></table></div>
   </div>
   <div class="card">
-    <h2><span class="icon">🔍</span> Scanner Candidates</h2>
+    <h2><span class="icon">🔍</span> Live Scanner Candidates <span id="candidateStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div id="candidateMeta" style="font-size:12px;color:#8b949e;margin-bottom:8px"></div>
     <table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol</th><th>Sent</th><th>Score</th><th>UW</th></tr></thead>
     <tbody id="candidates"></tbody></table>
+  </div>
+
+  <div class="card full">
+    <h2><span class="icon">🧭</span> Research Universe <span id="researchStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <table><thead><tr><th>Symbol</th><th>Side</th><th>Source</th><th>Priority</th><th>Context</th></tr></thead>
+    <tbody id="researchUniverse"></tbody></table>
   </div>
 
   <!-- Recent Exits -->
@@ -1909,12 +1929,19 @@ async function refresh() {
       const decCls = h.decision==='BUY'?'tag-buy':h.decision==='SHORT'?'tag-short':'tag-skip';
       const reason = (h.reasoning||'').substring(0, 120) + ((h.reasoning||'').length > 120 ? '...' : '');
       const votes = h.consensus_detail && h.consensus_detail.votes ? Object.entries(h.consensus_detail.votes).map(([k, v]) => `${k}:${v}`).join(' · ') : '';
+      const cd = h.consensus_detail || {};
+      const unavailable = Array.isArray(cd.unavailable_providers) ? cd.unavailable_providers : [];
+      const rateLimited = Array.isArray(cd.rate_limited_providers) ? cd.rate_limited_providers : [];
+      const providerIssues = [
+        rateLimited.length ? `rate-limited: ${rateLimited.join(', ')}` : '',
+        unavailable.filter(p => !rateLimited.includes(p)).length ? `missing: ${unavailable.filter(p => !rateLimited.includes(p)).join(', ')}` : '',
+      ].filter(Boolean).join(' · ');
       return `<tr><td><strong>${h.symbol}</strong></td>
         <td><span class="tag ${decCls}">${h.decision}</span></td>
         <td>${(h.confidence||0).toFixed(0)}%</td>
         <td>${(h.size_pct||0).toFixed(1)}%</td>
         <td>${(h.trail_pct||0).toFixed(1)}%</td>
-        <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reason}${votes ? `<div style="color:#8b949e;margin-top:4px">${votes}</div>` : ''}</td></tr>`;
+        <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reason}${votes ? `<div style="color:#8b949e;margin-top:4px">${votes}</div>` : ''}${providerIssues ? `<div style="color:#f0883e;margin-top:4px">${providerIssues}</div>` : ''}</td></tr>`;
     }).join('') : '<tr><td colspan="6" class="empty">No agent decisions yet</td></tr>';
   }
   // Trade History
@@ -2057,13 +2084,24 @@ async function refresh() {
   }).join('') : '<tr><td colspan="6" class="empty">No open positions</td></tr>';
   // Candidates
   const cand = await api('/api/candidates');
+  const scanStatus = await api('/api/scan-status');
+  const research = await api('/api/research-universe');
+  $('candidateStats').textContent = scanStatus ? `${scanStatus.live||0} live` : '';
+  $('researchStats').textContent = scanStatus ? `${scanStatus.research||0} tracked` : '';
   $('candidates').innerHTML = cand && cand.length ? cand.slice(0,10).map(c => `<tr>
-    <td><strong>${c.symbol}</strong>${c.uw_budget_mode ? `<div style="font-size:11px;color:#8b949e">${c.uw_budget_mode}</div>` : ''}</td><td>$${(c.price||0).toFixed(2)}</td>
+    <td><strong>${c.symbol}</strong>${c.uw_budget_mode ? `<div style="font-size:11px;color:#8b949e">${c.uw_budget_mode}</div>` : ''}</td><td>${c.price ? '$'+(c.price||0).toFixed(2) : '—'}</td>
     <td class="${cls(c.change_pct||0)}">${fmt(c.change_pct||0,1)}%</td>
     <td>${(c.volume_spike||0).toFixed(1)}x</td><td>${(c.sentiment_score||0).toFixed(2)}</td>
     <td><strong>${(c.score||0).toFixed(3)}</strong></td>
     <td style="font-size:11px;color:#8b949e;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${((c.uw_news_summary||'') + ' | ' + (c.uw_chain_summary||'')).replace(/"/g,'&quot;')}">${c.uw_chain_summary || c.uw_news_summary || '—'}</td>
   </tr>`).join('') : '<tr><td colspan="7" class="empty">No candidates yet</td></tr>';
+  $('researchUniverse').innerHTML = research && research.length ? research.slice(0,15).map(r => `<tr>
+    <td><strong>${r.symbol||'?'}</strong></td>
+    <td>${(r.side||'long').toUpperCase()}</td>
+    <td style="font-size:11px;color:#8b949e">${r.source||'—'}</td>
+    <td>${typeof r.score === 'number' ? r.score.toFixed(3) : '—'}</td>
+    <td style="font-size:11px;color:#8b949e;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${((r.watchlist_reason||'') + ' | ' + (r.human_intel||'') + ' | ' + (r.copy_trader_context||'')).replace(/"/g,'&quot;')}">${r.watchlist_reason || r.human_intel || r.copy_trader_context || '—'}</td>
+  </tr>`).join('') : '<tr><td colspan="5" class="empty">No research universe yet</td></tr>';
   // Activity Feed
   const activity = await api('/api/activity?limit=30');
   if (activity && activity.length) {
@@ -2114,12 +2152,32 @@ async function refresh() {
   const uwApi = (intelligence && intelligence.unusual_whales_api) || {};
   const uwFocus = (intelligence && intelligence.unusual_whales_focus) || [];
   const uwBudget = uwApi.budget_mode || 'unknown';
-  $('candidateMeta').innerHTML = intelligence ? `
-    <span><strong>UW budget:</strong> ${uwBudget}</span>
-    <span style="margin-left:12px"><strong>Minute remaining:</strong> ${uwApi.minute_remaining ?? '—'}</span>
-    <span style="margin-left:12px"><strong>Last path:</strong> ${uwApi.last_request_path || '—'}</span>
+  const funnel = scanStatus || {};
+  const sourceBits = [
+    `alpaca ${funnel.alpaca_movers ?? '—'}`,
+    `polygon ${funnel.polygon_gainers ?? '—'}`,
+    `twits ${funnel.stocktwits_trending ?? '—'}`,
+    `grok ${funnel.grok_x ?? '—'}`,
+    `copy ${funnel.copy_trader ?? '—'}`,
+    `watchlist ${funnel.watchlist ?? '—'}`,
+    `uw ${funnel.unusual_whales ?? '—'}`,
+    `human ${funnel.human_intel ?? '—'}`,
+  ];
+  $('candidateMeta').innerHTML = `
+    <div>
+      <span><strong>UW budget:</strong> ${uwBudget}</span>
+      <span style="margin-left:12px"><strong>Minute remaining:</strong> ${uwApi.minute_remaining ?? '—'}</span>
+      <span style="margin-left:12px"><strong>Last path:</strong> ${uwApi.last_request_path || '—'}</span>
+      <span style="margin-left:12px"><strong>Regime:</strong> ${funnel.regime || '—'}</span>
+    </div>
+    <div style="margin-top:6px">
+      <strong>Scan funnel:</strong> merged ${funnel.merged_unique ?? '—'} -> enriched ${funnel.enriched ?? '—'} -> filtered ${funnel.filtered ?? '—'} -> disabled ${funnel.disabled ?? '—'} -> live ${funnel.live ?? '—'}
+    </div>
+    <div style="margin-top:6px">
+      <strong>Sources:</strong> ${sourceBits.join(' · ')}
+    </div>
     ${uwFocus.length ? `<div style="margin-top:6px"><strong>Top UW context:</strong> ${uwFocus.map(row => `${row.symbol}: ${row.chain_summary || row.news_summary}`).join(' · ')}</div>` : ''}
-  ` : '';
+  `;
   $('copyTraderSummary').innerHTML = `
     <div class="summary-item"><div class="val info">${ctSignals.length}</div><div class="lbl">Active Signals</div></div>
     <div class="summary-item"><div class="val negative">${ctExits.length}</div><div class="lbl">Exit Signals</div></div>
