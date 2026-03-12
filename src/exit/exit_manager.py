@@ -220,75 +220,77 @@ class ExitManager:
         symbol = position["symbol"]
         if quantity <= 0:
             return None
-        if position.get("exit_pending") and not position.get("exit_recorded"):
-            logger.debug(f"{symbol}: exit already pending with broker — skipping duplicate request")
-            return None
-        if self.risk and hasattr(self.risk, "can_exit_position"):
-            if not self.risk.can_exit_position(position, reason=reason):
-                logger.info(f"⛔ Exit deferred for {symbol}: {reason}")
+        lock = self.get_symbol_lock(symbol)
+        async with lock:
+            if position.get("exit_pending") and not position.get("exit_recorded"):
+                logger.debug(f"{symbol}: exit already pending with broker — skipping duplicate request")
                 return None
+            if self.risk and hasattr(self.risk, "can_exit_position"):
+                if not self.risk.can_exit_position(position, reason=reason):
+                    logger.info(f"⛔ Exit deferred for {symbol}: {reason}")
+                    return None
 
-        logger.warning(f"🔴 EXIT {symbol}: {reason} | {quantity} shares @ ${price:.2f} | P&L: {pnl_pct:+.2f}%")
+            logger.warning(f"🔴 EXIT {symbol}: {reason} | {quantity} shares @ ${price:.2f} | P&L: {pnl_pct:+.2f}%")
 
-        order = None
-        side = position.get("side", "long")
-        if self.broker:
-            exit_side = "buy" if side == "short" else "sell"
-            canceled = await self._cancel_conflicting_exit_orders(symbol, exit_side=exit_side)
-            if canceled:
-                logger.info(f"Cancelled {canceled} conflicting {exit_side} orders for {symbol} before market exit")
-            broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
-            order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, quantity)
-            if not order:
-                logger.error(f"Exit order FAILED for {symbol}! Will retry next tick.")
-                return None
-            position["exit_pending"] = True
-            position["exit_order_id"] = order.get("id")
-            position["exit_submitted_at"] = time.time()
-            position["exit_fill_qty"] = 0.0
-            position["exit_finalized_at"] = None
-            position["exit_recorded"] = False
-            position["last_exit_reason"] = reason
-            position["last_exit_attempt_at"] = time.time()
-            return {
+            order = None
+            side = position.get("side", "long")
+            if self.broker:
+                exit_side = "buy" if side == "short" else "sell"
+                canceled = await self._cancel_conflicting_exit_orders(symbol, exit_side=exit_side)
+                if canceled:
+                    logger.info(f"Cancelled {canceled} conflicting {exit_side} orders for {symbol} before market exit")
+                broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
+                order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, quantity)
+                if not order:
+                    logger.error(f"Exit order FAILED for {symbol}! Will retry next tick.")
+                    return None
+                position["exit_pending"] = True
+                position["exit_order_id"] = order.get("id")
+                position["exit_submitted_at"] = time.time()
+                position["exit_fill_qty"] = 0.0
+                position["exit_finalized_at"] = None
+                position["exit_recorded"] = False
+                position["last_exit_reason"] = reason
+                position["last_exit_attempt_at"] = time.time()
+                return {
+                    "symbol": symbol,
+                    "side": "buy_to_cover" if side == "short" else "sell",
+                    "reason": reason,
+                    "quantity": quantity,
+                    "exit_price": price,
+                    "pnl_pct": round(pnl_pct, 2),
+                    "order": order,
+                    "status": "exit_pending",
+                }
+
+            if side == "short":
+                pnl_dollars = (position["entry_price"] - price) * quantity
+            else:
+                pnl_dollars = (price - position["entry_price"]) * quantity
+            trade = {
                 "symbol": symbol,
                 "side": "buy_to_cover" if side == "short" else "sell",
-                "reason": reason,
-                "quantity": quantity,
+                "entry_price": position["entry_price"],
                 "exit_price": price,
+                "quantity": quantity,
+                "pnl": round(pnl_dollars, 2),
                 "pnl_pct": round(pnl_pct, 2),
+                "reason": reason,
+                "hold_seconds": time.time() - position.get("entry_time", time.time()),
+                "exit_time": time.time(),
                 "order": order,
-                "status": "exit_pending",
             }
+            self.exit_history.append(trade)
 
-        if side == "short":
-            pnl_dollars = (position["entry_price"] - price) * quantity
-        else:
-            pnl_dollars = (price - position["entry_price"]) * quantity
-        trade = {
-            "symbol": symbol,
-            "side": "buy_to_cover" if side == "short" else "sell",
-            "entry_price": position["entry_price"],
-            "exit_price": price,
-            "quantity": quantity,
-            "pnl": round(pnl_dollars, 2),
-            "pnl_pct": round(pnl_pct, 2),
-            "reason": reason,
-            "hold_seconds": time.time() - position.get("entry_time", time.time()),
-            "exit_time": time.time(),
-            "order": order,
-        }
-        self.exit_history.append(trade)
+            # Update risk manager
+            if self.risk:
+                self.risk.record_trade(trade)
 
-        # Update risk manager
-        if self.risk:
-            self.risk.record_trade(trade)
+            # Remove from entry manager positions
+            if self.entry and reason != "take_profit_1":
+                self.entry.remove_position(symbol)
 
-        # Remove from entry manager positions
-        if self.entry and reason != "take_profit_1":
-            self.entry.remove_position(symbol)
-
-        return trade
+            return trade
 
     def _is_eod(self) -> bool:
         """Check if we're past EOD exit time (default 3:30 PM ET)."""

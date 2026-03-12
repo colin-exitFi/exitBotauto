@@ -423,8 +423,11 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
         try:
             broker_call = broker.place_market_buy if side == "short" else broker.place_market_sell
             order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, qty)
-            if order and getattr(bot, "entry_manager", None) and hasattr(bot.entry_manager, "remove_position"):
-                bot.entry_manager.remove_position(symbol)
+            if order:
+                position["exit_pending"] = True
+                position["exit_order_id"] = order.get("id")
+                position["exit_submitted_at"] = time.time()
+                position["last_exit_reason"] = f"{source}: {reason}"
             return order
         except Exception as e:
             logger.error(f"PM strategic exit failed for {symbol}: {e}")
