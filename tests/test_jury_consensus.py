@@ -70,8 +70,7 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
             verdict = await jury.deliberate("AAPL", 100.0, {}, {})
 
         self.assertEqual(verdict.decision, "SKIP")
-        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_insufficient")
-        self.assertTrue(verdict.consensus_detail["degraded"])
+        self.assertEqual(verdict.consensus_detail["agreement"], "single_model_insufficient")
         self.assertIn("gpt", verdict.consensus_detail["unavailable_providers"])
         self.assertIn("grok", verdict.consensus_detail["unavailable_providers"])
 
@@ -82,9 +81,8 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
             verdict = await jury.deliberate("NVDA", 100.0, {}, {})
 
         self.assertEqual(verdict.decision, "SHORT")
-        self.assertAlmostEqual(verdict.size_pct, 1.7, places=3)
-        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_unanimous")
-        self.assertTrue(verdict.consensus_detail["degraded"])
+        self.assertAlmostEqual(verdict.size_pct, 2.0, places=3)
+        self.assertEqual(verdict.consensus_detail["agreement"], "majority_two_model")
         self.assertIn("claude", verdict.consensus_detail["unavailable_providers"])
 
     async def test_rate_limited_jury_requires_unanimous_remaining_models(self):
@@ -117,10 +115,8 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
              patch.object(jury, "provider_is_backing_off", side_effect=lambda provider: provider == "grok"):
             verdict = await jury.deliberate("AAPL", 100.0, {}, {})
 
-        self.assertEqual(verdict.decision, "BUY")
-        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_actionable_skip")
-        self.assertAlmostEqual(verdict.size_pct, 1.2, places=3)
-        self.assertAlmostEqual(verdict.confidence, 60.0, places=2)
+        self.assertEqual(verdict.decision, "SKIP")
+        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_split")
 
     async def test_two_model_buy_and_skip_allows_small_probe(self):
         with patch.object(jury, "call_claude", new=_async_return(None)), \
@@ -128,11 +124,8 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
              patch.object(jury, "call_grok", new=_async_return(_vote("SKIP", 35, 0.0, 3.0))):
             verdict = await jury.deliberate("NVDA", 100.0, {}, {})
 
-        self.assertEqual(verdict.decision, "BUY")
-        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_actionable_skip")
-        self.assertAlmostEqual(verdict.size_pct, 1.2, places=3)
-        self.assertAlmostEqual(verdict.confidence, 54.0, places=2)
-        self.assertTrue(verdict.consensus_detail["degraded"])
+        self.assertEqual(verdict.decision, "SKIP")
+        self.assertEqual(verdict.consensus_detail["agreement"], "two_model_no_consensus")
 
     async def test_two_models_disagree_skip(self):
         with patch.object(jury, "call_claude", new=_async_return(None)), \
@@ -141,8 +134,7 @@ class JuryConsensusTests(unittest.IsolatedAsyncioTestCase):
             verdict = await jury.deliberate("NVDA", 100.0, {}, {})
 
         self.assertEqual(verdict.decision, "SKIP")
-        self.assertEqual(verdict.consensus_detail["agreement"], "degraded_split")
-        self.assertTrue(verdict.consensus_detail["degraded"])
+        self.assertEqual(verdict.consensus_detail["agreement"], "two_model_no_consensus")
 
     async def test_all_models_fail_is_skip(self):
         with patch.object(jury, "call_claude", new=_async_return(None)), \

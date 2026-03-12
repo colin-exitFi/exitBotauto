@@ -218,6 +218,7 @@ class BotReplayHarness:
         self.bot.orchestrator = ReplayOrchestrator(verdicts=verdicts)
         self.bot.ai_layers = {}
         self.bot.pnl_state = {}
+        self.bot._broker_ready = True
         self.bot.scan_regime = "mixed"
         self.bot.scan_regime_raw = "mixed"
         self.bot._tomorrow_thesis_cache = {"market_bias": "mixed", "watchlist": []}

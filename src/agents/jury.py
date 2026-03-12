@@ -395,7 +395,7 @@ def _apply_consensus(
         for item in provider_results
         if item.get("rate_limited")
     ]
-    degraded = bool(unavailable_providers)
+    degraded = bool(degraded_providers)
     failed_providers = {
         str(item.get("provider", "")): str(item.get("error", "") or "")
         for item in provider_results
@@ -499,40 +499,6 @@ def _apply_consensus(
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
-        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
-            return _decision_verdict(
-                symbol,
-                "BUY",
-                buy_votes,
-                skip_votes,
-                providers_used,
-                vote_map,
-                briefs,
-                "degraded_actionable_skip",
-                0.60,
-                0.75,
-                degraded=degraded,
-                unavailable_providers=unavailable_providers,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
-        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
-            return _decision_verdict(
-                symbol,
-                "SHORT",
-                short_votes,
-                skip_votes,
-                providers_used,
-                vote_map,
-                briefs,
-                "degraded_actionable_skip",
-                0.60,
-                0.75,
-                degraded=degraded,
-                unavailable_providers=unavailable_providers,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
         return _skip_verdict(
             symbol,
             briefs,
@@ -548,32 +514,14 @@ def _apply_consensus(
         )
 
     if total == 1:
-        only_vote = votes[0]
-        if only_vote["decision"] == "SKIP":
-            return _skip_verdict(
-                symbol,
-                briefs,
-                providers_used,
-                vote_map,
-                total,
-                "single_skip",
-                "Single model responded with SKIP",
-                degraded=degraded,
-                unavailable_providers=unavailable_providers,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
-        return _decision_verdict(
-            symbol=symbol,
-            decision=only_vote["decision"],
-            agreeing_votes=[only_vote],
-            opposing_votes=[],
-            providers_used=providers_used,
-            vote_map=vote_map,
-            briefs=briefs,
-            agreement="single",
-            size_modifier=0.50,
-            confidence_multiplier=0.60,
+        return _skip_verdict(
+            symbol,
+            briefs,
+            providers_used,
+            vote_map,
+            total,
+            "single_model_insufficient",
+            "Single model response is insufficient for action — SKIP for safety",
             degraded=degraded,
             unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
@@ -582,16 +530,12 @@ def _apply_consensus(
 
     if total == 2:
         if len(buy_votes) == 2:
-            return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+            return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
         if len(short_votes) == 2:
-            return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+            return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
         if len(skip_votes) == 2:
-            return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
-            return _decision_verdict(symbol, "BUY", buy_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
-            return _decision_verdict(symbol, "SHORT", short_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "split", "Two responding models disagreed", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+            return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "two_model_no_consensus", "Two models responded without unanimous agreement — SKIP for safety", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
 
     if len(buy_votes) == 3:
         return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
@@ -669,16 +613,10 @@ def _decision_verdict(
         summary = f"{decision} unanimous 3/3"
     elif agreement == "degraded_unanimous":
         summary = f"{decision} degraded unanimous{issue_suffix}"
-    elif agreement == "single":
-        summary = f"{decision} single-model fallback{issue_suffix}"
     elif agreement == "majority_conflict":
         summary = f"{decision} 2/3 with direct opposition"
     elif agreement == "majority_two_model":
         summary = f"{decision} 2/2{issue_suffix}"
-    elif agreement == "split_with_skip":
-        summary = f"{decision} 1/1 with one abstain{issue_suffix}"
-    elif agreement == "degraded_actionable_skip":
-        summary = f"{decision} degraded 1/1 with one abstain{issue_suffix}"
     else:
         summary = f"{decision} 2/3 majority"
 
@@ -720,8 +658,9 @@ def _skip_verdict(
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
 ) -> JuryVerdict:
-    if degraded:
-        reasoning = f"{reasoning}{_provider_issue_suffix(unavailable_providers, rate_limited_providers)}"
+    issue_suffix = _provider_issue_suffix(unavailable_providers, rate_limited_providers)
+    if issue_suffix:
+        reasoning = f"{reasoning}{issue_suffix}"
     return JuryVerdict(
         symbol=symbol,
         decision="SKIP",
