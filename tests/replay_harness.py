@@ -218,12 +218,30 @@ class BotReplayHarness:
         self.bot.orchestrator = ReplayOrchestrator(verdicts=verdicts)
         self.bot.ai_layers = {}
         self.bot.pnl_state = {}
+        self.bot.scan_regime = "mixed"
+        self.bot.scan_regime_raw = "mixed"
+        self.bot._tomorrow_thesis_cache = {"market_bias": "mixed", "watchlist": []}
+        self.bot._tomorrow_thesis_cache_at = time.time()
+        self.bot._load_tomorrow_thesis = lambda: {"market_bias": "mixed", "watchlist": []}
 
     async def replay(self, events: List[Dict]):
         for event in events:
             etype = event.get("type")
             if etype == "scan":
-                await self.bot._process_candidates(event.get("candidates", []))
+                candidates = []
+                for candidate in event.get("candidates", []):
+                    row = dict(candidate)
+                    symbol = str(row.get("symbol", "")).upper().strip()
+                    verdict = self.bot.orchestrator._verdicts.get(symbol) if symbol else None
+                    direction = getattr(verdict, "decision", "") if verdict else ""
+                    if not row.get("market_regime"):
+                        if direction == "SHORT" or str(row.get("side", "")).lower() == "short":
+                            row["market_regime"] = "risk_off"
+                        else:
+                            row["market_regime"] = "risk_on"
+                    row.setdefault("signal_timestamp", time.time() - 300)
+                    candidates.append(row)
+                await self.bot._process_candidates(candidates)
             elif etype == "broker_close":
                 self.broker.mark_closed(
                     symbol=event["symbol"],

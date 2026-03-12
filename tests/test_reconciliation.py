@@ -72,7 +72,7 @@ class ReconcilerTests(unittest.TestCase):
     def test_open_position_activity_is_not_flagged_missing_from_internal(self):
         alpaca = _FakeAlpaca(
             account={"equity": 10050.0, "last_equity": 10000.0, "cash": 5000.0},
-            positions=[{"symbol": "AAPL", "unrealized_pnl": "50.0"}],
+            positions=[{"symbol": "AAPL", "qty": "10", "unrealized_pnl": "50.0"}],
             activities=[{"symbol": "AAPL", "side": "buy", "qty": "10"}],
             portfolio_history={
                 "timestamp": [1, 2],
@@ -90,6 +90,76 @@ class ReconcilerTests(unittest.TestCase):
         self.assertNotIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
         self.assertEqual(snap["reconciliation"]["status"], "healthy")
         self.assertFalse(snap["trust"]["broker_only_mode"])
+
+    def test_broker_fill_ledger_reconstructs_intraday_round_trip(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 10040.0, "last_equity": 10000.0, "cash": 10040.0},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "TENX",
+                    "side": "buy",
+                    "qty": "10",
+                    "price": "10.00",
+                    "transaction_time": "2026-03-10T14:00:00Z",
+                    "order_id": "open-1",
+                },
+                {
+                    "symbol": "TENX",
+                    "side": "sell",
+                    "qty": "10",
+                    "price": "14.00",
+                    "transaction_time": "2026-03-10T15:00:00Z",
+                    "order_id": "close-1",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 10040.0],
+                "profit_loss": [0.0, 40.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": 0.0}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": 0.0, "total_trades": 0, "overall": {}, "by_symbol": {}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-10")
+
+        self.assertEqual(snap["internal"]["trade_history_trade_count"], 1)
+        self.assertAlmostEqual(snap["internal"]["trade_history_realized"], 40.0, places=6)
+        self.assertNotIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
+        self.assertEqual(snap["reconciliation"]["status"], "healthy")
+
+    def test_broker_fill_ledger_marks_unresolved_carryover_symbol(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9950.0, "last_equity": 10000.0, "cash": 9950.0},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "CRCL",
+                    "side": "sell",
+                    "qty": "5",
+                    "price": "110.00",
+                    "transaction_time": "2026-03-10T14:00:00Z",
+                    "order_id": "close-carry-1",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 9950.0],
+                "profit_loss": [0.0, -50.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": 0.0}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": 0.0, "total_trades": 0, "overall": {}, "by_symbol": {}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-10")
+
+        self.assertIn("broker_fill_ledger_unresolved", snap["reconciliation"]["reasons"])
+        self.assertIn("CRCL", snap["internal"]["broker_reconstructed_unresolved_symbols"])
 
     def test_carryover_gap_alone_is_warning_not_critical(self):
         alpaca = _FakeAlpaca(

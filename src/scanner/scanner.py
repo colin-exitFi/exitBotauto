@@ -14,6 +14,7 @@ import httpx
 from config import settings
 from src.data import strategy_controls
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
+from src.data.strategy_playbook import annotate_candidate
 from src.data.technicals import compute_technicals
 from src.signals.live_indicators import compute_live_signals, get_consensus
 
@@ -50,6 +51,8 @@ class Scanner:
         self.min_momentum = settings.MIN_MOMENTUM_PCT
 
         self._cache: List[Dict] = []
+        self._research_cache: List[Dict] = []
+        self._last_scan_stats: Dict = {}
         self._news_cache: Dict[str, tuple] = {}
         self._performance_cache: Dict = {}
         self._performance_cache_at = 0.0
@@ -339,6 +342,20 @@ class Scanner:
                 seen[sym] = s
 
         all_symbols = list(seen.values())
+        self._research_cache = [
+            {
+                "symbol": str(row.get("symbol", "")).upper(),
+                "source": row.get("source", ""),
+                "side": row.get("side", "long"),
+                "watchlist_reason": row.get("watchlist_reason", ""),
+                "human_intel": row.get("human_intel", ""),
+                "copy_trader_context": row.get("copy_trader_context", ""),
+                "score": float(row.get("watchlist_conviction", row.get("priority", 0.0)) or 0.0),
+                "research_only": True,
+            }
+            for row in all_symbols
+            if str(row.get("symbol", "")).strip()
+        ][:50]
         logger.info(f"Merged candidates: {len(all_symbols)} unique symbols")
 
         # ── ENRICH ALL with Polygon snapshot data ──────────────────
@@ -357,6 +374,7 @@ class Scanner:
         for c in filtered:
             c["strategy_tag"] = self._derive_strategy_tag(c)
             c["signal_sources"] = self._extract_signal_sources(c)
+            c.update(annotate_candidate(c))
 
         # Hard disable losing strategies before bar fetches.
         disabled_strategies = self._load_disabled_strategies()
@@ -470,6 +488,23 @@ class Scanner:
         active_candidates.sort(key=lambda x: x["score"], reverse=True)
 
         self._cache = active_candidates[:20]  # Keep more candidates for orchestrator diversity
+        self._last_scan_stats = {
+            "alpaca_movers": len(alpaca_candidates),
+            "polygon_gainers": len(polygon_candidates),
+            "stocktwits_trending": len(stocktwits_candidates),
+            "grok_x": len(grok_x_candidates),
+            "copy_trader": len(copy_trader_candidates),
+            "watchlist": len(watchlist_candidates),
+            "unusual_whales": len(uw_candidates),
+            "human_intel": len(human_candidates),
+            "merged_unique": len(all_symbols),
+            "enriched": len(candidates),
+            "filtered": len(filtered),
+            "disabled": disabled_count,
+            "live": len(self._cache),
+            "research": len(self._research_cache),
+            "regime": regime,
+        }
 
         # Record today's big runners for tomorrow's fade watchlist
         self._maybe_record_todays_runners(active_candidates)
@@ -480,7 +515,14 @@ class Scanner:
         try:
             from src.dashboard.dashboard import log_activity
             top = [f"{c['symbol']} ({c['change_pct']:+.1f}%)" for c in self._cache[:5]]
-            log_activity("scan", f"Found {len(self._cache)} candidates: {', '.join(top)}")
+            log_activity(
+                "scan",
+                (
+                    f"Live {len(self._cache)} | Research {len(self._research_cache)} | "
+                    f"Filtered {len(filtered)}/{len(candidates)} | Merged {len(all_symbols)}: "
+                    f"{', '.join(top) if top else 'no live leaders'}"
+                ),
+            )
         except Exception:
             pass
         for c in self._cache[:8]:
@@ -498,6 +540,28 @@ class Scanner:
 
     def get_cached_candidates(self) -> List[Dict]:
         return list(self._cache)
+
+    def get_research_universe(self) -> List[Dict]:
+        rows = list(self._research_cache)
+        if rows:
+            return rows
+        if self.watchlist:
+            return [
+                {
+                    "symbol": str(item.get("ticker", "")).upper(),
+                    "source": str(item.get("sources", "watchlist") or "watchlist"),
+                    "side": item.get("side", "long"),
+                    "watchlist_reason": item.get("reason", ""),
+                    "score": float(item.get("conviction", 0.0) or 0.0),
+                    "research_only": True,
+                }
+                for item in (self.watchlist.get_all() or [])
+                if str(item.get("ticker", "")).strip()
+            ][:50]
+        return []
+
+    def get_last_scan_stats(self) -> Dict:
+        return dict(self._last_scan_stats)
 
     def get_last_market_regime(self) -> str:
         return self._last_market_regime
@@ -824,6 +888,7 @@ class Scanner:
             candidate["fade_score"] = max(float(candidate.get("fade_score", 0) or 0), 0.9)
         candidate["strategy_tag"] = self._derive_strategy_tag(candidate)
         candidate["signal_sources"] = self._extract_signal_sources(candidate)
+        candidate.update(annotate_candidate(candidate))
 
     def _maybe_record_todays_runners(self, candidates: List[Dict]):
         if not self.fade:

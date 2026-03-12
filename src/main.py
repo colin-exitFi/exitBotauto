@@ -60,6 +60,13 @@ from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
 from src.data.trade_schema import normalize_trade_record
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
+from src.data.strategy_playbook import (
+    annotate_candidate,
+    bias_matches_direction,
+    extract_watchlist_symbols,
+    normalize_bias_label,
+    score_directional_biases,
+)
 from src.data.technicals import get_cached_rsi
 from src.options.options_monitor import OptionsMonitor
 from src.reconciliation.reconciler import Reconciler
@@ -105,6 +112,8 @@ class TradingBot:
         self._last_daily_reset_date = None
         self._processed_copy_trader_exit_ids = set()
         self._recorded_realized_keys = set()
+        self._tomorrow_thesis_cache = None
+        self._tomorrow_thesis_cache_at = 0.0
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -1410,6 +1419,115 @@ class TradingBot:
     def _derive_strategy_tag(candidate: dict, direction: str) -> str:
         return derive_strategy_tag(candidate, direction)
 
+    def _load_tomorrow_thesis(self) -> Dict:
+        now = time.time()
+        if self._tomorrow_thesis_cache is not None and (now - self._tomorrow_thesis_cache_at) < 300:
+            return dict(self._tomorrow_thesis_cache)
+
+        thesis_file = Path(__file__).parent.parent / "data" / "tomorrow_thesis.json"
+        thesis: Dict = {}
+        try:
+            if thesis_file.exists():
+                thesis = json.loads(thesis_file.read_text())
+        except Exception as e:
+            logger.debug(f"Tomorrow thesis load failed: {e}")
+            thesis = {}
+
+        self._tomorrow_thesis_cache = dict(thesis)
+        self._tomorrow_thesis_cache_at = now
+        return dict(thesis)
+
+    @staticmethod
+    def _candidate_has_uw_confirmation(candidate: Dict, direction: str) -> bool:
+        biases = score_directional_biases(
+            [
+                candidate.get("uw_flow_sentiment"),
+                candidate.get("uw_recent_flow_bias"),
+                candidate.get("uw_net_premium_bias"),
+                candidate.get("uw_options_volume_bias"),
+                candidate.get("uw_chain_bias"),
+                candidate.get("uw_news_bias"),
+                candidate.get("market_tide_bias"),
+            ]
+        )
+        if str(direction or "BUY").upper() == "SHORT":
+            return biases["bearish"] >= 2 and biases["bearish"] > biases["bullish"]
+        return biases["bullish"] >= 2 and biases["bullish"] > biases["bearish"]
+
+    def _evaluate_trade_gate(self, candidate: Dict, direction: str) -> Dict:
+        annotated = annotate_candidate(candidate)
+        strategy_tag = str(
+            annotated.get("strategy_tag")
+            or self._derive_strategy_tag(annotated, direction)
+            or "unknown"
+        )
+        annotated["strategy_tag"] = strategy_tag
+        annotated.update(annotate_candidate(annotated))
+
+        regime = str(
+            annotated.get("market_regime")
+            or getattr(self, "scan_regime", "")
+            or getattr(self, "scan_regime_raw", "")
+            or "mixed"
+        ).lower()
+        if not annotated.get("playbook_live", False):
+            return {"allowed": False, "reason": "playbook_disabled", "candidate": annotated}
+
+        allowed_regimes = {
+            str(r).strip().lower() for r in (annotated.get("playbook_allowed_regimes") or []) if str(r).strip()
+        }
+        if allowed_regimes and regime not in allowed_regimes:
+            return {"allowed": False, "reason": "regime_block", "candidate": annotated}
+
+        raw_signal_ts = annotated.get("signal_timestamp", None)
+        signal_ts = None if raw_signal_ts in (None, "") else float(raw_signal_ts)
+        signal_age = None if signal_ts is None else max(0.0, time.time() - signal_ts)
+        min_signal_age = max(0, int(annotated.get("playbook_min_signal_age_seconds", 0) or 0))
+        if signal_age is not None and signal_age < min_signal_age:
+            return {"allowed": False, "reason": "awaiting_confirmation", "candidate": annotated}
+
+        if annotated.get("playbook_requires_uw_confirmation") and not self._candidate_has_uw_confirmation(annotated, direction):
+            return {"allowed": False, "reason": "uw_unconfirmed", "candidate": annotated}
+
+        thesis_mode = str(annotated.get("playbook_thesis_mode", "intraday") or "intraday").lower()
+        if thesis_mode == "required":
+            thesis = self._load_tomorrow_thesis()
+            bias = normalize_bias_label(thesis.get("market_bias"))
+            watchlist = extract_watchlist_symbols(thesis)
+            if bias == "unknown" and not watchlist:
+                return {"allowed": False, "reason": "thesis_not_actionable", "candidate": annotated}
+            if annotated.get("playbook_watchlist_only") and watchlist:
+                if str(annotated.get("symbol", "")).upper() not in watchlist:
+                    return {"allowed": False, "reason": "not_in_watchlist", "candidate": annotated}
+            if bias in ("bullish", "bearish") and not bias_matches_direction(bias, direction):
+                return {"allowed": False, "reason": "thesis_bias_conflict", "candidate": annotated}
+
+        return {"allowed": True, "reason": "ok", "candidate": annotated}
+
+    def _determine_options_allocation_pct(self, candidate: Dict, direction: str, confidence: float) -> float:
+        annotated = annotate_candidate(candidate)
+        strategy_tag = str(
+            annotated.get("strategy_tag")
+            or self._derive_strategy_tag(annotated, direction)
+            or "unknown"
+        )
+        annotated["strategy_tag"] = strategy_tag
+        annotated.update(annotate_candidate(annotated))
+
+        options_mode = str(annotated.get("playbook_options_mode", "off") or "off").lower()
+        if options_mode != "prefer":
+            return 0.0
+        if not self._candidate_has_uw_confirmation(annotated, direction):
+            return 0.0
+
+        base_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50) or 50)
+        confidence = float(confidence or 0)
+        if confidence >= 85:
+            return base_pct
+        if confidence >= 75:
+            return base_pct * 0.5
+        return 0.0
+
     @staticmethod
     def _determine_scan_interval(regime: str, session: str = "regular") -> int:
         """
@@ -2233,6 +2351,7 @@ class TradingBot:
         # Evaluate candidates — skip held tickers and recently-SKIPped to find FRESH opportunities
         evaluated = 0
         held_symbols = {p.get("symbol") for p in positions}
+        evaluated_symbols = set()
         for candidate in candidates[:20]:  # Look at top 20
             if evaluated >= 8:  # Evaluate up to 8 per cycle (more diversity)
                 break
@@ -2241,6 +2360,10 @@ class TradingBot:
             # Skip tickers we already hold (don't waste AI calls re-evaluating held positions)
             if symbol in held_symbols:
                 continue
+            if symbol in evaluated_symbols:
+                logger.debug(f"Skipping duplicate candidate in same cycle: {symbol}")
+                continue
+            evaluated_symbols.add(symbol)
 
             sentiment_score = candidate.get("sentiment_score", 0)
             sentiment_data = dict(self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score})
@@ -2354,6 +2477,21 @@ class TradingBot:
             sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
             sentiment_data.setdefault("share_notional_multiplier", 1.0)
             sentiment_data.setdefault("signal_timestamp", signal_timestamp)
+            gate = self._evaluate_trade_gate(
+                {**candidate, "strategy_tag": sentiment_data.get("strategy_tag", "unknown")},
+                direction,
+            )
+            candidate = dict(gate.get("candidate", candidate) or candidate)
+            sentiment_data["strategy_tag"] = candidate.get("strategy_tag", sentiment_data.get("strategy_tag", "unknown"))
+            sentiment_data["playbook_label"] = candidate.get("playbook_label", "")
+            sentiment_data["playbook_options_mode"] = candidate.get("playbook_options_mode", "off")
+            if not gate.get("allowed", False):
+                reason = gate.get("reason", "playbook_block")
+                logger.info(f"⛔ PLAYBOOK GATE {symbol}: {reason} strategy={sentiment_data['strategy_tag']} direction={direction}")
+                log_activity("trade", f"⛔ PLAYBOOK GATE: {symbol} {direction} blocked ({reason})")
+                if direction == "SHORT":
+                    self._record_short_verdict_block(symbol, reason, "playbook")
+                continue
             if candidate.get("copy_trader_context"):
                 sentiment_data["copy_trader_context"] = candidate.get("copy_trader_context", "")
                 sentiment_data["copy_trader_handles"] = list(candidate.get("copy_trader_handles", []) or [])
@@ -2402,14 +2540,7 @@ class TradingBot:
                 options_engine = getattr(self, "options_engine", None)
                 if options_engine:
                     confidence = sentiment_data.get("consensus_confidence", 0)
-                    # High confidence trades (80%+) → options for leverage
-                    # Lower confidence → shares (safer)
-                    if confidence >= 80:
-                        options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50))
-                    elif confidence >= 70:
-                        options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)) * 0.5
-                    else:
-                        options_pct = 0  # Shares only for low confidence
+                    options_pct = self._determine_options_allocation_pct(candidate, direction, confidence)
 
                     if options_pct > 0:
                         tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}

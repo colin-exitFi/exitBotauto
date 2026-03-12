@@ -231,23 +231,39 @@ def _is_rate_limit_error(message: object) -> bool:
 
 
 async def _safe_call(provider_name: str, caller, prompt: str) -> Dict:
-    try:
-        result = await caller(prompt, max_tokens=400)
-        rate_limited = result is None and provider_is_backing_off(provider_name)
-        return {
-            "provider": provider_name,
-            "result": result,
-            "rate_limited": rate_limited,
-            "error": "rate_limited" if rate_limited else ("no_response" if result is None else ""),
-        }
-    except Exception as e:
-        logger.warning(f"Jury {provider_name} failed: {e}")
-        return {
-            "provider": provider_name,
-            "result": None,
-            "rate_limited": provider_is_backing_off(provider_name) or _is_rate_limit_error(e),
-            "error": str(e),
-        }
+    last_error = ""
+    for attempt in range(1, 3):
+        try:
+            result = await caller(prompt, max_tokens=400)
+            rate_limited = result is None and provider_is_backing_off(provider_name)
+            if result is not None or rate_limited or attempt == 2:
+                return {
+                    "provider": provider_name,
+                    "result": result,
+                    "rate_limited": rate_limited,
+                    "error": "rate_limited" if rate_limited else ("no_response" if result is None else last_error),
+                }
+            logger.warning(f"Jury {provider_name} returned no response; retrying once")
+            await asyncio.sleep(0.75)
+        except Exception as e:
+            last_error = str(e)
+            rate_limited = provider_is_backing_off(provider_name) or _is_rate_limit_error(e)
+            if rate_limited or attempt == 2:
+                logger.warning(f"Jury {provider_name} failed: {e}")
+                return {
+                    "provider": provider_name,
+                    "result": None,
+                    "rate_limited": rate_limited,
+                    "error": str(e),
+                }
+            logger.warning(f"Jury {provider_name} transient failure; retrying once: {e}")
+            await asyncio.sleep(0.75)
+    return {
+        "provider": provider_name,
+        "result": None,
+        "rate_limited": provider_is_backing_off(provider_name),
+        "error": last_error or "no_response",
+    }
 
 
 def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
@@ -369,12 +385,17 @@ def _apply_consensus(
     provider_results: Optional[List[Dict]] = None,
 ) -> JuryVerdict:
     provider_results = provider_results or []
+    unavailable_providers = [
+        str(item.get("provider", ""))
+        for item in provider_results
+        if not item.get("result")
+    ]
     degraded_providers = [
         str(item.get("provider", ""))
         for item in provider_results
         if item.get("rate_limited")
     ]
-    degraded = bool(degraded_providers)
+    degraded = bool(unavailable_providers)
     failed_providers = {
         str(item.get("provider", "")): str(item.get("error", "") or "")
         for item in provider_results
@@ -397,6 +418,7 @@ def _apply_consensus(
                 "size_modifier": 0.0,
                 "confidence": 0.0,
                 "degraded": degraded,
+                "unavailable_providers": unavailable_providers,
                 "rate_limited_providers": degraded_providers,
                 "failed_providers": failed_providers,
             },
@@ -423,8 +445,9 @@ def _apply_consensus(
                 vote_map,
                 total,
                 "degraded_insufficient",
-                "Degraded jury: fewer than two models responded while another model was rate-limited",
+                "Degraded jury: fewer than two models responded",
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -441,6 +464,7 @@ def _apply_consensus(
                 0.85,
                 0.80,
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -457,6 +481,7 @@ def _apply_consensus(
                 0.85,
                 0.80,
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -470,6 +495,7 @@ def _apply_consensus(
                 "degraded_unanimous_skip",
                 "Degraded jury: all responding models SKIPped",
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -486,6 +512,7 @@ def _apply_consensus(
                 0.60,
                 0.75,
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -502,6 +529,7 @@ def _apply_consensus(
                 0.60,
                 0.75,
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -514,6 +542,7 @@ def _apply_consensus(
             "degraded_split",
             "Degraded jury: remaining models were not unanimous",
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
@@ -530,6 +559,7 @@ def _apply_consensus(
                 "single_skip",
                 "Single model responded with SKIP",
                 degraded=degraded,
+                unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
@@ -545,6 +575,7 @@ def _apply_consensus(
             size_modifier=0.50,
             confidence_multiplier=0.60,
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
@@ -583,6 +614,7 @@ def _apply_consensus(
             0.75 if conflict else 1.0,
             0.85,
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
@@ -600,11 +632,12 @@ def _apply_consensus(
             0.75 if conflict else 1.0,
             0.85,
             degraded=degraded,
+            unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
 
-    return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "none", "No consensus across jury models", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+    return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "none", "No consensus across jury models", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
 
 
 def _decision_verdict(
@@ -619,6 +652,7 @@ def _decision_verdict(
     size_modifier: float,
     confidence_multiplier: float,
     degraded: bool = False,
+    unavailable_providers: Optional[List[str]] = None,
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
 ) -> JuryVerdict:
@@ -630,20 +664,21 @@ def _decision_verdict(
 
     reasons = [f"{vote['provider']}={vote['decision']} ({vote['reasoning'][:70]})" for vote in agreeing_votes + opposing_votes]
     reason_text = "; ".join(reasons[:3])
+    issue_suffix = _provider_issue_suffix(unavailable_providers, rate_limited_providers)
     if agreement == "unanimous":
         summary = f"{decision} unanimous 3/3"
     elif agreement == "degraded_unanimous":
-        summary = f"{decision} degraded unanimous"
+        summary = f"{decision} degraded unanimous{issue_suffix}"
     elif agreement == "single":
-        summary = f"{decision} single-model fallback"
+        summary = f"{decision} single-model fallback{issue_suffix}"
     elif agreement == "majority_conflict":
         summary = f"{decision} 2/3 with direct opposition"
     elif agreement == "majority_two_model":
-        summary = f"{decision} 2/2"
+        summary = f"{decision} 2/2{issue_suffix}"
     elif agreement == "split_with_skip":
-        summary = f"{decision} 1/1 with one abstain"
+        summary = f"{decision} 1/1 with one abstain{issue_suffix}"
     elif agreement == "degraded_actionable_skip":
-        summary = f"{decision} degraded 1/1 with one abstain"
+        summary = f"{decision} degraded 1/1 with one abstain{issue_suffix}"
     else:
         summary = f"{decision} 2/3 majority"
 
@@ -665,6 +700,7 @@ def _decision_verdict(
             "base_size_pct": round(base_size, 3),
             "agreeing_models": [vote["provider"] for vote in agreeing_votes],
             "degraded": degraded,
+            "unavailable_providers": list(unavailable_providers or []),
             "rate_limited_providers": list(rate_limited_providers or []),
             "failed_providers": dict(failed_providers or {}),
         },
@@ -680,9 +716,12 @@ def _skip_verdict(
     agreement: str,
     reasoning: str,
     degraded: bool = False,
+    unavailable_providers: Optional[List[str]] = None,
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
 ) -> JuryVerdict:
+    if degraded:
+        reasoning = f"{reasoning}{_provider_issue_suffix(unavailable_providers, rate_limited_providers)}"
     return JuryVerdict(
         symbol=symbol,
         decision="SKIP",
@@ -699,7 +738,25 @@ def _skip_verdict(
             "size_modifier": 0.0,
             "confidence": 0.0,
             "degraded": degraded,
+            "unavailable_providers": list(unavailable_providers or []),
             "rate_limited_providers": list(rate_limited_providers or []),
             "failed_providers": dict(failed_providers or {}),
         },
     )
+
+
+def _provider_issue_suffix(
+    unavailable_providers: Optional[List[str]],
+    rate_limited_providers: Optional[List[str]],
+) -> str:
+    unavailable = [str(p) for p in (unavailable_providers or []) if str(p)]
+    rate_limited = [str(p) for p in (rate_limited_providers or []) if str(p)]
+    if not unavailable and not rate_limited:
+        return ""
+    missing = [p for p in unavailable if p not in rate_limited]
+    parts = []
+    if rate_limited:
+        parts.append(f"rate-limited: {', '.join(rate_limited)}")
+    if missing:
+        parts.append(f"missing: {', '.join(missing)}")
+    return f" ({'; '.join(parts)})" if parts else ""
