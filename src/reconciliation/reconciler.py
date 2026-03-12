@@ -25,7 +25,7 @@ class Reconciler:
         self.options_engine = options_engine
 
     def snapshot(self, trade_date: Optional[str] = None) -> Dict:
-        previous = self._load_json(RECONCILIATION_FILE)
+        previous = persistence.load_reconciliation_state() or {}
         broker = self.get_broker_truth(trade_date=trade_date)
         internal = self.get_internal_analytics(trade_date=trade_date or broker.get("date"), broker=broker)
         reconciliation = self.classify_mismatch(broker, internal)
@@ -40,7 +40,7 @@ class Reconciler:
             "canaries": canaries,
             "trust": trust,
         }
-        self._save(payload)
+        persistence.save_reconciliation_state(payload)
         if reconciliation.get("status") != "healthy":
             logger.warning(
                 "BROKER TRUTH:\n"
@@ -230,17 +230,22 @@ class Reconciler:
         broker_day_pnl = float(broker.get("day_pnl", 0) or 0)
         pnl_state_realized = float(internal.get("pnl_state_today_realized", 0) or 0)
         trade_history_realized = float(internal.get("trade_history_realized", 0) or 0)
+        broker_supplemental_trade_count = int(internal.get("broker_supplemental_trade_count", 0) or 0)
         overnight_gap = float(broker.get("overnight_gap_pnl", 0) or 0)
         current_open_unrealized = float(broker.get("current_open_unrealized", 0) or 0)
         broker_closed_trade_estimate = round(broker_day_pnl - overnight_gap - current_open_unrealized, 2)
         diff_pnl_state = round(broker_closed_trade_estimate - pnl_state_realized, 2)
         diff_trade_history = round(broker_closed_trade_estimate - trade_history_realized, 2)
         effective_diff = max(abs(diff_pnl_state), abs(diff_trade_history))
+        if broker_supplemental_trade_count > 0 and abs(diff_trade_history) <= 5:
+            effective_diff = abs(diff_trade_history)
 
         reasons: List[str] = []
         if broker.get("overnight_gap_pnl") is not None and abs(float(broker.get("overnight_gap_pnl") or 0)) > 25:
             reasons.append("carryover_gap")
-        if abs(pnl_state_realized - trade_history_realized) > 10:
+        if abs(pnl_state_realized - trade_history_realized) > 10 and not (
+            broker_supplemental_trade_count > 0 and abs(diff_trade_history) <= 5
+        ):
             reasons.append("internal_ledgers_diverge")
         if broker.get("broker_closed_symbols"):
             missing = sorted(set(broker.get("broker_closed_symbols") or []) - set(internal.get("symbols_in_trade_history") or []))
@@ -607,10 +612,3 @@ class Reconciler:
             return ""
         return cls._trade_day_key(ts)
 
-    @staticmethod
-    def _save(payload: Dict):
-        try:
-            DATA_DIR.mkdir(exist_ok=True)
-            RECONCILIATION_FILE.write_text(json.dumps(payload, indent=2, default=str))
-        except Exception:
-            pass

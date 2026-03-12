@@ -813,6 +813,31 @@ async def get_equity_curve(limit: int = 120):
     }
 
 
+def _resolve_starting_equity(pnl: Dict, broker_truth: Dict) -> float:
+    """Resolve the most trustworthy starting equity baseline for dashboard math."""
+    candidates = [float(getattr(settings, "TOTAL_CAPITAL", 25000) or 25000)]
+    if _bot and getattr(_bot, "risk_manager", None):
+        try:
+            candidates.append(float(getattr(_bot.risk_manager, "_starting_equity", 0) or 0))
+        except Exception:
+            pass
+    try:
+        candidates.append(float(pnl.get("starting_equity", 0) or 0))
+    except Exception:
+        pass
+    try:
+        last_equity = float((broker_truth or {}).get("last_equity", 0) or 0)
+        equity = float((broker_truth or {}).get("equity", 0) or 0)
+        if last_equity > 0:
+            candidates.append(last_equity)
+        elif equity > 0:
+            candidates.append(equity)
+    except Exception:
+        pass
+    resolved = max(c for c in candidates if c and c > 0)
+    return round(resolved, 2)
+
+
 @app.get("/api/pnl")
 async def get_pnl():
     """Comprehensive P&L tracking — the Bloomberg terminal view."""
@@ -828,14 +853,15 @@ async def get_pnl():
     best = pnl.get("best_trade", 0)
     worst = pnl.get("worst_trade", 0)
 
-    equity = 25000.0
+    default_equity = float(getattr(settings, "TOTAL_CAPITAL", 25000.0) or 25000.0)
+    equity = default_equity
     last_equity = equity
     broker_day_pnl = 0.0
     broker_day_pnl_pct = 0.0
     unrealized = 0
     options_unrealized = 0.0
-    starting = pnl.get("starting_equity", 25000.0)
-    peak = pnl.get("peak_equity", 25000.0)
+    starting = default_equity
+    peak = max(float(pnl.get("peak_equity", 0) or 0), default_equity)
     reconciliation_state = {}
     broker_truth = {}
     reconciliation = {}
@@ -855,7 +881,7 @@ async def get_pnl():
     elif _bot.alpaca_client:
         try:
             acct = _bot.alpaca_client.get_account()
-            equity = float(acct.get("equity", 25000.0))
+            equity = float(acct.get("equity", default_equity))
             last_equity = float(acct.get("last_equity", equity) or equity)
             broker_day_pnl = round(equity - last_equity, 2)
             broker_day_pnl_pct = round((broker_day_pnl / last_equity * 100.0), 2) if last_equity else 0.0
@@ -863,6 +889,7 @@ async def get_pnl():
             unrealized = sum(float(p.get("unrealized_pnl", p.get("unrealized_pl", p.get("open_pnl", 0)))) for p in alpaca_positions)
         except Exception:
             pass
+    starting = _resolve_starting_equity(pnl, broker_truth)
     if equity > peak:
         peak = equity
         pnl["peak_equity"] = peak

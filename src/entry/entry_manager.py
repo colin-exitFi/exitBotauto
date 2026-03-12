@@ -241,15 +241,15 @@ class EntryManager:
             logger.debug("Market closed, cannot enter")
             return self._set_gate(symbol, False, "market_closed")
 
+        if symbol in getattr(self, "_halted_symbols", set()):
+            logger.info(f"⛔ {symbol} is halted — blocking entry")
+            return self._set_gate(symbol, False, "halted")
+
         from src.data.entry_controls import is_entry_blocked
         blocked, reason = is_entry_blocked(symbol)
         if blocked:
             logger.info(f"⛔ {symbol} blocked by persistent controls: {reason}")
             return self._set_gate(symbol, False, f"persistent_{reason}")
-
-        if symbol in getattr(self, "_halted_symbols", set()):
-            logger.info(f"⛔ {symbol} is halted — blocking entry")
-            return self._set_gate(symbol, False, "halted")
 
         if symbol in self.positions:
             logger.info(f"⛔ Already in position: {symbol} — duplicate entry blocked")
@@ -337,7 +337,9 @@ class EntryManager:
         notional = adjusted_notional
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
-        equity = self.risk.equity if self.risk and hasattr(self.risk, 'equity') else (self.risk._equity if self.risk else 25000)
+        equity = getattr(self.risk, 'equity', None) if self.risk else None
+        if equity is None:
+            equity = getattr(self.risk, '_equity', 25000) if self.risk else 25000
         notional = min(notional, equity * 0.25)
         min_notional = float(getattr(settings, "MIN_NOTIONAL", 25.0) or 25.0)
         if notional < min_notional:
@@ -641,7 +643,9 @@ class EntryManager:
         notional = adjusted_notional
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
-        equity = self.risk.equity if self.risk and hasattr(self.risk, 'equity') else (self.risk._equity if self.risk else 25000)
+        equity = getattr(self.risk, 'equity', None) if self.risk else None
+        if equity is None:
+            equity = getattr(self.risk, '_equity', 25000) if self.risk else 25000
         notional = min(notional, equity * 0.25)
         min_notional = float(getattr(settings, "MIN_NOTIONAL", 25.0) or 25.0)
         if notional < min_notional:

@@ -397,7 +397,8 @@ class OptionsEngineUnitTests(unittest.TestCase):
 
         exits = self.engine.close_paired_options("AAPL", reason="underlying_exit")
 
-        self.assertEqual(exits, [])
+        self.assertEqual(len(exits), 1)
+        self.assertEqual(exits[0]["status"], "new")
         self.assertIn(contract, self.engine.positions)
         self.assertEqual(self.engine.positions[contract]["status"], "closing")
 

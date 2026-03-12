@@ -62,8 +62,9 @@ class ExitAgentConflictTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(broker.cancelled, ["sell-stop"])
         self.assertEqual(broker.market_sells, [("AAPL", 4)])
-        self.assertEqual(entry_manager.removed, ["AAPL"])
-        self.assertTrue(pos["_exit_recorded"])
+        self.assertEqual(entry_manager.removed, [])
+        self.assertTrue(pos.get("exit_pending"))
+        self.assertEqual(pos.get("exit_order_id"), "mkt-sell")
 
 
 if __name__ == "__main__":

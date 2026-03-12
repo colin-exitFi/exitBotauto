@@ -218,6 +218,7 @@ class BotReplayHarness:
         self.bot.orchestrator = ReplayOrchestrator(verdicts=verdicts)
         self.bot.ai_layers = {}
         self.bot.pnl_state = {}
+        self.bot._broker_ready = True
 
     async def replay(self, events: List[Dict]):
         for event in events:

@@ -105,6 +105,14 @@ def load_options_positions() -> Dict[str, Dict]:
 # ── Trade History (canonical single ledger) ──────────────────────
 
 def save_trades(trades: List[Dict]):
+    """Persist the canonical full trade-history ledger atomically."""
+    lock = _get_lock(TRADE_HISTORY_FILE)
+    with lock:
+        normalized = [normalize_trade_record(t) for t in (trades or [])]
+        _write_trade_history_unlocked(normalized)
+
+
+def append_trades(trades: List[Dict]):
     """Append-merge new trades into the canonical trade history ledger."""
     lock = _get_lock(TRADE_HISTORY_FILE)
     with lock:

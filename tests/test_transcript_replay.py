@@ -12,7 +12,8 @@ class TranscriptReplayTests(unittest.IsolatedAsyncioTestCase):
         transcript = load_transcript_fixture(str(fixture_path))
         harness = BotReplayHarness.from_transcript(transcript)
 
-        with patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
+        with patch.object(main_module.trade_history, "load_all", return_value=[]), \
+             patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
              patch.object(main_module.persistence, "save_pnl_state"), \
              patch.object(main_module.persistence, "save_positions"), \
              patch.object(main_module.persistence, "save_trades"), \
@@ -33,7 +34,8 @@ class TranscriptReplayTests(unittest.IsolatedAsyncioTestCase):
         transcript = load_transcript_fixture(str(fixture_path))
         harness = BotReplayHarness.from_transcript(transcript)
 
-        with patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
+        with patch.object(main_module.trade_history, "load_all", return_value=[]), \
+             patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
              patch.object(main_module.persistence, "save_pnl_state"), \
              patch.object(main_module.persistence, "save_positions"), \
              patch.object(main_module.persistence, "save_trades"), \

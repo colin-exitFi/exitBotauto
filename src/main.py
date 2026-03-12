@@ -417,6 +417,19 @@ class TradingBot:
         except Exception as _be:
             logger.error(f"Broker health check failed: {_be} — entries BLOCKED until next cycle")
 
+        shutdown_marker = persistence.load_shutdown_marker()
+        if shutdown_marker and self._broker_ready:
+            marker_symbols = {str(sym or "").upper() for sym in shutdown_marker.get("open_symbols", []) if str(sym or "").strip()}
+            live_symbols = {str(p.get("symbol", "") or "").upper() for p in (self.entry_manager.get_positions() or [])}
+            missing_after_shutdown = sorted(marker_symbols - live_symbols)
+            if missing_after_shutdown:
+                try:
+                    from src.data.entry_controls import tombstone_symbol
+                    for sym in missing_after_shutdown:
+                        tombstone_symbol(sym, reason="shutdown_marker_missing_on_broker")
+                        logger.warning(f"TOMBSTONED after shutdown recovery: {sym} missing on broker after prior shutdown")
+                except Exception as e:
+                    logger.debug(f"Shutdown marker tombstone failed: {e}")
         persistence.clear_shutdown_marker()
         logger.success("All components initialized")
 
@@ -2729,7 +2742,6 @@ class TradingBot:
             persistence.save_options_positions(options_engine.positions)
             if self.risk_manager:
                 self.risk_manager.update_options_exposure(options_engine.get_options_positions())
-        persistence.save_trades([trade_record])
 
     @staticmethod
     def _position_is_copy_trader_influenced(position: dict) -> bool:
@@ -3436,16 +3448,17 @@ class TradingBot:
             await self.unusual_whales_stream.stop()
         if getattr(self, "copy_trader_monitor", None) and getattr(self.copy_trader_monitor, "stop_stream", None):
             self.copy_trader_monitor.stop_stream()
-        # Save final state
+        positions = self.entry_manager.get_positions() if self.entry_manager else []
+        persistence.write_shutdown_marker([p.get("symbol", "") for p in positions])
+        if positions and self.exit_manager:
+            logger.warning(f"Closing {len(positions)} positions on shutdown")
+            await self.exit_manager.close_all(positions, "shutdown")
+        # Save final state after shutdown marker and liquidation attempts
         persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
         if getattr(self, "options_engine", None):
             persistence.save_options_positions(self.options_engine.positions)
         persistence.save_pnl_state(getattr(self, 'pnl_state', {}))
         persistence.save_ai_state(self.ai_layers)
-        positions = self.entry_manager.get_positions() if self.entry_manager else []
-        if positions and self.exit_manager:
-            logger.warning(f"Closing {len(positions)} positions on shutdown")
-            await self.exit_manager.close_all(positions, "shutdown")
         logger.success("✅ Shutdown complete")
 
     def stop(self):

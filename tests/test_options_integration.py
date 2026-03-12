@@ -323,6 +323,7 @@ class OptionsIntegrationTests(unittest.IsolatedAsyncioTestCase):
         bot.position_manager = FakePositionManager()
         bot.orchestrator = FakeOrchestrator(FakeVerdict("AAPL", decision="BUY", confidence=92))
         bot.ai_layers = {}
+        bot._broker_ready = True
         bot.options_engine = FakeOptionsEngine()
 
         with patch.object(main_module, "log_activity"), \

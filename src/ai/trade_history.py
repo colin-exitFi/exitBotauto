@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
 
+from src import persistence
 from src.data.trade_schema import normalize_trade_record
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
@@ -28,18 +29,15 @@ def record_trade(trade: Dict):
     if len(history) > MAX_TRADES:
         history = history[-MAX_TRADES:]
     try:
-        HISTORY_FILE.write_text(json.dumps(history))
+        persistence.atomic_write_json(HISTORY_FILE, history, indent=0)
     except Exception as e:
         logger.warning(f"Failed to save trade history: {e}")
 
 
 def load_all() -> List[Dict]:
     """Load all trade history from disk."""
-    if not HISTORY_FILE.exists():
-        return []
     try:
-        data = json.loads(HISTORY_FILE.read_text())
-        # Support both formats: raw list or {"trades": [...]}
+        data = persistence.safe_load_json(HISTORY_FILE, default=list)
         if isinstance(data, dict):
             data = data.get("trades", [])
         if not isinstance(data, list):

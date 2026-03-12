@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from config import settings
+from src import persistence
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 
@@ -651,7 +652,6 @@ class RiskManager:
 
     def _save_state(self):
         """Save milestone tracking state."""
-        DATA_DIR.mkdir(exist_ok=True)
         state = {
             "equity": self._equity,
             "starting_equity": self._starting_equity,
@@ -662,23 +662,21 @@ class RiskManager:
             "alpaca_daytrade_count": self._alpaca_daytrade_count,
         }
         try:
-            (DATA_DIR / "risk_state.json").write_text(json.dumps(state, indent=2))
+            persistence.save_risk_state(state)
         except Exception:
             pass
 
     def _load_state(self):
         """Load milestone tracking state."""
-        state_file = DATA_DIR / "risk_state.json"
-        if state_file.exists():
-            try:
-                state = json.loads(state_file.read_text())
+        try:
+            state = persistence.load_risk_state()
+            if state:
                 # Always use configured TOTAL_CAPITAL — don't load stale starting_equity from state
-                # self._starting_equity is already set from settings.TOTAL_CAPITAL in __init__
                 self._ath_equity = state.get("ath_equity", self._ath_equity)
                 self._start_date = state.get("start_date", self._start_date)
                 self._wash_sale_list = state.get("wash_sale_list", {})
                 self._round_trips = state.get("round_trips", [])
                 self._alpaca_daytrade_count = int(state.get("alpaca_daytrade_count", self._alpaca_daytrade_count) or 0)
                 logger.info(f"Loaded risk state: ATH=${self._ath_equity:,.2f}, start=${self._starting_equity:,.2f}, wash_sales={len(self._wash_sale_list)}, round_trips={len(self._round_trips)}")
-            except Exception:
-                pass
+        except Exception:
+            pass

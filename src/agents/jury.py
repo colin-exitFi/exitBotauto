@@ -490,30 +490,14 @@ def _apply_consensus(
 
     if total == 1:
         only_vote = votes[0]
-        if only_vote["decision"] == "SKIP":
-            return _skip_verdict(
-                symbol,
-                briefs,
-                providers_used,
-                vote_map,
-                total,
-                "single_skip",
-                "Single model responded with SKIP",
-                degraded=degraded,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
-        return _decision_verdict(
-            symbol=symbol,
-            decision=only_vote["decision"],
-            agreeing_votes=[only_vote],
-            opposing_votes=[],
-            providers_used=providers_used,
-            vote_map=vote_map,
-            briefs=briefs,
-            agreement="single",
-            size_modifier=0.50,
-            confidence_multiplier=0.60,
+        return _skip_verdict(
+            symbol,
+            briefs,
+            providers_used,
+            vote_map,
+            total,
+            "single_model_insufficient",
+            "Single model response is insufficient for action — SKIP for safety",
             degraded=degraded,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
@@ -600,16 +584,10 @@ def _decision_verdict(
         summary = f"{decision} unanimous 3/3"
     elif agreement == "degraded_unanimous":
         summary = f"{decision} degraded unanimous"
-    elif agreement == "single":
-        summary = f"{decision} single-model fallback"
     elif agreement == "majority_conflict":
         summary = f"{decision} 2/3 with direct opposition"
     elif agreement == "majority_two_model":
         summary = f"{decision} 2/2"
-    elif agreement == "split_with_skip":
-        summary = f"{decision} 1/1 with one abstain"
-    elif agreement == "degraded_actionable_skip":
-        summary = f"{decision} degraded 1/1 with one abstain"
     else:
         summary = f"{decision} 2/3 majority"
 
