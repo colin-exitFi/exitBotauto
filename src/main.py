@@ -1487,6 +1487,48 @@ class TradingBot:
             return raw_regime
         return current
 
+    def _get_operating_guardrails(self) -> dict:
+        risk_status = self.risk_manager.get_status() if self.risk_manager and hasattr(self.risk_manager, "get_status") else {}
+        reconciliation_state = {}
+        if getattr(self, "reconciler", None):
+            try:
+                reconciliation_state = self.reconciler.snapshot()
+            except Exception:
+                reconciliation_state = {}
+        recon = (reconciliation_state.get("reconciliation", {}) or {}) if isinstance(reconciliation_state, dict) else {}
+        trust = (reconciliation_state.get("trust", {}) or {}) if isinstance(reconciliation_state, dict) else {}
+        positions = self.entry_manager.get_positions() if getattr(self, "entry_manager", None) else []
+        unprotected = []
+        protection_failed = []
+        for pos in positions or []:
+            symbol = str(pos.get("symbol", "") or "")
+            if pos.get("protection_failed"):
+                protection_failed.append(symbol)
+            if not pos.get("has_trailing_stop") and not pos.get("swing_only"):
+                unprotected.append(symbol)
+        reasons = []
+        allow_new_entries = True
+        if recon.get("status") == "critical_mismatch" or trust.get("broker_only_mode"):
+            allow_new_entries = False
+            reasons.append("critical_reconciliation")
+        if protection_failed:
+            allow_new_entries = False
+            reasons.append("protection_failed")
+        if len(unprotected) > 0:
+            allow_new_entries = False
+            reasons.append("unprotected_positions")
+        if risk_status.get("trading_halted"):
+            allow_new_entries = False
+            reasons.append("risk_halted")
+        return {
+            "allow_new_entries": allow_new_entries,
+            "reconciliation_status": recon.get("status", "unknown"),
+            "broker_only_mode": bool(trust.get("broker_only_mode")),
+            "unprotected_symbols": unprotected,
+            "protection_failed_symbols": protection_failed,
+            "reasons": reasons,
+        }
+
     @staticmethod
     def _compute_entry_slippage_bps(entry_price: float, signal_price: float, side: str) -> float:
         """
@@ -2254,6 +2296,10 @@ class TradingBot:
         if not getattr(self, "_broker_ready", False):
             return
         if not self.risk_manager.can_trade():
+            return
+        guardrails = self._get_operating_guardrails()
+        if not guardrails.get("allow_new_entries", True):
+            logger.warning(f"⛔ Entry pipeline blocked by operating guardrails: {','.join(guardrails.get('reasons', []))}")
             return
 
         self._prune_jury_vetoes()

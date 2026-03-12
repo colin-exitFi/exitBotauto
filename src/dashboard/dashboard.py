@@ -1103,14 +1103,15 @@ async def get_streams():
 
 @app.get("/api/guards")
 async def get_guards():
-    """Get extended hours guard status for all positions."""
+    """Get extended hours guard status plus operating guardrails."""
     if not _bot or not hasattr(_bot, 'extended_guard'):
-        return {"active": False, "guards": {}}
+        return {"active": False, "guards": {}, "guardrails": {}}
     guard = _bot.extended_guard
     return {
         "active": guard.is_extended_hours(),
         "regular_hours": guard.is_regular_hours(),
         "guards": guard.get_guard_status(),
+        "guardrails": getattr(_bot, '_get_operating_guardrails', lambda: {})() or {},
     }
 
 
