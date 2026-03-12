@@ -417,19 +417,6 @@ class TradingBot:
         except Exception as _be:
             logger.error(f"Broker health check failed: {_be} — entries BLOCKED until next cycle")
 
-        shutdown_marker = persistence.load_shutdown_marker()
-        if shutdown_marker and self._broker_ready:
-            marker_symbols = {str(sym or "").upper() for sym in shutdown_marker.get("open_symbols", []) if str(sym or "").strip()}
-            live_symbols = {str(p.get("symbol", "") or "").upper() for p in (self.entry_manager.get_positions() or [])}
-            missing_after_shutdown = sorted(marker_symbols - live_symbols)
-            if missing_after_shutdown:
-                try:
-                    from src.data.entry_controls import tombstone_symbol
-                    for sym in missing_after_shutdown:
-                        tombstone_symbol(sym, reason="shutdown_marker_missing_on_broker")
-                        logger.warning(f"TOMBSTONED after shutdown recovery: {sym} missing on broker after prior shutdown")
-                except Exception as e:
-                    logger.debug(f"Shutdown marker tombstone failed: {e}")
         persistence.clear_shutdown_marker()
         logger.success("All components initialized")
 
@@ -1501,24 +1488,6 @@ class TradingBot:
         return current
 
     @staticmethod
-    def _strategy_allowed_for_regime(strategy_tag: str, regime: str) -> bool:
-        strategy = str(strategy_tag or "unknown")
-        active = set(getattr(settings, "ACTIVE_STRATEGY_TAGS", []) or [])
-        if active and strategy not in active:
-            return False
-        regime_key = str(regime or "mixed").lower()
-        regime_map = {
-            "risk_on": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_RISK_ON", []) or []),
-            "risk_off": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_RISK_OFF", []) or []),
-            "mixed": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_MIXED", []) or []),
-            "choppy": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_CHOPPY", []) or []),
-        }
-        allowed = regime_map.get(regime_key) or regime_map.get("mixed") or set()
-        if not allowed:
-            return True
-        return strategy in allowed
-
-    @staticmethod
     def _compute_entry_slippage_bps(entry_price: float, signal_price: float, side: str) -> float:
         """
         Compute signed entry slippage in bps vs signal price.
@@ -2241,16 +2210,44 @@ class TradingBot:
         if not pos:
             return
         qty = float(pos.get("quantity", 0) or 0)
-        if qty <= 0 or not self.exit_manager:
+        if qty <= 0:
             return
-        entry_price = float(pos.get("entry_price", 0) or 0)
         side = pos.get("side", "long")
-        current_price = float(pos.get("current_price", entry_price) or entry_price)
+        close_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
+        order = await asyncio.get_event_loop().run_in_executor(None, close_fn, symbol, qty)
+        if not order:
+            return
+        exit_price = float(order.get("filled_avg_price", pos.get("entry_price", 0)) or pos.get("entry_price", 0))
+        entry_price = float(pos.get("entry_price", exit_price) or exit_price)
+        pnl = (entry_price - exit_price) * qty if side == "short" else (exit_price - entry_price) * qty
+        pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
         if side == "short":
-            pnl_pct = ((entry_price - current_price) / entry_price * 100) if entry_price else 0
-        else:
-            pnl_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
-        await self.exit_manager._execute_exit(pos, qty, current_price, reason, pnl_pct)
+            pnl_pct = -pnl_pct
+        trade_record = {
+            "symbol": symbol,
+            "side": "buy_to_cover" if side == "short" else "sell",
+            "entry_price": entry_price,
+            "exit_price": exit_price,
+            "quantity": qty,
+            "pnl": pnl,
+            "pnl_pct": pnl_pct,
+            "reason": reason,
+            "hold_seconds": time.time() - pos.get("entry_time", time.time()),
+            "entry_time": pos.get("entry_time", 0),
+            "exit_time": time.time(),
+            "strategy_tag": pos.get("strategy_tag", "unknown"),
+            "signal_sources": pos.get("signal_sources", ["unknown"]),
+            "decision_confidence": pos.get("decision_confidence", 0),
+            "provider_used": pos.get("provider_used", ""),
+            "signal_price": pos.get("signal_price", entry_price),
+            "decision_price": pos.get("decision_price", entry_price),
+            "fill_price": exit_price,
+            "slippage_bps": self._compute_entry_slippage_bps(
+                entry_price, pos.get("signal_price", entry_price), side
+            ),
+            **self._compute_signal_latency_fields(pos),
+        }
+        self._record_realized_exit(trade_record)
 
     async def _process_candidates(self, candidates):
         """Evaluate scanner candidates for entry with position manager veto."""
@@ -2388,11 +2385,6 @@ class TradingBot:
                         (getattr(verdict, "consensus_detail", {}) or {}).get("agreement", "")
                     )
                     sentiment_data["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
-                    scanner_obj = getattr(self, "scanner", None)
-                    active_regime = getattr(self, "scan_regime", None) or (scanner_obj.get_last_market_regime() if scanner_obj and hasattr(scanner_obj, "get_last_market_regime") else "mixed")
-                    if not self._strategy_allowed_for_regime(sentiment_data["strategy_tag"], active_regime):
-                        logger.info(f"⛔ {symbol} strategy {sentiment_data['strategy_tag']} blocked in regime {active_regime}")
-                        continue
                 except Exception as e:
                     logger.error(f"Orchestrator error for {symbol}: {e}")
                     continue  # Never trade without agent consensus
@@ -2402,11 +2394,6 @@ class TradingBot:
             sentiment_data.setdefault("provider_used", "")
             sentiment_data.setdefault("consensus_confidence", 0)
             sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
-            scanner_obj = getattr(self, "scanner", None)
-            active_regime = getattr(self, "scan_regime", None) or (scanner_obj.get_last_market_regime() if scanner_obj and hasattr(scanner_obj, "get_last_market_regime") else "mixed")
-            if not self._strategy_allowed_for_regime(sentiment_data.get("strategy_tag", "unknown"), active_regime):
-                logger.info(f"⛔ {symbol} strategy {sentiment_data.get('strategy_tag', 'unknown')} blocked in regime {active_regime}")
-                continue
             sentiment_data.setdefault("share_notional_multiplier", 1.0)
             sentiment_data.setdefault("signal_timestamp", signal_timestamp)
             if candidate.get("copy_trader_context"):
@@ -2429,18 +2416,8 @@ class TradingBot:
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -effective_sentiment_score if direction == "SHORT" else effective_sentiment_score
-            try:
-                from src.data import entry_controls as _entry_controls
-                strategy_limit = int(getattr(settings, "MAX_ENTRIES_PER_STRATEGY_PER_DAY", 8) or 8)
-                if _entry_controls.get_strategy_entry_count(sentiment_data.get("strategy_tag", "unknown")) >= strategy_limit:
-                    gate_reason = "strategy_daily_limit"
-                    can = False
-                else:
-                    can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
-                    gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
-            except Exception:
-                can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
-                gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
+            can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
+            gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
             risk_status = {}
             if self.risk_manager and hasattr(self.risk_manager, "get_status"):
                 try:
@@ -2468,10 +2445,7 @@ class TradingBot:
                     confidence = sentiment_data.get("consensus_confidence", 0)
                     # High confidence trades (80%+) → options for leverage
                     # Lower confidence → shares (safer)
-                    strategy_tag = str(sentiment_data.get("strategy_tag", "") or "")
-                    if strategy_tag.startswith("uw_flow_") and confidence >= 65:
-                        options_pct = max(float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)), 75.0)
-                    elif confidence >= 80:
+                    if confidence >= 80:
                         options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50))
                     elif confidence >= 70:
                         options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)) * 0.5
@@ -2527,11 +2501,6 @@ class TradingBot:
                     order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
                     self._record_short_verdict_block(symbol, order_reason, "execution")
                 if pos:
-                    try:
-                        from src.data import entry_controls as _entry_controls
-                        _entry_controls.record_entry(symbol, sentiment_data.get("strategy_tag", "unknown"), ts=time.time())
-                    except Exception as _ec_err:
-                        logger.debug(f"Entry count update failed for {symbol}: {_ec_err}")
                     positions = self.entry_manager.get_positions()
 
     async def _monitor_pending_orders(self):
@@ -2709,40 +2678,22 @@ class TradingBot:
                     trade_record.get("anomaly_flags", []),
                 )
 
-        partial_exit = False
-        if position and asset_type != "option":
-            exit_scope = str(position.get("exit_scope", "") or "")
-            current_qty = float(position.get("quantity", 0) or 0)
-            filled_qty = float(trade_record.get("quantity", 0) or 0)
-            remaining_qty = max(0.0, current_qty - filled_qty)
-            if exit_scope == "partial" or (remaining_qty > 1e-6 and str(trade_record.get("reason", "")) == "take_profit_1"):
-                partial_exit = True
-                position["quantity"] = remaining_qty
-                position["actual_qty"] = remaining_qty
-                entry_price = float(position.get("entry_price", 0) or 0)
-                position["actual_notional"] = entry_price * remaining_qty
-                position["exit_recorded"] = False
-                position["partial_exit"] = True
-                position.pop("exit_scope", None)
-                position.pop("pending_exit_qty", None)
-                position.pop("remaining_qty", None)
-
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
-        if self.entry_manager and symbol and asset_type != "option" and not partial_exit:
+        if self.entry_manager and symbol and asset_type != "option":
             self.entry_manager.remove_position(symbol)
         if self.risk_manager:
             self.risk_manager.record_trade(trade_record)
 
-        if symbol and asset_type != "option" and not partial_exit:
+        if symbol and asset_type != "option":
             try:
                 from src.data import entry_controls
                 exit_time = float(trade_record.get("exit_time", time.time()) or time.time())
                 entry_controls.set_cooldown(symbol, exit_confirmed_at=exit_time)
                 anomaly_flags = trade_record.get("anomaly_flags", []) or []
                 reason_str = str(trade_record.get("reason", "") or "").lower()
-                if ("statistical_poison" in str(anomaly_flags).lower() or "blacklist" in reason_str or "emergency_trail_failure" in reason_str or "dust_liquidation" in reason_str or "protection_failed" in str(anomaly_flags).lower() or "broker_reloaded_after_local_removal" in str(anomaly_flags).lower()):
-                    entry_controls.blacklist_symbol(symbol, reason=reason_str or str(anomaly_flags), source="exit_recording")
+                if "statistical_poison" in str(anomaly_flags).lower() or "blacklist" in reason_str:
+                    entry_controls.blacklist_symbol(symbol, reason=reason_str, source="exit_recording")
             except Exception as ec_err:
                 logger.debug(f"Entry controls update failed for {symbol}: {ec_err}")
         copy_trader_monitor = getattr(self, "copy_trader_monitor", None)
@@ -2778,6 +2729,7 @@ class TradingBot:
             persistence.save_options_positions(options_engine.positions)
             if self.risk_manager:
                 self.risk_manager.update_options_exposure(options_engine.get_options_positions())
+        persistence.save_trades([trade_record])
 
     @staticmethod
     def _position_is_copy_trader_influenced(position: dict) -> bool:
@@ -3484,17 +3436,16 @@ class TradingBot:
             await self.unusual_whales_stream.stop()
         if getattr(self, "copy_trader_monitor", None) and getattr(self.copy_trader_monitor, "stop_stream", None):
             self.copy_trader_monitor.stop_stream()
-        positions = self.entry_manager.get_positions() if self.entry_manager else []
-        persistence.write_shutdown_marker([p.get("symbol", "") for p in positions])
-        if positions and self.exit_manager:
-            logger.warning(f"Closing {len(positions)} positions on shutdown")
-            await self.exit_manager.close_all(positions, "shutdown")
-        # Save final state after shutdown marker and liquidation attempts
+        # Save final state
         persistence.save_positions(self.entry_manager.positions if self.entry_manager else {})
         if getattr(self, "options_engine", None):
             persistence.save_options_positions(self.options_engine.positions)
         persistence.save_pnl_state(getattr(self, 'pnl_state', {}))
         persistence.save_ai_state(self.ai_layers)
+        positions = self.entry_manager.get_positions() if self.entry_manager else []
+        if positions and self.exit_manager:
+            logger.warning(f"Closing {len(positions)} positions on shutdown")
+            await self.exit_manager.close_all(positions, "shutdown")
         logger.success("✅ Shutdown complete")
 
     def stop(self):

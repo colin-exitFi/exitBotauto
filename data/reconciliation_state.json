@@ -1,5 +1,5 @@
 {
-  "as_of": 1773235584.389,
+  "as_of": 1773277689.032556,
   "date": "2026-03-10",
   "broker": {
     "date": "2026-03-10",
@@ -27,9 +27,17 @@
     "carryover_fragment_symbols": [],
     "intraday_symbols": [],
     "broker_history_available": true,
+    "broker_fill_ledger": {
+      "trade_count": 0,
+      "realized_pnl": 0,
+      "closed_symbols": [],
+      "reconstructable_closed_symbols": [],
+      "unresolved_symbols": [],
+      "trades": []
+    },
     "broker_positions": {
       "AAPL": {
-        "qty": 0.0,
+        "qty": 10.0,
         "side": "",
         "avg_entry_price": 0.0,
         "market_value": 0.0
@@ -49,6 +57,10 @@
     "symbols_in_trade_history": [],
     "symbols_in_game_film": [],
     "analytics_total_realized_all_time": 0.0,
+    "broker_reconstructed_realized": 0.0,
+    "broker_reconstructed_trade_count": 0,
+    "broker_reconstructed_unresolved_symbols": [],
+    "broker_supplemental_trade_count": 0,
     "internal_live_positions": {}
   },
   "reconciliation": {
@@ -64,7 +76,7 @@
       "code": "broker_position_missing_internal",
       "symbol": "AAPL",
       "severity": "critical",
-      "first_seen": 1773235584.3889961,
+      "first_seen": 1773277689.0325508,
       "current_magnitude": 0.0,
       "recommended_action": "Sync live positions from broker before trusting internal exposure."
     }
