@@ -244,10 +244,16 @@ class ExitManager:
                 if not order:
                     logger.error(f"Exit order FAILED for {symbol}! Will retry next tick.")
                     return None
+                position_qty = float(position.get("quantity", 0) or 0)
+                requested_qty = float(quantity or 0)
+                remaining_qty = max(0.0, position_qty - requested_qty)
                 position["exit_pending"] = True
                 position["exit_order_id"] = order.get("id")
                 position["exit_submitted_at"] = time.time()
                 position["exit_fill_qty"] = 0.0
+                position["pending_exit_qty"] = requested_qty
+                position["remaining_qty"] = remaining_qty
+                position["exit_scope"] = "partial" if remaining_qty > 1e-6 else "full"
                 position["exit_finalized_at"] = None
                 position["exit_recorded"] = False
                 position["last_exit_reason"] = reason

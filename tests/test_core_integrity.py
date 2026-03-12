@@ -142,6 +142,47 @@ class ExitAccountingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(trade.get("signal_sources"), ["unknown"])
         self.assertAlmostEqual(trade.get("slippage_bps", 0), 0.0, places=6)
 
+    def test_record_realized_exit_partial_take_profit_preserves_remaining_position(self):
+        pos = {
+            "symbol": "AAPL",
+            "entry_price": 100.0,
+            "quantity": 10.0,
+            "entry_time": time.time() - 120,
+            "side": "long",
+            "exit_scope": "partial",
+            "partial_exit": False,
+            "_exit_recorded": False,
+        }
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.entry_manager = FakeEntryManager(pos, remove_on_exit=True)
+        bot.risk_manager = FakeRiskManager()
+        bot.pnl_state = {}
+
+        with patch.object(main_module.trade_history, "load_all", return_value=[]), \
+             patch.object(main_module.trade_history, "record_trade") as record_trade_mock, \
+             patch.object(main_module.persistence, "save_pnl_state"), \
+             patch.object(main_module.persistence, "save_positions"), \
+             patch.object(main_module.persistence, "save_options_positions"):
+            bot._record_realized_exit(
+                {
+                    "symbol": "AAPL",
+                    "side": "sell",
+                    "entry_price": 100.0,
+                    "exit_price": 102.0,
+                    "quantity": 5.0,
+                    "pnl": 10.0,
+                    "pnl_pct": 2.0,
+                    "reason": "take_profit_1",
+                    "entry_time": pos["entry_time"],
+                    "exit_time": time.time(),
+                }
+            )
+
+        self.assertEqual(record_trade_mock.call_count, 1)
+        self.assertIn("AAPL", bot.entry_manager.positions)
+        self.assertAlmostEqual(bot.entry_manager.positions["AAPL"]["quantity"], 5.0, places=6)
+        self.assertTrue(bot.entry_manager.positions["AAPL"]["partial_exit"])
+
     async def test_monitor_positions_uses_latest_side_matched_trailing_fill(self):
         pos = {
             "symbol": "TSLA",

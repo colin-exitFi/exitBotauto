@@ -2663,14 +2663,32 @@ class TradingBot:
                     trade_record.get("anomaly_flags", []),
                 )
 
+        partial_exit = False
+        if position and asset_type != "option":
+            exit_scope = str(position.get("exit_scope", "") or "")
+            current_qty = float(position.get("quantity", 0) or 0)
+            filled_qty = float(trade_record.get("quantity", 0) or 0)
+            remaining_qty = max(0.0, current_qty - filled_qty)
+            if exit_scope == "partial" or (remaining_qty > 1e-6 and str(trade_record.get("reason", "")) == "take_profit_1"):
+                partial_exit = True
+                position["quantity"] = remaining_qty
+                position["actual_qty"] = remaining_qty
+                entry_price = float(position.get("entry_price", 0) or 0)
+                position["actual_notional"] = entry_price * remaining_qty
+                position["exit_recorded"] = False
+                position["partial_exit"] = True
+                position.pop("exit_scope", None)
+                position.pop("pending_exit_qty", None)
+                position.pop("remaining_qty", None)
+
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
-        if self.entry_manager and symbol and asset_type != "option":
+        if self.entry_manager and symbol and asset_type != "option" and not partial_exit:
             self.entry_manager.remove_position(symbol)
         if self.risk_manager:
             self.risk_manager.record_trade(trade_record)
 
-        if symbol and asset_type != "option":
+        if symbol and asset_type != "option" and not partial_exit:
             try:
                 from src.data import entry_controls
                 exit_time = float(trade_record.get("exit_time", time.time()) or time.time())
