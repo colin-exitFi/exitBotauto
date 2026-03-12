@@ -64,13 +64,16 @@ def atomic_write_json(path: Path, data, indent: int = 2):
 def safe_load_json(path: Path, default=None):
     """Load JSON with crash safety. Returns default on any error."""
     lock = _get_lock(path)
-    with lock:
-        try:
-            if path.exists():
-                with open(path) as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load {path.name}: {e}")
+    acquired = lock.acquire(timeout=2.0)
+    try:
+        if path.exists():
+            with open(path) as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load {path.name}: {e}")
+    finally:
+        if acquired:
+            lock.release()
     return default() if callable(default) else (default if default is not None else {})
 
 
