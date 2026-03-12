@@ -142,6 +142,14 @@ class RiskManager:
             self._ath_equity = equity
         self._save_state()
 
+    def sync_daily_pnl_from_broker(self, broker_day_pnl: float):
+        """Sync daily P&L from broker truth. Circuit breaker uses this, not internal accumulator."""
+        old = self.daily_pnl
+        self.daily_pnl = float(broker_day_pnl or 0)
+        if abs(old - self.daily_pnl) > 10:
+            logger.info(f"Broker P&L sync: ${old:.2f} -> ${self.daily_pnl:.2f}")
+        self._save_state()
+
     def _effective_daytrade_count(self) -> int:
         """
         Prefer Alpaca's rolling PDT count when it looks sane.
@@ -592,7 +600,14 @@ class RiskManager:
         """Check if adding this symbol would exceed sector concentration limit."""
         sector = SECTOR_MAP.get(str(symbol or "").upper(), "unknown")
         if sector == "unknown":
-            return True  # Don't block unknown sectors
+            unknown_notional = sum(
+                p.get("entry_price", 0) * p.get("quantity", 0)
+                for p in positions
+                if SECTOR_MAP.get(str(p.get("symbol", "")).upper(), "unknown") == "unknown"
+            )
+            if self._equity > 0 and (unknown_notional / self._equity) * 100 >= 20.0:
+                logger.warning(f"Unknown sector cap reached (20%) for {symbol}")
+                return False
 
         # Calculate current sector exposure
         sector_notional = 0.0

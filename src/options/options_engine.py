@@ -1208,8 +1208,15 @@ class OptionsEngine:
             if not contract_symbol or qty < 1:
                 continue
             order = self.close_option_position(contract_symbol, qty=qty, reason=reason)
-            if not order:
-                continue
+            if order:
+                exits.append({
+                    "symbol": contract_symbol,
+                    "underlying": underlying_symbol,
+                    "reason": reason,
+                    "qty": qty,
+                    "order_id": order.get("id", ""),
+                    "status": order.get("status", "submitted"),
+                })
         return exits
 
     def reconcile_with_broker(self) -> Dict[str, object]:
@@ -1240,6 +1247,14 @@ class OptionsEngine:
             broker_symbols = set(broker_open.keys())
 
             for symbol in list(local_symbols - broker_symbols):
+                pos = self.positions.get(symbol)
+                if not pos:
+                    continue
+                miss_count = int(pos.get("_broker_miss_count", 0) or 0) + 1
+                pos["_broker_miss_count"] = miss_count
+                if miss_count < 2:
+                    logger.info(f"Options {symbol} missing from broker snapshot ({miss_count}/2) — keeping for confirmation")
+                    continue
                 removed_pos = self.positions.pop(symbol, None)
                 if removed_pos:
                     removed_positions.append(removed_pos)

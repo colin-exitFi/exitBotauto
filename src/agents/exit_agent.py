@@ -55,10 +55,11 @@ Respond with ONLY valid JSON:
 class ExitAgent:
     """Manages the exit agent loop — monitors positions and adjusts trailing stops."""
 
-    def __init__(self, broker=None, entry_manager=None, risk_manager=None):
+    def __init__(self, broker=None, entry_manager=None, risk_manager=None, exit_manager=None):
         self.broker = broker
         self.entry_manager = entry_manager
         self.risk_manager = risk_manager
+        self._exit_manager = exit_manager
         self._running = False
         self._last_briefs: Dict[str, Dict] = {}  # symbol -> latest agent briefs
         self._last_check: Dict[str, float] = {}  # symbol -> last check timestamp
@@ -261,31 +262,38 @@ class ExitAgent:
         act = action.get("action", "HOLD")
 
         if act == "EXIT_NOW":
-            # Immediate market sell
             qty = float(pos.get("quantity", 0) or 0)
             if qty > 0:
-                logger.warning(f"🚨 EXIT_NOW: {symbol} — {action.get('reasoning', '')}")
+                logger.warning(f"EXIT_NOW: {symbol} — {action.get('reasoning', '')}")
                 try:
-                    side = pos.get("side", "long")
-                    canceled = await self._cancel_conflicting_exit_orders(symbol, side=side)
-                    if canceled:
-                        logger.info(f"Exit agent canceled {canceled} conflicting orders for {symbol} before EXIT_NOW")
-                    order = None
-                    if side == "short":
-                        # Buy to cover
-                        order = await asyncio.get_event_loop().run_in_executor(
-                            None, self.broker.place_market_buy, symbol, qty
+                    exit_manager = getattr(self, "_exit_manager", None)
+                    if exit_manager:
+                        entry_price = float(pos.get("entry_price", 0) or 0)
+                        side = pos.get("side", "long")
+                        if side == "short":
+                            pnl_pct = ((entry_price - float(pos.get("current_price", entry_price))) / entry_price * 100) if entry_price else 0
+                        else:
+                            pnl_pct = ((float(pos.get("current_price", entry_price)) - entry_price) / entry_price * 100) if entry_price else 0
+                        result = await exit_manager._execute_exit(
+                            pos, qty, float(pos.get("current_price", entry_price)),
+                            f"exit_agent_EXIT_NOW: {action.get('reasoning', '')[:100]}", pnl_pct
                         )
+                        if result:
+                            self._last_briefs.pop(symbol, None)
+                            self._last_check.pop(symbol, None)
                     else:
-                        order = await asyncio.get_event_loop().run_in_executor(
-                            None, self.broker.place_market_sell, symbol, qty
-                        )
-                    if order:
-                        pos["_exit_recorded"] = True
-                        if self.entry_manager and hasattr(self.entry_manager, "remove_position"):
-                            self.entry_manager.remove_position(symbol)
-                        self._last_briefs.pop(symbol, None)
-                        self._last_check.pop(symbol, None)
+                        side = pos.get("side", "long")
+                        canceled = await self._cancel_conflicting_exit_orders(symbol, side=side)
+                        if canceled:
+                            logger.info(f"Exit agent canceled {canceled} orders for {symbol}")
+                        broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
+                        order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, qty)
+                        if order:
+                            pos["exit_pending"] = True
+                            pos["exit_order_id"] = order.get("id")
+                            pos["last_exit_reason"] = f"exit_agent_EXIT_NOW: {action.get('reasoning', '')[:100]}"
+                            self._last_briefs.pop(symbol, None)
+                            self._last_check.pop(symbol, None)
                 except Exception as e:
                     logger.error(f"Exit agent EXIT_NOW failed for {symbol}: {e}")
 

@@ -1,0 +1,17 @@
+{
+  "blacklist": {},
+  "cooldowns": {
+    "AAPL": {
+      "exit_confirmed_at": 1773156660.0,
+      "cooldown_until": 1773156960.0,
+      "expires_at": 1773156960.0
+    },
+    "TSLA": {
+      "exit_confirmed_at": 1772704860.0,
+      "cooldown_until": 1772705160.0,
+      "expires_at": 1772705160.0
+    }
+  },
+  "jury_vetoes": {},
+  "tombstones": {}
+}

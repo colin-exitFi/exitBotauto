@@ -230,17 +230,22 @@ class Reconciler:
         broker_day_pnl = float(broker.get("day_pnl", 0) or 0)
         pnl_state_realized = float(internal.get("pnl_state_today_realized", 0) or 0)
         trade_history_realized = float(internal.get("trade_history_realized", 0) or 0)
+        broker_supplemental_trade_count = int(internal.get("broker_supplemental_trade_count", 0) or 0)
         overnight_gap = float(broker.get("overnight_gap_pnl", 0) or 0)
         current_open_unrealized = float(broker.get("current_open_unrealized", 0) or 0)
         broker_closed_trade_estimate = round(broker_day_pnl - overnight_gap - current_open_unrealized, 2)
         diff_pnl_state = round(broker_closed_trade_estimate - pnl_state_realized, 2)
         diff_trade_history = round(broker_closed_trade_estimate - trade_history_realized, 2)
         effective_diff = max(abs(diff_pnl_state), abs(diff_trade_history))
+        if broker_supplemental_trade_count > 0 and abs(diff_trade_history) <= 5:
+            effective_diff = abs(diff_trade_history)
 
         reasons: List[str] = []
         if broker.get("overnight_gap_pnl") is not None and abs(float(broker.get("overnight_gap_pnl") or 0)) > 25:
             reasons.append("carryover_gap")
-        if abs(pnl_state_realized - trade_history_realized) > 10:
+        if abs(pnl_state_realized - trade_history_realized) > 10 and not (
+            broker_supplemental_trade_count > 0 and abs(diff_trade_history) <= 5
+        ):
             reasons.append("internal_ledgers_diverge")
         if broker.get("broker_closed_symbols"):
             missing = sorted(set(broker.get("broker_closed_symbols") or []) - set(internal.get("symbols_in_trade_history") or []))
