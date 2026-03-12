@@ -17,6 +17,7 @@ DEFAULT_BRIEF = {
     "key_levels": {"support": 0, "resistance": 0},
     "momentum": "decelerating",
     "timeframe": "hours",
+    "error": True,
 }
 
 PROMPT_TEMPLATE = """You are a TECHNICAL specialist inside Velox.

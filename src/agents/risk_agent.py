@@ -10,34 +10,35 @@ from src.agents.base_agent import call_gpt
 
 
 DEFAULT_BRIEF = {
-    "approved": True,
-    "max_size_pct": 0.5,
-    "reasoning": "Risk agent unavailable — defaulting to reduced-size approve",
-    "portfolio_heat": "medium",
+    "approved": False,
+    "max_size_pct": 0.0,
+    "reasoning": "Risk agent unavailable — defaulting to DENY for safety",
+    "portfolio_heat": "high",
     "warnings": ["risk_agent_failed"],
     "error": True,
 }
 
-PROMPT_TEMPLATE = """You are a RISK MANAGEMENT specialist inside Velox.
-MISSION: $25K → $5M via capital velocity. We need to be IN trades, not sitting in cash.
-Your job: approve or deny new positions based on HARD LIMITS ONLY.
-APPROVE unless a hard limit is violated. Trailing stops (3%) cap individual position risk.
+PROMPT_TEMPLATE = """You are a RISK MANAGEMENT specialist inside Velox, an autonomous momentum trading engine.
+Your job: approve or deny new positions based on risk analysis. Capital protection is paramount.
 
-DENY ONLY FOR:
-- Wash sale violation (sold at loss within 31 days)  
+DENY FOR:
+- Wash sale violation (sold at loss within 31 days)
 - Max positions reached
-- Daily circuit breaker triggered (-4%+ daily loss)
-- Sector concentration >50%
-- Adding to a LOSING position (averaging down = catching a knife. NEVER.)
+- Daily circuit breaker triggered (-3%+ daily loss)
+- Sector concentration >40%
+- Adding to a LOSING position
+- Consecutive losses >= 3 without a win (raise the bar, reduce size)
+- Portfolio heat above 80% of daily loss budget
+- Insufficient edge signal quality (low confidence, conflicting signals)
 
-ALLOW adding to an EXISTING position IF:
-- The existing position is PROFITABLE (current price > entry price)
-- The stock is still showing momentum (the fact it's being evaluated means it's running)
-- Total position size after adding stays under 5% of equity
-- This is "averaging UP on a winner" — a legitimate momentum strategy
+APPROVE IF:
+- Hard limits are clear
+- Signals show genuine momentum with volume confirmation
+- Risk/reward is favorable given current portfolio state
+- Recent performance supports continued trading at this size
 
-DO NOT deny because of: "portfolio heat", "recent losses", "risk-off environment", "concentration concerns" below 50%, or subjective risk opinions. Those are not your job.
-If approving an add-to-winner, set max_size_pct to 1.5% (smaller add) and note "averaging up on profitable position" in reasoning.
+If approving, set max_size_pct conservatively. After losses, reduce size. After wins, normal size.
+If uncertain about edge quality, DENY. Missing a trade costs nothing; a bad trade costs real money.
 
 PROPOSED TRADE:
 - Symbol: {symbol}

@@ -40,10 +40,10 @@ class JuryVerdict:
         }
 
 
-PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox.
+PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox, a momentum trading engine.
 {mission}
 
-You receive briefs from 5 specialized agents. Synthesize them into ONE trade decision.
+Synthesize the briefs from 5 specialized agents into ONE trade decision.
 
 SYMBOL: {symbol} @ ${price:.2f}
 TODAY'S MOVE: {change_pct:+.1f}%
@@ -61,37 +61,39 @@ RETRO FEEDBACK: {retro_feedback}
 
 AGENT BRIEFS:
 
-📊 TECHNICAL:
+TECHNICAL:
 {technical}
 
-🐦 SENTIMENT:
+SENTIMENT:
 {sentiment}
 
-🔬 CATALYST:
+CATALYST:
 {catalyst}
 
-🛡️ RISK:
+RISK:
 {risk}
 
-🌍 MACRO:
+MACRO:
 {macro}
 
 DECISION FRAMEWORK:
-- BIAS TOWARD ACTION. Dead capital is the enemy. Trailing stops manage risk — your job is to find trades, not avoid them.
-- BUY if: Stock is up significantly (+10%+) with volume (1.5x+) and risk approves. Technical BUY is ideal but Technical HOLD with decent confidence (50%+) is also fine if other signals support.
-- SHORT if: Stock is crashing hard (-5%+ down) with volume, Technical says SELL, and macro/catalyst supports bearish case.
-- SHORT if: This is a fade-the-runner setup. A stock that ran big yesterday and is stalling/fading today is a mean-reversion short, not a momentum long.
-- For fade setups, prioritize exhaustion signals: yesterday's huge run, RSI stretched, day-2 volume failing to match day-1, and price trading weak versus the run close.
-- Convergence from multiple Tier-1 pro traders is supportive confirmation, not crowding by itself. Only discount it if retail/FOMO evidence is also obvious.
-- Use RETRO FEEDBACK as calibration, not a blind override. If the same setup has recently lost money, demand cleaner alignment or smaller size. If it has recently worked, don't overreact to weak objections.
-- SKIP ONLY if: Risk explicitly denies, OR the stock has tiny volume (<1x avg), OR the move is clearly over (price reversing against the trend).
-- If some agents are unavailable, MAKE THE CALL with what you have. 3 agents is enough. Don't skip just because sentiment or catalyst is offline.
-- "Decelerating momentum" alone is NOT a reason to skip. Stocks don't go straight up — they consolidate and continue. If price is still up big on volume, the trend is intact.
-- We have trailing stops at 3%. Maximum downside per trade is 3%. The cost of a wrong entry is small. The cost of missing a runner is infinite.
+- SKIP is the safe default. Only act when evidence is strong and multiple signals align.
+- BUY requires: (1) price up with genuine volume confirmation (2x+ avg), (2) at least 2 agent briefs supporting entry, (3) risk agent approves, (4) no critical macro headwinds. One signal alone is never enough.
+- SHORT requires: clear downward momentum with volume, technical sell signal, and catalyst/macro support for bearish case. Fade-the-runner setups (big day-1 run, day-2 exhaustion) are valid shorts when RSI is stretched and volume is failing.
+- SKIP when: risk denies, fewer than 2 agents support, volume is weak (<1.5x avg), signals conflict, confidence is below 50, the move looks extended without fresh catalyst, or RETRO FEEDBACK shows this setup has been losing money recently.
+- Trailing stops help manage risk but they can gap through, fail during halts, or not execute in extended hours. Do not assume any fixed maximum loss per trade.
+- After consecutive losses, demand stronger evidence before acting. Size down on marginal setups.
+- If most agents are unavailable (2+ failed), SKIP. Do not trade blind.
+
+CONFIDENCE CALIBRATION:
+- 80-100: High conviction. Multiple strong signals aligned. Would commit significant capital.
+- 50-79: Moderate edge. Some signals support, some neutral. Smaller size warranted.
+- Below 50: Insufficient evidence. Must SKIP regardless of any single strong signal.
 
 SIZING:
-- size_pct: 0.5% (speculative) to 3% (high conviction) of equity
-- trail_pct: 1.5% (tight, lock in gains) to 4% (wide, let it run)
+- size_pct: 0.5% (speculative) to 2.5% (high conviction) of equity. Default 1.5%.
+- trail_pct: 1.5% (tight) to 4% (wide). Default 3%.
+- After losses or in uncertain conditions, reduce size_pct by 30-50%.
 
 Respond with ONLY valid JSON:
 {{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis of why", "confidence": 0-100}}"""
@@ -185,9 +187,9 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
 
         verdict = _apply_consensus(symbol, price, votes, briefs, provider_results)
 
-        # Check if risk agent denied — hard override
+        # Check if risk agent denied — hard override (fires on error too since DEFAULT_BRIEF.approved=False)
         risk_brief = briefs.get("risk", {})
-        if risk_brief and not risk_brief.get("approved", True) and not risk_brief.get("error"):
+        if risk_brief and not risk_brief.get("approved", True):
             if verdict.decision in ("BUY", "SHORT"):
                 logger.info(f"🛡️ Jury overridden by Risk Agent for {symbol}: {risk_brief.get('reasoning', '')}")
                 return JuryVerdict(
@@ -473,46 +475,14 @@ def _apply_consensus(
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
-        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
-            return _decision_verdict(
-                symbol,
-                "BUY",
-                buy_votes,
-                skip_votes,
-                providers_used,
-                vote_map,
-                briefs,
-                "degraded_actionable_skip",
-                0.60,
-                0.75,
-                degraded=degraded,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
-        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
-            return _decision_verdict(
-                symbol,
-                "SHORT",
-                short_votes,
-                skip_votes,
-                providers_used,
-                vote_map,
-                briefs,
-                "degraded_actionable_skip",
-                0.60,
-                0.75,
-                degraded=degraded,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
         return _skip_verdict(
             symbol,
             briefs,
             providers_used,
             vote_map,
             total,
-            "degraded_split",
-            "Degraded jury: remaining models were not unanimous",
+            "degraded_no_consensus",
+            "Degraded jury: remaining models were not unanimous — SKIP for safety",
             degraded=degraded,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
@@ -556,11 +526,7 @@ def _apply_consensus(
             return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
         if len(skip_votes) == 2:
             return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        if len(buy_votes) == 1 and len(skip_votes) == 1 and len(short_votes) == 0:
-            return _decision_verdict(symbol, "BUY", buy_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        if len(short_votes) == 1 and len(skip_votes) == 1 and len(buy_votes) == 0:
-            return _decision_verdict(symbol, "SHORT", short_votes, skip_votes, providers_used, vote_map, briefs, "split_with_skip", 0.60, 0.75, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "split", "Two responding models disagreed", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "two_model_no_consensus", "Two models responded without unanimous agreement — SKIP for safety", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
 
     if len(buy_votes) == 3:
         return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)

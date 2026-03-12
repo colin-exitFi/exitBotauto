@@ -118,9 +118,7 @@ class TradeStream:
             try:
                 async with websockets.connect(url, ping_interval=20, ping_timeout=10) as ws:
                     self._ws = ws
-                    self._reconnect_delay = 1
 
-                    # Authenticate
                     auth = self._build_auth_message()
                     await ws.send(json.dumps(auth))
                     auth_resp = await ws.recv()
@@ -128,9 +126,10 @@ class TradeStream:
 
                     resp = json.loads(auth_resp)
                     if self._auth_succeeded(resp):
-                        logger.success("📡 Trade stream connected + authenticated")
+                        self._reconnect_delay = 1
+                        logger.success("Trade stream connected + authenticated")
                     else:
-                        logger.error(f"📡 Trade WS auth failed: {resp}")
+                        logger.error(f"Trade WS auth failed: {resp}. Retrying with backoff...")
                         continue
 
                     # Subscribe to trade updates

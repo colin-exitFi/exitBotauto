@@ -59,7 +59,7 @@ class ExitManager:
     def __init__(self, alpaca_client=None, polygon_client=None, risk_manager=None, entry_manager=None):
         self.broker = alpaca_client
         self.polygon = polygon_client
-        self.risk = risk_manager  # RiskManager for dynamic stop loss
+        self.risk = risk_manager
         self.entry = entry_manager
 
         self.tp1_pct = settings.TAKE_PROFIT_1_PCT
@@ -67,10 +67,18 @@ class ExitManager:
         self.stop_loss_pct = settings.STOP_LOSS_PCT
         self.trailing_pct = settings.TRAILING_STOP_PCT
         self.max_hold_seconds = settings.MAX_HOLD_HOURS * 3600
-        self.eod_exit_time = settings.EOD_EXIT_TIME  # "15:30" ET
+        self.eod_exit_time = settings.EOD_EXIT_TIME
 
         self.exit_history: List[Dict] = []
+        self._symbol_locks: Dict[str, asyncio.Lock] = {}
         logger.info("Exit manager initialized")
+
+    def get_symbol_lock(self, symbol: str) -> asyncio.Lock:
+        """Get or create the per-symbol lifecycle lock."""
+        sym = str(symbol or "").upper().strip()
+        if sym not in self._symbol_locks:
+            self._symbol_locks[sym] = asyncio.Lock()
+        return self._symbol_locks[sym]
 
     async def check_and_exit(self, position: Dict, current_price: float, sentiment_score: float) -> Optional[Dict]:
         """

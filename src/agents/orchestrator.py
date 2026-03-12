@@ -141,7 +141,19 @@ class Orchestrator:
             "macro": macro_brief,
         }
 
-        # Feed briefs to jury (include raw scanner data so jury can see price/volume)
+        all_defaults = all(
+            isinstance(b, dict) and b.get("error")
+            for b in [tech_brief, sent_brief, cat_brief, risk_brief, macro_brief]
+        )
+        if all_defaults:
+            logger.warning(f"All 5 agents failed for {symbol} — returning SKIP without jury call")
+            return JuryVerdict(
+                symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
+                reasoning="All 5 agent briefs are defaults (all errored) — SKIP for safety",
+                briefs=briefs,
+                consensus_detail={"agreement": "all_agents_failed", "votes": {}},
+            )
+
         verdict = await deliberate(symbol, price, briefs, signals_data=signals_data)
 
         # Update exit agent with latest briefs for this symbol

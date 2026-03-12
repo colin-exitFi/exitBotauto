@@ -235,11 +235,17 @@ class EntryManager:
         return notional
 
     async def can_enter(self, symbol: str, sentiment_score: float, current_positions: List[Dict]) -> bool:
-        """Check all entry conditions."""
+        """Check all entry conditions including persistent controls."""
         self.last_order_error = ""
         if not self.is_market_open():
             logger.debug("Market closed, cannot enter")
             return self._set_gate(symbol, False, "market_closed")
+
+        from src.data.entry_controls import is_entry_blocked
+        blocked, reason = is_entry_blocked(symbol)
+        if blocked:
+            logger.info(f"⛔ {symbol} blocked by persistent controls: {reason}")
+            return self._set_gate(symbol, False, f"persistent_{reason}")
 
         if symbol in getattr(self, "_halted_symbols", set()):
             logger.info(f"⛔ {symbol} is halted — blocking entry")
@@ -329,9 +335,15 @@ class EntryManager:
         if adjusted_notional is None:
             return None
         notional = adjusted_notional
-        # Reduce size during extended hours
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
+        equity = self.risk.equity if self.risk and hasattr(self.risk, 'equity') else (self.risk._equity if self.risk else 25000)
+        notional = min(notional, equity * 0.25)
+        min_notional = float(getattr(settings, "MIN_NOTIONAL", 25.0) or 25.0)
+        if notional < min_notional:
+            logger.warning(f"Notional ${notional:.2f} below MIN_NOTIONAL ${min_notional:.2f} for {symbol} — rejecting dust entry")
+            self.last_order_error = "below_min_notional"
+            return None
         shares = self.risk.get_shares(price, notional) if self.risk else 0
         if shares <= 0 or notional <= 0:
             tier = self.risk.get_risk_tier() if self.risk else {}
@@ -629,6 +641,13 @@ class EntryManager:
         notional = adjusted_notional
         if extended:
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
+        equity = self.risk.equity if self.risk and hasattr(self.risk, 'equity') else (self.risk._equity if self.risk else 25000)
+        notional = min(notional, equity * 0.25)
+        min_notional = float(getattr(settings, "MIN_NOTIONAL", 25.0) or 25.0)
+        if notional < min_notional:
+            logger.warning(f"SHORT notional ${notional:.2f} below MIN_NOTIONAL ${min_notional:.2f} for {symbol} — rejecting")
+            self.last_order_error = "below_min_notional"
+            return None
         shares = int(notional / price) if price > 0 else 0
         if shares < 1:
             logger.warning(f"SHORT position size too small for {symbol} @ ${price:.2f}")
@@ -798,6 +817,7 @@ class EntryManager:
         """
         Escalate a fast-path scout position to full size.
         Only valid for breakout_fast_path positions and only once.
+        Must pass persistent entry controls.
         """
         pos = self.positions.get(symbol)
         if not pos:
@@ -809,6 +829,12 @@ class EntryManager:
         if pos.get("side", "long") != "long":
             return None
         if not self.broker or not self.polygon:
+            return None
+
+        from src.data.entry_controls import is_entry_blocked
+        blocked, reason = is_entry_blocked(symbol)
+        if blocked:
+            logger.info(f"Scout escalation blocked for {symbol}: {reason}")
             return None
 
         current_positions = self.get_positions()

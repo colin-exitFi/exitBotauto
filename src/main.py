@@ -319,14 +319,30 @@ class TradingBot:
             "last_uw_stream_signal": None,
         }
 
-        # ── Restore persisted state ─────────────────────────────────
-        # Positions: merge disk state with Alpaca reality
+        # ── Fail-Closed Startup: broker is canonical ──────────────────
+        self._broker_ready = False
         saved_positions = persistence.load_positions()
+        broker_symbols = {p.get("symbol") for p in (self.entry_manager.get_positions() or [])}
+        ghost_count = 0
+        restored_count = 0
         if saved_positions:
             for sym, pos in saved_positions.items():
-                if sym not in self.entry_manager.positions:
-                    self.entry_manager.positions[sym] = pos
-            logger.info(f"📦 Merged {len(saved_positions)} persisted positions")
+                if sym in broker_symbols:
+                    if sym not in self.entry_manager.positions:
+                        self.entry_manager.positions[sym] = pos
+                        restored_count += 1
+                else:
+                    ghost_count += 1
+                    logger.warning(f"GHOST POSITION REMOVED: {sym} on disk but not on broker — tombstoning")
+                    try:
+                        from src.data.entry_controls import tombstone_symbol
+                        tombstone_symbol(sym, reason="ghost_position_startup_cleanup")
+                    except Exception:
+                        pass
+            if restored_count:
+                logger.info(f"Restored {restored_count} broker-confirmed positions from disk")
+            if ghost_count:
+                logger.warning(f"Tombstoned {ghost_count} ghost positions not found on broker")
 
         # Options positions: restore + reconcile with broker snapshot
         if self.options_engine:
@@ -390,7 +406,19 @@ class TradingBot:
         except Exception as e:
             logger.debug(f"Earnings calendar fetch failed: {e}")
 
-        logger.success("✅ All components initialized")
+        # Validate broker health before enabling entries
+        try:
+            _acct = await asyncio.get_event_loop().run_in_executor(None, self.alpaca_client.get_account)
+            if _acct and _acct.get("equity"):
+                self._broker_ready = True
+                logger.success("Broker health validated — entries enabled")
+            else:
+                logger.error("Broker health check returned empty account — entries BLOCKED")
+        except Exception as _be:
+            logger.error(f"Broker health check failed: {_be} — entries BLOCKED until next cycle")
+
+        persistence.clear_shutdown_marker()
+        logger.success("All components initialized")
 
     async def run(self):
         """Main trading loop with AI layers running as concurrent tasks."""
@@ -1990,6 +2018,8 @@ class TradingBot:
 
     async def _execute_fast_path_scout_entry(self, candidate: dict):
         """Async scout entry path (can use network; launched from sync callback via create_task)."""
+        if not getattr(self, "_broker_ready", False):
+            return
         symbol = candidate["symbol"]
         price = float(candidate.get("price", 0) or 0)
         pct_change = float(candidate.get("change_pct", 0) or 0)
@@ -2221,6 +2251,8 @@ class TradingBot:
 
     async def _process_candidates(self, candidates):
         """Evaluate scanner candidates for entry with position manager veto."""
+        if not getattr(self, "_broker_ready", False):
+            return
         if not self.risk_manager.can_trade():
             return
 
@@ -2323,12 +2355,22 @@ class TradingBot:
                     if verdict.decision not in ("BUY", "SHORT"):
                         if "cooldown" not in verdict.reasoning.lower():
                             self._record_jury_veto(symbol)
-                            logger.info(f"🗳️ Jury SKIP for {symbol}: {verdict.reasoning}")
-                            log_activity("ai", f"🗳️ {symbol}: SKIP — {verdict.reasoning}")
+                            from src.data.entry_controls import record_jury_veto as _persist_veto
+                            _persist_veto(symbol)
+                            logger.info(f"Jury SKIP for {symbol}: {verdict.reasoning}")
+                            log_activity("ai", f"{symbol}: SKIP — {verdict.reasoning}")
+                        continue
+                    min_conf = float(getattr(settings, "MIN_JURY_CONFIDENCE", 40) or 40)
+                    if verdict.confidence < min_conf:
+                        logger.warning(f"Jury {verdict.decision} for {symbol} below confidence floor ({verdict.confidence:.0f}% < {min_conf:.0f}%) — forcing SKIP")
+                        log_activity("ai", f"{symbol}: {verdict.decision} blocked — confidence {verdict.confidence:.0f}% < {min_conf:.0f}% threshold")
+                        self._record_jury_veto(symbol)
                         continue
                     direction = verdict.decision
-                    if direction == "BUY":
+                    if direction in ("BUY", "SHORT"):
                         self._clear_jury_veto(symbol)
+                        from src.data.entry_controls import clear_jury_veto as _clear_persist_veto
+                        _clear_persist_veto(symbol)
                     # Map jury sizing to consensus_size_modifier (0-1 range)
                     tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
                     tier_size = tier.get("size_pct", 2.0)
@@ -2366,8 +2408,7 @@ class TradingBot:
             raw_sentiment_score = float(sentiment_score or 0)
             effective_sentiment_score = raw_sentiment_score
             if direction == "SHORT":
-                min_entry_sent = float(getattr(self.entry_manager, "min_sentiment", settings.MIN_ENTRY_SENTIMENT) or settings.MIN_ENTRY_SENTIMENT)
-                effective_sentiment_score = -max(abs(raw_sentiment_score), min_entry_sent)
+                effective_sentiment_score = -abs(raw_sentiment_score) if raw_sentiment_score != 0 else -0.1
                 sentiment_data["raw_sentiment_score"] = raw_sentiment_score
                 sentiment_data["score"] = effective_sentiment_score
             else:
@@ -2643,6 +2684,18 @@ class TradingBot:
             self.entry_manager.remove_position(symbol)
         if self.risk_manager:
             self.risk_manager.record_trade(trade_record)
+
+        if symbol and asset_type != "option":
+            try:
+                from src.data import entry_controls
+                exit_time = float(trade_record.get("exit_time", time.time()) or time.time())
+                entry_controls.set_cooldown(symbol, exit_confirmed_at=exit_time)
+                anomaly_flags = trade_record.get("anomaly_flags", []) or []
+                reason_str = str(trade_record.get("reason", "") or "").lower()
+                if "statistical_poison" in str(anomaly_flags).lower() or "blacklist" in reason_str:
+                    entry_controls.blacklist_symbol(symbol, reason=reason_str, source="exit_recording")
+            except Exception as ec_err:
+                logger.debug(f"Entry controls update failed for {symbol}: {ec_err}")
         copy_trader_monitor = getattr(self, "copy_trader_monitor", None)
         if copy_trader_monitor and (
             trade_record.get("copy_trader_handles")
@@ -3097,25 +3150,26 @@ class TradingBot:
                                 pos["trailing_stop_order_id"] = stop_order.get("id")
                                 pos["_trail_retry_count"] = 0
                                 logger.success(f"📈 Trailing stop placed: {symbol} trail={trail_pct}%")
-                            elif retry_count >= 5:
-                                # Only emergency sell after 5 failed attempts across 5 scan cycles
-                                logger.error(f"🚨 TRAILING STOP FAILED 5x for {symbol} — FORCED MARKET EXIT for protection")
-                                emergency_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
-                                order = await asyncio.get_event_loop().run_in_executor(
-                                    None, emergency_fn, symbol, raw_qty
-                                )
-                                if order:
-                                    self.entry_manager.remove_position(symbol)
-                                    log_activity("alert", f"🚨 Emergency market exit: {symbol} — trailing stop failed 5x")
+                            elif retry_count >= 2:
+                                logger.error(f"TRAILING STOP FAILED {retry_count}x for {symbol} — FORCED EXIT via exit_manager")
+                                entry_price = float(pos.get("entry_price", 0) or 0)
+                                if side == "short":
+                                    _pnl_pct = ((entry_price - float(pos.get("current_price", entry_price))) / entry_price * 100) if entry_price else 0
+                                else:
+                                    _pnl_pct = ((float(pos.get("current_price", entry_price)) - entry_price) / entry_price * 100) if entry_price else 0
+                                await self.exit_manager._execute_exit(pos, raw_qty, float(pos.get("current_price", entry_price)), "emergency_trail_failure", _pnl_pct)
+                                log_activity("alert", f"Emergency exit: {symbol} — trailing stop failed {retry_count}x")
                             else:
-                                logger.warning(f"⚠️ Trailing stop failed for {symbol} — will retry next cycle ({retry_count}/5)")
+                                logger.warning(f"Trailing stop failed for {symbol} — will retry next cycle ({retry_count}/2)")
                         elif pos.get("_dust_remainder") and raw_qty > 0:
-                            logger.warning(f"🧹 {symbol} fractional remainder {raw_qty:.4f} cannot carry trailing stop — liquidating dust")
-                            emergency_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
-                            order = await asyncio.get_event_loop().run_in_executor(None, emergency_fn, symbol, raw_qty)
-                            if order:
-                                self.entry_manager.remove_position(symbol)
-                                log_activity("trade", f"🧹 Dust exit: {symbol} {raw_qty:.4f} shares")
+                            logger.warning(f"{symbol} fractional {raw_qty:.4f} — liquidating dust via exit_manager")
+                            entry_price = float(pos.get("entry_price", 0) or 0)
+                            if side == "short":
+                                _pnl_pct = ((entry_price - float(pos.get("current_price", entry_price))) / entry_price * 100) if entry_price else 0
+                            else:
+                                _pnl_pct = ((float(pos.get("current_price", entry_price)) - entry_price) / entry_price * 100) if entry_price else 0
+                            await self.exit_manager._execute_exit(pos, raw_qty, float(pos.get("current_price", entry_price)), "dust_liquidation", _pnl_pct)
+                            log_activity("trade", f"Dust exit: {symbol} {raw_qty:.4f} shares")
 
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")
