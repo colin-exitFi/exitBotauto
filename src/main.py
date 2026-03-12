@@ -2401,8 +2401,18 @@ class TradingBot:
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
             # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -effective_sentiment_score if direction == "SHORT" else effective_sentiment_score
-            can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
-            gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
+            try:
+                from src.data import entry_controls as _entry_controls
+                strategy_limit = int(getattr(settings, "MAX_ENTRIES_PER_STRATEGY_PER_DAY", 8) or 8)
+                if _entry_controls.get_strategy_entry_count(sentiment_data.get("strategy_tag", "unknown")) >= strategy_limit:
+                    gate_reason = "strategy_daily_limit"
+                    can = False
+                else:
+                    can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
+                    gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
+            except Exception:
+                can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
+                gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
             risk_status = {}
             if self.risk_manager and hasattr(self.risk_manager, "get_status"):
                 try:
@@ -2486,6 +2496,11 @@ class TradingBot:
                     order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
                     self._record_short_verdict_block(symbol, order_reason, "execution")
                 if pos:
+                    try:
+                        from src.data import entry_controls as _entry_controls
+                        _entry_controls.record_entry(symbol, sentiment_data.get("strategy_tag", "unknown"), ts=time.time())
+                    except Exception as _ec_err:
+                        logger.debug(f"Entry count update failed for {symbol}: {_ec_err}")
                     positions = self.entry_manager.get_positions()
 
     async def _monitor_pending_orders(self):
@@ -2695,8 +2710,8 @@ class TradingBot:
                 entry_controls.set_cooldown(symbol, exit_confirmed_at=exit_time)
                 anomaly_flags = trade_record.get("anomaly_flags", []) or []
                 reason_str = str(trade_record.get("reason", "") or "").lower()
-                if "statistical_poison" in str(anomaly_flags).lower() or "blacklist" in reason_str:
-                    entry_controls.blacklist_symbol(symbol, reason=reason_str, source="exit_recording")
+                if ("statistical_poison" in str(anomaly_flags).lower() or "blacklist" in reason_str or "emergency_trail_failure" in reason_str or "dust_liquidation" in reason_str or "protection_failed" in str(anomaly_flags).lower() or "broker_reloaded_after_local_removal" in str(anomaly_flags).lower()):
+                    entry_controls.blacklist_symbol(symbol, reason=reason_str or str(anomaly_flags), source="exit_recording")
             except Exception as ec_err:
                 logger.debug(f"Entry controls update failed for {symbol}: {ec_err}")
         copy_trader_monitor = getattr(self, "copy_trader_monitor", None)

@@ -246,7 +246,7 @@ class EntryManager:
             return self._set_gate(symbol, False, "halted")
 
         from src.data.entry_controls import is_entry_blocked
-        blocked, reason = is_entry_blocked(symbol)
+        blocked, reason = is_entry_blocked(symbol, max_symbol_entries=int(getattr(settings, "MAX_ENTRIES_PER_SYMBOL_PER_DAY", 2) or 2))
         if blocked:
             logger.info(f"⛔ {symbol} blocked by persistent controls: {reason}")
             return self._set_gate(symbol, False, f"persistent_{reason}")
@@ -836,7 +836,7 @@ class EntryManager:
             return None
 
         from src.data.entry_controls import is_entry_blocked
-        blocked, reason = is_entry_blocked(symbol)
+        blocked, reason = is_entry_blocked(symbol, max_symbol_entries=int(getattr(settings, "MAX_ENTRIES_PER_SYMBOL_PER_DAY", 2) or 2))
         if blocked:
             logger.info(f"Scout escalation blocked for {symbol}: {reason}")
             return None

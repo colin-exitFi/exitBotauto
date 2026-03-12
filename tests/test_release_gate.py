@@ -97,6 +97,20 @@ class TestEntryControls(unittest.TestCase):
         self.assertTrue(is_blacklisted("aapl"))
 
 
+    def test_symbol_daily_entry_limit_blocks(self):
+        from src.data.entry_controls import record_entry, is_entry_blocked
+        record_entry("DOMO", "breakout_fast_path")
+        record_entry("DOMO", "breakout_fast_path")
+        blocked, reason = is_entry_blocked("DOMO", max_symbol_entries=2)
+        self.assertTrue(blocked)
+        self.assertEqual(reason, "symbol_daily_limit")
+
+    def test_strategy_daily_entry_limit_counts(self):
+        from src.data.entry_controls import record_entry, get_strategy_entry_count
+        record_entry("AAPL", "breakout_fast_path")
+        record_entry("MSFT", "breakout_fast_path")
+        self.assertEqual(get_strategy_entry_count("breakout_fast_path"), 2)
+
 class TestTradingCalendar(unittest.TestCase):
     """D6: Canonical trading calendar."""
 
