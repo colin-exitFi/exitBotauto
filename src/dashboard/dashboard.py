@@ -1693,6 +1693,9 @@ function renderEquityCurve(points) {
 }
 
 async function refresh() {
+  let _trustFlags = {};
+  let _brokerOnlyMode = false;
+  let _degradedInternal = false;
   // Status
   const s = await api('/api/status');
   if (s) {
@@ -1739,8 +1742,11 @@ async function refresh() {
       el.className = 'value muted';
     };
     const trust = pnl.trust_flags || {};
+    _trustFlags = trust;
     const brokerOnly = !!trust.broker_only_mode;
     const degradedInternal = !!trust.internal_analytics_degraded;
+    _brokerOnlyMode = brokerOnly;
+    _degradedInternal = degradedInternal;
     $('totalPnl').textContent = '$' + (pnl.total_pnl||0).toFixed(2);
     $('totalPnl').className = 'value big-pnl ' + cls(pnl.total_pnl||0);
     setPnl('equity', pnl.equity||0);
@@ -1813,19 +1819,20 @@ async function refresh() {
     const pnlChanged = _prevPnl !== null && _prevPnl !== (m.daily_pnl||0);
     _prevPnl = m.daily_pnl||0;
     const anim = pnlChanged ? ' animated' : '';
+    const metricMuted = _degradedInternal ? ' muted' : '';
     $('metrics').innerHTML = `
       <div class="metric"><div class="value" style="color:#d2a8ff">${m.tier_name||'?'}</div><div class="label">Risk Tier</div></div>
-      <div class="metric"><div class="value ${m.swing_mode?'negative':'positive'}">${m.swing_mode?'SWING':'NORMAL'}</div><div class="label">Mode</div></div>
-      <div class="metric"><div class="value">${m.remaining_day_trades??'—'}</div><div class="label">Day Trades</div></div>
-      <div class="metric"><div class="value">${m.consecutive_wins||0}W/${m.consecutive_losses||0}L</div><div class="label">Streak</div></div>
-      <div class="metric"><div class="value">${(m.heat_pct||0).toFixed(0)}%</div><div class="label">Heat</div></div>
-      <div class="metric"><div class="value">${(m.tier_size_pct||0)}%</div><div class="label">Pos Size</div></div>
-      <div class="metric"><div class="value">${m.tier_max_positions||0}</div><div class="label">Max Pos</div></div>
-      <div class="metric"><div class="value">$${(m.ath_equity||0).toLocaleString()}</div><div class="label">ATH</div></div>
-      <div class="metric"><div class="value">$${(m.next_milestone||0).toLocaleString()}</div><div class="label">Next Milestone</div></div>
-      <div class="metric"><div class="value info">${(m.milestone_progress_pct||0).toFixed(0)}%</div><div class="label">→ Progress</div></div>
-      <div class="metric"><div class="value ${cls(m.total_return_pct||0)}">${(m.total_return_pct||0).toFixed(1)}%</div><div class="label">Total Return</div></div>
-      <div class="metric"><div class="value">${(m.days_trading||0).toFixed(0)}d</div><div class="label">Days</div></div>
+      <div class="metric"><div class="value${metricMuted} ${_degradedInternal ? "" : (m.swing_mode?'negative':'positive')}">${m.swing_mode?'SWING':'NORMAL'}</div><div class="label">Mode</div></div>
+      <div class="metric"><div class="value${metricMuted}">${m.remaining_day_trades??'—'}</div><div class="label">Day Trades</div></div>
+      <div class="metric"><div class="value${metricMuted}">${m.consecutive_wins||0}W/${m.consecutive_losses||0}L</div><div class="label">Streak</div></div>
+      <div class="metric"><div class="value${metricMuted}">${(m.heat_pct||0).toFixed(0)}%</div><div class="label">Heat</div></div>
+      <div class="metric"><div class="value${metricMuted}">${(m.tier_size_pct||0)}%</div><div class="label">Pos Size</div></div>
+      <div class="metric"><div class="value${metricMuted}">${m.tier_max_positions||0}</div><div class="label">Max Pos</div></div>
+      <div class="metric"><div class="value${metricMuted}">$${(m.ath_equity||0).toLocaleString()}</div><div class="label">ATH</div></div>
+      <div class="metric"><div class="value${metricMuted}">$${(m.next_milestone||0).toLocaleString()}</div><div class="label">Next Milestone</div></div>
+      <div class="metric"><div class="value${metricMuted} ${_degradedInternal ? "" : "info"}">${(m.milestone_progress_pct||0).toFixed(0)}%</div><div class="label">→ Progress</div></div>
+      <div class="metric"><div class="value${metricMuted} ${_degradedInternal ? "" : cls(m.total_return_pct||0)}">${(m.total_return_pct||0).toFixed(1)}%</div><div class="label">Total Return</div></div>
+      <div class="metric"><div class="value${metricMuted}">${(m.days_trading||0).toFixed(0)}d</div><div class="label">Days</div></div>
     `;
   }
   // AI Status
@@ -1841,7 +1848,7 @@ async function refresh() {
       html += '</div>';
       if (ai.last_game_film) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#d2a8ff">🎬 Game Film:</strong> ' + ai.last_game_film + '</div>';
       if (ai.short_verdicts_blocked) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#f85149">🩳 Short blocks:</strong> ' + ai.short_verdicts_blocked + (ai.last_short_block_reason ? ' · ' + ai.last_short_block_reason : '') + '</div>';
-      $('aiStatus').innerHTML = html;
+      $('aiStatus').innerHTML = _degradedInternal ? `<div style="margin-bottom:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px;color:#8b949e">Internal AI summaries degraded by reconciliation state.<\/div>` + html : html;
     } else { $('aiStatus').innerHTML = '<span class="empty">AI layers not initialized</span>'; }
   }
   // Consensus
@@ -1849,7 +1856,7 @@ async function refresh() {
   if (con) {
     const st = con.stats || {};
     const ac = st.api_calls || {};
-    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations` : '❌ Disabled';
+    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations${_brokerOnlyMode ? ' | degraded' : _degradedInternal ? ' | internal degraded' : ''}` : '❌ Disabled';
     $('consensusSummary').innerHTML = con.enabled ? `
       <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Evals</div></div>
       <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY</div></div>
@@ -1889,7 +1896,7 @@ async function refresh() {
       <div class="summary-item" title="${bestSource?bestSource.name:''}"><div class="val val-sm ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?bestSource.name:'—'}</div><div class="lbl">Top Source</div></div>
       <div class="summary-item"><div class="val info">${typeof s.avg_signal_to_fill_ms==='number'?Math.round(s.avg_signal_to_fill_ms)+'ms':'—'}</div><div class="lbl">Avg Sig→Fill</div></div>
     ` : '';
-    $('tradeHistory').innerHTML = th.trades.length ? th.trades.slice().reverse().map(t => `<tr>
+    const tradeHistoryHtml = th.trades.length ? th.trades.slice().reverse().map(t => `<tr style="${_degradedInternal ? 'opacity:0.65' : ''}">
       <td><strong>${t.symbol||'?'}</strong></td>
       <td>$${(t.entry_price||0).toFixed(2)}</td><td>$${(t.exit_price||0).toFixed(2)}</td>
       <td class="${cls(t.pnl||0)}"><strong>${fmt(t.pnl||0)}</strong></td>
@@ -1900,6 +1907,7 @@ async function refresh() {
       <td class="${(t.slippage_bps||0) > 0 ? 'negative' : 'positive'}">${fmt(t.slippage_bps||0, 1)}</td>
       <td class="info">${typeof t.signal_to_fill_ms==='number'?Math.round(t.signal_to_fill_ms):'—'}</td>
     </tr>`).join('') : '<tr><td colspan="11" class="empty">No completed trades yet</td></tr>';
+    $('tradeHistory').innerHTML = (_degradedInternal ? '<tr><td colspan="11" class="empty" style="color:#8b949e">Internal trade analytics degraded by reconciliation state</td></tr>' : '') + tradeHistoryHtml;
   }
   // Strategy controls
   const sc = await api('/api/strategy-controls');
