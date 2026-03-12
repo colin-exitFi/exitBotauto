@@ -2681,7 +2681,17 @@ class TradingBot:
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
         if self.entry_manager and symbol and asset_type != "option":
-            self.entry_manager.remove_position(symbol)
+            # For partial exits (TP1), preserve the position with remaining quantity
+            is_partial = (position or {}).get("exit_scope") == "partial" or \
+                         str(trade_record.get("reason", "") or "").endswith("_1")
+            remaining_qty = float((position or {}).get("quantity", 0) or 0) - float(trade_record.get("quantity", 0) or 0)
+            if is_partial and remaining_qty > 0:
+                if position:
+                    position["quantity"] = remaining_qty
+                    position["partial_exit"] = True
+                    position.pop("exit_recorded", None)  # allow future exit recording
+            else:
+                self.entry_manager.remove_position(symbol)
         if self.risk_manager:
             self.risk_manager.record_trade(trade_record)
 
