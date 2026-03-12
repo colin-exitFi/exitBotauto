@@ -2223,44 +2223,16 @@ class TradingBot:
         if not pos:
             return
         qty = float(pos.get("quantity", 0) or 0)
-        if qty <= 0:
+        if qty <= 0 or not self.exit_manager:
             return
+        entry_price = float(pos.get("entry_price", 0) or 0)
         side = pos.get("side", "long")
-        close_fn = self.alpaca_client.place_market_buy if side == "short" else self.alpaca_client.place_market_sell
-        order = await asyncio.get_event_loop().run_in_executor(None, close_fn, symbol, qty)
-        if not order:
-            return
-        exit_price = float(order.get("filled_avg_price", pos.get("entry_price", 0)) or pos.get("entry_price", 0))
-        entry_price = float(pos.get("entry_price", exit_price) or exit_price)
-        pnl = (entry_price - exit_price) * qty if side == "short" else (exit_price - entry_price) * qty
-        pnl_pct = ((exit_price - entry_price) / entry_price * 100) if entry_price else 0
+        current_price = float(pos.get("current_price", entry_price) or entry_price)
         if side == "short":
-            pnl_pct = -pnl_pct
-        trade_record = {
-            "symbol": symbol,
-            "side": "buy_to_cover" if side == "short" else "sell",
-            "entry_price": entry_price,
-            "exit_price": exit_price,
-            "quantity": qty,
-            "pnl": pnl,
-            "pnl_pct": pnl_pct,
-            "reason": reason,
-            "hold_seconds": time.time() - pos.get("entry_time", time.time()),
-            "entry_time": pos.get("entry_time", 0),
-            "exit_time": time.time(),
-            "strategy_tag": pos.get("strategy_tag", "unknown"),
-            "signal_sources": pos.get("signal_sources", ["unknown"]),
-            "decision_confidence": pos.get("decision_confidence", 0),
-            "provider_used": pos.get("provider_used", ""),
-            "signal_price": pos.get("signal_price", entry_price),
-            "decision_price": pos.get("decision_price", entry_price),
-            "fill_price": exit_price,
-            "slippage_bps": self._compute_entry_slippage_bps(
-                entry_price, pos.get("signal_price", entry_price), side
-            ),
-            **self._compute_signal_latency_fields(pos),
-        }
-        self._record_realized_exit(trade_record)
+            pnl_pct = ((entry_price - current_price) / entry_price * 100) if entry_price else 0
+        else:
+            pnl_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
+        await self.exit_manager._execute_exit(pos, qty, current_price, reason, pnl_pct)
 
     async def _process_candidates(self, candidates):
         """Evaluate scanner candidates for entry with position manager veto."""

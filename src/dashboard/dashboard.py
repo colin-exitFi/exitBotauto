@@ -554,6 +554,14 @@ async def get_status():
         return {"running": False, "error": "Bot not connected"}
     risk_status = _bot.risk_manager.get_status() if _bot.risk_manager else {}
     positions = _bot.entry_manager.get_positions() if _bot.entry_manager else []
+    reconciliation_state = {}
+    if getattr(_bot, "reconciler", None):
+        try:
+            reconciliation_state = _bot.reconciler.snapshot()
+        except Exception:
+            reconciliation_state = {}
+    trust = reconciliation_state.get("trust", {}) if isinstance(reconciliation_state, dict) else {}
+    recon = reconciliation_state.get("reconciliation", {}) if isinstance(reconciliation_state, dict) else {}
     return {
         "running": _bot.running,
         "paused": _bot.paused,
@@ -562,6 +570,8 @@ async def get_status():
         "uptime_seconds": int(time.time() - _bot.start_time) if hasattr(_bot, 'start_time') else 0,
         "options_enabled": bool(getattr(settings, "OPTIONS_ENABLED", False)),
         "options_execution_enabled": bool(getattr(_bot, "options_engine", None)),
+        "reconciliation_status": recon.get("status", "unknown"),
+        "trust_flags": trust,
         **risk_status,
     }
 
@@ -613,7 +623,13 @@ async def get_positions():
             "trail_pct": p.get("trail_pct", 3.0),
             "guard_limit": guard_info.get("limit_price", 0),
         })
-    return enriched
+    if getattr(_bot, "reconciler", None):
+        try:
+            trust = (_bot.reconciler.snapshot() or {}).get("trust", {})
+            return {"positions": enriched, "trust_flags": trust}
+        except Exception:
+            pass
+    return {"positions": enriched, "trust_flags": {}}
 
 
 @app.get("/api/options")
@@ -684,12 +700,19 @@ async def get_consensus():
     if not _bot or not hasattr(_bot, 'orchestrator') or not _bot.orchestrator:
         return {"enabled": False, "history": [], "stats": {}}
     ai = getattr(_bot, "ai_layers", {}) or {}
+    trust = {}
+    if getattr(_bot, "reconciler", None):
+        try:
+            trust = (_bot.reconciler.snapshot() or {}).get("trust", {})
+        except Exception:
+            trust = {}
     return {
         "enabled": True,
         "history": _bot.orchestrator.get_history()[-10:],
         "stats": _bot.orchestrator.get_stats(),
         "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
         "last_short_block_reason": ai.get("last_short_block_reason"),
+        "trust_flags": trust,
     }
 
 
@@ -740,11 +763,18 @@ async def get_trade_history(limit: int = 20):
     # Compute best/worst
     best = max(trades, key=lambda t: t.get("pnl", 0)) if trades else None
     worst = min(trades, key=lambda t: t.get("pnl", 0)) if trades else None
+    trust = {}
+    if getattr(_bot, "reconciler", None):
+        try:
+            trust = (_bot.reconciler.snapshot() or {}).get("trust", {})
+        except Exception:
+            trust = {}
     return {
         "trades": trades,
         "stats": stats,
         "best": best,
         "worst": worst,
+        "trust_flags": trust,
     }
 
 
@@ -1088,7 +1118,13 @@ async def get_guards():
 async def get_metrics():
     if not _bot or not _bot.risk_manager:
         return {}
-    return _bot.risk_manager.get_status()
+    payload = dict(_bot.risk_manager.get_status())
+    if getattr(_bot, "reconciler", None):
+        try:
+            payload["trust_flags"] = (_bot.reconciler.snapshot() or {}).get("trust", {})
+        except Exception:
+            payload["trust_flags"] = {}
+    return payload
 
 
 @app.get("/api/activity")
@@ -1816,6 +1852,7 @@ async function refresh() {
   // Metrics
   const m = await api('/api/metrics');
   if (m) {
+    if (m.trust_flags) { _trustFlags = m.trust_flags; _brokerOnlyMode = !!_trustFlags.broker_only_mode; _degradedInternal = !!_trustFlags.internal_analytics_degraded; }
     const pnlChanged = _prevPnl !== null && _prevPnl !== (m.daily_pnl||0);
     _prevPnl = m.daily_pnl||0;
     const anim = pnlChanged ? ' animated' : '';
@@ -1854,6 +1891,7 @@ async function refresh() {
   // Consensus
   const con = await api('/api/consensus');
   if (con) {
+    if (con.trust_flags) { _trustFlags = con.trust_flags; _brokerOnlyMode = !!_trustFlags.broker_only_mode; _degradedInternal = !!_trustFlags.internal_analytics_degraded; }
     const st = con.stats || {};
     const ac = st.api_calls || {};
     $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations${_brokerOnlyMode ? ' | degraded' : _degradedInternal ? ' | internal degraded' : ''}` : '❌ Disabled';
@@ -1881,6 +1919,7 @@ async function refresh() {
   // Trade History
   const th = await api('/api/trade-history?limit=20');
   if (th) {
+    if (th.trust_flags) { _trustFlags = th.trust_flags; _brokerOnlyMode = !!_trustFlags.broker_only_mode; _degradedInternal = !!_trustFlags.internal_analytics_degraded; }
     const s = th.stats?.overall || {};
     const best = th.best, worst = th.worst;
     const bestStrategy = topPnlBucket(th.stats?.by_strategy_tag);
@@ -2004,7 +2043,9 @@ async function refresh() {
     </tr>`).join('') : '<tr><td colspan="13" class="empty">No open options positions</td></tr>';
   }
   // Bot Positions
-  const pos = await api('/api/positions');
+  const posPayload = await api('/api/positions');
+  const pos = posPayload && Array.isArray(posPayload.positions) ? posPayload.positions : [];
+  if (posPayload && posPayload.trust_flags) { _trustFlags = posPayload.trust_flags; _brokerOnlyMode = !!_trustFlags.broker_only_mode; _degradedInternal = !!_trustFlags.internal_analytics_degraded; }
   $('positions').innerHTML = pos && pos.length ? pos.map(p => {
     const isPending = p.order_status === 'pending';
     const statusBadge = isPending ? '<span class="tag" style="background:#e3b34122;color:#e3b341;border:1px solid #e3b34144;margin-left:4px">PENDING</span>' : '';
