@@ -1501,6 +1501,24 @@ class TradingBot:
         return current
 
     @staticmethod
+    def _strategy_allowed_for_regime(strategy_tag: str, regime: str) -> bool:
+        strategy = str(strategy_tag or "unknown")
+        active = set(getattr(settings, "ACTIVE_STRATEGY_TAGS", []) or [])
+        if active and strategy not in active:
+            return False
+        regime_key = str(regime or "mixed").lower()
+        regime_map = {
+            "risk_on": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_RISK_ON", []) or []),
+            "risk_off": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_RISK_OFF", []) or []),
+            "mixed": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_MIXED", []) or []),
+            "choppy": set(getattr(settings, "REGIME_ALLOWED_STRATEGIES_CHOPPY", []) or []),
+        }
+        allowed = regime_map.get(regime_key) or regime_map.get("mixed") or set()
+        if not allowed:
+            return True
+        return strategy in allowed
+
+    @staticmethod
     def _compute_entry_slippage_bps(entry_price: float, signal_price: float, side: str) -> float:
         """
         Compute signed entry slippage in bps vs signal price.
@@ -2370,6 +2388,11 @@ class TradingBot:
                         (getattr(verdict, "consensus_detail", {}) or {}).get("agreement", "")
                     )
                     sentiment_data["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
+                    scanner_obj = getattr(self, "scanner", None)
+                    active_regime = getattr(self, "scan_regime", None) or (scanner_obj.get_last_market_regime() if scanner_obj and hasattr(scanner_obj, "get_last_market_regime") else "mixed")
+                    if not self._strategy_allowed_for_regime(sentiment_data["strategy_tag"], active_regime):
+                        logger.info(f"⛔ {symbol} strategy {sentiment_data['strategy_tag']} blocked in regime {active_regime}")
+                        continue
                 except Exception as e:
                     logger.error(f"Orchestrator error for {symbol}: {e}")
                     continue  # Never trade without agent consensus
@@ -2379,6 +2402,11 @@ class TradingBot:
             sentiment_data.setdefault("provider_used", "")
             sentiment_data.setdefault("consensus_confidence", 0)
             sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
+            scanner_obj = getattr(self, "scanner", None)
+            active_regime = getattr(self, "scan_regime", None) or (scanner_obj.get_last_market_regime() if scanner_obj and hasattr(scanner_obj, "get_last_market_regime") else "mixed")
+            if not self._strategy_allowed_for_regime(sentiment_data.get("strategy_tag", "unknown"), active_regime):
+                logger.info(f"⛔ {symbol} strategy {sentiment_data.get('strategy_tag', 'unknown')} blocked in regime {active_regime}")
+                continue
             sentiment_data.setdefault("share_notional_multiplier", 1.0)
             sentiment_data.setdefault("signal_timestamp", signal_timestamp)
             if candidate.get("copy_trader_context"):
@@ -2440,7 +2468,10 @@ class TradingBot:
                     confidence = sentiment_data.get("consensus_confidence", 0)
                     # High confidence trades (80%+) → options for leverage
                     # Lower confidence → shares (safer)
-                    if confidence >= 80:
+                    strategy_tag = str(sentiment_data.get("strategy_tag", "") or "")
+                    if strategy_tag.startswith("uw_flow_") and confidence >= 65:
+                        options_pct = max(float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)), 75.0)
+                    elif confidence >= 80:
                         options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50))
                     elif confidence >= 70:
                         options_pct = float(getattr(settings, "OPTIONS_ALLOCATION_PCT", 50)) * 0.5

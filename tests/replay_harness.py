@@ -1,4 +1,5 @@
 import json
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -208,6 +209,13 @@ class BotReplayHarness:
             default_quantity=default_quantity,
             entry_quantities=entry_quantities,
         )
+        from src.data import entry_controls
+        self._orig_controls_file = entry_controls.CONTROLS_FILE
+        tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        tmp.write(b"{}")
+        tmp.close()
+        self._controls_tmp = tmp.name
+        entry_controls.CONTROLS_FILE = Path(self._controls_tmp)
         self.risk_manager = ReplayRiskManager()
         self.bot = main_module.TradingBot.__new__(main_module.TradingBot)
         self.bot.alpaca_client = self.broker
@@ -306,3 +314,15 @@ class BotReplayHarness:
 def load_transcript_fixture(path: str) -> Dict:
     p = Path(path)
     return json.loads(p.read_text())
+
+
+    def __del__(self):
+        try:
+            from src.data import entry_controls
+            entry_controls.CONTROLS_FILE = self._orig_controls_file
+        except Exception:
+            pass
+        try:
+            Path(self._controls_tmp).unlink(missing_ok=True)
+        except Exception:
+            pass

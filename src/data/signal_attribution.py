@@ -51,6 +51,8 @@ def derive_strategy_tag(candidate: Dict, direction: Optional[str] = None) -> str
         return "fade_short"
     if candidate.get("pharma_signal") or "pharma" in src:
         return "pharma_catalyst"
+    if "unusual_whales" in src:
+        return "uw_flow_short" if is_short else "uw_flow_long"
     if "grok_x" in src or "stocktwits" in src or src == "both":
         return "social_momentum_short" if is_short else "social_momentum_long"
     if is_short:

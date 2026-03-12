@@ -24,6 +24,11 @@ def _env_int(key: str, default: int = 0) -> int:
     return int(os.getenv(key, str(default)))
 
 
+def _env_csv(key: str, default: str = "") -> list:
+    raw = os.getenv(key, default)
+    return [item.strip() for item in str(raw).split(",") if item.strip()]
+
+
 # ── API Keys ──────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = _env("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = _env("OPENAI_API_KEY")
@@ -161,6 +166,13 @@ MIN_JURY_CONFIDENCE = _env_int("MIN_JURY_CONFIDENCE", 40)
 MIN_NOTIONAL = _env_float("MIN_NOTIONAL", 25.0)
 REENTRY_COOLDOWN_SECONDS = _env_int("REENTRY_COOLDOWN_SECONDS", 300)
 BLACKLIST_DURATION_SECONDS = _env_int("BLACKLIST_DURATION_SECONDS", 86400)
+MAX_ENTRIES_PER_SYMBOL_PER_DAY = _env_int("MAX_ENTRIES_PER_SYMBOL_PER_DAY", 2)
+MAX_ENTRIES_PER_STRATEGY_PER_DAY = _env_int("MAX_ENTRIES_PER_STRATEGY_PER_DAY", 8)
+ACTIVE_STRATEGY_TAGS = _env_csv("ACTIVE_STRATEGY_TAGS", "momentum_long,momentum_short,social_momentum_long,social_momentum_short,fade_short,uw_flow_long,uw_flow_short")
+REGIME_ALLOWED_STRATEGIES_RISK_ON = _env_csv("REGIME_ALLOWED_STRATEGIES_RISK_ON", "momentum_long,social_momentum_long,uw_flow_long")
+REGIME_ALLOWED_STRATEGIES_RISK_OFF = _env_csv("REGIME_ALLOWED_STRATEGIES_RISK_OFF", "fade_short,momentum_short,social_momentum_short,uw_flow_short")
+REGIME_ALLOWED_STRATEGIES_MIXED = _env_csv("REGIME_ALLOWED_STRATEGIES_MIXED", "momentum_long,social_momentum_long,fade_short,uw_flow_long,uw_flow_short")
+REGIME_ALLOWED_STRATEGIES_CHOPPY = _env_csv("REGIME_ALLOWED_STRATEGIES_CHOPPY", "uw_flow_long,uw_flow_short,social_momentum_short")
 MAX_ENTRIES_PER_SYMBOL_PER_DAY = _env_int("MAX_ENTRIES_PER_SYMBOL_PER_DAY", 2)
 MAX_ENTRIES_PER_STRATEGY_PER_DAY = _env_int("MAX_ENTRIES_PER_STRATEGY_PER_DAY", 8)
 

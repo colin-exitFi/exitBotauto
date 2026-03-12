@@ -315,6 +315,22 @@ def _candidate(symbol="AAPL"):
 
 
 class OptionsIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from src.data import entry_controls
+        self._orig_controls_file = entry_controls.CONTROLS_FILE
+        self._tmp_controls = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        self._tmp_controls.write(b"{}")
+        self._tmp_controls.close()
+        entry_controls.CONTROLS_FILE = Path(self._tmp_controls.name)
+
+    async def asyncTearDown(self):
+        from src.data import entry_controls
+        entry_controls.CONTROLS_FILE = self._orig_controls_file
+        try:
+            Path(self._tmp_controls.name).unlink()
+        except Exception:
+            pass
+
     async def test_paired_entry_places_shares_and_options(self):
         bot = main_module.TradingBot.__new__(main_module.TradingBot)
         bot.risk_manager = FakeRiskManager()
