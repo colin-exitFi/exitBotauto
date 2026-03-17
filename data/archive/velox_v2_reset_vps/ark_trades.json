@@ -1,0 +1,93 @@
+{
+  "trades": [
+    {
+      "fund": "ARKK",
+      "date": "2026-03-11",
+      "direction": "buy",
+      "ticker": "WGS",
+      "isin": "US81663L2007",
+      "name": "GeneDx Holdings Corp",
+      "shares": 1620,
+      "weight_pct": 0.0021,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-11",
+      "direction": "buy",
+      "ticker": "WGS",
+      "isin": "US81663L2007",
+      "name": "GeneDx Holdings Corp",
+      "shares": 1202,
+      "weight_pct": 0.0091,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKK",
+      "date": "2026-03-11",
+      "direction": "sell",
+      "ticker": "TXG",
+      "isin": "US88025U1097",
+      "name": "10X Genomics Inc",
+      "shares": 207643,
+      "weight_pct": 0.0651,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-11",
+      "direction": "sell",
+      "ticker": "TXG",
+      "isin": "US88025U1097",
+      "name": "10X Genomics Inc",
+      "shares": 54936,
+      "weight_pct": 0.1008,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-11",
+      "direction": "buy",
+      "ticker": "TEM",
+      "isin": "US88023B1035",
+      "name": "Tempus AI Inc",
+      "shares": 23086,
+      "weight_pct": 0.1088,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-11",
+      "direction": "sell",
+      "ticker": "PSNL",
+      "isin": "US71535D1063",
+      "name": "Personalis Inc",
+      "shares": 58693,
+      "weight_pct": 0.0426,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKW",
+      "date": "2026-03-11",
+      "direction": "sell",
+      "ticker": "NXDR",
+      "isin": "US65345M1080",
+      "name": "Nextdoor Holdings Inc",
+      "shares": 1400,
+      "weight_pct": 0.0001,
+      "source": "ark_trades"
+    },
+    {
+      "fund": "ARKG",
+      "date": "2026-03-11",
+      "direction": "sell",
+      "ticker": "LAB",
+      "isin": "US34385P1084",
+      "name": "Standard BioTools Inc",
+      "shares": 102053,
+      "weight_pct": 0.0089,
+      "source": "ark_trades"
+    }
+  ],
+  "fetched_at": 1773351760.2997217
+}

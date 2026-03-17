@@ -1,24 +1,28 @@
 """
-Jury 🗳️ - Synthesizes all 5 agent briefs into a final trade decision.
-All three configured jury models vote in parallel. 2-of-3 agreement wins.
+Jury 🗳️ - Synthesizes specialized agent briefs into a v2 entry decision.
+Velox v2 keeps the jury focused on entries only. Exits are mechanical.
 """
 
 import asyncio
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+
 from loguru import logger
 
 from config import settings
 from src.agents.base_agent import call_claude, call_gpt, call_grok, provider_is_backing_off
+
+_jury_gate_lock: Optional[asyncio.Lock] = None
+_jury_last_slot_ts: float = 0.0
 
 
 @dataclass
 class JuryVerdict:
     symbol: str
     decision: str  # "BUY", "SHORT", "SKIP"
-    size_pct: float  # position size as % of equity
-    trail_pct: float  # trailing stop %
+    size_pct: float
+    trail_pct: float  # legacy compatibility; mirrors ratchet trail settings
     reasoning: str
     confidence: float = 0.0
     provider_used: str = ""
@@ -40,16 +44,23 @@ class JuryVerdict:
         }
 
 
-PROMPT_TEMPLATE = """You are the JURY — the final decision maker inside Velox.
+PROMPT_TEMPLATE = """You are the JURY inside Velox v2.
 {mission}
 
-You receive briefs from 5 specialized agents. Synthesize them into ONE trade decision.
+Your job is entry selection only.
+- Risk decides whether the portfolio can trade and caps size.
+- Exits are mechanical outside your authority: hard stop, profit ratchet, and portfolio circuit breaker.
+- Missing data lowers confidence but does not justify panic or "system integrity" language.
 
+SESSION: {session_label}
 SYMBOL: {symbol} @ ${price:.2f}
 TODAY'S MOVE: {change_pct:+.1f}%
 VOLUME vs AVG: {volume_spike:.1f}x
 SPREAD: {spread_pct}%
 SETUP TAG: {strategy_tag}
+SIGNAL TIER: {signal_tier}
+HOLDING HORIZON: {holding_horizon}
+MARKET REGIME: {market_regime}
 SIDE BIAS: {side_bias}
 FADE CONTEXT: {fade_context}
 ECONOMIC CALENDAR: {economic_calendar}
@@ -57,61 +68,60 @@ HUMAN INTEL: {human_intel}
 PRO TRADER CONTEXT: {copy_trader_context}
 UW NEWS: {uw_news}
 OPTION CHAIN CONFIRMATION: {option_chain_confirmation}
+UW FLOW: {uw_flow_summary}
 RETRO FEEDBACK: {retro_feedback}
 
 AGENT BRIEFS:
 
-📊 TECHNICAL:
+TECHNICAL:
 {technical}
 
-🐦 SENTIMENT:
+SENTIMENT:
 {sentiment}
 
-🔬 CATALYST:
+CATALYST:
 {catalyst}
 
-🛡️ RISK:
+RISK:
 {risk}
 
-🌍 MACRO:
+MACRO:
 {macro}
 
 DECISION FRAMEWORK:
-- BIAS TOWARD ACTION. Dead capital is the enemy. Trailing stops manage risk — your job is to find trades, not avoid them.
-- BUY if: Stock is up significantly (+10%+) with volume (1.5x+) and risk approves. Technical BUY is ideal but Technical HOLD with decent confidence (50%+) is also fine if other signals support.
-- SHORT if: Stock is crashing hard (-5%+ down) with volume, Technical says SELL, and macro/catalyst supports bearish case.
-- SHORT if: This is a fade-the-runner setup. A stock that ran big yesterday and is stalling/fading today is a mean-reversion short, not a momentum long.
-- For fade setups, prioritize exhaustion signals: yesterday's huge run, RSI stretched, day-2 volume failing to match day-1, and price trading weak versus the run close.
-- Convergence from multiple Tier-1 pro traders is supportive confirmation, not crowding by itself. Only discount it if retail/FOMO evidence is also obvious.
-- Use RETRO FEEDBACK as calibration, not a blind override. If the same setup has recently lost money, demand cleaner alignment or smaller size. If it has recently worked, don't overreact to weak objections.
-- SKIP ONLY if: Risk explicitly denies, OR the stock has tiny volume (<1x avg), OR the move is clearly over (price reversing against the trend).
-- If some agents are unavailable, MAKE THE CALL with what you have. 3 agents is enough. Don't skip just because sentiment or catalyst is offline.
-- "Decelerating momentum" alone is NOT a reason to skip. Stocks don't go straight up — they consolidate and continue. If price is still up big on volume, the trend is intact.
-- We have trailing stops at 3%. Maximum downside per trade is 3%. The cost of a wrong entry is small. The cost of missing a runner is infinite.
+- Bias toward action when the setup is coherent, liquid, and aligned.
+- BUY when long momentum, catalyst, or institutional flow is aligned.
+- SHORT when fade / downside momentum / bearish institutional flow is aligned.
+- Risk `can_trade=false` is a hard block. If `can_trade=true`, risk does not get to veto the thesis.
+- Tier-1 institutional flow deserves serious weight; stronger UW confirmation can justify a smaller probe.
+- Unanimous SKIP means skip.
+- Do not invent exits or discretionary liquidation logic.
 
 SIZING:
-- size_pct: 0.5% (speculative) to 3% (high conviction) of equity
-- trail_pct: 1.5% (tight, lock in gains) to 4% (wide, let it run)
+- size_pct should reflect conviction from 0.25 to 5.0.
+- trail_pct is a legacy compatibility field only; default it near 2.0.
 
 Respond with ONLY valid JSON:
-{{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis of why", "confidence": 0-100}}"""
+{{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis", "confidence": 0-100}}"""
 
 
 async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict = None) -> JuryVerdict:
     """Synthesize agent briefs into a final trade decision."""
     try:
-        # Format briefs for the prompt
+        await _await_jury_slot()
+
         def fmt(brief: Dict) -> str:
-            if not brief or brief.get("error"):
-                return "⚠️ Agent unavailable"
+            if not brief:
+                return "No data"
             lines = []
-            for k, v in brief.items():
-                if k in ("error", "symbol"):
+            for key, value in brief.items():
+                if key in {"symbol"}:
                     continue
-                lines.append(f"  {k}: {v}")
-            return "\n".join(lines) if lines else "  No data"
+                lines.append(f"  {key}: {value}")
+            return "\n".join(lines) if lines else "No data"
 
         from src.ai.mission import MISSION_SHORT
+
         sd = signals_data or {}
         side_bias = "SHORT" if str(sd.get("side", "")).strip().lower() == "short" else "LONG"
         if sd.get("fade_signal"):
@@ -123,15 +133,37 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             )
         else:
             fade_context = "None"
+
+        try:
+            from datetime import datetime as _dt
+            import zoneinfo
+
+            _et = _dt.now(zoneinfo.ZoneInfo("US/Eastern"))
+            _h, _m = _et.hour, _et.minute
+            if (_h == 9 and _m >= 30) or (10 <= _h < 16):
+                session_label = "REGULAR HOURS"
+            elif 4 <= _h < 9 or (_h == 9 and _m < 30):
+                session_label = "PRE-MARKET"
+            elif 16 <= _h < 20:
+                session_label = "AFTER-HOURS"
+            else:
+                session_label = "OVERNIGHT"
+        except Exception:
+            session_label = "UNKNOWN"
+
         retro_feedback = _build_retro_feedback(symbol, sd)
         prompt = PROMPT_TEMPLATE.format(
             mission=MISSION_SHORT,
+            session_label=session_label,
             symbol=symbol,
             price=price,
             change_pct=sd.get("change_pct", 0),
             volume_spike=sd.get("volume_spike", 0),
             spread_pct=sd.get("spread_pct", "N/A"),
             strategy_tag=sd.get("strategy_tag", "unknown"),
+            signal_tier=sd.get("signal_tier", "tier_2"),
+            holding_horizon=sd.get("holding_horizon", "intraday"),
+            market_regime=sd.get("market_regime", "mixed"),
             side_bias=side_bias,
             fade_context=fade_context,
             economic_calendar=sd.get("economic_calendar", "None"),
@@ -139,6 +171,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             copy_trader_context=sd.get("copy_trader_context", "None"),
             uw_news=sd.get("uw_news_summary", "None"),
             option_chain_confirmation=sd.get("uw_chain_summary", "None"),
+            uw_flow_summary=sd.get("uw_flow_summary", "None"),
             retro_feedback=retro_feedback,
             technical=fmt(briefs.get("technical", {})),
             sentiment=fmt(briefs.get("sentiment", {})),
@@ -183,40 +216,59 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             if normalized:
                 votes.append(normalized)
 
-        verdict = _apply_consensus(symbol, price, votes, briefs, provider_results)
+        verdict = _apply_consensus(symbol, votes, briefs, sd, provider_results)
 
-        # Check if risk agent denied — hard override
-        risk_brief = briefs.get("risk", {})
-        if risk_brief and not risk_brief.get("approved", True) and not risk_brief.get("error"):
-            if verdict.decision in ("BUY", "SHORT"):
-                logger.info(f"🛡️ Jury overridden by Risk Agent for {symbol}: {risk_brief.get('reasoning', '')}")
-                return JuryVerdict(
-                    symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
-                    reasoning=f"Risk agent denied: {risk_brief.get('reasoning', 'portfolio risk too high')}",
-                    provider_used=verdict.provider_used,
-                    briefs=briefs,
-                    consensus_detail={**verdict.consensus_detail, "risk_override": True},
-                )
+        risk_brief = briefs.get("risk", {}) or {}
+        risk_blocked = risk_brief.get("can_trade") is False or (
+            "can_trade" not in risk_brief and risk_brief.get("approved") is False
+        )
+        if risk_blocked and verdict.decision in {"BUY", "SHORT"}:
+            reasoning = str(risk_brief.get("reasoning", "") or "Risk hard gate blocked the trade")
+            logger.info(f"🛡️ Jury hard-blocked by Risk Agent for {symbol}: {reasoning}")
+            return JuryVerdict(
+                symbol=symbol,
+                decision="SKIP",
+                size_pct=0.0,
+                trail_pct=_default_trail_pct(),
+                reasoning=f"Risk hard gate: {reasoning}",
+                provider_used=verdict.provider_used,
+                briefs=briefs,
+                consensus_detail={**verdict.consensus_detail, "risk_override": True},
+            )
 
-        # Cap size_pct by risk agent's max
-        if risk_brief and risk_brief.get("max_size_pct"):
-            verdict.size_pct = min(verdict.size_pct, float(risk_brief["max_size_pct"]))
+        risk_cap = risk_brief.get("size_cap_pct", risk_brief.get("max_size_pct"))
+        if risk_cap is not None:
+            try:
+                verdict.size_pct = min(float(verdict.size_pct or 0), float(risk_cap or 0))
+            except Exception:
+                pass
+            if verdict.decision in {"BUY", "SHORT"} and float(verdict.size_pct or 0) <= 0:
+                verdict.decision = "SKIP"
+                verdict.reasoning = f"Risk size cap blocked action. {verdict.reasoning}".strip()
+                verdict.confidence = 0.0
 
-        votes_text = verdict.consensus_detail.get("votes", {})
         logger.info(
             f"🗳️ Jury verdict for {symbol}: {verdict.decision} "
             f"size={verdict.size_pct}% trail={verdict.trail_pct}% "
             f"conf={verdict.confidence}% provider={verdict.provider_used or '?'} "
-            f"votes={votes_text} — {verdict.reasoning[:100]}"
+            f"votes={verdict.consensus_detail.get('votes', {})} — {verdict.reasoning[:120]}"
         )
         return verdict
 
     except Exception as e:
         logger.error(f"Jury error for {symbol}: {e}")
         return JuryVerdict(
-            symbol=symbol, decision="SKIP", size_pct=0, trail_pct=3.0,
-            reasoning=f"Jury exception: {e}", briefs=briefs,
+            symbol=symbol,
+            decision="SKIP",
+            size_pct=0.0,
+            trail_pct=_default_trail_pct(),
+            reasoning=f"Jury exception: {e}",
+            briefs=briefs,
         )
+
+
+def _default_trail_pct() -> float:
+    return round(float(getattr(settings, "PROFIT_RATCHET_TRAIL_PCT", 2.0) or 2.0), 3)
 
 
 def _is_rate_limit_error(message: object) -> bool:
@@ -231,6 +283,14 @@ def _is_rate_limit_error(message: object) -> bool:
 
 
 async def _safe_call(provider_name: str, caller, prompt: str) -> Dict:
+    if provider_is_backing_off(provider_name):
+        return {
+            "provider": provider_name,
+            "result": None,
+            "rate_limited": True,
+            "error": "provider_backoff_active",
+        }
+
     last_error = ""
     for attempt in range(1, 3):
         try:
@@ -266,20 +326,36 @@ async def _safe_call(provider_name: str, caller, prompt: str) -> Dict:
     }
 
 
+async def _await_jury_slot():
+    """Light global pacing gate to avoid burst-spiking provider calls."""
+    global _jury_gate_lock, _jury_last_slot_ts
+    spacing = max(0.0, float(getattr(settings, "JURY_MIN_SPACING_SECONDS", 0.35) or 0.35))
+    if spacing <= 0:
+        return
+    if _jury_gate_lock is None:
+        _jury_gate_lock = asyncio.Lock()
+    async with _jury_gate_lock:
+        now = time.time()
+        wait = (_jury_last_slot_ts + spacing) - now
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _jury_last_slot_ts = time.time()
+
+
 def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
     if not result or not isinstance(result, dict):
         return None
     decision = str(result.get("decision", "SKIP") or "SKIP").upper()
-    if decision not in ("BUY", "SHORT", "SKIP"):
+    if decision not in {"BUY", "SHORT", "SKIP"}:
         decision = "SKIP"
     try:
         size_pct = max(0.0, min(5.0, float(result.get("size_pct", 0) or 0)))
     except Exception:
         size_pct = 0.0
     try:
-        trail_pct = max(1.0, min(5.0, float(result.get("trail_pct", 3.0) or 3.0)))
+        trail_pct = max(0.5, min(5.0, float(result.get("trail_pct", _default_trail_pct()) or _default_trail_pct())))
     except Exception:
-        trail_pct = 3.0
+        trail_pct = _default_trail_pct()
     try:
         confidence = max(0.0, min(100.0, float(result.get("confidence", 0) or 0)))
     except Exception:
@@ -379,9 +455,9 @@ def _format_confidence_calibration(trades: List[Dict]) -> str:
 
 def _apply_consensus(
     symbol: str,
-    price: float,
     votes: List[Dict],
     briefs: Dict,
+    signals_data: Dict,
     provider_results: Optional[List[Dict]] = None,
 ) -> JuryVerdict:
     provider_results = provider_results or []
@@ -395,7 +471,6 @@ def _apply_consensus(
         for item in provider_results
         if item.get("rate_limited")
     ]
-    degraded = bool(degraded_providers)
     failed_providers = {
         str(item.get("provider", "")): str(item.get("error", "") or "")
         for item in provider_results
@@ -403,25 +478,16 @@ def _apply_consensus(
     }
 
     if not votes:
-        return JuryVerdict(
+        return _skip_verdict(
             symbol=symbol,
-            decision="SKIP",
-            size_pct=0,
-            trail_pct=3.0,
-            reasoning="All jury models failed",
-            provider_used="none",
             briefs=briefs,
-            consensus_detail={
-                "votes": {},
-                "total_models": 0,
-                "agreement": "none",
-                "size_modifier": 0.0,
-                "confidence": 0.0,
-                "degraded": degraded,
-                "unavailable_providers": unavailable_providers,
-                "rate_limited_providers": degraded_providers,
-                "failed_providers": failed_providers,
-            },
+            providers_used=[],
+            vote_map={},
+            agreement="no_votes",
+            reasoning="No jury models returned a usable vote",
+            unavailable_providers=unavailable_providers,
+            rate_limited_providers=degraded_providers,
+            failed_providers=failed_providers,
         )
 
     grouped = {"BUY": [], "SHORT": [], "SKIP": []}
@@ -430,158 +496,202 @@ def _apply_consensus(
 
     providers_used = [vote["provider"] for vote in votes]
     vote_map = {vote["provider"]: vote["decision"] for vote in votes}
-    total = len(votes)
-
     buy_votes = grouped["BUY"]
     short_votes = grouped["SHORT"]
     skip_votes = grouped["SKIP"]
+    total_votes = len(votes)
 
-    if degraded:
-        if total < 2:
-            return _skip_verdict(
-                symbol,
-                briefs,
-                providers_used,
-                vote_map,
-                total,
-                "degraded_insufficient",
-                "Degraded jury: fewer than two models responded",
-                degraded=degraded,
-                unavailable_providers=unavailable_providers,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
-        if len(buy_votes) == total:
+    if total_votes == 1:
+        if _allow_tier1_probe("BUY", buy_votes, short_votes, signals_data):
             return _decision_verdict(
-                symbol,
-                "BUY",
-                buy_votes,
-                [],
-                providers_used,
-                vote_map,
-                briefs,
-                "degraded_unanimous",
-                0.85,
-                0.80,
-                degraded=degraded,
+                symbol=symbol,
+                decision="BUY",
+                agreeing_votes=buy_votes,
+                opposing_votes=short_votes + skip_votes,
+                providers_used=providers_used,
+                vote_map=vote_map,
+                briefs=briefs,
+                agreement="tier1_probe",
+                size_modifier=0.5,
+                confidence_multiplier=0.8,
                 unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
-        if len(short_votes) == total:
+        if _allow_tier1_probe("SHORT", short_votes, buy_votes, signals_data):
             return _decision_verdict(
-                symbol,
-                "SHORT",
-                short_votes,
-                [],
-                providers_used,
-                vote_map,
-                briefs,
-                "degraded_unanimous",
-                0.85,
-                0.80,
-                degraded=degraded,
-                unavailable_providers=unavailable_providers,
-                rate_limited_providers=degraded_providers,
-                failed_providers=failed_providers,
-            )
-        if len(skip_votes) == total:
-            return _skip_verdict(
-                symbol,
-                briefs,
-                providers_used,
-                vote_map,
-                total,
-                "degraded_unanimous_skip",
-                "Degraded jury: all responding models SKIPped",
-                degraded=degraded,
+                symbol=symbol,
+                decision="SHORT",
+                agreeing_votes=short_votes,
+                opposing_votes=buy_votes + skip_votes,
+                providers_used=providers_used,
+                vote_map=vote_map,
+                briefs=briefs,
+                agreement="tier1_probe",
+                size_modifier=0.5,
+                confidence_multiplier=0.8,
                 unavailable_providers=unavailable_providers,
                 rate_limited_providers=degraded_providers,
                 failed_providers=failed_providers,
             )
         return _skip_verdict(
-            symbol,
-            briefs,
-            providers_used,
-            vote_map,
-            total,
-            "degraded_split",
-            "Degraded jury: remaining models were not unanimous",
-            degraded=degraded,
+            symbol=symbol,
+            briefs=briefs,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            agreement="degraded_insufficient" if degraded_providers else "single_model_insufficient",
+            reasoning="Single model response is insufficient for action",
             unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
+            confidence_hint=_average_confidence(votes),
         )
 
-    if total == 1:
+    if total_votes == 3 and len(skip_votes) == 3:
         return _skip_verdict(
-            symbol,
-            briefs,
-            providers_used,
-            vote_map,
-            total,
-            "single_model_insufficient",
-            "Single model response is insufficient for action — SKIP for safety",
-            degraded=degraded,
+            symbol=symbol,
+            briefs=briefs,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            agreement="unanimous_skip",
+            reasoning="All jury models SKIPped",
             unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
+            confidence_hint=_average_confidence(skip_votes),
         )
 
-    if total == 2:
-        if len(buy_votes) == 2:
-            return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        if len(short_votes) == 2:
-            return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "majority_two_model", 1.0, 0.85, degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        if len(skip_votes) == 2:
-            return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "Two-model unanimous SKIP", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "two_model_no_consensus", "Two models responded without unanimous agreement — SKIP for safety", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-
-    if len(buy_votes) == 3:
-        return _decision_verdict(symbol, "BUY", buy_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-    if len(short_votes) == 3:
-        return _decision_verdict(symbol, "SHORT", short_votes, [], providers_used, vote_map, briefs, "unanimous", 1.0, 1.0, degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-    if len(skip_votes) == 3:
-        return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "unanimous_skip", "All jury models SKIPped", degraded=degraded, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
-
-    if len(buy_votes) == 2:
-        conflict = len(short_votes) > 0
+    if len(buy_votes) >= 2:
+        if len(buy_votes) == 3:
+            agreement = "unanimous"
+        elif total_votes == 2:
+            agreement = "degraded_unanimous" if degraded_providers else "majority_two_model"
+        else:
+            agreement = "majority_conflict" if short_votes else "majority"
         return _decision_verdict(
-            symbol,
-            "BUY",
-            buy_votes,
-            short_votes,
-            providers_used,
-            vote_map,
-            briefs,
-            "majority_conflict" if conflict else "majority",
-            0.75 if conflict else 1.0,
-            0.85,
-            degraded=degraded,
-            unavailable_providers=unavailable_providers,
-            rate_limited_providers=degraded_providers,
-            failed_providers=failed_providers,
-        )
-    if len(short_votes) == 2:
-        conflict = len(buy_votes) > 0
-        return _decision_verdict(
-            symbol,
-            "SHORT",
-            short_votes,
-            buy_votes,
-            providers_used,
-            vote_map,
-            briefs,
-            "majority_conflict" if conflict else "majority",
-            0.75 if conflict else 1.0,
-            0.85,
-            degraded=degraded,
+            symbol=symbol,
+            decision="BUY",
+            agreeing_votes=buy_votes,
+            opposing_votes=short_votes + skip_votes,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            briefs=briefs,
+            agreement=agreement,
+            size_modifier=0.75 if agreement == "majority_conflict" else (0.85 if agreement == "degraded_unanimous" else 1.0),
+            confidence_multiplier=1.0 if agreement == "unanimous" else 0.9,
             unavailable_providers=unavailable_providers,
             rate_limited_providers=degraded_providers,
             failed_providers=failed_providers,
         )
 
-    return _skip_verdict(symbol, briefs, providers_used, vote_map, total, "none", "No consensus across jury models", degraded=degraded, unavailable_providers=unavailable_providers, rate_limited_providers=degraded_providers, failed_providers=failed_providers)
+    if len(short_votes) >= 2:
+        if len(short_votes) == 3:
+            agreement = "unanimous"
+        elif total_votes == 2:
+            agreement = "degraded_unanimous" if degraded_providers else "majority_two_model"
+        else:
+            agreement = "majority_conflict" if buy_votes else "majority"
+        return _decision_verdict(
+            symbol=symbol,
+            decision="SHORT",
+            agreeing_votes=short_votes,
+            opposing_votes=buy_votes + skip_votes,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            briefs=briefs,
+            agreement=agreement,
+            size_modifier=0.75 if agreement == "majority_conflict" else (0.85 if agreement == "degraded_unanimous" else 1.0),
+            confidence_multiplier=1.0 if agreement == "unanimous" else 0.9,
+            unavailable_providers=unavailable_providers,
+            rate_limited_providers=degraded_providers,
+            failed_providers=failed_providers,
+        )
+
+    if _allow_tier1_probe("BUY", buy_votes, short_votes, signals_data):
+        return _decision_verdict(
+            symbol=symbol,
+            decision="BUY",
+            agreeing_votes=buy_votes,
+            opposing_votes=short_votes + skip_votes,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            briefs=briefs,
+            agreement="tier1_probe",
+            size_modifier=0.5,
+            confidence_multiplier=0.8,
+            unavailable_providers=unavailable_providers,
+            rate_limited_providers=degraded_providers,
+            failed_providers=failed_providers,
+        )
+
+    if _allow_tier1_probe("SHORT", short_votes, buy_votes, signals_data):
+        return _decision_verdict(
+            symbol=symbol,
+            decision="SHORT",
+            agreeing_votes=short_votes,
+            opposing_votes=buy_votes + skip_votes,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            briefs=briefs,
+            agreement="tier1_probe",
+            size_modifier=0.5,
+            confidence_multiplier=0.8,
+            unavailable_providers=unavailable_providers,
+            rate_limited_providers=degraded_providers,
+            failed_providers=failed_providers,
+        )
+
+    if total_votes == 2 and len(skip_votes) == 2:
+        return _skip_verdict(
+            symbol=symbol,
+            briefs=briefs,
+            providers_used=providers_used,
+            vote_map=vote_map,
+            agreement="degraded_unanimous_skip" if degraded_providers else "two_model_skip",
+            reasoning="Both responding jury models SKIPped",
+            unavailable_providers=unavailable_providers,
+            rate_limited_providers=degraded_providers,
+            failed_providers=failed_providers,
+            confidence_hint=_average_confidence(skip_votes),
+        )
+
+    return _skip_verdict(
+        symbol=symbol,
+        briefs=briefs,
+        providers_used=providers_used,
+        vote_map=vote_map,
+        agreement="degraded_split" if degraded_providers else ("two_model_no_consensus" if total_votes == 2 else "split_vote"),
+        reasoning="Jury did not reach a v2 executable consensus",
+        unavailable_providers=unavailable_providers,
+        rate_limited_providers=degraded_providers,
+        failed_providers=failed_providers,
+        confidence_hint=_average_confidence(votes),
+    )
+
+
+def _allow_tier1_probe(
+    decision: str,
+    agreeing_votes: List[Dict],
+    opposing_directional_votes: List[Dict],
+    signals_data: Dict,
+) -> bool:
+    if len(agreeing_votes) != 1:
+        return False
+    if opposing_directional_votes:
+        return False
+    signal_tier = str((signals_data or {}).get("signal_tier", "") or "").lower()
+    if signal_tier != "tier_1":
+        return False
+    uw_direction = str((signals_data or {}).get("side", "") or "").strip().lower()
+    if decision == "SHORT":
+        return uw_direction == "short"
+    return uw_direction != "short"
+
+
+def _average_confidence(votes: List[Dict]) -> float:
+    if not votes:
+        return 0.0
+    return sum(float(vote.get("confidence", 0) or 0) for vote in votes) / max(1, len(votes))
 
 
 def _decision_verdict(
@@ -595,39 +705,43 @@ def _decision_verdict(
     agreement: str,
     size_modifier: float,
     confidence_multiplier: float,
-    degraded: bool = False,
     unavailable_providers: Optional[List[str]] = None,
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
 ) -> JuryVerdict:
     base_size = sum(vote["size_pct"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
-    trail_pct = sum(vote["trail_pct"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
-    avg_conf = sum(vote["confidence"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
+    base_trail = sum(vote["trail_pct"] for vote in agreeing_votes) / max(1, len(agreeing_votes))
+    avg_conf = _average_confidence(agreeing_votes)
+    size_pct = max(0.25, min(5.0, base_size * size_modifier))
     consensus_conf = max(0.0, min(100.0, avg_conf * confidence_multiplier))
-    size_pct = max(0.0, min(5.0, base_size * size_modifier))
 
-    reasons = [f"{vote['provider']}={vote['decision']} ({vote['reasoning'][:70]})" for vote in agreeing_votes + opposing_votes]
+    reasons = [
+        f"{vote['provider']}={vote['decision']} ({vote['reasoning'][:70]})"
+        for vote in agreeing_votes + opposing_votes
+    ]
     reason_text = "; ".join(reasons[:3])
+
+    summaries = {
+        "unanimous": f"{decision} unanimous 3/3",
+        "majority": f"{decision} 2-of-3 consensus",
+        "majority_two_model": f"{decision} 2/2 consensus",
+        "degraded_unanimous": f"{decision} degraded unanimous",
+        "majority_conflict": f"{decision} 2-of-3 with direct opposition",
+        "tier1_probe": f"{decision} tier-1 reduced-size probe",
+    }
+    summary = summaries.get(agreement, f"{decision} consensus")
     issue_suffix = _provider_issue_suffix(unavailable_providers, rate_limited_providers)
-    if agreement == "unanimous":
-        summary = f"{decision} unanimous 3/3"
-    elif agreement == "degraded_unanimous":
-        summary = f"{decision} degraded unanimous{issue_suffix}"
-    elif agreement == "majority_conflict":
-        summary = f"{decision} 2/3 with direct opposition"
-    elif agreement == "majority_two_model":
-        summary = f"{decision} 2/2{issue_suffix}"
-    else:
-        summary = f"{decision} 2/3 majority"
+    if issue_suffix:
+        summary = f"{summary}{issue_suffix}"
 
     return JuryVerdict(
         symbol=symbol,
         decision=decision,
         size_pct=round(size_pct, 3),
-        trail_pct=round(trail_pct, 3),
+        trail_pct=round(base_trail if base_trail > 0 else _default_trail_pct(), 3),
         reasoning=f"{summary}. {reason_text}".strip(),
         confidence=round(consensus_conf, 2),
-        provider_used=",".join(providers_used),
+        provider_used=",".join(providers_used) if providers_used else "none",
         briefs=briefs,
         consensus_detail={
             "votes": vote_map,
@@ -637,7 +751,7 @@ def _decision_verdict(
             "confidence": round(consensus_conf, 2),
             "base_size_pct": round(base_size, 3),
             "agreeing_models": [vote["provider"] for vote in agreeing_votes],
-            "degraded": degraded,
+            "degraded": bool(rate_limited_providers),
             "unavailable_providers": list(unavailable_providers or []),
             "rate_limited_providers": list(rate_limited_providers or []),
             "failed_providers": dict(failed_providers or {}),
@@ -650,33 +764,49 @@ def _skip_verdict(
     briefs: Dict,
     providers_used: List[str],
     vote_map: Dict[str, str],
-    total_models: int,
     agreement: str,
     reasoning: str,
-    degraded: bool = False,
     unavailable_providers: Optional[List[str]] = None,
     rate_limited_providers: Optional[List[str]] = None,
     failed_providers: Optional[Dict[str, str]] = None,
+    confidence_hint: Optional[float] = None,
 ) -> JuryVerdict:
+    baseline = {
+        "unanimous_skip": 62.0,
+        "degraded_unanimous_skip": 55.0,
+        "two_model_skip": 55.0,
+        "split_vote": 40.0,
+        "two_model_no_consensus": 45.0,
+        "single_model_insufficient": 30.0,
+        "degraded_insufficient": 30.0,
+        "degraded_split": 40.0,
+        "no_votes": 25.0,
+    }
+    try:
+        hinted = float(confidence_hint if confidence_hint is not None else 0.0)
+    except Exception:
+        hinted = 0.0
+    consensus_conf = max(0.0, min(100.0, hinted if hinted > 0 else baseline.get(agreement, 35.0)))
     issue_suffix = _provider_issue_suffix(unavailable_providers, rate_limited_providers)
     if issue_suffix:
         reasoning = f"{reasoning}{issue_suffix}"
+
     return JuryVerdict(
         symbol=symbol,
         decision="SKIP",
-        size_pct=0,
-        trail_pct=3.0,
+        size_pct=0.0,
+        trail_pct=_default_trail_pct(),
         reasoning=reasoning,
-        confidence=0.0,
-        provider_used=",".join(providers_used),
+        confidence=round(consensus_conf, 2),
+        provider_used=",".join(providers_used) if providers_used else "none",
         briefs=briefs,
         consensus_detail={
             "votes": vote_map,
-            "total_models": total_models,
+            "total_models": len(providers_used),
             "agreement": agreement,
             "size_modifier": 0.0,
-            "confidence": 0.0,
-            "degraded": degraded,
+            "confidence": round(consensus_conf, 2),
+            "degraded": bool(rate_limited_providers),
             "unavailable_providers": list(unavailable_providers or []),
             "rate_limited_providers": list(rate_limited_providers or []),
             "failed_providers": dict(failed_providers or {}),

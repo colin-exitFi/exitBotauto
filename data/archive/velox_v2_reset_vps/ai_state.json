@@ -1,0 +1,388 @@
+{
+  "last_observation": "Overnight session, market closed \u2014 positions in limbo with pending exit orders that cannot execute until 9:30 AM open, creating gap risk exposure.",
+  "last_advice": "EMERGENCY LIQUIDATION MODE \u2014 Exit both dying positions immediately at market open, then FULL TRADING HALT until data pipeline and protection systems are restored.",
+  "last_tuner_changes": "TRAILING_STOP_PCT:1.0\u21920.75",
+  "last_game_film_summary": "359 trades, 32.9% WR, $-173.72",
+  "last_position_manager": "critical | 2 exits | 1 vetoes",
+  "last_consensus": {
+    "symbol": "ULY",
+    "decision": "SKIP",
+    "size_pct": 0,
+    "trail_pct": 3.0,
+    "reasoning": "Two models responded without unanimous agreement \u2014 SKIP for safety (missing: grok)",
+    "confidence": 51.5,
+    "provider_used": "claude,gpt",
+    "consensus_detail": {
+      "votes": {
+        "claude": "SKIP",
+        "gpt": "BUY"
+      },
+      "total_models": 2,
+      "agreement": "two_model_no_consensus",
+      "size_modifier": 0.0,
+      "confidence": 51.5,
+      "degraded": false,
+      "unavailable_providers": [
+        "grok"
+      ],
+      "rate_limited_providers": [],
+      "failed_providers": {
+        "grok": "no_response"
+      }
+    },
+    "timestamp": 1773705715.7546427
+  },
+  "short_verdicts_blocked": 36,
+  "last_short_block_reason": "ADBE playbook:regime_block",
+  "last_uw_stream_signal": "SGOV live UW dark pool bullish $291,034 (2,895 @ $100.53)",
+  "provider_health": {
+    "claude": {
+      "ok": true,
+      "error": "",
+      "latency_ms": 1564
+    },
+    "gpt": {
+      "ok": true,
+      "error": "",
+      "latency_ms": 3048
+    },
+    "grok": {
+      "ok": true,
+      "error": "",
+      "latency_ms": 792
+    }
+  },
+  "scan_regime": "risk_on",
+  "scan_regime_raw": "risk_on",
+  "scan_interval_seconds": 300,
+  "reconciliation": {
+    "broker_vs_pnl_state_diff": 0.0,
+    "broker_vs_trade_history_diff": 0.0,
+    "broker_closed_trade_estimate": -25.96,
+    "canonical_realized_source": "broker_reconstructed",
+    "canonical_realized_pnl": -8.93,
+    "status": "healthy",
+    "severity": "healthy",
+    "reasons": [
+      "broker_fill_ledger_unresolved"
+    ]
+  },
+  "broker_truth": {
+    "date": "2026-03-17",
+    "equity": 27123.79,
+    "last_equity": 27230.55,
+    "day_pnl": -106.76,
+    "day_pnl_pct": -0.39,
+    "cash": 26597.95,
+    "long_market_value": 525.84,
+    "short_market_value": 0.0,
+    "position_market_value": 525.84,
+    "current_open_unrealized": -80.85,
+    "overnight_gap_pnl": 0.05,
+    "intraday_change_from_open": -25.95,
+    "intraday_realized_estimate": null,
+    "fill_count": 100,
+    "symbols_with_broker_activity": [
+      "ACXP",
+      "BCRX",
+      "BMNR",
+      "CING",
+      "CTMX",
+      "DSGR",
+      "ETHT",
+      "ETHU",
+      "NBIL",
+      "NBIS",
+      "NEBX"
+    ],
+    "broker_open_symbols": [
+      "CTMX",
+      "NEBX"
+    ],
+    "broker_closed_symbols": [
+      "ACXP",
+      "BCRX",
+      "BMNR",
+      "CING",
+      "DSGR",
+      "ETHT",
+      "ETHU",
+      "NBIL",
+      "NBIS"
+    ],
+    "carryover_symbols": [
+      "CTMX",
+      "NEBX"
+    ],
+    "carryover_fragment_symbols": [],
+    "intraday_symbols": [],
+    "broker_history_available": true,
+    "broker_fill_ledger": {
+      "trade_count": 3,
+      "realized_pnl": -8.93,
+      "closed_symbols": [
+        "ACXP",
+        "BCRX",
+        "ETHU"
+      ],
+      "reconstructable_closed_symbols": [
+        "ACXP",
+        "BCRX",
+        "ETHU"
+      ],
+      "unresolved_symbols": [
+        "BMNR",
+        "CING",
+        "DSGR",
+        "ETHT",
+        "NBIL",
+        "NBIS"
+      ],
+      "trades": [
+        {
+          "symbol": "ACXP",
+          "side": "sell",
+          "entry_price": 5.4,
+          "exit_price": 5.32,
+          "quantity": 28.0,
+          "pnl": -2.24,
+          "pnl_pct": -1.48,
+          "reason": "broker_fill_reconstructed",
+          "entry_time": 1773676501.52465,
+          "exit_time": 1773676603.25081,
+          "hold_seconds": 101.7261598110199,
+          "asset_type": "equity",
+          "strategy_tag": "broker_reconciled",
+          "entry_path": "broker_reconciliation",
+          "signal_sources": [
+            "broker_reconciliation"
+          ],
+          "provider_used": "alpaca_reconciler",
+          "decision_confidence": 0,
+          "anomaly_flags": [
+            "broker_reconstructed"
+          ],
+          "trade_date": "2026-03-17",
+          "exit_order_id": "5e8db3d7-9878-42a2-b1bd-877824a1169f",
+          "signal_price": 5.4,
+          "decision_price": 5.4,
+          "fill_price": 5.32,
+          "slippage_bps": 0.0,
+          "signal_timestamp": null,
+          "entry_order_timestamp": null,
+          "fill_timestamp": null,
+          "fill_timestamp_source": "unknown",
+          "signal_to_order_ms": null,
+          "signal_to_fill_ms": null,
+          "intended_notional": 0.0,
+          "actual_notional": 151.20000000000002,
+          "intended_qty": 28.0,
+          "actual_qty": 28.0,
+          "price_at_1m": null,
+          "price_at_3m": null,
+          "price_at_5m": null,
+          "time_to_green_seconds": null,
+          "time_to_peak_seconds": null,
+          "mfe_pct": null,
+          "mae_pct": null
+        },
+        {
+          "symbol": "BCRX",
+          "side": "sell",
+          "entry_price": 9.29,
+          "exit_price": 9.209959,
+          "quantity": 43.932185,
+          "pnl": -3.52,
+          "pnl_pct": -0.86,
+          "reason": "broker_fill_reconstructed",
+          "entry_time": 1773674041.152889,
+          "exit_time": 1773674297.522491,
+          "hold_seconds": 256.36960196495056,
+          "asset_type": "equity",
+          "strategy_tag": "broker_reconciled",
+          "entry_path": "broker_reconciliation",
+          "signal_sources": [
+            "broker_reconciliation"
+          ],
+          "provider_used": "alpaca_reconciler",
+          "decision_confidence": 0,
+          "anomaly_flags": [
+            "broker_reconstructed"
+          ],
+          "trade_date": "2026-03-17",
+          "exit_order_id": "d591aeac-90d3-4b41-8fe6-633015b406c9",
+          "signal_price": 9.29,
+          "decision_price": 9.29,
+          "fill_price": 9.209959,
+          "slippage_bps": 0.0,
+          "signal_timestamp": null,
+          "entry_order_timestamp": null,
+          "fill_timestamp": null,
+          "fill_timestamp_source": "unknown",
+          "signal_to_order_ms": null,
+          "signal_to_fill_ms": null,
+          "intended_notional": 0.0,
+          "actual_notional": 408.12999864999995,
+          "intended_qty": 43.932185,
+          "actual_qty": 43.932185,
+          "price_at_1m": null,
+          "price_at_3m": null,
+          "price_at_5m": null,
+          "time_to_green_seconds": null,
+          "time_to_peak_seconds": null,
+          "mfe_pct": null,
+          "mae_pct": null
+        },
+        {
+          "symbol": "ETHU",
+          "side": "sell",
+          "entry_price": 27.52,
+          "exit_price": 27.306205,
+          "quantity": 14.84157,
+          "pnl": -3.17,
+          "pnl_pct": -0.78,
+          "reason": "broker_fill_reconstructed",
+          "entry_time": 1773670561.294587,
+          "exit_time": 1773671458.79708,
+          "hold_seconds": 897.5024931430817,
+          "asset_type": "equity",
+          "strategy_tag": "broker_reconciled",
+          "entry_path": "broker_reconciliation",
+          "signal_sources": [
+            "broker_reconciliation"
+          ],
+          "provider_used": "alpaca_reconciler",
+          "decision_confidence": 0,
+          "anomaly_flags": [
+            "broker_reconstructed"
+          ],
+          "trade_date": "2026-03-17",
+          "exit_order_id": "2ac3049e-366f-49db-896f-f9d55944c4e8",
+          "signal_price": 27.52,
+          "decision_price": 27.52,
+          "fill_price": 27.306205,
+          "slippage_bps": 0.0,
+          "signal_timestamp": null,
+          "entry_order_timestamp": null,
+          "fill_timestamp": null,
+          "fill_timestamp_source": "unknown",
+          "signal_to_order_ms": null,
+          "signal_to_fill_ms": null,
+          "intended_notional": 0.0,
+          "actual_notional": 408.4400064,
+          "intended_qty": 14.84157,
+          "actual_qty": 14.84157,
+          "price_at_1m": null,
+          "price_at_3m": null,
+          "price_at_5m": null,
+          "time_to_green_seconds": null,
+          "time_to_peak_seconds": null,
+          "mfe_pct": null,
+          "mae_pct": null
+        }
+      ]
+    },
+    "broker_positions": {
+      "CTMX": {
+        "qty": 35.0,
+        "side": "long",
+        "avg_entry_price": 6.64,
+        "market_value": 229.25
+      },
+      "NEBX": {
+        "qty": 7.0,
+        "side": "long",
+        "avg_entry_price": 53.47,
+        "market_value": 296.59
+      }
+    }
+  },
+  "uw_stream": {
+    "configured": true,
+    "mode": "auto",
+    "connected": true,
+    "fresh": false,
+    "fallback_active": true,
+    "joined_channels": [
+      "flow-alerts",
+      "off_lit_trades"
+    ],
+    "recent_flow_count": 0,
+    "recent_dark_pool_count": 0,
+    "market_tide_bias": "risk_on",
+    "market_tide_refreshed_at": 1773709165.180637,
+    "last_event_age": 3590.0,
+    "last_connect_age": 17699.1,
+    "last_error": "",
+    "recent_emitted": [
+      {
+        "symbol": "WDC",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 172674.0,
+        "timestamp": 1773705589.8917952
+      },
+      {
+        "symbol": "UPRO",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 159040.8,
+        "timestamp": 1773705593.8999374
+      },
+      {
+        "symbol": "USO",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 151967.66,
+        "timestamp": 1773705594.889993
+      },
+      {
+        "symbol": "IBRX",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 783130.15,
+        "timestamp": 1773705596.8931034
+      },
+      {
+        "symbol": "LITE",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 433860.0,
+        "timestamp": 1773705596.8936694
+      },
+      {
+        "symbol": "ALAB",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 112308.62,
+        "timestamp": 1773705596.8938532
+      },
+      {
+        "symbol": "IBIT",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 127398.3,
+        "timestamp": 1773705596.8939013
+      },
+      {
+        "symbol": "NVDA",
+        "event_type": "dark_pool",
+        "side": "",
+        "premium": 137091.9,
+        "timestamp": 1773705598.8899136
+      }
+    ]
+  },
+  "uw_api": {
+    "configured": true,
+    "last_request_path": "/api/market/market-tide",
+    "last_request_at": 1773709165.1797595,
+    "daily_request_count": 464,
+    "minute_request_count": 1,
+    "minute_remaining": 119,
+    "minute_reset": 34843,
+    "daily_limit": 50000,
+    "request_id": "5d90c7e9e8fc7b183441174851cd2c9e",
+    "budget_mode": "normal"
+  }
+}

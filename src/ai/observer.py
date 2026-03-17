@@ -93,11 +93,24 @@ class Observer:
             from datetime import datetime as _dt
             try:
                 import zoneinfo
-                _now_et = _dt.now(zoneinfo.ZoneInfo("US/Eastern")).strftime("%Y-%m-%d %H:%M ET (%A)")
+                _et_now = _dt.now(zoneinfo.ZoneInfo("US/Eastern"))
+                _now_et = _et_now.strftime("%Y-%m-%d %H:%M ET (%A)")
+                _et_h, _et_m = _et_now.hour, _et_now.minute
             except Exception:
                 _now_et = time.strftime('%Y-%m-%d %H:%M ET')
+                _et_h, _et_m = 12, 0
+
+            if (_et_h == 9 and _et_m >= 30) or (10 <= _et_h < 16):
+                _session_label = "REGULAR HOURS — full liquidity, all order types"
+            elif 4 <= _et_h < 9 or (_et_h == 9 and _et_m < 30):
+                _session_label = "PRE-MARKET — extended hours trading active, limit orders only"
+            elif 16 <= _et_h < 20:
+                _session_label = "AFTER-HOURS — extended hours trading active, limit orders only"
+            else:
+                _session_label = "OVERNIGHT — market closed"
 
             prompt = f"""Current date/time: {_now_et}
+SESSION: {_session_label}
 Current state:
 
 ACCOUNT:

@@ -1,0 +1,33 @@
+{
+  "sp500_futures": "Slightly bullish direction after holding support at 6462 overnight; key levels: resistance at 6472 (overnight high), 6522; support at 6460, 6453, 6429, 6390 (weekly low).[1]",
+  "overnight_news": "Upcoming earnings: MU (Mar 18, EPS $8.50, Rev $18.97B); BABA (Mar 19, EPS $1.73, Rev $41.26B); FDX (Mar 19, EPS $4.11, Rev $26.46B). Recent market mixed close with AI spending concerns; Fed announcements impact noted in weekly outlook.[1][2][4]",
+  "hot_sectors": [
+    "Semiconductors (MU earnings)",
+    "Airlines (recent rally)",
+    "Tech/AI (spending fears)",
+    "Express Delivery (FDX earnings)"
+  ],
+  "watchlist": [
+    {
+      "ticker": "MU",
+      "reason": "Earnings on March 18 with EPS $8.50 est., key for semiconductors amid AI trends.[1]"
+    },
+    {
+      "ticker": "BABA",
+      "reason": "Earnings on March 19, EPS $1.73 est., China tech exposure.[1]"
+    },
+    {
+      "ticker": "FDX",
+      "reason": "Earnings on March 19, EPS $4.11 est., logistics sector mover.[1]"
+    },
+    {
+      "ticker": "AAPL",
+      "reason": "Recent +3% jump on product launch news, tech leader.[2]"
+    },
+    {
+      "ticker": "ES=F",
+      "reason": "S&P 500 futures tracking key levels around 6460-6472 for session open.[1]"
+    }
+  ],
+  "market_bias": "neutral"
+}

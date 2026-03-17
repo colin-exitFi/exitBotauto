@@ -1,0 +1,2551 @@
+{
+  "generated_at": 1773716930.4476569,
+  "total_trades": 359,
+  "total_wins": 118,
+  "total_losses": 241,
+  "overall_win_rate_pct": 32.9,
+  "total_pnl": -173.72,
+  "avg_win": 2.87,
+  "avg_loss": -2.13,
+  "by_symbol": {
+    "BATL": {
+      "trades": 18,
+      "wins": 11,
+      "pnl": 25.97,
+      "win_rate_pct": 61.1,
+      "avg_pnl": 1.44
+    },
+    "CTMX": {
+      "trades": 2,
+      "wins": 2,
+      "pnl": 20.62,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 10.31
+    },
+    "ETHU": {
+      "trades": 8,
+      "wins": 3,
+      "pnl": 11.32,
+      "win_rate_pct": 37.5,
+      "avg_pnl": 1.41
+    },
+    "HIMX": {
+      "trades": 59,
+      "wins": 18,
+      "pnl": 9.09,
+      "win_rate_pct": 30.5,
+      "avg_pnl": 0.15
+    },
+    "MU": {
+      "trades": 2,
+      "wins": 2,
+      "pnl": 5.63,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 2.82
+    },
+    "BMNR": {
+      "trades": 10,
+      "wins": 2,
+      "pnl": 5.24,
+      "win_rate_pct": 20.0,
+      "avg_pnl": 0.52
+    },
+    "NBIG": {
+      "trades": 5,
+      "wins": 3,
+      "pnl": -0.65,
+      "win_rate_pct": 60.0,
+      "avg_pnl": -0.13
+    },
+    "ABVX": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -3.36,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.68
+    },
+    "ATPC": {
+      "trades": 15,
+      "wins": 8,
+      "pnl": -4.01,
+      "win_rate_pct": 53.3,
+      "avg_pnl": -0.27
+    },
+    "SVCO": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -4.12,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.06
+    },
+    "ACXP": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -4.76,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.38
+    },
+    "CING": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -5.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.5
+    },
+    "ETHT": {
+      "trades": 6,
+      "wins": 1,
+      "pnl": -6.12,
+      "win_rate_pct": 16.7,
+      "avg_pnl": -1.02
+    },
+    "BCRX": {
+      "trades": 3,
+      "wins": 0,
+      "pnl": -7.48,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.49
+    },
+    "NBIS": {
+      "trades": 18,
+      "wins": 5,
+      "pnl": -8.07,
+      "win_rate_pct": 27.8,
+      "avg_pnl": -0.45
+    },
+    "DSGR": {
+      "trades": 8,
+      "wins": 2,
+      "pnl": -11.07,
+      "win_rate_pct": 25.0,
+      "avg_pnl": -1.38
+    },
+    "LWLG": {
+      "trades": 35,
+      "wins": 10,
+      "pnl": -12.02,
+      "win_rate_pct": 28.6,
+      "avg_pnl": -0.34
+    },
+    "ROMA": {
+      "trades": 20,
+      "wins": 9,
+      "pnl": -15.2,
+      "win_rate_pct": 45.0,
+      "avg_pnl": -0.76
+    },
+    "NBIL": {
+      "trades": 10,
+      "wins": 4,
+      "pnl": -20.69,
+      "win_rate_pct": 40.0,
+      "avg_pnl": -2.07
+    },
+    "APEI": {
+      "trades": 8,
+      "wins": 1,
+      "pnl": -21.69,
+      "win_rate_pct": 12.5,
+      "avg_pnl": -2.71
+    },
+    "NSA": {
+      "trades": 8,
+      "wins": 0,
+      "pnl": -22.29,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.79
+    },
+    "POET": {
+      "trades": 9,
+      "wins": 3,
+      "pnl": -25.45,
+      "win_rate_pct": 33.3,
+      "avg_pnl": -2.83
+    },
+    "ONDS": {
+      "trades": 25,
+      "wins": 8,
+      "pnl": -26.36,
+      "win_rate_pct": 32.0,
+      "avg_pnl": -1.05
+    },
+    "FLY": {
+      "trades": 82,
+      "wins": 26,
+      "pnl": -53.24,
+      "win_rate_pct": 31.7,
+      "avg_pnl": -0.65
+    }
+  },
+  "by_strategy_tag": {
+    "carryover": {
+      "trades": 28,
+      "wins": 6,
+      "pnl": -0.59,
+      "first_half": {
+        "trades": 7,
+        "wins": 1,
+        "pnl": -6.82,
+        "win_rate_pct": 14.3
+      },
+      "second_half": {
+        "trades": 21,
+        "wins": 5,
+        "pnl": 6.23,
+        "win_rate_pct": 23.8
+      },
+      "win_rate_pct": 21.4,
+      "avg_pnl": -0.02
+    },
+    "momentum_long": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.67,
+      "first_half": {
+        "trades": 0,
+        "wins": 0,
+        "pnl": 0.0,
+        "win_rate_pct": 0.0
+      },
+      "second_half": {
+        "trades": 1,
+        "wins": 0,
+        "pnl": -2.67,
+        "win_rate_pct": 0.0
+      },
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.67
+    },
+    "uw_flow_long": {
+      "trades": 6,
+      "wins": 1,
+      "pnl": -8.16,
+      "first_half": {
+        "trades": 1,
+        "wins": 0,
+        "pnl": -0.43,
+        "win_rate_pct": 0.0
+      },
+      "second_half": {
+        "trades": 5,
+        "wins": 1,
+        "pnl": -7.73,
+        "win_rate_pct": 20.0
+      },
+      "win_rate_pct": 16.7,
+      "avg_pnl": -1.36
+    },
+    "broker_reconciled": {
+      "trades": 44,
+      "wins": 9,
+      "pnl": -44.0,
+      "first_half": {
+        "trades": 0,
+        "wins": 0,
+        "pnl": 0.0,
+        "win_rate_pct": 0.0
+      },
+      "second_half": {
+        "trades": 44,
+        "wins": 9,
+        "pnl": -44.0,
+        "win_rate_pct": 20.5
+      },
+      "win_rate_pct": 20.5,
+      "avg_pnl": -1.0
+    },
+    "breakout_fast_path": {
+      "trades": 280,
+      "wins": 102,
+      "pnl": -118.29,
+      "first_half": {
+        "trades": 171,
+        "wins": 70,
+        "pnl": -64.88,
+        "win_rate_pct": 40.9
+      },
+      "second_half": {
+        "trades": 109,
+        "wins": 32,
+        "pnl": -53.42,
+        "win_rate_pct": 29.4
+      },
+      "win_rate_pct": 36.4,
+      "avg_pnl": -0.42
+    }
+  },
+  "by_hour": {
+    "15": {
+      "trades": 53,
+      "wins": 18,
+      "pnl": 25.69,
+      "win_rate_pct": 34.0,
+      "avg_pnl": 0.48
+    },
+    "17": {
+      "trades": 34,
+      "wins": 16,
+      "pnl": 12.72,
+      "win_rate_pct": 47.1,
+      "avg_pnl": 0.37
+    },
+    "20": {
+      "trades": 2,
+      "wins": 1,
+      "pnl": 0.17,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 0.09
+    },
+    "04": {
+      "trades": 7,
+      "wins": 1,
+      "pnl": -0.02,
+      "win_rate_pct": 14.3,
+      "avg_pnl": -0.0
+    },
+    "13": {
+      "trades": 59,
+      "wins": 22,
+      "pnl": -13.8,
+      "win_rate_pct": 37.3,
+      "avg_pnl": -0.23
+    },
+    "18": {
+      "trades": 33,
+      "wins": 10,
+      "pnl": -31.82,
+      "win_rate_pct": 30.3,
+      "avg_pnl": -0.96
+    },
+    "16": {
+      "trades": 35,
+      "wins": 10,
+      "pnl": -46.83,
+      "win_rate_pct": 28.6,
+      "avg_pnl": -1.34
+    },
+    "14": {
+      "trades": 77,
+      "wins": 24,
+      "pnl": -51.21,
+      "win_rate_pct": 31.2,
+      "avg_pnl": -0.67
+    },
+    "19": {
+      "trades": 59,
+      "wins": 16,
+      "pnl": -68.62,
+      "win_rate_pct": 27.1,
+      "avg_pnl": -1.16
+    }
+  },
+  "by_hold_duration": {
+    "30min-2h": {
+      "trades": 4,
+      "wins": 3,
+      "pnl": 30.42,
+      "win_rate_pct": 75.0,
+      "avg_pnl": 7.61
+    },
+    "5-30min": {
+      "trades": 51,
+      "wins": 19,
+      "pnl": 12.1,
+      "win_rate_pct": 37.3,
+      "avg_pnl": 0.24
+    },
+    ">4h": {
+      "trades": 12,
+      "wins": 2,
+      "pnl": -23.59,
+      "win_rate_pct": 16.7,
+      "avg_pnl": -1.97
+    },
+    "<5min": {
+      "trades": 292,
+      "wins": 94,
+      "pnl": -192.65,
+      "win_rate_pct": 32.2,
+      "avg_pnl": -0.66
+    }
+  },
+  "by_exit_reason": {
+    "trailing_stop_ws": {
+      "trades": 15,
+      "wins": 12,
+      "pnl": 88.37,
+      "win_rate_pct": 80.0,
+      "avg_pnl": 5.89
+    },
+    "ai_emergency: CRITICAL: Systematic data failure - zero specialist validation, extreme 52% intraday volatility ($3.60-$8.57 range = gap/halt risk), risk-off regime violation, Observer 'dying' status, consecutive loss context. Currently +4.37% but entry was BLIND with no technical/sentiment/catalyst confirmation. Protect this gain before it reverses.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 33.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 33.0
+    },
+    "advisor_strategic_exit: ZERO specialist data validation - position entered during systematic data pipeline failure with no technical analysis, sentiment, catalyst, or risk assessment. Advisor mandates FULL TRADING HALT. Position is +1.61% (~$6.21 profit) but thesis is completely blind. Exit immediately to secure profit and comply with halt order.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 15.18,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 15.18
+    },
+    "advisor_strategic_exit: Down -0.72% with 4min hold, no momentum reversal. Drawdown from peak equals P&L loss. Part of degraded scanner batch flagged by Observer. Cut before it bleeds further.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 10.31,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 10.31
+    },
+    "advisor_strategic_exit: Just entered 1 minute ago, flat. Zero specialist data = blind entry during infrastructure crisis. No Risk agent approval available. Same regime mismatch as LWLG. Exit before it goes red.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 9.96,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 9.96
+    },
+    "ai_emergency: Entered 1 MINUTE ago at 19:42 ET (after market close at 16:00 ET). This is IMPOSSIBLE timing and indicates same broken fast-path that created ONDS/FLY disasters. No specialist data = no thesis. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 9.1,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 9.1
+    },
+    "ai_emergency: CRITICAL DATA INTEGRITY FAILURE: Position entered with ZERO specialist validation (all agents down), Observer issued URGENT warning about scanner deterioration and trading blind, 8/8 trades today lack specialist data, 37.5% win rate indicates systematic failure. We are executing entries during a confirmed system failure state. Exit immediately before data corruption causes larger loss.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 7.94,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 7.94
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly denied this position (approved=False, max_size_pct=0.0) citing unclear edge, c": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 7.5,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 7.5
+    },
+    "ai_emergency: ZERO specialist data, blind entry, no thesis, no stops visible. Advisor flagged infrastructure failure. Exit before this becomes another zombie loss.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 6.48,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 6.48
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly DENIED this position (approved=False, max_size_pct=0.0) with portfolio_heat=hi": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 5.5,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 5.5
+    },
+    "ai_emergency: MARKET CLOSE IMMINENT - 17:00 ET is market close, position will be forced out immediately. Exit now to control execution.": {
+      "trades": 2,
+      "wins": 1,
+      "pnl": 5.34,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 2.67
+    },
+    "ai_emergency: CRITICAL: Position entered with ZERO specialist validation during -1.30% SPY selloff, no trailing stop active, all 5 agents offline = blind flight in risk-off regime. 0.91% profit is pure luck, not thesis. Advisor demands full trading halt. No data = no thesis = immediate exit.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 5.17,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 5.17
+    },
+    "advisor_strategic_exit: ZERO specialist data available (complete pipeline failure), position entered despite Observer HIGH URGENCY warning of regime violations and data integrity failures, trading BLIND with no technical/sentiment/catalyst intelligence, +1.73% profit exists to protect, Advisor explicitly said 'DO NOT TRADE until specialist agents consistently online' - this entry violated core safety protocols": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 4.86,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 4.86
+    },
+    "ai_emergency: CRITICAL SYSTEM FAILURE - trading blind with zero specialist data, no trailing stop active despite 3% setting, micro-cap in risk-off market at session close (15:29 ET). Position shows 0% P&L but entered at $5.00 with current price unknown. Cannot manage what we cannot see. Advisor issued FULL TRADING HALT for data integrity failure.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 4.6,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 4.6
+    },
+    "advisor_strategic_exit: Brand new position (+1.99%) entered 2 minutes ago during infrastructure crisis. No fresh catalyst, risk agent denying, momentum decelerating. Exit while small profit exists - we cannot manage positions with broken controls": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 4.45,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 4.45
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Position entered with ZERO specialist data during Observer's URGENT warning about 'SCANNER QUALITY DETERIORATION' and 'PLAYBOOK VIOLATIONS'. All 5 specialist agents completely offline. Data corruption evident (entry_price $23.89 vs fill_price $24.00 contradiction). Trading blind with 37.5% win rate in risk-off regime. This is not a trading decision - this is a system safety exit.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 4.14,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 4.14
+    },
+    "advisor_strategic_exit: Advisor high-urgency exit confirmed: Brand new position (<1min old) entered via broken fast_path at market close. No catalyst, contrarian sentiment, +0.5% but exposed to gap risk with non-functional stops.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 4.1,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 4.1
+    },
+    "ai_emergency: ZERO specialist data validation - entered blind during systematic pipeline failure, no technical/sentiment/catalyst confirmation, Advisor mandate FULL HALT until infrastructure restored": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 3.55,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 3.55
+    },
+    "ai_emergency: ZERO specialist data, blind entry, up 0.75% but NO THESIS. Observer pattern: these positions fail when specialist pipeline is broken. Lock tiny gain now.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 3.19,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 3.19
+    },
+    "advisor_strategic_exit: Only position showing +0.55% gain BUT has ZERO specialist intelligence backing it. Advisor is right - we're entering blind through broken fast_path. Take the small win before infrastructure failure turns it into another loss.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 3.01,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 3.01
+    },
+    "advisor_strategic_exit: Data pipeline failure - position entered with zero specialist validation; cannot evaluate thesis strength; Advisor FULL HALT confirmed; risk-off regime; violates core quality-over-quantity principle": {
+      "trades": 2,
+      "wins": 2,
+      "pnl": 2.93,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.47
+    },
+    "advisor_strategic_exit: ZERO specialist data = blind trade. Entered via broken fast_path with decision_confidence=0. No technical brief, no sentiment, no catalyst validation. 8min hold with no momentum follow-through. This is exactly the pattern Observer warned about: 'extreme momo plays reversing violently'. 1W/5L today proves we're guessing. Exit immediately at market while still showing small gain.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 2.84,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 2.84
+    },
+    "advisor_strategic_exit: Advisor high-urgency exit confirmed: position up only 0.47% after 22 minutes, technical shows BUY but momentum is 'accelerating' into resistance at $455 (current $451.37 = 99.2% of resistance). Sentiment NEUTRAL with contrarian flag = crowd against us. Risk agent DENIED new entry citing position management failure. Observer notes 94 failed trail attempts = protection system broken. This is a profitable position with degrading thesis and broken infrastructure - secure the 0.47% gain before it reverses into resistance.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 2.58,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 2.58
+    },
+    "ai_emergency: BLIND ENTRY - zero specialist validation, entered during risk-off regime, showing +0.77% but no confirmed thesis to support holding, cannot justify risk without data": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 2.51,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 2.51
+    },
+    "ai_emergency: CRITICAL DATA INTEGRITY FAILURE: Position entered with ZERO specialist validation (all agents down), immediately after Observer HIGH URGENCY warning about trading blind. Same pattern as previous 8 trades today (37.5% win rate, -$10.30 P&L). Entry at 2:05 PM contradicts Observer's 2:04 PM urgent halt recommendation. Trading with no technical/sentiment/catalyst/risk/macro data is Russian roulette with capital. This is not a trade - it's a system malfunction.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 2.34,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 2.34
+    },
+    "ai_emergency: ZERO specialist data + Advisor full halt + 9-loss streak + Friday 5:07pm close imminent + blind entry violated all protocols": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 2.02,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 2.02
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied approval (max_size_pct=0.0) and portfolio_heat=high. Position should not be open p": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.78,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.78
+    },
+    "ai_emergency: TRADING BLIND - zero specialist data, Friday 7:54 PM after-hours, 34% win rate system failure, no thesis to defend": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.69,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.69
+    },
+    "advisor_strategic_exit: Entered at peak of +48% parabolic spike with NO fundamental catalyst (catalyst agent confirms 'magnitude=0, no news in 24hrs'). RSI 42 after extreme spike = exhaustion. Position opened 1min ago during system crisis with risk agent denying entry. Classic late-chase disaster setup. Exit immediately while at breakeven.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.66,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.66
+    },
+    "ai_emergency: ZERO specialist data available, blind position entered against risk-off regime, Observer HIGH urgency warnings all session, Advisor explicitly says DO NOT TRADE until data integrity restored": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.65,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.65
+    },
+    "advisor_strategic_exit: 3-minute hold with minimal gain (+0.57%) in context of 33% win rate, 3 consecutive losses, and Advisor FULL HALT recommendation - lock the small win before it reverses": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.45,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.45
+    },
+    "ai_emergency: ZERO specialist data available, blind entry violates all protocols. Observer flagged 'specialist data pipeline failure throughout session' with HIGH URGENCY. Entry occurred 1 minute ago despite Advisor screaming 'DO NOT TRADE until specialist agents consistently online.' This is the EXACT scenario Observer and Advisor warned against.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.36,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.36
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval with portfolio_heat=high and system warnings. Position has minim": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.31,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.31
+    },
+    "exit_agent_EXIT_NOW: Risk agent DENIED position (approved=False, max_size_pct=0.0) with portfolio_heat=high. Technical mo": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.29,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.29
+    },
+    "advisor_strategic_exit: IMMEDIATE EXIT REQUIRED: Position entered 1 minute ago at market close (13:59 ET) with ZERO specialist data, no technical brief, no sentiment analysis, no catalyst confirmation. This is a blind entry that violates every quality standard. Advisor explicitly warned about data integrity failures and premarket artifacts. Trading at EOD with no agent validation is maximum risk for minimal reward. Exit now while still up 0.5% before after-hours gap risk materializes.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.11,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.11
+    },
+    "advisor_strategic_exit: Just entered 1 minute ago during FULL TRADING HALT advisory, zero catalyst (magnitude=4, 'failed breakout risk'), risk agent unavailable/denying, +1.27% profit on speculative entry that should never have occurred. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.1,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.1
+    },
+    "ai_emergency: ZERO specialist data = blind entry with no validation. Entered 7 min before close on Friday with no trailing stop, exposing to unprotected weekend gap risk. This is the exact systemic failure pattern causing 33.6% win rate collapse.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.09,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.09
+    },
+    "advisor_strategic_exit: SYSTEM FAILURE EXIT: Zero specialist data, entered via broken fast-path with 0 confidence, 45 prior trades showing cumulative -$35.28 loss (worst performer), now barely green +0.79% but was -0.54% moments ago indicating whipsaw. No trailing stop deployed despite config. 7-loss streak context + Friday 3:47pm = unacceptable blind position. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.07,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.07
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position (approved=False, max_size_pct=0.0), portfolio heat is high, momentum dece": {
+      "trades": 2,
+      "wins": 2,
+      "pnl": 1.05,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.53
+    },
+    "ai_emergency: Position entered 1 minute ago with ZERO specialist data (all agents offline). After-hours entry at 18:23 ET with no technical brief, no sentiment, no catalyst = blind gambling. This is the exact broken fast-path pattern that created 79 losses. System integrity crisis confirmed by Advisor. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.05,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.05
+    },
+    "advisor_strategic_exit: MARKET CLOSE IMMINENT (14:59 ET) + zero specialist data = blind flight into close. Position just opened with +0.34% gain, no thesis validation possible, risk-off regime confirmed. Exit now to secure small profit and avoid overnight/close risk with zero intelligence.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.04,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.04
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Position entered with ZERO specialist data (all agents down), during Observer HIGH URGENCY alert about scanner deterioration and playbook violations. Entry contradictions (signal $23.89 vs fill $24.00 vs recorded $24.15). Trading blind in risk-off market with 37.5% win rate. This is a data corruption crisis, not a trade thesis. EXIT IMMEDIATELY.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 1.02,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 1.02
+    },
+    "ai_emergency: Risk agent explicitly DENIED approval (approved=False, max_size_pct=0.0) - position entered despite risk veto, technical momentum decelerating, resistance at entry price $58.01, contrarian_flag=True warns of reversal risk": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.98,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.98
+    },
+    "ai_emergency: ZERO specialist data, fast-path breakout with no thesis, dead flat after 52min, decision_confidence=0. This is gambling, not trading. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.97,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.97
+    },
+    "advisor_strategic_exit: CRITICAL DATA INTEGRITY FAILURE - position entered with zero specialist data, zero agent briefs, zero thesis validation. This is a blind entry violating all quality rules. Observer flagged severe data corruption (HIMX $12.83 vs $8.55-$9.19 range). Advisor explicitly commanded 'DO NOT TRADE until price feeds stabilize'. Position entered 1 minute ago at 1:52 PM ET despite clear stand-down order. Exit immediately at breakeven before corrupt data causes real damage.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.94,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.94
+    },
+    "ai_emergency: ZERO specialist data, entered blind at 15:19 ET (1 minute before market close), no thesis, no technical view, no risk assessment, Friday afternoon liquidity crunch imminent": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.93,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.93
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE - Position entered with ZERO specialist data, no technical/sentiment/catalyst briefs, no trailing stop despite being live. This is the EXACT blind entry pattern that caused 33% win rate collapse. ADVISOR explicitly warned system is broken and should be HALTED.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.92,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.92
+    },
+    "ai_emergency: Zero specialist data available, position entered during 9-loss streak against Advisor's FULL HALT directive, 17:16 ET Friday (14 minutes to close) with no protection infrastructure visible, micro-cap illiquidity risk into weekend": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.9,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.9
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Position entered with ZERO specialist data (all agents down), data corruption evident (entry_price discrepancy), Observer issued HIGH URGENCY warning pre-entry about scanner deterioration and playbook violations, trading completely blind in 2-loss streak. This is not a market risk - this is a data pipeline failure. Immediate exit required.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.89,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.89
+    },
+    "ai_emergency: ZERO specialist data, blind fast-path entry, same infrastructure failure pattern as FLY. No trailing stops deployed despite configuration. Dead on arrival.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.89,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.89
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly denied approval (approved=False, max_size_pct=0.0) with portfolio heat already": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.87,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.87
+    },
+    "ai_emergency: ZERO specialist data available - trading blind with no technical/sentiment/catalyst intelligence. This is the exact infrastructure failure pattern that created 7 consecutive losses. Position entered via broken fast_path.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.81,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.81
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval (approved=False, max_size_pct=0.0) with portfolio_heat=high. Pos": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.8,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.8
+    },
+    "advisor_strategic_exit: Entered during Advisor FULL TRADING HALT directive - violates quality filter mandate; position opened 1 min ago with no specialist data available to justify entry against halt recommendation": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.8,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.8
+    },
+    "ai_emergency: ZERO specialist data available - flying completely blind with no technical/sentiment/catalyst intelligence. Position entered via broken fast-path that bypasses quality gates. Observer explicitly warned 'protection mechanism failed to deploy on HIMX' - same infrastructure failure risk here. Late Friday 15:27 ET in choppy market with no intelligence = unacceptable risk exposure.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.79,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.79
+    },
+    "advisor_strategic_exit: Brand new position (0 min old) entered at 3:23 PM close during system-wide infrastructure failure. Zero validation, no agent briefs, market already closed. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.78,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.78
+    },
+    "advisor_strategic_exit: Flat position entered 1 minute ago during FULL TRADING HALT period - entered against explicit Advisor guidance, exit immediately to preserve capital": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.77,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.77
+    },
+    "exit_agent_EXIT_NOW: Risk agent DENIED position (approved=False, max_size_pct=0.0) with portfolio_heat=high. Position sho": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.76,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.76
+    },
+    "advisor_strategic_exit: ADVISOR FULL HALT + Zero specialist data + Failed breakout pattern (entered 25min ago, zero follow-through) + 3:05pm Friday with weekend gap risk + No thesis defense available": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.73,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.73
+    },
+    "exit_agent_EXIT_NOW: Critical data integrity issue: Risk agent flagged price mismatch ($16.65 vs $13.14 actual), position": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.72,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.72
+    },
+    "advisor_strategic_exit: ZERO specialist data available (complete intelligence blackout), position entered 2min ago during confirmed risk-off regime with -1% indices, Observer HIGH URGENCY warning about data pipeline failure and regime violations, Advisor explicitly recommends NO ACTION until data integrity restored, 0.55% profit exists to protect, no thesis visibility = blind flying": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.7,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.7
+    },
+    "ai_emergency: INFRASTRUCTURE CORRUPTION: Position entered at 19:49 ET (1 MINUTE AGO) via the SAME broken fast-path system that created ONDS/FLY disasters. Entered at market close in risk_off regime with no functional trailing stops. Exit before system fails here too.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.68,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.68
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval citing no clear edge, existing position conflict, and lack of mo": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.66,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.66
+    },
+    "ai_emergency: MARKET CLOSED - position entered at 18:50 ET after 4pm close. This is an INVALID ENTRY that bypassed market hours checks. No liquidity, no price discovery, no ability to manage risk.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.65,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.65
+    },
+    "advisor_strategic_exit: Zero specialist data available (all agents showing 'No data available'), entered blind without validation - this is the exact infrastructure failure pattern Advisor flagged causing 33% win rate collapse": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.61,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.61
+    },
+    "ai_emergency: CRITICAL: Entered 1 minute ago during -1.30% SPY selloff with ZERO specialist data, ZERO trailing stop protection, systematic pipeline failure confirmed. Observer HIGH URGENCY warning, Advisor FULL TRADING HALT recommendation. This is a blind entry during confirmed data integrity crisis. Exit at breakeven before damage occurs.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.6,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.6
+    },
+    "ai_emergency: ZERO specialist data available - no thesis, no protection intelligence, no visibility. Observer explicitly flagged this as previous zombie position. Trading blind is unacceptable.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.59,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.59
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly DENIED this position (approved=False, max_size_pct=0.0) with portfolio heat HI": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.57,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.57
+    },
+    "advisor_strategic_exit: EXIT IMMEDIATELY - just entered 2 minutes ago via same broken system during FULL OPERATIONAL CRISIS, risk agent denying all entries, -0.28% and market closing in 57 minutes": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.57,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.57
+    },
+    "dust_liquidation": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.49,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.49
+    },
+    "advisor_strategic_exit: Position entered via broken fast-path with ZERO specialist data, no trailing stop deployed, 25% historical win rate on this symbol, minimal profit (+0.31%) likely to evaporate. Advisor urgency HIGH confirmed. System integrity failure - exit immediately before turning red.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.42,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.42
+    },
+    "advisor_strategic_exit: Fresh entry (4 min) showing immediate weakness -0.09%, zero specialist data available, no thesis confirmation. In a 2-loss streak, cannot justify holding speculative position with no intel. Capital preservation priority.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.39,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.39
+    },
+    "ai_emergency: ZERO specialist data, flat entry with no visible thesis or protection. Third blind position entered via broken infrastructure. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.37,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.37
+    },
+    "ai_emergency: CRITICAL: Position entered at 15:05 ET with ZERO specialist data during documented system-wide data pipeline failure. Advisor issued FULL TRADING HALT due to 'systematic data integrity failure'. This is blind trading in violation of all quality principles. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.34,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.34
+    },
+    "ai_emergency: Barely positive (+0.1%) at market close (15:02 ET), entered 1 minute ago with zero momentum confirmation, no specialist data, no protective stops, Friday close creates unacceptable weekend exposure": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.32,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.32
+    },
+    "ai_emergency: After-hours position entered at 3:13 PM, now 7:14 PM with zero specialist data - unmanaged overnight risk into weekend with 33% win rate and 4-loss streak": {
+      "trades": 2,
+      "wins": 1,
+      "pnl": 0.32,
+      "win_rate_pct": 50.0,
+      "avg_pnl": 0.16
+    },
+    "advisor_strategic_exit: SYSTEMATIC DATA FAILURE - zero specialist validation available, trading completely blind in violation of core strategy rules; Advisor mandates full trading halt; position entered during risk_off regime when Social Momentum playbook requires risk_on; small biotech with gap/halt risk and no thesis visibility": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.29,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.29
+    },
+    "ai_emergency: CRITICAL: Entered 1 minute ago with ZERO specialist data (all agents offline). This is the 27th consecutive blind entry violating system integrity rules. Advisor issued FULL TRADING HALT for systematic data pipeline failure. Cannot manage position we entered blind.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.26,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.26
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position (approved=False, max_size_pct=0.0) with high portfolio heat and risk_agen": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.23,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.23
+    },
+    "ai_emergency: ZERO specialist data available = trading blind. After-hours entry (18:16 ET) with no validation pipeline. Recent session: 111 trades, 36W/70L from identical blind entries. This is the EXACT pattern that destroyed win rate from 60% to 33.96%. Exit immediately.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.21,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.21
+    },
+    "ai_emergency: ZERO specialist data available - blind position with no validation, Advisor flagged systemic data integrity crisis, 19:37 ET after-hours trading with no intelligence, violates all quality gates": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.21,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.21
+    },
+    "advisor_strategic_exit: Position entered 1 minute ago during active system emergency with Risk agent returning DENY (approved=False, max_size_pct=0.0). Despite technical BUY signal, this violates the hard 'IMMEDIATE FULL TRADING HALT' mandate. Exit immediately to stop the bleeding of unauthorized entries.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.2,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.2
+    },
+    "advisor_strategic_exit: SYSTEM FAILURE EXIT: Zero specialist data, same broken fast-path batch as FLY, 20 prior trades with 25% win rate, barely green +0.15% after being underwater at entry. No trailing stop active. Both positions show identical failure pattern = false breakout signal. 7-loss streak + Friday close approaching + blind entry = exit now.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.2,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.2
+    },
+    "ai_emergency: CRITICAL DATA INTEGRITY FAILURE: Position entered with ZERO specialist validation during Observer's urgent warning about system deterioration. All 5 specialist agents down = trading completely blind. 8/8 trades today with no validation, 37.5% win rate, average 100-second hold times = panic pattern. Entry price discrepancy ($23.89 signal vs $24.00 fill vs $23.99 current reporting) indicates data corruption. This is not a trading decision - this is a system failure requiring immediate position closure.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.17,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.17
+    },
+    "ai_emergency: Entered 1 min ago at 3:50pm ET Friday with ZERO specialist data - trading blind into market close. Advisor explicitly commands FULL TRADING HALT. No technical/sentiment/catalyst validation = zero thesis.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.16,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.16
+    },
+    "exit_agent_EXIT_NOW: Position thesis is broken: Risk agent explicitly DENIED this position due to policy violations (addi": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.16,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.16
+    },
+    "ai_emergency: CRITICAL: 16:53 ET Friday, 7min to close, ZERO specialist data, 9-loss streak, +$0.01 'profit' means nothing - close before weekend gap risk with blind position": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.15,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.15
+    },
+    "ai_emergency: TRADING BLIND - zero specialist data, dead flat entry with no follow-through, system critically broken": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.11,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.11
+    },
+    "advisor_strategic_exit: Entered during Advisor FULL TRADING HALT directive - violates quality filter mandate; position opened <1 min ago with no specialist data available to justify entry against halt recommendation": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.07,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.07
+    },
+    "exit_agent_EXIT_NOW: Position down -6.2% with no recovery from entry price (peak = entry). No momentum materialized after": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.05,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.05
+    },
+    "advisor_strategic_exit: Broker-reloaded ghost position (+0.85%) with zero specialist brief data and 'broker_reloaded_after_local_removal' flag. System already tried to exit this. No thesis, no data, pure infrastructure anomaly. Lock the 0.85% gain before it vanishes.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.05,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.05
+    },
+    "ai_emergency: Entered 1 min ago at 3:50pm ET Friday with ZERO specialist data AND zero trailing stop protection despite 3% trail setting. Observer flags 'protection_failed' risk. Trading blind 10 minutes before close = unacceptable risk exposure.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.02,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.02
+    },
+    "advisor_strategic_exit: Up 2.66% but already held 9min, technical momentum decelerating (confidence 45), no fundamental catalyst, Observer flagged it as 'dying' and appearing in scanner again at +29% (late chase warning). Secure profits before reversal.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.01,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.01
+    },
+    "advisor_strategic_exit: ZERO specialist data available (all agents offline), entered during confirmed risk-off regime with Observer HIGH URGENCY warnings, Advisor explicitly states 'DO NOT TRADE until specialist agents consistently online', position has no thesis support whatsoever": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "advisor_strategic_exit: Just entered at literal peak of +48% parabolic spike (RSI 42 post-spike = exhaustion). Zero specialist data available. Position opened during system crisis with broken controls. No thesis validation. Exit immediately while flat.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZERO specialist data available - another zombie position from broken infrastructure. No technical analysis, no sentiment, no catalyst data. Cannot manage what we cannot see.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZERO specialist data, blind position, entered via broken fast_path bypassing quality gates - this is the EXACT pattern that created recent losses": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: Zombie position held 2036 minutes (34+ hours) with ZERO specialist data, fractional share (0.018 shares = $0.43 position), Observer flagged protection system failure - this IS the stuck position problem": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: ZERO specialist data available, another zombie from broken fast-path, no thesis visible, flying blind": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "advisor_strategic_exit: ZOMBIE POSITION with 1.22% profit after 35 HOURS holding. Observer called this dead 3x, emergency exit already attempted, broker keeps reloading. Zero specialist data = flying blind. This is not a 'runner' - it's a broken system artifact. TAKE THE PROFIT AND CLOSE THIS CHAPTER.": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE: Zero specialist data, blind entry, trailing stops unverified, 3:32pm Friday in choppy market. Observer flagged 'protection mechanism failed to deploy' on this exact symbol. This is the textbook definition of unsafe position - we have NO intelligence, NO catalyst view, NO technical thesis, NO sentiment read, and NO confirmation stops are armed. Exit immediately before this becomes another loss statistic.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZERO specialist data, 0.02 shares = system error position, entered blind, no risk management possible": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: INFRASTRUCTURE FAILURE: Zero specialist data, no trailing stop deployed despite config, entered blind via broken fast-path with 0 confidence. 45th trade on worst-performing symbol (-$35.28 cumulative). Now underwater in 3min. This is not a market call - this is a system integrity failure.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "advisor_strategic_exit: Position entered via broken fast-path with ZERO specialist data, no trailing stop deployed despite config, only +0.2% after market close (16:08 ET), 25% historical win rate on this symbol, part of 7-loss streak pattern. No thesis exists to defend - exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "advisor_strategic_exit: MARKET CLOSE IMMINENT (16:22 ET, 8 min to close) + zero specialist data + entered at worst possible time (Friday afternoon) + catastrophic 35.4% win rate demands we NOT hold mystery positions into weekend + position just opened 2min ago with no thesis validation": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "advisor_strategic_exit: Held 2200 minutes (3+ days), down -0.43%, zero catalyst/technical data to justify continued hold, dead capital during 4-loss streak, exit before weekend gap risk": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "exit_agent_EXIT_NOW: Position is down -1.8% after 37.7 hours with no recovery. Current price equals entry price at peak, ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: ZERO specialist data available - position entered via broken fast-path with no intelligence. Entered 1 min ago Friday 18:38 ET (after hours, extreme risk). This is the exact pattern that created 78 losses. Observer flags 'risk-off regime but momentum long signals' - regime mismatch. No technical, sentiment, catalyst, risk, or macro data = blind entry. 33.3% win rate shows this pattern is catastrophic.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: AFTER HOURS ENTRY VIOLATION - position entered at 18:56 ET, well after market close (16:00 ET). This violates our operational safety bounds. We do not trade after hours due to liquidity risk, gap risk, and inability to manage positions effectively. This entry should never have occurred.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZERO specialist data - blind entry with no technical/sentiment/catalyst validation. Already down -0.25% with complete intelligence failure. Same catastrophic pattern as FLY.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZERO specialist data available - blind position with no technical/sentiment/catalyst validation. Entered at 3:35pm ET (25 min to close) with literally no intelligence. This is the exact systemic failure Advisor identified: 'fast_path bypassing ALL quality gates'. Position has no thesis, no context, no risk assessment.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": 0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZERO specialist data available - blind position with no validation, Advisor flagged systemic data integrity crisis, after-hours with no thesis, $0.54 total exposure shows entry_manager already recognized low conviction": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: ZERO specialist data, blind entry, 8min hold with no intelligence validation - systemic data integrity failure": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: ZERO specialist data, already down -0.62%, 3min hold with no thesis - infrastructure failure": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: ZERO specialist data, Observer flagged 'dying' status with 'failed break', 4min hold with no validation": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.0
+    },
+    "ai_emergency: ZOMBIE POSITION: $0.03 notional dust, broker-reloaded ghost the system already tried to exit, Observer says 'purge', zero economic value, pure overhead": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "ai_emergency: Zombie position with $0.03 notional value (0.00071305 shares) - broker artifact with zero economic value, clogs system tracking": {
+      "trades": 1,
+      "wins": 1,
+      "pnl": 0.0,
+      "win_rate_pct": 100.0,
+      "avg_pnl": 0.0
+    },
+    "exit_agent_EXIT_NOW: Position is underwater at -0.7% after 84.9 hours with no recovery above entry. Price has not exceede": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.0
+    },
+    "exit_agent_EXIT_NOW: Position is down -5.0% and trading at entry level (current $6.73 vs entry $7.08). Peak price equals ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.01,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.01
+    },
+    "ai_emergency: Observer explicitly flagged 'protection mechanism failed to deploy' - trailing stop never activated, -1.62% bleeding, 35+ hours holding blind, Observer warned this exact symbol": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.01,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.01
+    },
+    "exit_agent_EXIT_NOW: Position down -0.5% after 81.4 hours with -4.0% drawdown from peak ($10.66\u2192$10.23). No momentum, ext": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.01,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.01
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE - Zero specialist data, entered during system crisis, now -1.35% and deteriorating. All specialist agents offline (No data available). This matches the broken fast_path signature from game film.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.01,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.01
+    },
+    "advisor_strategic_exit: MARKET CLOSED - position entered at 18:52 ET, 7 minutes after close. This is an INVALID ENTRY that should never have occurred. Exit immediately on Monday open to prevent weekend risk exposure on a position entered outside trading hours.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.02,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.02
+    },
+    "ai_emergency: CRITICAL: Position entered with ZERO protection - trailing stop system failed to deploy despite 3% config. Now holding unprotected into Friday after-hours with no specialist data, no thesis validation, and catastrophic 34.4% win rate context. This is exactly the kind of broken execution that's destroying the account.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.02,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.02
+    },
+    "ai_emergency: ZERO specialist data available (all agents show 'No data available'), entered at 23.66 at 16:47 ET on a Friday with 7-loss streak active. This is a blind entry with NO thesis, NO technical confirmation, NO catalyst, NO risk assessment. Position has existed 0 minutes - exit immediately before it becomes loss #8.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.06,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.06
+    },
+    "ai_emergency: ZERO specialist data available, zombie position from previous catastrophic failure, blind entry via broken pipeline": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.07,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.07
+    },
+    "ai_emergency: ZERO specialist data - blind entry with no technical/sentiment/catalyst validation. Entered 1 minute ago with complete intelligence failure. This is the exact systemic failure pattern that created 33.3% win rate.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.07,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.07
+    },
+    "ai_emergency: CRITICAL: 16:53 ET Friday, 7min to close, ZERO specialist data, 9-loss streak, flat entry just opened - close before weekend gap risk with blind position": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.09,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.09
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE - position entered with NO specialist data, NO trailing stop active despite 3% config, NO risk validation. This is the exact blind entry pattern that destroyed win rate from 60% to 33%. Observer flags 'protection_failed=false but has_trailing_stop=false is concerning' and warns 'low liquidity micro-cap with potential for violent reversals.' Position is <2min old with ZERO intelligence backing it.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.1
+    },
+    "ai_emergency: ZOMBIE POSITION: $23.76 notional dust, broker-reloaded artifact, Observer says 'DYING' and 'liquidate immediately', Risk agent DENIES new orders on this symbol, this is data pollution not a trade": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.1
+    },
+    "ai_emergency: ZERO specialist data, entered blind via broken fast-path, -0.19% immediate, 15:34 ET close approaching, no thesis exists": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.14,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.14
+    },
+    "advisor_strategic_exit: Just entered 1min ago via same broken fast_path infrastructure that caused ONDS/FLY disasters. Risk agent denying all entries. Exit immediately before this becomes another stuck position.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.16,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.16
+    },
+    "ai_emergency: ZERO specialist data available, NO trailing stop protection active despite 3% trail setting, entered 2min ago into Friday 6:01pm afterhours with broken data pipeline - trading completely blind with no risk protection": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.16,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.16
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval (max_size=0%, portfolio_heat=high, risk_agent_failed). Position ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.17,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.17
+    },
+    "advisor_strategic_exit: Technical agent SELL signal (72% confidence), momentum decelerating, position barely profitable (+0.27%), held only 2 minutes past catalyst pop. Risk agent DENIED adding to position citing 'losing position' logic. This is a post-announcement fade setup - the 15% surge already happened, now technical says exit. Lock the tiny gain before it reverses.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.18,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.18
+    },
+    "ai_emergency: CRITICAL DATA INTEGRITY FAILURE - zero specialist data, entered 7 min before Friday close with no protection, no thesis validation, no technical/sentiment/catalyst intelligence. Pure blind entry consistent with systemic failure pattern identified by Advisor. Weekend gap risk on unvalidated position.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.2,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.2
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly denied position approval with portfolio_heat=high. Position entered at peak ($": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.21,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.21
+    },
+    "advisor_strategic_exit: Just entered 1 minute ago, already -0.7%. Zero specialist data = blind entry during infrastructure crisis. No Risk agent approval available. Observer flags 'all playbooks require risk_on but market is risk_off'. Exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.21,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.21
+    },
+    "ai_emergency: ZERO INTELLIGENCE ENTRY - position entered with all specialist agents offline (no technical, sentiment, catalyst, risk, or macro data). This is the exact broken fast-path pattern that created 78 losses. Entry at 18:44 ET after market close violates all timing rules. Observer flags 'catastrophic 33.87% win rate' and 'systematic blind entry failures'. Advisor explicitly states 'this is not a trading problem - this is a SYSTEM INTEGRITY CRISIS'. Cannot defend position with literally zero data.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.21,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.21
+    },
+    "ai_emergency: ZERO specialist data available, entered with no decision intelligence, immediately underwater, 7-loss streak in progress, Friday close in 10 minutes with weekend gap risk": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.25,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.25
+    },
+    "ai_emergency: ZERO SPECIALIST DATA - trading completely blind in risk-off regime. Position entered 2min ago with no validation. Observer: 'systematic data pipeline failure causing blind entries.' This is Russian roulette, not trading.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.26,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.26
+    },
+    "ai_emergency: BLIND ENTRY - zero specialist validation, entered during risk-off regime (SPY -1.30%), no trailing stop, position <2min old with no thesis confirmation. Advisor mandate: FULL TRADING HALT until data pipeline restored. This violates every quality gate.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.27,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.27
+    },
+    "ai_emergency: INFRASTRUCTURE FAILURE: Identical pattern to FLY - zero specialist data, no stops, blind fast-path entry, immediately underwater. System entered both positions simultaneously without ANY quality gates. Exit before losses compound.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.3,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.3
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Position entered with ZERO specialist data (all agents offline), violating all quality gates. This is the exact broken fast-path that created 60+ losing FLY trades (-$42.78). Entry at 14:11 ET Friday afternoon after market close (current time 18:44 ET) = position entered during extended hours with no visibility. Observer flags 'catastrophic 33.87% win rate', 'playbook mismatch', and 'momentum longs in wrong regime'. No technical brief, no sentiment, no catalyst = blind gambling. This position should NEVER have been entered.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.3,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.3
+    },
+    "ai_emergency: 16:37 ET = 23 minutes to close on Friday with zero specialist data, no thesis validation, entered blind into weekend gap risk during 3-loss streak with 35% win rate": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.31,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.31
+    },
+    "exit_agent_EXIT_NOW: Risk agent DENIED position (approved=False, max_size_pct=0.0) with portfolio_heat=high and risk_agen": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.31,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.31
+    },
+    "ai_emergency: ZERO specialist data available - trading completely blind with no technical/sentiment/catalyst validation. Position entered at 9.87, currently 9.86 (flat), but we have NO intelligence on setup quality, momentum health, or risk context. This is exactly the 'broken fast-path blind entry' pattern that collapsed win rate to 33.96%. After 4 consecutive losses and Advisor's explicit FULL TRADING HALT order, holding a position with zero data validation violates every quality principle.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.31,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.31
+    },
+    "advisor_strategic_exit: Just entered 1 minute ago at market close (15:00 ET) - ZERO liquidity window remaining, cannot manage risk into close, violates Friday afternoon + close-proximity entry rules. Observer flagged immediate stall pattern on prior entries (HIMX/ONDS). 3-loss streak means quality bar must be highest - entering at 3pm Friday is reckless timing regardless of setup quality.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.32,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.32
+    },
+    "exit_agent_EXIT_NOW: Position down -1.6% with decelerating momentum (confidence only 45%), Risk agent explicitly denied f": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.33,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.33
+    },
+    "advisor_strategic_exit: Down -1.25%, technical says HOLD with confidence 45 and momentum decelerating, infrastructure shows 69 failed trailing stop attempts. Crypto lagging in risk-on market is red flag. Cut the loser.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.35,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.35
+    },
+    "exit_agent_EXIT_NOW: Risk agent DENIED this position (approved=False, max_size_pct=0.0) with portfolio_heat=high. Positio": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -0.38,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.19
+    },
+    "ai_emergency: BLIND ENTRY - zero specialist validation, entered during risk-off regime, no confirmed catalyst or technical edge, just entered 1 min ago with no thesis": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.39,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.39
+    },
+    "advisor_strategic_exit: Position just entered (1 min old) but systemic context is catastrophic: 33% win rate, 3 consecutive losses, Observer/Advisor both calling for FULL HALT. Zero specialist data available = blind entry. This violates 'quality over quantity' - we just added a position when both Observer AND Advisor explicitly said SKIP ALL. Exit immediately before this becomes loss #4.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.39,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.39
+    },
+    "ai_emergency: ZERO specialist data, entered blind, already down -0.43%, Observer confirms protection mechanisms failing, 35% win rate means 2/3 chance this becomes a loser": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.39,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.39
+    },
+    "ai_emergency: After-hours position with zero specialist data, zero sentiment, no thesis validation - blind risk into weekend gap": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -0.41,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.2
+    },
+    "ai_emergency: ZERO specialist data available - blind position with no validation, just entered after hours with no technical/sentiment/catalyst context. Same systemic failure pattern that caused 4 consecutive losses": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.41,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.41
+    },
+    "ai_emergency: TRADING BLIND - zero specialist data, breakeven/red position with no momentum confirmation, infrastructure failure": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.41,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.41
+    },
+    "advisor_strategic_exit: Entered at market close via broken fast_path infrastructure. Strong catalyst (Stage 3 customer) BUT entered with failed risk agents in hostile market. Exit before protection mechanisms fail.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.43,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.43
+    },
+    "ai_emergency: RISK AGENT EXPLICITLY DENIED (approved=False, max_size_pct=0.0), yet position exists - direct protocol violation, plus momentum decelerating per technical agent": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.43,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.43
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE: Position entered without trailing stop protection, no specialist validation data available, market closed in 30min with weekend gap risk, Advisor flagged broken fast-path causing 33% win rate collapse": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.43,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.43
+    },
+    "ai_emergency: ZERO specialist data on brand new position - trading blind into Friday close violates all quality rules. Position entered 2min ago with no technical/sentiment/catalyst validation available.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.43,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.43
+    },
+    "ai_emergency: ZERO specialist data, blind fast-path entry, 45 prior trades with cumulative -$35.28 loss, worst performer in system. Infrastructure failure - no valid thesis exists.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.51,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.51
+    },
+    "advisor_strategic_exit: Zombie dust position ($152 notional), broker artifact documented by Observer as needing immediate purge. Mental overhead exceeds any value.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.51,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.51
+    },
+    "advisor_strategic_exit: Entered at market close (16:33 ET) with ZERO specialist intel, zero sentiment data, zero technical confirmation - blind entry violates all quality gates. Position is flat (-0.08%) with 27 minutes until market close and massive weekend gap risk. Advisor confirmed FULL TRADING HALT due to catastrophic 35.4% win rate. This entry directly contradicts the halt order and exposes capital to weekend risk with no thesis.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.52,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.52
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Position entered via broken fast_path with decision_confidence=0, zero specialist data across all agents, no technical/sentiment/catalyst validation. This is blind speculation, not trading. Observer confirms pattern of 'extreme momo plays reversing violently' - exact same failure mode as 238 prior losses. We are 10min into a position with NO THESIS and NO DATA. Market closes in 8 minutes - this is maximum risk for zero edge.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.52,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.52
+    },
+    "advisor_strategic_exit: Position underwater -0.46%, part of 4-trade losing streak, entered via fast_path with zero confidence, technical momentum decelerating (confidence only 45%), no upward progress in 3 minutes, Risk Agent explicitly denied adding to this position citing insufficient edge. This is textbook bad entry - cut it now before 3% trail gets hit.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.57,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.57
+    },
+    "exit_agent_EXIT_NOW: Position is down -2.2% after 20 hours with no momentum recovery. Price peaked at $24.63 shortly afte": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.59,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.59
+    },
+    "advisor_strategic_exit: Position entered blind via broken fast-path with zero specialist data, immediately underwater (-0.15%), Advisor high-urgency exit confirmed. 7-loss streak active, 25% historical win rate on this symbol, Friday afternoon thin liquidity, no trailing stop deployed despite configuration. No thesis exists to defend - exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.61,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.61
+    },
+    "ai_emergency: TRADING BLIND: Zero specialist data, entered at 3:54pm Friday with no catalyst/technical/sentiment validation. Advisor mandates FULL HALT. Market closes in 4 minutes. Cannot manage position without intelligence.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.62,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.62
+    },
+    "advisor_strategic_exit: TURNING LOSER: Now -2.11% from entry ($27.52\u2192$26.94), down from Advisor's cited +0.18% snapshot 12min ago. Crypto momentum reversing, no specialist data to support thesis continuation, and we're 1 loss from consecutive=2. Cut before trailing stop fails on gap down.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.65,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.65
+    },
+    "exit_agent_EXIT_NOW: Position underwater at -0.2% after 4 minutes with decelerating momentum (confidence only 45%). Catal": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.73,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.73
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE - Position entered with ZERO specialist data (all agents offline), violating all quality gates. This is the exact broken fast-path pattern that created 60+ losing FLY trades costing -$42.78. Entry at 14:11 ET Friday afternoon violates late-day timing rules. Position entered in RISK_OFF regime with Observer explicitly flagging 'playbook mismatch'. Win rate at catastrophic 33.6% - cannot afford another blind entry turning into loss #80. After-hours now (18:26 ET), position unmonitored for 4+ hours with no specialist coverage.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.74,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.74
+    },
+    "advisor_strategic_exit: Brand new position (<1min old) entered at market close (19:52 ET) in risk_off regime with broken infrastructure. No fresh catalyst, momentum post-compliance news already played. Exit before overnight gap risk.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.75,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.75
+    },
+    "ai_emergency: ZERO specialist data available, already -0.28% and dropping from entry. No technical brief, no catalyst brief, no risk assessment = no valid thesis. Cannot manage what we cannot see.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.76,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.76
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE: Zero specialist data, no trailing stop deployed despite specifications, entered blind on fast-path bypass, now immediately underwater -0.38% in first 2 minutes, late Friday afternoon with thin liquidity. This is exactly the scenario Observer and Advisor warned against - broken protection systems meeting choppy Friday close.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.77,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.77
+    },
+    "ai_emergency: Entered at 16:39 ET - 21 minutes before market close on 4-loss streak with 34% win rate, violates Friday afternoon weekend gap risk rule, zero momentum data available, literally blind entry": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.77,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.77
+    },
+    "ai_emergency: CRITICAL: Position entered 1 minute ago with ZERO specialist data, NO trailing stop protection deployed despite 3% config, into Friday after-hours (19:09 ET) with catastrophic 33.87% win rate and explicit FULL TRADING HALT directive from Advisor. This is a system failure - position should never have been entered.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.8,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.8
+    },
+    "ai_emergency: CRITICAL: Zero specialist data, no trailing stop active despite configuration, social momentum in risk_off regime, trading completely blind - operational failure not market risk": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.81,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.81
+    },
+    "advisor_strategic_exit: Position opened at 4:27pm ET (3 minutes to close) with ZERO specialist data, no thesis, no catalyst confirmation. This is a blind entry violating every quality gate the Advisor just mandated we fix. Market closes in 3 minutes - impossible to manage risk or capture meaningful move. 35.4% win rate demands we STOP making speculative entries without edge.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.81,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.81
+    },
+    "ai_emergency: Flat entry at market close (15:02 ET), zero follow-through after 1 minute, no specialist data, no trailing stop protection, Friday close imminent with weekend gap risk": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.86,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.86
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE - Position entered via broken fast-path with ZERO specialist validation (all briefs 'No data available'), NO trailing stop active despite 3% config, Friday 3:39pm with 21min to close, blind entry exactly matching 9-loss streak failure pattern": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.86,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.86
+    },
+    "ai_emergency: ZERO specialist data, entered blind during infrastructure failure, Advisor explicitly warned 'protection mechanism failed to deploy', -0.39% underwater with no thesis": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.9,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.9
+    },
+    "ai_emergency: ZERO specialist data available - complete intelligence blackout. Position entered via broken fast-path that has produced 60+ losing FLY trades totaling -$42.78. Entered at 14:11 ET Friday (late-day violation), now after hours at 18:35 ET with extended hours gap risk. This is the EXACT pattern Observer warned about: 'momentum longs in wrong regime', 'playbook mismatch'. No technical brief, no sentiment, no catalyst = blind gambling. Exit immediately in extended hours before gap down.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.91,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.91
+    },
+    "ai_emergency: Entered at absolute peak of 32% parabolic move with -15% rolling VWAP divergence. Flat since entry, sitting at day's low. Observer flagged as 'trap' and 'textbook exhaustion entry'. Zero momentum continuation after 4min.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.91,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.91
+    },
+    "ai_emergency: ZERO specialist data, no trailing stop protection, entered blind via broken fast_path. This is the EXACT pattern that created stuck zombie positions. Exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.94,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.94
+    },
+    "ai_emergency: ZERO specialist data, no thesis, already down -0.09% with no protection visible. Another blind fast_path entry. Exit before it becomes another losing position.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.96,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.96
+    },
+    "ai_emergency: Position down -1.17% after 6 minutes on a +32% extended runner with NO specialist data, entered at $25.87 (likely the peak), now at $25.57. Observer flagged this as 'textbook exhaustion entry' and 'trap'. This is a failed momentum chase\u2014cut it immediately before it spirals.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -0.98,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -0.98
+    },
+    "ai_emergency: ZERO specialist data, blind entry bypassing quality gates, -0.48% worst performer, no visibility on risk": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.03,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.03
+    },
+    "advisor_strategic_exit: Position entered at 16:19 ET (1 minute from market close) with ZERO specialist intelligence available - blind entry violates all quality gates. Advisor confirmed FULL TRADING HALT due to catastrophic 35.4% win rate. This entry happened AFTER the halt recommendation, suggesting execution layer malfunction. Exit immediately to prevent another statistical loss.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.04,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.04
+    },
+    "advisor_strategic_exit: No specialist brief data available = blind flying on 2min old position. Advisor flags 'broker-reloaded zombie' with prior failed exit attempt. No thesis visibility means we can't defend holding. Take the +0.05% and eliminate unknown risk.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.04,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.04
+    },
+    "ai_emergency: ZERO specialist data = blind position, entered 1min ago with IMMEDIATE reversal, systematic data integrity failure confirmed by Advisor, no intelligence to justify holding": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.08,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.08
+    },
+    "ai_emergency: ZERO specialist data = blind position, entered 15min ago with no follow-through, late Friday 15:43 execution into weekend gap risk, protection system failed (no trailing stop despite settings), part of 4-loss streak": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.09,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.09
+    },
+    "ai_emergency: ZERO specialist data available, already -0.89% immediately on entry, blind position entered via broken fast-path system during 3-loss streak": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.1
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied approval with portfolio_heat=high. Position underwater at -0.3%, momentum decelera": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.12,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.12
+    },
+    "ai_emergency: ZERO specialist data, just entered with no thesis via fast-path breakout. Flat at entry = no edge confirmed. Exit before it bleeds like ONDS.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.13,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.13
+    },
+    "advisor_strategic_exit: Position entered underwater and deteriorating (-0.38% P&L, down from entry). No specialist data to support thesis. 35% win rate means we can't afford speculative holds. Advisor called FULL HALT for reason - our quality filter is broken. This is exactly the type of marginal setup that becomes loss #35. Exit now while loss is small.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.15,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.15
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied approval (approved=False, max_size_pct=0.0) with portfolio_heat=high. Position sho": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.16,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.16
+    },
+    "advisor_strategic_exit: Flat P&L (-0.04%) with immediate -0.39% MAE on 3min old position. Entered poorly, no momentum confirmation, merger arb play in decelerating momentum environment. Cut before it becomes a loser.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.18,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.18
+    },
+    "ai_emergency: CRITICAL SYSTEM FAILURE: Zero specialist data at entry and now. Trading completely blind in risk-off market. Micro-cap with no ATR, no options context, no trailing stop active despite 3% setting. Position flat (-0.2%) but entered via broken pipeline that caused 26/26 blind entries today. Advisor issued FULL TRADING HALT for data integrity failure. This is operational risk, not market risk.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.22,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.22
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied approval (max_size_pct=0.0) with high portfolio heat and failed risk checks. Posit": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.23,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.23
+    },
+    "advisor_strategic_exit: Position entered at exact peak ($128.82), immediately red with -0.43% loss, zero supporting data (sentiment/technical/catalyst all 'No data available'), no documented thesis, biotech showing weakness pattern. Advisor timeout condition met (10:00 AM passed, no recovery). This is a blind carryover position with no edge - cut it now.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.24,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.24
+    },
+    "advisor_strategic_exit: 18min underwater, entered at literal peak $9.75, failed breakout with no recovery - this is precisely what we cut. Zero thesis, pure bleed.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.25,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.25
+    },
+    "ai_emergency: HIGH-URGENCY ADVISOR EXIT: 99.4% fill failure, 1,092+ failed exit attempts over 20hrs, dust position blocking capital. Execution pipeline catastrophically broken.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.27,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.27
+    },
+    "advisor_strategic_exit: Now RED at -0.54%, entered 7min ago already retracing from peak, Advisor warns 'broker_reloaded_after_local_removal' + 'RSI 68.1 overbought' + 'topping signals'. No specialist brief support. Lock -$2.53 loss before it deepens.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.31,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.31
+    },
+    "ai_emergency: CRITICAL: Zero specialist data, fresh entry with no validation, immediate drawdown, systemic data pipeline failure - cannot manage what we cannot see": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.35,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.35
+    },
+    "ai_emergency: ZERO specialist data, underwater -0.42%, dead flat for 52min after fast-path entry with no thesis. This is gambling, not trading.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.35,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.35
+    },
+    "ai_emergency: ZERO specialist data, already negative -0.09%, blind entry with no analysis. Exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.42,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.42
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE - position entered 1 minute ago with ZERO specialist data, NO trailing stop active, blind entry violating halt directive. This is the exact failure pattern that caused 33% win rate collapse. Already -0.55% and no protection infrastructure in place.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.43,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.43
+    },
+    "advisor_strategic_exit: JUST ENTERED with ZERO specialist data available - blind entry violating core quality mandate. Advisor explicitly warns 'fast-path entering blind positions without specialist validation' caused win rate collapse to 33%. Position has NO trailing stop active, NO thesis validation, NO agent briefs. This is the exact infrastructure failure pattern. Exit immediately before it becomes another loss.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.44,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.44
+    },
+    "ai_emergency: ZERO specialist data validation - blind entry during -1.3% SPY selloff with complete data pipeline failure, Observer HIGH urgency regime violation warnings, Advisor FULL TRADING HALT recommendation. Position opened 1 minute ago with no technical/sentiment/catalyst/risk/macro confirmation. This is the exact systematic failure that collapsed win rate to 51.4%.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.45,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.45
+    },
+    "exit_agent_EXIT_NOW: Position is down -1.0% and already at peak price ($23.14), showing immediate rejection from entry wi": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.49,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.49
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval with portfolio_heat=high and risk_agent_failed warning. Position": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.5,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.5
+    },
+    "advisor_strategic_exit: Fresh entry (1 min) already down -0.19%, zero specialist data available, no thesis confirmation. Extremely fresh position bleeding immediately. Exit before drawdown expands.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.53,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.53
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Zero specialist data, entered blind via broken fast-path, underwater immediately, 45th trade on worst performer (-$35.28 cumulative), no trailing stop deployed despite config, 7-loss streak context with 32.8% win rate collapse": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.55,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.55
+    },
+    "ai_emergency: ZERO specialist data on fresh entry - blind position with no technical/sentiment/catalyst intelligence. Observer confirmed 'protection mechanism failed to deploy' and specialists offline. Entering at 3:29 PM ET on Friday with broken infrastructure is reckless. Exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.61,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.61
+    },
+    "advisor_strategic_exit: Position entered 2 min ago with ZERO specialist data, ZERO sentiment context, ZERO technical confirmation. Advisor mandates FULL TRADING HALT due to catastrophic 33% win rate and 3-loss streak. This entry violates the quality-over-quantity mandate completely. Already underwater -0.19%. Exit immediately before this becomes loss #4.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.62,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.62
+    },
+    "ai_emergency: ZERO specialist data, blind entry during system malfunction, no trailing stops confirmed active, -0.31% and drifting": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.65,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.65
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly denied approval (max_size_pct=0.0, approved=False) with portfolio heat already": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.66,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.66
+    },
+    "ai_emergency: CRITICAL SYSTEM FAILURE: Zero specialist data at entry and now. Trading completely blind in final hour of session. Position entered 15:25 ET with NO validation, NO thesis, NO risk assessment. This is the exact pattern that destroyed our win rate (60%\u219254%) and caused $21.66 in preventable losses today. Market closes in 35 minutes - cannot manage risk we cannot see. IMMEDIATE EXIT REQUIRED.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.71,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.71
+    },
+    "exit_agent_EXIT_NOW: Risk agent denying position + portfolio heat HIGH + no momentum edge (confidence only 45%, decelerat": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.71,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.71
+    },
+    "advisor_strategic_exit: Red at -1.38% only 2min after entry, already approaching stop zone. Immediate drawdown on fresh entry = bad fill or deteriorating setup. No specialist data, Advisor silent but this is textbook early warning. Cut before stop hits.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.8,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.8
+    },
+    "ai_emergency: ZERO data availability across all specialist agents - trading blind with no technical, sentiment, catalyst, risk, or macro intelligence. Position just entered at $121.56 with NO THESIS, NO CONTEXT, NO RISK ASSESSMENT. This violates core mandate: 'Quality over quantity. A bad trade costs real money.' Cannot manage what we cannot see.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.83,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.83
+    },
+    "ai_emergency: ZERO specialist data - trading completely blind in risk-off regime. Advisor mandated FULL TRADING HALT due to data pipeline failure. Cannot manage position without intelligence.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.83,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.83
+    },
+    "ai_emergency: ZERO specialist data available - complete intelligence blackout. Position entered with no technical brief, no sentiment, no catalyst confirmation. This is the exact broken fast-path pattern that created 78 losses. After-hours entry (18:31 ET) with no ability to exit cleanly if position moves against us. Observer flagged 'system integrity crisis' and Advisor called for 'FULL TRADING HALT'. This is blind gambling, not trading.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.86,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.86
+    },
+    "advisor_strategic_exit: Just entered 4min ago, already showing immediate drawdown. Fresh positions that hurt immediately almost always get worse. No specialist data to support thesis. Exit while damage is minimal.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.86,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.86
+    },
+    "advisor_strategic_exit: Just entered 1 minute ago during OPERATIONAL EMERGENCY, no catalyst, no momentum edge, risk agent denied approval, entered via broken infrastructure that created ONDS/FLY disasters - exit immediately before protection fails here too": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.9,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.9
+    },
+    "exit_agent_EXIT_NOW: Risk agent DENIED position (approved=False, max_size_pct=0.0) with portfolio_heat=high. Position imm": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.91,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.91
+    },
+    "ai_emergency: ZERO specialist data - blind entry violates all quality gates. Entered after-hours with no validation. This is the exact systematic failure Advisor identified.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.91,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.91
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position (approved=False, max_size_pct=0.0), portfolio heat is high, position alre": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -1.97,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.97
+    },
+    "ai_emergency: ZERO specialist data, up 0.27% but NO THESIS or protection confirmation. Exit before reversal wipes gain.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.08,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.08
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position (approved=False, max_size_pct=0.0), portfolio heat is high, position imme": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.1
+    },
+    "advisor_strategic_exit: Flat position just entered during FULL TRADING HALT period - this entry violated the Advisor's explicit recommendation to stop all trading until quality filter is fixed": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.1
+    },
+    "advisor_strategic_exit: ZERO specialist data available (all agents returning 'No data available'), position opened at literal peak ($7.88 = peak_price), immediately underwater -0.38%, hold time 0 minutes means this is a brand new entry with no thesis validation, no sentiment score, no technical confirmation, no catalyst visibility. This is a blind entry that should never have happened. Exit immediately before drawdown worsens.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.12,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.12
+    },
+    "ai_emergency: AFTER HOURS POSITION - entered at 3:14 PM, market closed at 4:00 PM, now holding overnight into weekend with ZERO specialist data, ZERO thesis validation, in context of 5-loss streak and catastrophic 33% win rate. Advisor mandated FULL TRADING HALT. This violates every risk principle.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.14,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.14
+    },
+    "advisor_strategic_exit: Just entered with zero agent briefs (complete data blackout), no confirmation of working trailing stop, same broken infrastructure that failed on all other positions - exit immediately before it becomes another zombie": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.16,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.16
+    },
+    "ai_emergency: ZERO specialist data available - trading completely blind. Exactly matches failed BATL/ROMA pattern that Observer flagged. Infrastructure is broken, not protected by any intelligence layer.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.19,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.19
+    },
+    "ai_emergency: ZERO specialist data available, no trailing stop protection despite 3% setting, entered during 9-loss streak that Advisor explicitly warned to halt trading for, Friday 5:09 PM (after hours/low liquidity), 33% win rate environment demanding only highest-quality setups - this position has NONE of the required validation": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.21,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.21
+    },
+    "ai_emergency: Data corruption cascade: removed locally but broker reloaded, 768+ failed trailing stops over 19hrs. System integrity compromised.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.28,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.28
+    },
+    "ai_emergency: Zombie position with 1,092+ failed exit attempts over 20+ hours, data corruption preventing clean exit, blocking $410+ capital": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.32,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.32
+    },
+    "exit_agent_EXIT_NOW: Position underwater at -0.5%, never exceeded entry (peak=entry), momentum decelerating with low conf": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.42,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.42
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval with high portfolio heat warning. Position underwater at -0.6%, ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.45,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.45
+    },
+    "ai_emergency: CRITICAL DATA INTEGRITY FAILURE: Position entered 1 minute ago with ZERO specialist data (all agents down), during Observer HIGH URGENCY warning about 'SCANNER QUALITY DETERIORATION' and 'PLAYBOOK VIOLATIONS'. Trading completely blind - no technical, sentiment, catalyst, risk, or macro data available. Already down -0.09% with no thesis validation. This mirrors FLY disaster pattern from Advisor warning. Every second holding increases corruption risk.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.52,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.52
+    },
+    "ai_emergency: ZERO specialist data at entry = blind gambling. 3 consecutive losses. Advisor correctly identified catastrophic data pipeline failure. Position entered 1 minute ago with NO intelligence validation. This is the exact failure mode that caused the loss streak.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.52,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.52
+    },
+    "ai_emergency: ZOMBIE POSITION: Already underwater -0.58%, zero specialist data available, Observer confirms multiple failed exit attempts and system integrity issues. This is a ghost in the machine - force manual liquidation immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.55,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.55
+    },
+    "ai_emergency: Market close in 4 minutes - ZERO time to manage position, no specialist data, already underwater -0.48%, entered during 9-loss streak with broken infrastructure": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.57,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.57
+    },
+    "ai_emergency: RISK AGENT DENIED APPROVAL - position entered WITHOUT risk clearance (approved=False, max_size_pct=0.0). After-hours entry at 19:51 ET violates trading protocol. Infrastructure critically broken per Advisor. Position is UNAUTHORIZED.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.67,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.67
+    },
+    "ai_emergency: CRITICAL INFRASTRUCTURE FAILURE: Entered via broken fast-path with ZERO specialist data, ZERO trailing stop deployment, decision_confidence=0, immediately underwater -0.45%, part of 7-loss streak indicating systemic entry quality collapse. No thesis exists to defend this position.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.68,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.68
+    },
+    "exit_agent_EXIT_NOW: Position already underwater at -0.7% with Risk agent explicitly denying approval (max_size_pct=0.0, ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.82,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.82
+    },
+    "ai_emergency: 16:31 ET = 29 minutes to market close, position just entered with ZERO specialist data, ZERO sentiment, ZERO catalyst context - blind entry violates all quality rules during final trading hour on Friday with weekend gap risk": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.86,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.86
+    },
+    "ai_emergency: ZERO specialist data pipeline - blind position entered via broken fast_path, Observer specifically flagged ONDS as catastrophic loser from previous broken entries": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.89,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.89
+    },
+    "ai_emergency: Failed breakout with NO trailing stop protection. Peak P&L = 0%, now -0.61% and drifting. Twin failure with HIMX - both stalled at entry. No specialist data, no thesis validation, naked exposure into Friday close.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -2.9,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -2.9
+    },
+    "advisor_strategic_exit: Position entered at 1:45 PM (13:47 ET = late day entry) in violation of Advisor stand-down until 9:45 AM guidance. Immediately down -0.64% with NO specialist brief support (all agents show 'No data available'). Observer flagged severe issues: RSI 79.2 overbought, 4 momentum indicators showing SELL, bearish options chain 3.4:1 puts vs calls, fresh $150M dilution, entered in risk-off regime violating UW Flow playbook. Zero thesis confirmation available. This is a late-day speculative entry with no edge and immediate negative P&L.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.15,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.15
+    },
+    "ai_emergency: Risk agent explicitly DENIED (approved=False, max_size_pct=0.0), underwater -0.32%, momentum decelerating, contrarian sentiment against us. Position should never have been entered.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.18,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.18
+    },
+    "ai_emergency: ZERO specialist data pipeline - blind position entered via broken fast_path, holding 1min with immediate -0.61% loss, no thesis validation possible": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.24,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.24
+    },
+    "ai_emergency: SYSTEM INTEGRITY FAILURE: Position entered with ZERO specialist data (all agents offline). This is the exact broken fast-path pattern that created 60+ losing FLY trades costing -$42.78. Entry at 14:11 ET Friday afternoon violates late-day timing rules. After-hours now (18:19 ET) - position is stranded over weekend with gap risk and no exit liquidity. Observer confirms 'risk-off regime' + 'playbook mismatch' + 'scanner generating wrong signals'. Currently -0.38%, but this represents systemic quality gate bypass that has produced 78 losses in 118 trades (33.3% win rate). This position SHOULD NEVER HAVE BEEN ENTERED.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.27,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.27
+    },
+    "ai_emergency: CRITICAL EXECUTION FAILURE: Position entered 3min ago already down -1.73%, zero specialist data available (all agents returning 'No data available'), no trailing stop active despite system configuration. This mirrors the ONDS/FLY/ROMA/LWLG execution infrastructure crisis - position may be orphaned with no protection. Cut immediately before this becomes another zombie position.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.29,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.29
+    },
+    "advisor_strategic_exit: Just entered with ZERO specialist data available - blind entry violates quality mandate; 35% win rate means we can't afford speculative positions; exit immediately at breakeven before it becomes another loss": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.36,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.36
+    },
+    "advisor_strategic_exit: Observer flagged +23% gain with negative rolling VWAP divergence in same degraded scanner batch as DSGR. Down -0.52% in 1min with zero specialist intelligence to justify hold. Late entry on extended move.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.36,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.36
+    },
+    "ai_emergency: BLIND ENTRY - zero specialist data available, position opened during systematic data pipeline failure, trading against risk-off regime with no validation": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.41,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.41
+    },
+    "ai_emergency: SYSTEMATIC DATA FAILURE - zero specialist validation, entered during broad market selloff (SPY -1.30%, QQQ -1.54%), no trailing stop protection despite 1 minute hold, trading completely blind in risk-off regime": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.49,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.49
+    },
+    "ai_emergency: ZERO specialist data pipeline - blind position entered via broken fast_path, Observer specifically flagged FLY as catastrophic loser from previous broken entries": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.59,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.59
+    },
+    "ai_emergency: CRITICAL DATA INTEGRITY FAILURE: Position entered with ZERO specialist data (all agents down), immediately after Observer HIGH URGENCY warning about scanner deterioration and system blind trading. This is the 9th consecutive entry with no validation. Trading blind = unacceptable risk. Exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.6,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.6
+    },
+    "ai_emergency: Entered after hours (19:07 ET) when market closed at 16:00 - position should not exist, likely system error creating overnight gap risk": {
+      "trades": 2,
+      "wins": 0,
+      "pnl": -3.63,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -1.81
+    },
+    "exit_agent_EXIT_NOW: Risk agent denied position approval with portfolio_heat=high. Position underwater at -0.8%, momentum": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.65,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.65
+    },
+    "ai_emergency: Failed breakout with NO trailing stop protection. Peak P&L = 0%, now -0.55% and drifting. No specialist data, no thesis validation, no momentum follow-through after 25+ minutes. Naked exposure into Friday close.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.74,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.74
+    },
+    "ai_emergency: BLIND ENTRY - zero specialist validation, entered during risk-off regime violating Social Momentum playbook rules, small biotech with gap/halt risk, no confirmed thesis": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.85,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.85
+    },
+    "exit_agent_EXIT_NOW: Risk agent rejected position (approved=False, max_size_pct=0.0), portfolio heat is HIGH, technical c": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.85,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.85
+    },
+    "ai_emergency: ZERO specialist data available - blind position with no validation, exactly the systemic failure mode Advisor identified. Entry at market close (19:21 ET after hours), 1 min hold already negative, cannot assess thesis without intelligence": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.95,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.95
+    },
+    "exit_agent_EXIT_NOW: Risk agent did NOT approve this trade (approved=False) citing insufficient edge validation, unknown ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.95,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.95
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly DENIED position (approved=False, max_size_pct=0.0), portfolio heat is HIGH, mo": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -3.97,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -3.97
+    },
+    "advisor_strategic_exit: Position entered -0.69% immediately, already underwater with NO specialist brief data available to justify hold. Observer flags severe red flags: 4 momentum indicators flashing SELL, RSI 79.2 overbought, 3.4:1 bearish options flow ($4,765 puts vs $1,400 calls), fresh $150M dilution active, risk-off market regime. Advisor correctly identified premarket data corruption risk. No thesis to defend - cut loss now before it expands.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.1
+    },
+    "ai_emergency: CRITICAL: Risk agent explicitly DENIED entry (approved=False, max_size_pct=0.0) but position exists anyway - systemic safety bypass. Plus after-hours (19:49 ET), extended +21% runner at ATH with decelerating momentum per technical agent. This is the EXACT pattern Observer/Advisor flagged as catastrophic.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.1,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.1
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly DENIED approval (max_size_pct=0.0) with portfolio_heat=high and agent failure ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.23,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.23
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly denied position approval with portfolio heat already high. Position underwater": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.5,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.5
+    },
+    "exit_agent_EXIT_NOW: Risk agent explicitly denied position (approved=False, max_size_pct=0.0) with portfolio_heat=high. P": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.62,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.62
+    },
+    "exit_agent_EXIT_NOW: Technical SELL signal (72% confidence) with decelerating momentum, Risk agent denied position expans": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.81,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.81
+    },
+    "advisor_strategic_exit: Fresh entry (<2 min) immediately underwater -0.89%; zero specialist data available to validate thesis; Friday 5:14 PM ET after-hours with no support infrastructure; Advisor calling FULL HALT after 9-loss streak; this is the EXACT pattern that created the streak - blind fast-path entry with zero validation": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.85,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.85
+    },
+    "ai_emergency: Hit -1.0% stop threshold immediately (only 1min hold). No specialist data, no thesis validation, already at max loss tolerance.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.87,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.87
+    },
+    "ai_emergency: ZERO specialist data available (all agents offline), entered during confirmed data pipeline failure, position blind - Observer/Advisor explicitly warned NO TRADING until data integrity restored, this entry violated core directive": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -4.94,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -4.94
+    },
+    "advisor_strategic_exit: ZERO specialist data available at entry + Advisor explicitly says 'DO NOT TRADE until specialist agents consistently online' + position just opened with 0.0 minutes hold time = this entry violated the exact guidance given. Risk-off regime, data pipeline failure, this is precisely what Advisor warned against. Exit immediately.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -5.4,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -5.4
+    },
+    "advisor_strategic_exit: Exit at break-even immediately. Entered 1 minute ago via broken fast_path during market CLOSE with zero validation. No catalyst (magnitude 2), overbought technical setup, choppy regime. This is a disaster waiting to happen.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -5.6,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -5.6
+    },
+    "ai_emergency: COMPLETE DATA BLACKOUT - zero specialist intelligence, entered during documented data pipeline failure, already -2.05% in 1 minute with no thesis support, Observer flagged 'specialist data pipeline failure throughout session' with HIGH URGENCY, this position violates every safety protocol": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -5.95,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -5.95
+    },
+    "exit_agent_EXIT_NOW: Position is down -1.5% at 24 minutes with no recovery above entry. Current price $23.85 is at/below ": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -6.06,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -6.06
+    },
+    "ai_emergency: ZERO specialist data + Observer flagged as 'rolling over from $6.29 high, weak volume'. Trading blind in risk-off regime violates core mandate. Advisor ordered full halt.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -6.24,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -6.24
+    },
+    "ai_emergency: Data corruption cascade (removed locally but broker reloaded), 768+ failed trailing stops over 19+ hours, down -2.02% with no clean thesis": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -7.54,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -7.54
+    },
+    "exit_agent_EXIT_NOW: Position down -1.6% with decelerating momentum, 45% confidence HOLD signal, and Risk agent denied fu": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -8.51,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -8.51
+    },
+    "exit_agent_EXIT_NOW: Position underwater -2.2% with NO edge: catalyst agent sees no identifiable driver, risk agent DENIE": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -8.59,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -8.59
+    },
+    "advisor_strategic_exit: Just entered 1 minute ago during COMPLETE INFRASTRUCTURE FAILURE. Risk agent explicitly denying (approved=False, max_size_pct=0.0), no catalyst (magnitude=3), overbought warnings (RSI/Stoch), choppy regime. This entry should never have occurred. Exit immediately at breakeven before losses mount.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -9.94,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -9.94
+    },
+    "ai_emergency: ZERO specialist data, already down 0.73%, no thesis, no protection verification - repeating the broken pattern that Advisor explicitly flagged": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -14.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -14.0
+    },
+    "ai_emergency: CRITICAL SYSTEM FAILURE: Position entered with ZERO specialist data validation during Observer high-urgency alert about scanner deterioration and playbook violations. All 5 specialist agents reporting 'No data available' = complete intelligence blackout. Entry price data corruption ($23.89 vs $24.00 fill). We are trading completely blind in a risk-off market with 37.5% win rate. This is not a trade - this is a data integrity crisis.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -15.06,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -15.06
+    },
+    "exit_agent_EXIT_NOW: Position down -2.6% after only 1 minute with decelerating momentum, low technical confidence (45), R": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -15.2,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -15.2
+    },
+    "advisor_strategic_exit: Already -0.64% and retracing from +0.26% peak after just 1 minute. Risk agent denied approval. While technicals show BUY signal, position entered during system crisis with no validated protection. Capital better redeployed when system stabilizes.": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -18.52,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -18.52
+    },
+    "exit_agent_EXIT_NOW: Position down -4.3% after 17.5 hours with price at entry low ($5.84 vs $6.11 peak). No momentum mate": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -22.42,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -22.42
+    },
+    "exit_agent_EXIT_NOW: Position down -2.8% immediately after entry with 1-minute hold time. Price has not exceeded entry (p": {
+      "trades": 1,
+      "wins": 0,
+      "pnl": -26.0,
+      "win_rate_pct": 0.0,
+      "avg_pnl": -26.0
+    },
+    "broker_fill_reconstructed": {
+      "trades": 44,
+      "wins": 9,
+      "pnl": -44.0,
+      "win_rate_pct": 20.5,
+      "avg_pnl": -1.0
+    }
+  },
+  "by_risk_tier": {
+    "unknown": {
+      "trades": 59,
+      "wins": 21,
+      "pnl": 44.37,
+      "win_rate_pct": 35.6,
+      "avg_pnl": 0.75
+    },
+    "COMPOUND": {
+      "trades": 300,
+      "wins": 97,
+      "pnl": -218.08,
+      "win_rate_pct": 32.3,
+      "avg_pnl": -0.73
+    }
+  },
+  "by_conviction": {
+    "normal": {
+      "trades": 87,
+      "wins": 27,
+      "pnl": 41.58,
+      "win_rate_pct": 31.0,
+      "avg_pnl": 0.48
+    },
+    "high": {
+      "trades": 272,
+      "wins": 91,
+      "pnl": -215.29,
+      "win_rate_pct": 33.5,
+      "avg_pnl": -0.79
+    }
+  },
+  "by_day_of_week": {
+    "Monday": {
+      "trades": 83,
+      "wins": 24,
+      "pnl": -43.32,
+      "win_rate_pct": 28.9,
+      "avg_pnl": -0.52
+    },
+    "Thursday": {
+      "trades": 114,
+      "wins": 53,
+      "pnl": -43.6,
+      "win_rate_pct": 46.5,
+      "avg_pnl": -0.38
+    },
+    "Friday": {
+      "trades": 162,
+      "wins": 41,
+      "pnl": -86.8,
+      "win_rate_pct": 25.3,
+      "avg_pnl": -0.54
+    }
+  },
+  "max_win_streak": 4,
+  "max_loss_streak": 15,
+  "avg_winner_hold_min": 32.8,
+  "avg_loser_hold_min": 110.5,
+  "recent_20_win_rate_pct": 15.0,
+  "recent_20_pnl": -10.56,
+  "recommendations": {
+    "best_symbols": [
+      "BATL",
+      "ETHU",
+      "HIMX",
+      "BMNR"
+    ],
+    "worst_symbols": [
+      "POET",
+      "NSA",
+      "APEI",
+      "BCRX",
+      "NBIL"
+    ],
+    "best_hours": [
+      "15",
+      "17"
+    ],
+    "holding_losers_too_long": true,
+    "suggested_max_hold_min": 49.0,
+    "best_exit_reasons": [
+      "ai_emergency: CRITICAL: Systematic data failure - zero specialist validation, extreme 52% intraday volatility ($3.60-$8.57 range = gap/halt risk), risk-off regime violation, Observer 'dying' status, consecutive loss context. Currently +4.37% but entry was BLIND with no technical/sentiment/catalyst confirmation. Protect this gain before it reverses.",
+      "advisor_strategic_exit: ZERO specialist data validation - position entered during systematic data pipeline failure with no technical analysis, sentiment, catalyst, or risk assessment. Advisor mandates FULL TRADING HALT. Position is +1.61% (~$6.21 profit) but thesis is completely blind. Exit immediately to secure profit and comply with halt order.",
+      "advisor_strategic_exit: Down -0.72% with 4min hold, no momentum reversal. Drawdown from peak equals P&L loss. Part of degraded scanner batch flagged by Observer. Cut before it bleeds further."
+    ],
+    "disable_strategies": [
+      {
+        "strategy_tag": "broker_reconciled",
+        "trades": 44,
+        "win_rate_pct": 20.5,
+        "pnl": -44.0,
+        "reason": "Hard disable: 20% WR over 44 trades, $-44.00 P&L"
+      }
+    ],
+    "watch_list_strategies": [
+      {
+        "strategy_tag": "carryover",
+        "trades": 28,
+        "win_rate_pct": 21.4,
+        "pnl": -0.59,
+        "reason": "Warning: 21% WR over 28 trades \u2014 reduce size 50%"
+      }
+    ],
+    "size_reductions": [
+      {
+        "strategy_tag": "carryover",
+        "size_multiplier": 0.5,
+        "reason": "Watch list throttle: 21% WR over 28 trades"
+      }
+    ]
+  }
+}

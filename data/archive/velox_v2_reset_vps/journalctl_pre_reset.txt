@@ -1,0 +1,500 @@
+Mar 17 02:00:35 velox python[209779]: 02:00:35 | WARNING  | 🔍 PRICE CHECK: Removed HFFG — marked LONG but down -3.3%
+Mar 17 02:00:35 velox python[209779]: 02:00:35 | WARNING  | 🔍 Price validation removed 1: HFFG (-3.3%)
+Mar 17 02:00:35 velox python[209779]: 02:00:35 | INFO     | 🔍 Price validation complete: 1 removed, 0 adjusted
+Mar 17 02:00:35 velox python[209779]: 02:00:35 | INFO     | 📊 Dashboard candidates: 20 from overnight watchlist
+Mar 17 02:00:35 velox python[209779]: 02:00:35 | SUCCESS  | 📋 Tomorrow's thesis: bias=neutral, watchlist=24 tickers
+Mar 17 02:00:36 velox python[209779]: 02:00:36 | INFO     | 🌙 Overnight tasks: watchlist_rebuild, thesis
+Mar 17 02:00:47 velox python[209779]: 02:00:47 | INFO     | 🚪 Exit Agent NEBX: EXIT_NOW — Position down -20.8% from entry with no recovery (current price equals peak price at entry, meaning no upward movement occurred). 5.9 hours of immediate drawdown indicates failed entry and broken thes
+Mar 17 02:00:47 velox python[209779]: 02:00:47 | WARNING  | EXIT_NOW: NEBX — Position down -20.8% from entry with no recovery (current price equals peak price at entry, meaning no upward movement occurred). 5.9 hours of immediate drawdown indicates failed entry and broken thes
+Mar 17 02:00:47 velox python[209779]: 02:00:47 | INFO     | Order cancelled: 55a43749-d662-4ca2-98ed-5f2ed5f3a311
+Mar 17 02:00:47 velox python[209779]: 02:00:47 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:00:48 velox python[209779]: 02:00:48 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:00:48 velox python[209779]: 02:00:48 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:00:48 velox python[209779]: 02:00:48 | SUCCESS  | Market SELL: 7.0 NEBX → order f3362b85-b93b-4e46-907b-34141dcd8d93
+Mar 17 02:00:57 velox python[209779]: 02:00:57 | INFO     | 🚪 Exit Agent CTMX: EXIT_NOW — Position down -2.8% from entry with current price at recent lows. Peak price equals entry price indicating no upward momentum ever developed. After 2.8 hours, the momentum thesis has failed. Current 1
+Mar 17 02:00:57 velox python[209779]: 02:00:57 | WARNING  | EXIT_NOW: CTMX — Position down -2.8% from entry with current price at recent lows. Peak price equals entry price indicating no upward momentum ever developed. After 2.8 hours, the momentum thesis has failed. Current 1
+Mar 17 02:00:57 velox python[209779]: 02:00:57 | INFO     | Order cancelled: 5c71d57e-b4dc-4fa5-8e53-3c54079e91ab
+Mar 17 02:00:57 velox python[209779]: 02:00:57 | INFO     | 📡 ORDER CANCELED: CTMX (type=market)
+Mar 17 02:00:58 velox python[209779]: 02:00:58 | INFO     | Cancelled 1 open sell orders for CTMX
+Mar 17 02:00:58 velox python[209779]: 02:00:58 | INFO     | Exit agent canceled 1 orders for CTMX
+Mar 17 02:00:58 velox python[209779]: 02:00:58 | SUCCESS  | Market SELL: 35.0 CTMX → order 58b6c757-458f-43f3-854f-31f4f067872b
+Mar 17 02:02:09 velox python[209779]: 02:02:09 | WARNING  | 🤖 Position Manager: portfolio critical
+Mar 17 02:02:58 velox python[209779]: 02:02:58 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:02:58 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:02:58 velox python[209779]: 02:02:58 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:02:58 velox python[209779]: 02:02:58 | INFO     | Order cancelled: f3362b85-b93b-4e46-907b-34141dcd8d93
+Mar 17 02:02:58 velox python[209779]: 02:02:58 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:02:59 velox python[209779]: 02:02:59 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:02:59 velox python[209779]: 02:02:59 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:02:59 velox python[209779]: 02:02:59 | SUCCESS  | Market SELL: 7.0 NEBX → order d80dd8c7-f728-482c-afcc-0b6b0b879f0a
+Mar 17 02:02:59 velox python[209779]: 02:02:59 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:02:59 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:03:39 velox python[209779]: 02:03:39 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7q9mtNZ5GxYHp5XKxgm'}
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:05:00 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | INFO     | Order cancelled: d80dd8c7-f728-482c-afcc-0b6b0b879f0a
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:05:00 velox python[209779]: 02:05:00 | SUCCESS  | Market SELL: 7.0 NEBX → order ff59dc6c-931c-4c60-bb69-ec3488c3a066
+Mar 17 02:05:01 velox python[209779]: 02:05:01 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:05:01 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:05:40 velox python[209779]: 02:05:40 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7qJeCm7AUWhFCeSQxJB'}
+Mar 17 02:07:01 velox python[209779]: 02:07:01 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:07:01 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:07:01 velox python[209779]: 02:07:01 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:07:01 velox python[209779]: 02:07:01 | INFO     | Order cancelled: ff59dc6c-931c-4c60-bb69-ec3488c3a066
+Mar 17 02:07:01 velox python[209779]: 02:07:01 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:07:02 velox python[209779]: 02:07:02 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:07:02 velox python[209779]: 02:07:02 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:07:02 velox python[209779]: 02:07:02 | SUCCESS  | Market SELL: 7.0 NEBX → order 250af0ce-dfc2-4201-bd79-6952724955d9
+Mar 17 02:07:02 velox python[209779]: 02:07:02 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:07:02 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:07:40 velox python[209779]: 02:07:40 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7qTWPDbqCggfiRVCDou'}
+Mar 17 02:08:40 velox python[209779]: 02:08:40 | INFO     | 🎬 Game film: 359 trades, 33% win rate, $-173.72 P&L
+Mar 17 02:09:03 velox python[209779]: 02:09:03 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:09:03 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:09:03 velox python[209779]: 02:09:03 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:09:03 velox python[209779]: 02:09:03 | INFO     | Order cancelled: 250af0ce-dfc2-4201-bd79-6952724955d9
+Mar 17 02:09:03 velox python[209779]: 02:09:03 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:09:03 velox python[209779]: 02:09:03 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:09:04 velox python[209779]: 02:09:04 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:09:04 velox python[209779]: 02:09:04 | SUCCESS  | Market SELL: 7.0 NEBX → order 31e462b2-f3a8-4b67-9e6f-0189fc02871b
+Mar 17 02:09:04 velox python[209779]: 02:09:04 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:09:04 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:09:40 velox python[209779]: 02:09:40 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7qcNjqcnL5SEFkJJbVJ'}
+Mar 17 02:11:04 velox python[209779]: 02:11:04 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:11:04 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:11:04 velox python[209779]: 02:11:04 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:11:04 velox python[209779]: 02:11:04 | INFO     | Order cancelled: 31e462b2-f3a8-4b67-9e6f-0189fc02871b
+Mar 17 02:11:04 velox python[209779]: 02:11:04 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:11:05 velox python[209779]: 02:11:05 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:11:06 velox python[209779]: 02:11:06 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:11:06 velox python[209779]: 02:11:06 | SUCCESS  | Market SELL: 7.0 NEBX → order 21a70cfa-69f3-4680-8aad-662386a354f2
+Mar 17 02:11:06 velox python[209779]: 02:11:06 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:11:06 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:11:41 velox python[209779]: 02:11:41 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7qmEvYK6XY5izz2LitL'}
+Mar 17 02:13:06 velox python[209779]: 02:13:06 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:13:06 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:13:06 velox python[209779]: 02:13:06 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:13:06 velox python[209779]: 02:13:06 | INFO     | Order cancelled: 21a70cfa-69f3-4680-8aad-662386a354f2
+Mar 17 02:13:06 velox python[209779]: 02:13:06 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:13:06 velox python[209779]: 02:13:06 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:13:07 velox python[209779]: 02:13:07 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:13:07 velox python[209779]: 02:13:07 | SUCCESS  | Market SELL: 7.0 NEBX → order 34218f1b-22fe-48cf-bab8-892001e5abec
+Mar 17 02:13:07 velox python[209779]: 02:13:07 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:13:07 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:13:41 velox python[209779]: 02:13:41 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7qv6z4CK4shuiMKbpmH'}
+Mar 17 02:15:07 velox python[209779]: 02:15:07 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:15:07 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:15:07 velox python[209779]: 02:15:07 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:15:07 velox python[209779]: 02:15:07 | INFO     | Order cancelled: 34218f1b-22fe-48cf-bab8-892001e5abec
+Mar 17 02:15:07 velox python[209779]: 02:15:07 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:15:07 velox python[209779]: 02:15:07 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:15:08 velox python[209779]: 02:15:08 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:15:08 velox python[209779]: 02:15:08 | SUCCESS  | Market SELL: 7.0 NEBX → order 3446e318-e052-4f32-a97b-8ce2430b28de
+Mar 17 02:15:08 velox python[209779]: 02:15:08 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:15:08 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:15:41 velox python[209779]: 02:15:41 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7r4y8mmPCCxAjxYUxoJ'}
+Mar 17 02:17:08 velox python[209779]: 02:17:08 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:17:08 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:17:08 velox python[209779]: 02:17:08 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:17:08 velox python[209779]: 02:17:08 | INFO     | Order cancelled: 3446e318-e052-4f32-a97b-8ce2430b28de
+Mar 17 02:17:08 velox python[209779]: 02:17:08 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:17:08 velox python[209779]: 02:17:08 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:17:09 velox python[209779]: 02:17:09 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:17:09 velox python[209779]: 02:17:09 | SUCCESS  | Market SELL: 7.0 NEBX → order 652593bd-15f8-4865-bf69-9a059d5367b0
+Mar 17 02:17:09 velox python[209779]: 02:17:09 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:17:09 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:17:41 velox python[209779]: 02:17:41 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rDqGkUtzRpUUS9UFAz'}
+Mar 17 02:18:48 velox python[209779]: _locate_stream(Workbook): seen
+Mar 17 02:18:48 velox python[209779]:     0  5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+Mar 17 02:18:48 velox python[209779]:    20  4 4 4 4 4 4 4 3 2
+Mar 17 02:19:09 velox python[209779]: 02:19:09 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:19:09 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:19:09 velox python[209779]: 02:19:09 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:19:09 velox python[209779]: 02:19:09 | INFO     | Order cancelled: 652593bd-15f8-4865-bf69-9a059d5367b0
+Mar 17 02:19:09 velox python[209779]: 02:19:09 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:19:09 velox python[209779]: 02:19:09 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:19:10 velox python[209779]: 02:19:10 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:19:10 velox python[209779]: 02:19:10 | SUCCESS  | Market SELL: 7.0 NEBX → order 128affab-74c9-4d51-a52d-2a12a3e3ef8e
+Mar 17 02:19:10 velox python[209779]: 02:19:10 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:19:10 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:19:42 velox python[209779]: 02:19:42 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rNhPUrXTmwj2ryMyzr'}
+Mar 17 02:21:10 velox python[209779]: 02:21:10 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:21:10 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:21:10 velox python[209779]: 02:21:10 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:21:10 velox python[209779]: 02:21:10 | INFO     | Order cancelled: 128affab-74c9-4d51-a52d-2a12a3e3ef8e
+Mar 17 02:21:10 velox python[209779]: 02:21:10 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:21:10 velox python[209779]: 02:21:10 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:21:11 velox python[209779]: 02:21:11 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:21:11 velox python[209779]: 02:21:11 | SUCCESS  | Market SELL: 7.0 NEBX → order 42891847-8f51-4daf-9378-e7a954702ed9
+Mar 17 02:21:11 velox python[209779]: 02:21:11 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:21:11 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:21:42 velox python[209779]: 02:21:42 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rXZwGNN3tjep3h6ixh'}
+Mar 17 02:23:11 velox python[209779]: 02:23:11 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:23:11 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:23:11 velox python[209779]: 02:23:11 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:23:11 velox python[209779]: 02:23:11 | INFO     | Order cancelled: 42891847-8f51-4daf-9378-e7a954702ed9
+Mar 17 02:23:11 velox python[209779]: 02:23:11 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:23:12 velox python[209779]: 02:23:12 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:23:12 velox python[209779]: 02:23:12 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:23:12 velox python[209779]: 02:23:12 | SUCCESS  | Market SELL: 7.0 NEBX → order 8409f604-9154-41d4-bc5f-be360a186512
+Mar 17 02:23:12 velox python[209779]: 02:23:12 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:23:12 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:23:42 velox python[209779]: 02:23:42 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rgSH9GCcs2rRknJJGt'}
+Mar 17 02:25:12 velox python[209779]: 02:25:12 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:25:12 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:25:12 velox python[209779]: 02:25:12 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:25:12 velox python[209779]: 02:25:12 | INFO     | Order cancelled: 8409f604-9154-41d4-bc5f-be360a186512
+Mar 17 02:25:12 velox python[209779]: 02:25:12 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:25:13 velox python[209779]: 02:25:13 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:25:13 velox python[209779]: 02:25:13 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:25:13 velox python[209779]: 02:25:13 | SUCCESS  | Market SELL: 7.0 NEBX → order 161b01f1-3707-4bc6-a00f-09b47e8a3a6c
+Mar 17 02:25:13 velox python[209779]: 02:25:13 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:25:13 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:25:43 velox python[209779]: 02:25:43 | ERROR    | Observer failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rqJ81ArcAzWmNAcVXK'}
+Mar 17 02:25:43 velox python[209779]: 02:25:43 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rqKZ5hZAaUXY6E8sbw'}
+Mar 17 02:27:13 velox python[209779]: 02:27:13 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:27:13 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:27:13 velox python[209779]: 02:27:13 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:27:13 velox python[209779]: 02:27:13 | INFO     | Order cancelled: 161b01f1-3707-4bc6-a00f-09b47e8a3a6c
+Mar 17 02:27:13 velox python[209779]: 02:27:13 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:27:14 velox python[209779]: 02:27:14 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:27:14 velox python[209779]: 02:27:14 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:27:14 velox python[209779]: 02:27:14 | SUCCESS  | Market SELL: 7.0 NEBX → order eb3648fb-8064-4d8c-8c7f-2459b045c3a4
+Mar 17 02:27:14 velox python[209779]: 02:27:14 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:27:14 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:27:43 velox python[209779]: 02:27:43 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7rzCGnFoUCBQrg5xjqv'}
+Mar 17 02:29:14 velox python[209779]: 02:29:14 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:29:14 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:29:14 velox python[209779]: 02:29:14 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:29:14 velox python[209779]: 02:29:14 | INFO     | Order cancelled: eb3648fb-8064-4d8c-8c7f-2459b045c3a4
+Mar 17 02:29:14 velox python[209779]: 02:29:14 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:29:15 velox python[209779]: 02:29:15 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:29:15 velox python[209779]: 02:29:15 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:29:15 velox python[209779]: 02:29:15 | SUCCESS  | Market SELL: 7.0 NEBX → order eeaa174c-195f-4485-82ee-faa1184488d2
+Mar 17 02:29:15 velox python[209779]: 02:29:15 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:29:15 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:29:43 velox python[209779]: 02:29:43 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7s94f8f6hzPCWsCGF2P'}
+Mar 17 02:31:15 velox python[209779]: 02:31:15 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:31:15 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:31:15 velox python[209779]: 02:31:15 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:31:15 velox python[209779]: 02:31:15 | INFO     | Order cancelled: eeaa174c-195f-4485-82ee-faa1184488d2
+Mar 17 02:31:15 velox python[209779]: 02:31:15 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:31:16 velox python[209779]: 02:31:16 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:31:16 velox python[209779]: 02:31:16 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:31:16 velox python[209779]: 02:31:16 | SUCCESS  | Market SELL: 7.0 NEBX → order 2226653c-ca24-41b4-95f0-1d6a54ff7566
+Mar 17 02:31:16 velox python[209779]: 02:31:16 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:31:16 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:31:44 velox python[209779]: 02:31:44 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7sHw1WajtopMsXd8HyJ'}
+Mar 17 02:33:16 velox python[209779]: 02:33:16 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:33:16 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:33:16 velox python[209779]: 02:33:16 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:33:17 velox python[209779]: 02:33:17 | INFO     | Order cancelled: 2226653c-ca24-41b4-95f0-1d6a54ff7566
+Mar 17 02:33:17 velox python[209779]: 02:33:17 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:33:17 velox python[209779]: 02:33:17 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:33:17 velox python[209779]: 02:33:17 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:33:17 velox python[209779]: 02:33:17 | SUCCESS  | Market SELL: 7.0 NEBX → order 65c11908-c470-4cba-877d-9e2446a4f1eb
+Mar 17 02:33:17 velox python[209779]: 02:33:17 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:33:17 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:33:44 velox python[209779]: 02:33:44 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7sSoEwXuV5BB38Q2eB8'}
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:35:18 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | INFO     | Order cancelled: 65c11908-c470-4cba-877d-9e2446a4f1eb
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | SUCCESS  | Market SELL: 7.0 NEBX → order 6bf4ebf2-a146-422d-bd7d-33e26e3cc3e0
+Mar 17 02:35:18 velox python[209779]: 02:35:18 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:35:18 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:35:44 velox python[209779]: 02:35:44 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7sbgQBX7iXBLmEmypSd'}
+Mar 17 02:37:19 velox python[209779]: 02:37:19 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:37:19 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:37:19 velox python[209779]: 02:37:19 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:37:19 velox python[209779]: 02:37:19 | INFO     | Order cancelled: 6bf4ebf2-a146-422d-bd7d-33e26e3cc3e0
+Mar 17 02:37:19 velox python[209779]: 02:37:19 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:37:19 velox python[209779]: 02:37:19 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:37:20 velox python[209779]: 02:37:20 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:37:20 velox python[209779]: 02:37:20 | SUCCESS  | Market SELL: 7.0 NEBX → order 13ebcd38-152f-435e-993c-2f1bbe96e5e9
+Mar 17 02:37:20 velox python[209779]: 02:37:20 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:37:20 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:37:45 velox python[209779]: 02:37:45 | ERROR    | Advisor failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7skYJmJknfNuwTa34uA'}
+Mar 17 02:37:45 velox python[209779]: 02:37:45 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7skZ2vDZGGwcxCaLiCu'}
+Mar 17 02:38:15 velox python[209779]: 02:38:15 | ERROR    | Tuner failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7snmtPTNFWVb7MwukC8'}
+Mar 17 02:39:20 velox python[209779]: 02:39:20 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:39:20 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:39:20 velox python[209779]: 02:39:20 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:39:20 velox python[209779]: 02:39:20 | INFO     | Order cancelled: 13ebcd38-152f-435e-993c-2f1bbe96e5e9
+Mar 17 02:39:20 velox python[209779]: 02:39:20 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:39:20 velox python[209779]: 02:39:20 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:39:20 velox python[209779]: 02:39:20 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:39:21 velox python[209779]: 02:39:21 | SUCCESS  | Market SELL: 7.0 NEBX → order b772bc53-1dba-42ca-bca2-d5e76d396a10
+Mar 17 02:39:21 velox python[209779]: 02:39:21 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:39:21 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:39:45 velox python[209779]: 02:39:45 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7suReAyorVPQugfNpT5'}
+Mar 17 02:41:21 velox python[209779]: 02:41:21 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:41:21 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:41:21 velox python[209779]: 02:41:21 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:41:21 velox python[209779]: 02:41:21 | INFO     | Order cancelled: b772bc53-1dba-42ca-bca2-d5e76d396a10
+Mar 17 02:41:21 velox python[209779]: 02:41:21 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:41:21 velox python[209779]: 02:41:21 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:41:21 velox python[209779]: 02:41:21 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:41:22 velox python[209779]: 02:41:22 | SUCCESS  | Market SELL: 7.0 NEBX → order de35119f-2475-4d3a-8393-9879a39390e2
+Mar 17 02:41:22 velox python[209779]: 02:41:22 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:41:22 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:41:46 velox python[209779]: 02:41:46 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7t4J8jVyXv5fqHWMEDV'}
+Mar 17 02:43:22 velox python[209779]: 02:43:22 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:43:22 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:43:22 velox python[209779]: 02:43:22 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:43:22 velox python[209779]: 02:43:22 | INFO     | Order cancelled: de35119f-2475-4d3a-8393-9879a39390e2
+Mar 17 02:43:22 velox python[209779]: 02:43:22 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:43:22 velox python[209779]: 02:43:22 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:43:23 velox python[209779]: 02:43:23 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:43:23 velox python[209779]: 02:43:23 | SUCCESS  | Market SELL: 7.0 NEBX → order 4c483f96-b560-432b-812b-e2d1f12ac102
+Mar 17 02:43:23 velox python[209779]: 02:43:23 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:43:23 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:43:46 velox python[209779]: 02:43:46 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7tDAMAvEgcAQKm5yMT2'}
+Mar 17 02:45:23 velox python[209779]: 02:45:23 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:45:23 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:45:23 velox python[209779]: 02:45:23 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:45:23 velox python[209779]: 02:45:23 | INFO     | Order cancelled: 4c483f96-b560-432b-812b-e2d1f12ac102
+Mar 17 02:45:23 velox python[209779]: 02:45:23 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:45:23 velox python[209779]: 02:45:23 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:45:24 velox python[209779]: 02:45:24 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:45:24 velox python[209779]: 02:45:24 | SUCCESS  | Market SELL: 7.0 NEBX → order bf2aa3c9-44d9-4cb8-879c-1eeab944ec79
+Mar 17 02:45:24 velox python[209779]: 02:45:24 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:45:24 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:45:46 velox python[209779]: 02:45:46 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7tN2V9GfqeLGfPHhv38'}
+Mar 17 02:47:24 velox python[209779]: 02:47:24 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:47:24 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:47:24 velox python[209779]: 02:47:24 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:47:24 velox python[209779]: 02:47:24 | INFO     | Order cancelled: bf2aa3c9-44d9-4cb8-879c-1eeab944ec79
+Mar 17 02:47:24 velox python[209779]: 02:47:24 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:47:24 velox python[209779]: 02:47:24 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:47:25 velox python[209779]: 02:47:25 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:47:25 velox python[209779]: 02:47:25 | SUCCESS  | Market SELL: 7.0 NEBX → order 4ad6b97a-1561-415a-a8e4-328012b89a18
+Mar 17 02:47:25 velox python[209779]: 02:47:25 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:47:25 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:47:46 velox python[209779]: 02:47:46 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7tWtkJv4kcxDauHjWTX'}
+Mar 17 02:49:25 velox python[209779]: 02:49:25 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:49:25 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:49:25 velox python[209779]: 02:49:25 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:49:25 velox python[209779]: 02:49:25 | INFO     | Order cancelled: 4ad6b97a-1561-415a-a8e4-328012b89a18
+Mar 17 02:49:25 velox python[209779]: 02:49:25 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:49:26 velox python[209779]: 02:49:26 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:49:26 velox python[209779]: 02:49:26 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:49:26 velox python[209779]: 02:49:26 | SUCCESS  | Market SELL: 7.0 NEBX → order 4a2b15e8-1968-43a7-a5e5-325a6af0417a
+Mar 17 02:49:26 velox python[209779]: 02:49:26 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:49:26 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:49:47 velox python[209779]: 02:49:47 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7tfktHRBTYXPZR98ZLD'}
+Mar 17 02:51:26 velox python[209779]: 02:51:26 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:51:26 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:51:26 velox python[209779]: 02:51:26 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:51:26 velox python[209779]: 02:51:26 | INFO     | Order cancelled: 4a2b15e8-1968-43a7-a5e5-325a6af0417a
+Mar 17 02:51:26 velox python[209779]: 02:51:26 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:51:27 velox python[209779]: 02:51:27 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:51:27 velox python[209779]: 02:51:27 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:51:27 velox python[209779]: 02:51:27 | SUCCESS  | Market SELL: 7.0 NEBX → order f232bf4f-b7d1-455c-b70c-a515880eb0ff
+Mar 17 02:51:27 velox python[209779]: 02:51:27 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:51:27 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:51:47 velox python[209779]: 02:51:47 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7tpdHt9t2iMYxFqsADK'}
+Mar 17 02:53:27 velox python[209779]: 02:53:27 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:53:27 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:53:27 velox python[209779]: 02:53:27 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:53:27 velox python[209779]: 02:53:27 | INFO     | Order cancelled: f232bf4f-b7d1-455c-b70c-a515880eb0ff
+Mar 17 02:53:27 velox python[209779]: 02:53:27 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:53:28 velox python[209779]: 02:53:28 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:53:28 velox python[209779]: 02:53:28 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:53:28 velox python[209779]: 02:53:28 | SUCCESS  | Market SELL: 7.0 NEBX → order efba07e7-4f08-47d6-a335-490ee1edc570
+Mar 17 02:53:28 velox python[209779]: 02:53:28 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:53:28 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:53:47 velox python[209779]: 02:53:47 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7tyVw82jK9x7wia7cbv'}
+Mar 17 02:55:28 velox python[209779]: 02:55:28 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:55:28 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:55:28 velox python[209779]: 02:55:28 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:55:28 velox python[209779]: 02:55:28 | INFO     | Order cancelled: efba07e7-4f08-47d6-a335-490ee1edc570
+Mar 17 02:55:28 velox python[209779]: 02:55:28 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:55:29 velox python[209779]: 02:55:29 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:55:29 velox python[209779]: 02:55:29 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:55:29 velox python[209779]: 02:55:29 | SUCCESS  | Market SELL: 7.0 NEBX → order a73578d2-b27e-42c3-8d61-169f16d600cb
+Mar 17 02:55:29 velox python[209779]: 02:55:29 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:55:29 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:55:48 velox python[209779]: 02:55:48 | ERROR    | Observer failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7u8N3bzYyfM7Y1KbDEU'}
+Mar 17 02:55:48 velox python[209779]: 02:55:48 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7u8PLjyjbV3DoHt1RLA'}
+Mar 17 02:57:29 velox python[209779]: 02:57:29 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:57:29 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:57:29 velox python[209779]: 02:57:29 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:57:30 velox python[209779]: 02:57:30 | INFO     | Order cancelled: a73578d2-b27e-42c3-8d61-169f16d600cb
+Mar 17 02:57:30 velox python[209779]: 02:57:30 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:57:30 velox python[209779]: 02:57:30 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:57:30 velox python[209779]: 02:57:30 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:57:30 velox python[209779]: 02:57:30 | SUCCESS  | Market SELL: 7.0 NEBX → order 3cb47643-eddc-4a2b-98f2-2edaef529e97
+Mar 17 02:57:30 velox python[209779]: 02:57:30 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:57:30 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:57:48 velox python[209779]: 02:57:48 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7uHFh7jBW8jTA1vxf9Q'}
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:59:31 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | INFO     | Order cancelled: 3cb47643-eddc-4a2b-98f2-2edaef529e97
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | SUCCESS  | Market SELL: 7.0 NEBX → order cf943c75-5bad-485b-bf7b-85fa8722ad8f
+Mar 17 02:59:31 velox python[209779]: 02:59:31 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 02:59:31 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 02:59:48 velox python[209779]: 02:59:48 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'Invalid authentication credentials'}, 'request_id': 'req_011CZ7uS82zdEe72vDhmwj1m'}
+Mar 17 03:00:45 velox python[209779]: 03:00:45 | INFO     | 📰 Overnight news: 5 market-moving headlines
+Mar 17 03:00:45 velox python[209779]: 03:00:45 | INFO     |   📰 **Ongoing Strait of Hormuz closure** from Iran strikes, sustaining ~40% oil surge since late Feb; im
+Mar 17 03:00:45 velox python[209779]: 03:00:45 | INFO     |   📰 **Escalating Middle East tensions** with Iran expanding strikes on GCC nations, pushing oil higher a
+Mar 17 03:00:45 velox python[209779]: 03:00:45 | INFO     |   📰 **Softening labor market** with -92k Feb jobs lost (post-revision), unemployment at 4.4%; pressures
+Mar 17 03:00:45 velox python[209779]: 03:00:45 | INFO     | 🌙 Overnight tasks: news
+Mar 17 03:01:31 velox python[209779]: 03:01:31 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:01:31 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:01:31 velox python[209779]: 03:01:31 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 03:01:32 velox python[209779]: 03:01:32 | INFO     | Order cancelled: cf943c75-5bad-485b-bf7b-85fa8722ad8f
+Mar 17 03:01:32 velox python[209779]: 03:01:32 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 03:01:32 velox python[209779]: 03:01:32 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 03:01:33 velox python[209779]: 03:01:33 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 03:01:33 velox python[209779]: 03:01:33 | SUCCESS  | Market SELL: 7.0 NEBX → order 1a6af850-ab18-4eb3-8dc4-844e8ee9d3b5
+Mar 17 03:01:33 velox python[209779]: 03:01:33 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:01:33 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:01:49 velox python[209779]: 03:01:49 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7uazX45hfVZLQ1J1G2L'}
+Mar 17 03:03:33 velox python[209779]: 03:03:33 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:03:33 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:03:33 velox python[209779]: 03:03:33 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 03:03:33 velox python[209779]: 03:03:33 | INFO     | Order cancelled: 1a6af850-ab18-4eb3-8dc4-844e8ee9d3b5
+Mar 17 03:03:33 velox python[209779]: 03:03:33 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 03:03:33 velox python[209779]: 03:03:33 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 03:03:33 velox python[209779]: 03:03:33 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 03:03:34 velox python[209779]: 03:03:34 | SUCCESS  | Market SELL: 7.0 NEBX → order ec8d38fc-9cac-4cf4-99af-3d8fc350150e
+Mar 17 03:03:34 velox python[209779]: 03:03:34 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:03:34 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:03:49 velox python[209779]: 03:03:49 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7ujrmix1W5Dv3ZDHQrq'}
+Mar 17 03:05:34 velox python[209779]: 03:05:34 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:05:34 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:05:34 velox python[209779]: 03:05:34 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 03:05:34 velox python[209779]: 03:05:34 | INFO     | Order cancelled: ec8d38fc-9cac-4cf4-99af-3d8fc350150e
+Mar 17 03:05:34 velox python[209779]: 03:05:34 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 03:05:34 velox python[209779]: 03:05:34 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 03:05:34 velox python[209779]: 03:05:34 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 03:05:35 velox python[209779]: 03:05:35 | SUCCESS  | Market SELL: 7.0 NEBX → order 1b86502b-b919-4d3d-87c5-5379e284da59
+Mar 17 03:05:35 velox python[209779]: 03:05:35 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:05:35 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:05:50 velox python[209779]: 03:05:50 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7utj5cs7CXe8TxjqiXd'}
+Mar 17 03:07:35 velox python[209779]: 03:07:35 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:07:35 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:07:35 velox python[209779]: 03:07:35 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 03:07:35 velox python[209779]: 03:07:35 | INFO     | Order cancelled: 1b86502b-b919-4d3d-87c5-5379e284da59
+Mar 17 03:07:35 velox python[209779]: 03:07:35 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 03:07:35 velox python[209779]: 03:07:35 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 03:07:36 velox python[209779]: 03:07:36 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 03:07:36 velox python[209779]: 03:07:36 | SUCCESS  | Market SELL: 7.0 NEBX → order 87e9a83c-1afe-45b8-9053-bd81c1b4a5a4
+Mar 17 03:07:36 velox python[209779]: 03:07:36 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:07:36 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:07:50 velox python[209779]: 03:07:50 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7v3c7RRuB7WtDJCy3Ho'}
+Mar 17 03:08:50 velox python[209779]: 03:08:50 | INFO     | 🎬 Game film: 359 trades, 33% win rate, $-173.72 P&L
+Mar 17 03:09:36 velox python[209779]: 03:09:36 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:09:36 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:09:36 velox python[209779]: 03:09:36 | WARNING  | EXIT_NOW: NEBX — Rule-based safety exit while AI unavailable
+Mar 17 03:09:36 velox python[209779]: 03:09:36 | INFO     | Order cancelled: 87e9a83c-1afe-45b8-9053-bd81c1b4a5a4
+Mar 17 03:09:36 velox python[209779]: 03:09:36 | INFO     | 📡 ORDER CANCELED: NEBX (type=market)
+Mar 17 03:09:37 velox python[209779]: 03:09:37 | INFO     | Cancelled 1 open sell orders for NEBX
+Mar 17 03:09:37 velox python[209779]: 03:09:37 | INFO     | Exit agent canceled 1 orders for NEBX
+Mar 17 03:09:37 velox python[209779]: 03:09:37 | SUCCESS  | Market SELL: 7.0 NEBX → order 219eef70-0ba5-4a99-9b90-e732cebe69de
+Mar 17 03:09:37 velox python[209779]: 03:09:37 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:09:37 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:09:50 velox python[209779]: 03:09:50 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7vCUZzQKSGVx9maPdsL'}
+Mar 17 03:11:37 velox python[209779]: 03:11:37 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:11:37 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:11:37 velox python[209779]: 03:11:37 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:11:37 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:11:51 velox python[209779]: 03:11:51 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7vMMLfi7vUCBA2JrFEj'}
+Mar 17 03:13:37 velox python[209779]: 03:13:37 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:13:37 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:13:38 velox python[209779]: 03:13:38 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:13:38 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:13:51 velox python[209779]: 03:13:51 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7vWDYcHTs4EcWXdfeaR'}
+Mar 17 03:15:38 velox python[209779]: 03:15:38 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:15:38 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:15:38 velox python[209779]: 03:15:38 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:15:38 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:15:51 velox python[209779]: 03:15:51 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7vf5oHGtLzXsmEhtw6s'}
+Mar 17 03:17:38 velox python[209779]: 03:17:38 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:17:38 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:17:38 velox python[209779]: 03:17:38 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:17:38 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:17:51 velox python[209779]: 03:17:51 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7voxAQEhU2NVG6FNWms'}
+Mar 17 03:18:50 velox python[209779]: _locate_stream(Workbook): seen
+Mar 17 03:18:50 velox python[209779]:     0  5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+Mar 17 03:18:50 velox python[209779]:    20  4 4 4 4 4 4 4 3 2
+Mar 17 03:19:38 velox python[209779]: 03:19:38 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:19:38 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:19:39 velox python[209779]: 03:19:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:19:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:19:52 velox python[209779]: 03:19:52 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7vxpRKDy9txcCgXmBiZ'}
+Mar 17 03:21:39 velox python[209779]: 03:21:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:21:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:21:39 velox python[209779]: 03:21:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:21:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:21:52 velox python[209779]: 03:21:52 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7w7gpR42BL9ANDZr4xA'}
+Mar 17 03:23:39 velox python[209779]: 03:23:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:23:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:23:39 velox python[209779]: 03:23:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:23:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:23:52 velox python[209779]: 03:23:52 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7wGZAnkPQSDwm7FXZUs'}
+Mar 17 03:25:39 velox python[209779]: 03:25:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:25:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:25:39 velox python[209779]: 03:25:39 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:25:39 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:25:53 velox python[209779]: 03:25:53 | ERROR    | Observer failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7wRQyvENnfJU8G38HXJ'}
+Mar 17 03:25:53 velox python[209779]: 03:25:53 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7wRRpmoYNByBW7YCgCg'}
+Mar 17 03:27:40 velox python[209779]: 03:27:40 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:27:40 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:27:40 velox python[209779]: 03:27:40 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:27:40 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:27:53 velox python[209779]: 03:27:53 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7waJ6w4DayWGFbcqqdc'}
+Mar 17 03:29:40 velox python[209779]: 03:29:40 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:29:40 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:29:40 velox python[209779]: 03:29:40 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:29:40 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:29:53 velox python[209779]: 03:29:53 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7wjAWHLvQkJfGpwfk69'}
+Mar 17 03:31:40 velox python[209779]: 03:31:40 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:31:40 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:31:40 velox python[209779]: 03:31:40 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:31:40 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:31:54 velox python[209779]: 03:31:54 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7wt2tPegWiasCvMCM6k'}
+Mar 17 03:33:41 velox python[209779]: 03:33:41 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:33:41 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:33:41 velox python[209779]: 03:33:41 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:33:41 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:33:54 velox python[209779]: 03:33:54 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7x2u5LcDinGFm5BpzJP'}
+Mar 17 03:35:41 velox python[209779]: 03:35:41 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:35:41 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:35:41 velox python[209779]: 03:35:41 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:35:41 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:35:54 velox python[209779]: 03:35:54 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xBmUC5d6gCxjXKwv4s'}
+Mar 17 03:37:41 velox python[209779]: 03:37:41 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:37:41 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:37:41 velox python[209779]: 03:37:41 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:37:41 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:37:55 velox python[209779]: 03:37:55 | ERROR    | Advisor failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xLdgsnC5stJG3KLjLH'}
+Mar 17 03:37:55 velox python[209779]: 03:37:55 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xLemsHBvYtBeWY7wNT'}
+Mar 17 03:38:25 velox python[209779]: 03:38:25 | ERROR    | Tuner failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xNsi3M1HZBhGSW5PKz'}
+Mar 17 03:39:42 velox python[209779]: 03:39:42 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:39:42 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:39:42 velox python[209779]: 03:39:42 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:39:42 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:39:55 velox python[209779]: 03:39:55 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xVXnRkQxVyTLRcHNkM'}
+Mar 17 03:41:42 velox python[209779]: 03:41:42 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:41:42 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:41:42 velox python[209779]: 03:41:42 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:41:42 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:41:56 velox python[209779]: 03:41:56 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xeQRv2zy7vTTRnhQJb'}
+Mar 17 03:43:42 velox python[209779]: 03:43:42 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:43:42 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:43:42 velox python[209779]: 03:43:42 | ERROR    | Claude API error: Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/messages'
+Mar 17 03:43:42 velox python[209779]: For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+Mar 17 03:43:56 velox python[209779]: 03:43:56 | ERROR    | Position manager failed: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CZ7xoGh5cCJRT4NMBgZs2'}

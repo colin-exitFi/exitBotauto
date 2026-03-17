@@ -112,6 +112,9 @@ class PositionManager:
         self._last_run = 0.0
         self._last_output: Optional[Dict] = None
         self._vetoed_symbols: set = set()
+        self._emergency_call_count: Dict[str, int] = {}
+        self._emergency_last_call: Dict[str, float] = {}
+        self._emergency_last_reason: Dict[str, str] = {}
         DATA_DIR.mkdir(exist_ok=True)
 
     async def run(self, bot, advisor_output: Optional[Dict] = None) -> Optional[Dict]:
@@ -249,25 +252,22 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
             result = _parse_json(text)
             self._last_output = result
 
-            # Process emergency exits first
+            # Recommendations only in v2 stabilization.
             emergency_exits = result.get("emergency_exits", []) or []
             for exit_rec in emergency_exits:
                 symbol = str(exit_rec.get("symbol", "") or "").upper()
-                pos = positions_by_symbol.get(symbol)
-                if not pos:
-                    continue
                 reason = str(exit_rec.get("reason", "AI position manager emergency") or "AI position manager emergency")
                 urgency = str(exit_rec.get("urgency", "medium") or "medium").lower()
                 if urgency not in {"critical", "high"}:
                     continue
-                await self._execute_market_exit(
-                    bot,
-                    pos,
-                    reason=reason,
-                    source="ai_emergency",
-                )
+                logger.warning(f"🤖 PM emergency recommendation only: {symbol} — {reason}")
+                try:
+                    from src.dashboard.dashboard import log_activity
 
-            # Process advisor-aligned strategic exits
+                    log_activity("ai", f"PM emergency recommendation: {symbol} — {reason}")
+                except Exception:
+                    pass
+
             strategic_exits = result.get("strategic_exits", []) or []
             for exit_rec in strategic_exits:
                 symbol = str(exit_rec.get("symbol", "") or "").upper()
@@ -278,25 +278,42 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
                 urgency = str(exit_rec.get("urgency", "medium") or "medium").lower()
                 if urgency not in {"critical", "high"}:
                     continue
-                await self._execute_market_exit(
-                    bot,
-                    pos,
-                    reason=reason,
-                    source="advisor_strategic_exit",
-                )
+                min_hold_minutes = float(getattr(settings, "POSITION_MANAGER_MIN_HOLD_MINUTES", 3.0) or 3.0)
+                entry_time = float(pos.get("entry_time", time.time()) or time.time())
+                hold_minutes = max(0.0, (time.time() - entry_time) / 60.0)
+                entry_price = float(pos.get("entry_price", 0) or 0)
+                current_price = float(pos.get("current_price", entry_price) or entry_price)
+                side = str(pos.get("side", "long") or "long").lower()
+                pnl_pct = self._calc_pnl_pct(entry_price, current_price, side)
+                if urgency != "critical" and hold_minutes < min_hold_minutes and pnl_pct > -1.0:
+                    logger.info(
+                        f"🤖 PM strategic exit deferred for {symbol}: hold {hold_minutes:.1f}m < "
+                        f"{min_hold_minutes:.1f}m (pnl={pnl_pct:+.2f}%)"
+                    )
+                    continue
+                logger.info(f"🤖 PM strategic recommendation only: {symbol} — {reason}")
+                try:
+                    from src.dashboard.dashboard import log_activity
 
-            # Process trail tightening / profit protection
+                    log_activity("ai", f"PM strategic recommendation: {symbol} — {reason}")
+                except Exception:
+                    pass
+
+            # Profit-protection suggestions are informational only.
             trail_adjustments = result.get("trail_adjustments", []) or []
             for rec in trail_adjustments:
                 symbol = str(rec.get("symbol", "") or "").upper()
-                pos = positions_by_symbol.get(symbol)
-                if not pos:
-                    continue
                 trail_pct = rec.get("trail_pct")
                 if trail_pct is None:
                     continue
                 reason = str(rec.get("reason", "profit protection") or "profit protection")
-                await self._tighten_trailing_stop(bot, pos, float(trail_pct), reason)
+                logger.info(f"🤖 PM ratchet suggestion: {symbol} → {float(trail_pct):.2f}% ({reason})")
+                try:
+                    from src.dashboard.dashboard import log_activity
+
+                    log_activity("ai", f"PM ratchet suggestion: {symbol} → {float(trail_pct):.2f}% ({reason})")
+                except Exception:
+                    pass
 
             # Update veto list
             self._vetoed_symbols = {str(s).upper() for s in (result.get("vetoes", []) or []) if str(s).strip()}
@@ -433,6 +450,42 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
             logger.error(f"PM strategic exit failed for {symbol}: {e}")
             return None
 
+    def _allow_emergency_exit(self, bot, symbol: str, reason: str, position: Dict) -> bool:
+        """
+        Throttle repeated AI emergency exit attempts per symbol.
+        Avoid token and log churn when market is closed and exit is already pending.
+        """
+        now = time.time()
+        reason_key = str(reason or "").strip()[:240]
+        last_reason = self._emergency_last_reason.get(symbol, "")
+        count = int(self._emergency_call_count.get(symbol, 0) or 0)
+        last_ts = float(self._emergency_last_call.get(symbol, 0.0) or 0.0)
+
+        market_open = True
+        try:
+            if getattr(bot, "entry_manager", None):
+                market_open = bool(bot.entry_manager.is_market_open())
+        except Exception:
+            market_open = True
+
+        # If market is closed and this symbol is already exiting, skip repeated emergency calls.
+        if not market_open and bool(position.get("exit_pending")):
+            if (now - last_ts) < 900:
+                return False
+
+        # Exponential backoff for repeated same-reason emergency signals.
+        if reason_key == last_reason and last_ts > 0:
+            backoff = min(300.0, 30.0 * (2 ** min(count, 4)))
+            if (now - last_ts) < backoff:
+                return False
+            self._emergency_call_count[symbol] = count + 1
+        else:
+            self._emergency_call_count[symbol] = 1
+
+        self._emergency_last_reason[symbol] = reason_key
+        self._emergency_last_call[symbol] = now
+        return True
+
     async def _tighten_trailing_stop(self, bot, position: Dict, requested_trail_pct: float, reason: str) -> bool:
         broker = getattr(bot, "alpaca_client", None)
         if not broker:
@@ -471,20 +524,7 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
 
 
 def _parse_json(text: str) -> dict:
-    text = text.strip()
-    if "```" in text:
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
-        else:
-            text = text.split("```")[1].split("```")[0]
-    text = text.strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start >= 0 and end > start:
-            return json.loads(text[start:end])
+    def _default() -> dict:
         return {
             "raw": text,
             "emergency_exits": [],
@@ -493,6 +533,39 @@ def _parse_json(text: str) -> dict:
             "vetoes": [],
             "portfolio_health": "healthy",
         }
+
+    text = str(text or "").strip()
+    if not text:
+        return _default()
+    if "```" in text:
+        try:
+            if "```json" in text:
+                text = text.split("```json", 1)[1].split("```", 1)[0]
+            else:
+                text = text.split("```", 1)[1].split("```", 1)[0]
+        except Exception:
+            pass
+    text = text.strip()
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start >= 0 and end > start:
+            try:
+                parsed = json.loads(text[start:end])
+            except Exception:
+                return _default()
+        else:
+            return _default()
+    if not isinstance(parsed, dict):
+        return _default()
+    parsed.setdefault("emergency_exits", [])
+    parsed.setdefault("strategic_exits", [])
+    parsed.setdefault("trail_adjustments", [])
+    parsed.setdefault("vetoes", [])
+    parsed.setdefault("portfolio_health", "healthy")
+    return parsed
 
 
 def _brief_summary(brief: Dict) -> str:

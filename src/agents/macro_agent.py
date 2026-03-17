@@ -13,8 +13,9 @@ DEFAULT_BRIEF = {
     "regime": "choppy",
     "sector_flow": "mixed",
     "bias": "neutral",
-    "headwinds": ["macro_agent_unavailable"],
-    "error": True,
+    "headwinds": [],
+    "reasoning": "No data available — neutral macro fallback",
+    "error": False,
 }
 
 PROMPT_TEMPLATE = """You are a MACRO/MARKET REGIME specialist inside Velox, an autonomous momentum trading engine.

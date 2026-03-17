@@ -13,11 +13,12 @@ from src.agents.base_agent import call_claude
 
 DEFAULT_BRIEF = {
     "signal": "HOLD",
-    "confidence": 0,
+    "confidence": 35,
     "key_levels": {"support": 0, "resistance": 0},
-    "momentum": "decelerating",
+    "momentum": "neutral",
     "timeframe": "hours",
-    "error": True,
+    "reasoning": "No data available — neutral technical fallback",
+    "error": False,
 }
 
 PROMPT_TEMPLATE = """You are a TECHNICAL specialist inside Velox.
@@ -90,6 +91,24 @@ def _format_validated_indicators(signals: Dict) -> str:
     return "\n".join(rows)
 
 
+def _safe_float(value, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return float(default)
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _safe_int(value, default: int = 0) -> int:
+    try:
+        if value is None:
+            return int(default)
+        return int(float(value))
+    except Exception:
+        return int(default)
+
+
 async def analyze(symbol: str, price: float, signals: Dict) -> Dict:
     """AI-powered technical momentum analysis."""
     try:
@@ -139,10 +158,10 @@ async def analyze(symbol: str, price: float, signals: Dict) -> Dict:
 
         brief = {
             "signal": result.get("signal", "HOLD").upper(),
-            "confidence": max(0, min(100, int(result.get("confidence", 0)))),
+            "confidence": max(0, min(100, _safe_int(result.get("confidence", 0), 0))),
             "key_levels": {
-                "support": float(result.get("key_levels", {}).get("support", 0)),
-                "resistance": float(result.get("key_levels", {}).get("resistance", 0)),
+                "support": _safe_float((result.get("key_levels") or {}).get("support", 0), 0.0),
+                "resistance": _safe_float((result.get("key_levels") or {}).get("resistance", 0), 0.0),
             },
             "momentum": result.get("momentum", "decelerating"),
             "timeframe": result.get("timeframe", "hours"),

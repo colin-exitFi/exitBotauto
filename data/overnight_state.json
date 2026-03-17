@@ -1,106 +1,13 @@
 {
-  "last_pharma_refresh": 1773022810.978513,
-  "last_news_scan": 1773036353.979402,
+  "last_premarket_scan": 1773727668.0430846,
+  "last_pharma_refresh": 1773720264.1494224,
+  "last_thesis": 1773727668.0430846,
+  "last_news_scan": 1773727668.0430846,
   "overnight_news": [
-    "**US non-farm payrolls fell 92,000 in Feb 2026, unemployment at 4.4%** (reported yesterday, last week); signals cooling labor market, boosts rate cut odds but adds volatility to broad US indices.[3]",
-    "**Oil surged above $80/barrel** (recent, highest since 2024); raises inflation fears, delays Fed cuts, pressures airlines/travel stocks (e.g., DAL, UAL); Dow dropped >1,000 pts.[3]",
-    "**Administration proposed 15% global tariffs**, 20 states suing to block; trade policy swings markets, impacts multinationals (e.g., broad S&P 500).[3]",
-    "**DMN (Damon Inc., NASDAQ) pre-market volume 2.23B** (Mar 9, liquidity focus); unusual volume could drive momentum/attention to DMN.[1]",
-    "**Indian Sensex tanks >1,800 pts, Nifty <23,900** (Mar 9 session); global risk-off sentiment may spill over to US open, affecting ADRs/emerging exposure tickers.[2]"
-  ],
-  "last_game_film": 1773022810.978513,
-  "last_thesis": 1773036968.281569,
-  "last_sunday_analysis": 1773029278.748099,
-  "sunday_thesis": {
-    "friday_close_summary": "Major indices closed sharply lower on Friday, March 6, 2026, amid a bearish selloff driven by geopolitical tensions (Iran conflict boosting oil), weak jobs data, and rising VIX to 23.75. S&P 500 -1.33% to 6740.02[1][2], Nasdaq -1.51%/-1.6% to ~24643/22387[1][2], Dow -0.94% (-453 pts) to 47501.55[1][2], Russell 2000 -2.3%[2]. Utilities (XLU) led with modest gains/decline of -0.35%, Technology (XLK) lagged -2.6%+. Elevated volume signaled institutional selling; worst week since Oct[1][2].",
-    "ah_movers": [
-      {
-        "ticker": "MSFT",
-        "change_pct": "-0.5",
-        "reason": "Profit-taking after recent stellar performance[1]"
-      },
-      {
-        "ticker": "AAPL",
-        "change_pct": "-1.7",
-        "reason": "Part of Magnificent 7 pressure amid tech selloff[1]"
-      },
-      {
-        "ticker": "AMZN",
-        "change_pct": "-2.62",
-        "reason": "Magnificent 7 decline to $200 close[1]"
-      },
-      {
-        "ticker": "TSLA",
-        "change_pct": "-2.14",
-        "reason": "Magnificent 7 drop to $369.6 amid risk-off[1]"
-      }
-    ],
-    "weekend_catalysts": "No specific weekend developments detailed in available data. Key ongoing factors: Escalating Iran conflict driving crude oil +12.34% to $91.01 (highest since 2023), pushing inflation fears and delaying Fed rate cut expectations[1][2][3]; 10Y Treasury yield up to 4.14%, USD down to 98.89[1]; defensive sector rotation; VIX surge signaling uncertainty[1].",
-    "futures_signal": "neutral",
-    "expected_gap": "down",
-    "market_bias": "Bearish - Risk-off from oil/geopolitics, inflation pressures delaying rate cuts, tech weakness, elevated VIX; watch S&P 6750/6800 support[1][2][3].",
-    "monday_watchlist": [
-      {
-        "ticker": "XLE",
-        "bias": "bullish",
-        "conviction": 0.8,
-        "reason": "Energy sector strength from oil surge +12% to $91 on Iran tensions; likely rotation play amid inflation fears[1][2]"
-      },
-      {
-        "ticker": "XLU",
-        "bias": "bullish",
-        "conviction": 0.7,
-        "reason": "Defensive leader Friday (-0.35% vs market plunge); capital shift to utilities in risk-off[1]"
-      },
-      {
-        "ticker": "XLK",
-        "bias": "bearish",
-        "conviction": 0.9,
-        "reason": "Tech lagged -2.6% Friday on growth fears, Magnificent 7 drops; momentum downside[1]"
-      },
-      {
-        "ticker": "USO",
-        "bias": "bullish",
-        "conviction": 0.85,
-        "reason": "Oil proxy for geopolitical risk; WTI biggest jump in years, highest since 2023[1][2][4]"
-      },
-      {
-        "ticker": "VIX",
-        "bias": "bullish",
-        "conviction": 0.75,
-        "reason": "+12% to 23.75 Friday; fear gauge elevated on uncertainty, institutional selling[1]"
-      },
-      {
-        "ticker": "SPY",
-        "bias": "bearish",
-        "conviction": 0.8,
-        "reason": "S&P ETF; broke 6800/6750 support, high volume selloff, watch gap fill lower[1][2]"
-      },
-      {
-        "ticker": "QQQ",
-        "bias": "bearish",
-        "conviction": 0.85,
-        "reason": "Nasdaq proxy; -1.51% Friday tech pressure, growth stocks vulnerable[1]"
-      },
-      {
-        "ticker": "MSFT",
-        "bias": "bearish",
-        "conviction": 0.6,
-        "reason": "AH profit-taking -0.5%; Mag7 weakness continuation risk[1]"
-      },
-      {
-        "ticker": "TSLA",
-        "bias": "bearish",
-        "conviction": 0.7,
-        "reason": "-2.14% Friday AH; momentum runner downside in risk-off[1]"
-      },
-      {
-        "ticker": "BHP",
-        "bias": "neutral",
-        "conviction": 0.5,
-        "reason": "Mining noted with copper > iron ore; commodity rotation watch amid China property slowdown[3]"
-      }
-    ]
-  },
-  "last_premarket_scan": 1773036659.410222
+    "Based on the search results provided, I can identify the following market-moving events from the past 4 hours (since approximately 2 AM UTC on March 17, 2026):",
+    "**Iran-US tensions escalating** \u2013 Impacts broad equity market sentiment; oil prices declining modestly as tankers permitted through Strait of Hormuz[2]",
+    "**Nvidia AI processor forecast announcement** \u2013 Strong positive tech sector sentiment; expected to boost AI-related stocks and broader market optimism[2]",
+    "**Oil price moderation** \u2013 Decline in crude prices reducing inflation concerns; supports consumer stocks and S&P 500[2]",
+    "**Semiconductor strength** \u2013 Micron Technology up 3.7%, Philadelphia Semiconductor Index higher; tech sector leadership[3]"
+  ]
 }

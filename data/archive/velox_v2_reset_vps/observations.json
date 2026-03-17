@@ -1,0 +1,3010 @@
+[
+  {
+    "market_assessment": "Pre-market Monday 4:30 ET - markets closed, no actionable price discovery, institutional flow dormant.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.05 notional) with exit pending - broker reconciliation artifact flagged as 'carryover_sync', zero specialist validation, down 4.34% from entry and 8.02% from peak. Exit order submitted but not yet filled."
+      }
+    ],
+    "risk_flags": [
+      "Market is CLOSED - no legitimate price discovery until 9:30 ET open",
+      "HIMX exit pending since 4:27:25 - monitor for fill confirmation at open",
+      "Scanner showing stale/pre-market data (LMRI) - not actionable until regular hours",
+      "Zero recent trades - no performance feedback loop active",
+      "Slight drawdown (-0.98% total return, -1.02% from ATH) - quality bar should remain elevated",
+      "Consecutive losses counter reset to 0 but account is below starting equity"
+    ],
+    "what_working": [
+      "HIMX achieved 4.08% MFE before reversal - entry timing was valid",
+      "Clean account state - no concentration risk, minimal heat (0.0%)"
+    ],
+    "what_not_working": [
+      "Fractional position management - HIMX became orphaned noise",
+      "Peak-to-current drawdown of 8% on HIMX suggests trailing stop was too loose or not triggered",
+      "Account still below starting equity after 4.3 days - net strategy effectiveness is negative"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773649883.7289224
+  },
+  {
+    "market_assessment": "Pre-market hours (4:41 AM ET Monday) - markets closed, no meaningful price discovery happening, scanner showing stale/low-volume data",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan position (0.1 shares, $1.05 notional) with exit pending since 3:47 AM - this is broker reconciliation noise from Friday, not a real trade. Exit order submitted but not filled yet due to pre-market conditions."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order pending but unfilled - likely waiting for market open",
+      "Scanner showing LMRI candidate but it's 3.97% DOWN with no volume (87k vs 1.1M avg) - this is noise",
+      "Pre-market conditions make all scanner data unreliable right now",
+      "Account shows -0.98% total return, below starting equity of $27,500"
+    ],
+    "what_working": [
+      "No active trades to evaluate - HIMX is a carryover artifact, not representative of current strategy"
+    ],
+    "what_not_working": [
+      "HIMX fractional position represents reconciliation failure, not trading strategy",
+      "Scanner producing low-quality signals during pre-market hours",
+      "Account has lost $269 (-0.98%) over 4.3 days of operation"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "additional_context": {
+      "time_issue": "Pre-market analysis is premature - wait for market open at 9:30 AM ET for meaningful data",
+      "himx_cleanup": "Exit order already submitted correctly by Advisor layer - just needs market open to execute",
+      "scanner_quality": "LMRI showing -3.97% with 93% volume deficit - ignore all pre-market scanner output",
+      "clean_slate_status": "Once HIMX exits at open, account will be 100% cash ($27,230) ready for fresh opportunities",
+      "strategic_position": "Slight drawdown from peak but well above circuit breaker levels - normal variance range"
+    },
+    "timestamp": 1773650509.27338
+  },
+  {
+    "market_assessment": "Pre-market Monday 04:51 ET - markets closed, no live price action to assess, awaiting 09:30 open",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional ghost position (0.1 shares, $1.05 notional) with exit pending since 04:47. Down 4.34% from entry, down 8% from peak. This is broker reconciliation noise from carryover - not a real trade. Exit order already submitted."
+      }
+    ],
+    "risk_flags": [
+      "Account equity DOWN $269 (-0.98%) from $27.5k starting point",
+      "4.3 days of trading, negative daily average return (-0.23%)",
+      "Only 54.5% progress toward $50k milestone despite starting at $27.5k",
+      "Zero consecutive wins tracked, system appears to be in early/reset state",
+      "HIMX position is carryover noise - should clear at open",
+      "Scanner showing LMRI down 3.97% pre-market with low volume (87k vs 1.1M avg) - NOT a momentum setup"
+    ],
+    "what_working": [
+      "Nothing conclusive yet - only 4.3 days of data, account near breakeven",
+      "PDT status unlocked (258 daytrades logged) - full intraday flexibility available"
+    ],
+    "what_not_working": [
+      "Account bleeding slowly (-$269 total, -0.23% per day average)",
+      "Recent carryover positions creating reconciliation issues",
+      "Scanner surfacing low-quality pre-market candidates (LMRI down, thin volume)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773651138.777985
+  },
+  {
+    "market_assessment": "Market closed (pre-market 5:02 AM Monday) - no meaningful price action yet, scanner showing stale data from Friday's close.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan position (0.1 shares, $1.06 notional) with exit pending since yesterday. This is broker reconciliation noise, not a real trade. Exit order submitted but not filled yet - likely needs market open to clear."
+      }
+    ],
+    "risk_flags": [
+      "Account essentially flat: $27,230 vs $27,500 starting (-0.98% total return)",
+      "Consecutive losses context: Recent drawdown from $27,509 ATH suggests recent losing streak",
+      "Scanner candidate LMRI is DOWN 3.97% - not a momentum long setup, this is bearish price action",
+      "HIMX fractional position is operational noise blocking clean state - needs immediate cleanup at market open"
+    ],
+    "what_working": [
+      "Capital preservation: Account near breakeven despite 4+ days of trading",
+      "Risk management: Only 0.01% heat, well within all limits",
+      "PDT status secured: 258 daytrades completed, unlimited trading capacity"
+    ],
+    "what_not_working": [
+      "Win rate deterioration: Account drifting down from ATH suggests quality bar was too low",
+      "Scanner quality: Top candidate is DOWN 4% - wrong direction for momentum long",
+      "Position cleanup: Broker sync left micro-position that should have been cleared Friday"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773651783.086763
+  },
+  {
+    "market_assessment": "Pre-market Monday, markets closed - zero liquidity, no actionable price discovery, scanner showing stale weekend data.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional ghost position (0.1 shares, $1.06 notional) with exit pending since 05:07 ET - this is reconciliation noise, not a real trade. Down 4.3% from entry, down 8% from peak. Exit order already submitted, waiting for market open to clear."
+      }
+    ],
+    "risk_flags": [
+      "Markets closed - all scanner data is stale/meaningless",
+      "HIMX exit pending - tiny fractional position awaiting market open cleanup",
+      "Zero real exposure ($1.06 = 0.004% of portfolio)",
+      "Scanner showing LMRI with -20% below VWAP and -3.97% change - likely Friday's close data, not actionable",
+      "No specialist validation available pre-market ('No data available' noted in HIMX context)"
+    ],
+    "what_working": [
+      "Capital preservation - sitting 99.996% cash is correct action pre-market",
+      "Exit discipline - advisor already flagged HIMX cleanup appropriately"
+    ],
+    "what_not_working": [
+      "Nothing actionable to assess - markets haven't opened yet",
+      "Scanner running pre-market generates noise signals without real liquidity context"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "timestamp": 1773652402.749457
+  },
+  {
+    "market_assessment": "Pre-market Monday 5:23 AM ET - markets closed, zero volume activity, impossible to assess real conditions until 9:30 AM open.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan position (0.1 shares, $1.06 notional) with exit already pending since yesterday. This is broker reconciliation noise, not a real trade. Exit order submitted but not yet filled."
+      }
+    ],
+    "risk_flags": [
+      "Pre-market assessment - all market data is stale/meaningless",
+      "HIMX exit order pending but unfilled - may need manual cleanup at open",
+      "Scanner showing LMRI candidate but it's DOWN 3.97% - not a momentum long setup",
+      "Zero real volume data available (market closed)",
+      "Account in slight drawdown (-0.98%) after 4.3 days of trading"
+    ],
+    "what_working": [
+      "Unable to assess - insufficient recent trade history (0 recent trades shown)"
+    ],
+    "what_not_working": [
+      "HIMX position was clearly a failed entry (down 4.34% from entry, down 8.02% from peak)",
+      "Fractional position sizing suggests execution issues or broker sync problems"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773653037.0922225
+  },
+  {
+    "market_assessment": "Pre-market Monday, markets closed - zero price discovery, no actionable flow, regime appears risk_off despite tide showing risk_on (stale weekend data mismatch).",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional ghost position (0.1 shares, $1.06 notional) with exit order pending since 05:27 ET. Down 4.3% from entry, down 8% from peak. This is broker reconciliation debris from prior session - not a real trading position. Exit order stuck in pre-market limbo."
+      }
+    ],
+    "risk_flags": [
+      "Markets closed until 09:30 ET - zero actionable liquidity for 4 hours",
+      "HIMX exit order pending but unfilled - pre-market execution uncertainty",
+      "Scanner showing LMRI candidate but thesis_mode='required' with no validation possible pre-market",
+      "Market regime conflict: tide says 'risk_on', regime says 'risk_off' - likely stale weekend data",
+      "4-day drawdown of -0.98% with negative daily avg return (-0.23%) - system still proving edge",
+      "Only 1 open position worth $1.06 - effective heat is 0%, but stuck capital from unfilled exit"
+    ],
+    "what_working": [
+      "HIMX showed 4% MFE before reversal - momentum capture worked temporarily",
+      "Risk management correctly flagged fractional position for cleanup"
+    ],
+    "what_not_working": [
+      "HIMX gave back entire 4% gain plus 4% more - no profit realization on runner",
+      "Fractional positions creating operational complexity",
+      "Pre-market exit orders not executing - liquidity gap risk"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773653670.2470276
+  },
+  {
+    "market_assessment": "Pre-market Monday (5:44 ET) - markets closed, minimal liquidity, no actionable price discovery yet.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional ghost position (0.1 shares, $1.06 notional) with exit pending - broker reconciliation artifact, not a real trade. Exit order already submitted, awaiting market open."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order pending since 3/15 - confirm fill at market open",
+      "No real positions held - effectively starting fresh Monday",
+      "Scanner showing LMRI at -3.97% in pre-market on no volume (87K vs 1.1M avg) - unreliable price action",
+      "Account in slight drawdown (-0.98% total, -1.02% from ATH) after 4.4 days of operation"
+    ],
+    "what_working": [
+      "Capital preservation - avoiding bad setups during choppy period",
+      "Clean risk management - no concentration issues, no heat buildup"
+    ],
+    "what_not_working": [
+      "Win rate showing strain - recent performance suggests quality bar needs elevation",
+      "Pre-market scanner data (LMRI) shows low conviction - down stock on thin volume is NOT our playbook"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773654273.4223206
+  },
+  {
+    "market_assessment": "Pre-market Monday, market closed - no live price action to assess, regime shows risk_off but market_tide indicates risk_on with heavy put flow unwinding.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.06 notional) with exit pending since 05:47 ET - this is broker reconciliation noise from carryover_sync, not a real position, exit order already submitted"
+      }
+    ],
+    "risk_flags": [
+      "Market is closed - no trading possible until 09:30 ET",
+      "HIMX exit order pending - waiting for market open to execute",
+      "Only 1 scanner candidate (LMRI) showing, very thin opportunity set",
+      "Scanner showing stale pre-market data (volume spike 0.08x is actually volume DROUGHT)",
+      "Recent performance: -0.98% total return, slight drawdown from ATH",
+      "4.4 days of trading history - still in early validation phase"
+    ],
+    "what_working": [
+      "Risk management holding - only $1 exposure in dying position",
+      "Exit discipline - advisor already flagged HIMX for removal",
+      "Capital preservation - 99.96% in cash protects against gaps"
+    ],
+    "what_not_working": [
+      "Scanner showing weak pre-market signals with poor quality (LMRI down 3.97%, below VWAP, low conviction indicators)",
+      "Limited opportunity flow - need market open for real setups",
+      "Carryover positions creating noise - HIMX should never have been this small"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773654884.3170161
+  },
+  {
+    "market_assessment": "Pre-market Monday 06:04 ET - markets closed, risk_on regime but scanner showing weak/contradictory signals with no viable setups",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.06 notional) with exit pending since 03/13. Down 4.34% from entry, down 8.02% from peak. This is broker reconciliation noise from carryover, not a real position. Exit order submitted but not filled - likely will execute at open."
+      }
+    ],
+    "risk_flags": [
+      "Account equity down -0.98% from starting ($27,230 vs $27,500)",
+      "Recent drawdown of 1.02% from ATH",
+      "HIMX exit order pending but not filled - may gap at open",
+      "Scanner candidates are RED FLAGS: NBIG/NBIL both showing SELL signals from indicators despite +9% pre-market gaps",
+      "LMRI is DOWN 3.97% - reverse signal, not a momentum long candidate",
+      "Zero quality setups available - all scanner hits have major disqualifying factors"
+    ],
+    "what_working": [
+      "Clean cash position (99.6% cash) ready to deploy",
+      "Pattern day trader status confirmed with unlimited day trades",
+      "Risk management holding - no new heat being added to struggling account"
+    ],
+    "what_not_working": [
+      "Scanner producing low-quality signals (top scores only 0.44)",
+      "NBIG/NBIL: pre-market gaps with bearish indicator consensus and minimal volume (0.006x and 0.014x avg volume)",
+      "No specialist validation, no institutional confirmation, no clean technical setups",
+      "Thesis mode required but no compelling narratives present"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "low",
+    "timestamp": 1773655494.548304
+  },
+  {
+    "market_assessment": "Pre-market Monday, risk_on regime with indexes up 0.39% avg - favorable conditions for momentum plays but market hasn't opened yet (6:15 AM ET).",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphaned position (0.1 shares, $1.07 notional) from broker sync. Exit pending but unfilled. Zero strategic value, pure reconciliation noise. This should be closed immediately at market open."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order submitted 46min ago but still unfilled - may need cancellation/resubmission at market open",
+      "Broker sync artifacts creating noise - fractional shares with no entry documentation",
+      "Pre-market scanner data on NBIG/NBIL/LMRI is unreliable - volumes are tiny (9k-87k) vs avg volumes (1M-1.8M), representing <1-8% of normal flow",
+      "All top candidates show pre-market price action that may gap/reverse at open",
+      "Strategy win rate only 50%, source win rate terrible at 14.3% - quality threshold must be very high"
+    ],
+    "what_working": [
+      "Clean slate - no active positions consuming capital once HIMX closes",
+      "Risk_on regime alignment with bullish market tide",
+      "Full buying power available ($108k) for quality setups",
+      "No heat, no drawdown pressure, no consecutive losses"
+    ],
+    "what_not_working": [
+      "Pre-market scanner signals unreliable - LMRI down 3.97%, NBIG/NBIL bearish indicator consensus despite upward price moves",
+      "Low source win rate (14.3%) suggests polygon pre-market signals are low quality",
+      "NBIG shows bearish chain bias (puts $1,702 vs calls $0) despite 9.25% gap up",
+      "NBIL showing SELL consensus from indicators despite 8.89% gap",
+      "Zero validated high-quality setups with market closed"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773656138.6697488
+  },
+  {
+    "market_assessment": "Pre-market Monday 6:25 AM ET - markets closed, risk_on regime signal (+0.53% index avg), minimal premarket volume on scanner candidates.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.07 notional) from broker sync, exit pending 46min unfilled, -4.34% from entry, -8.02% from peak $10.66. Zero strategic value, pure reconciliation noise requiring forced cleanup at open."
+      }
+    ],
+    "risk_flags": [
+      "Exit order unfilled for 46 minutes on fractional position - likely requires market open to execute",
+      "HIMX exit stuck in limbo - creates false position tracking noise until cleared",
+      "Scanner showing candidates down 3.97% (LMRI) and modest +8-9% premarket gaps (NBIG/NBIL) but all on extremely thin volume (<100k shares)",
+      "Top two scanner candidates (NBIG/NBIL) showing SELL signals from technical indicators despite +8-9% premarket moves - potential bull traps",
+      "Zero recent trade history - fresh start but no momentum context"
+    ],
+    "what_working": [
+      "Clean slate - no open losses bleeding capital",
+      "Full buying power available ($108k) with PDT status confirmed",
+      "Risk_on market regime aligned with momentum playbook"
+    ],
+    "what_not_working": [
+      "HIMX fractional position is administrative overhead consuming attention",
+      "Scanner candidates showing mixed signals - price strength contradicted by bearish technicals",
+      "Premarket volume extremely thin - price discovery unreliable until open",
+      "Account barely moved from starting equity ($27.2k vs $27.5k start) over 4.4 days - strategy hasn't gained traction"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773656769.2249138
+  },
+  {
+    "market_assessment": "Premarket (6:36 AM ET) on Monday - markets closed, risk_on regime with SPY/QQQ/IWM averaging +0.53%, but no live price action to assess real momentum yet.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.06 notional) from broker sync reconciliation. Exit order pending 46 minutes, unfilled. Zero strategic value, pure noise. Needs immediate market order at 9:30 AM open."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order stuck unfilled since 5:47 AM - stale GTC order likely won't execute",
+      "Account is 99.6% cash ($27,229) but locked in reconciliation limbo with worthless fractional position",
+      "Scanner showing momentum candidates but ALL are red flags: NBIL/NBIG both sellside indicator consensus, LMRI down -3.97% on day",
+      "Zero thesis-validated setups available - scanner producing low-quality signals",
+      "Monday premarket = elevated gap risk, no established intraday trend yet"
+    ],
+    "what_working": [
+      "Cash preservation - avoided bleeding on bad setups",
+      "Discipline holding through low-quality scanner output"
+    ],
+    "what_not_working": [
+      "Broker sync created fractional orphan position consuming mental/system bandwidth",
+      "GTC exit orders not executing in premarket - need market orders at open",
+      "Scanner surfacing momentum names with bearish technicals (NBIL indicator consensus SELL 49% strength, NBIG bearish chain bias)",
+      "No clean momentum setups with bullish confirmation - quality drought continues"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1773657387.495484
+  },
+  {
+    "market_assessment": "Pre-market Monday 6:46 AM - market closed, risk_on regime with indexes up 0.57% avg, momentum scanner active but no quality setups present.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "0.1 share fractional orphan ($1.07 notional) from broker sync, exit order pending 46min unfilled, down 4.3% from entry, -8% from peak, zero strategic value - pure reconciliation noise requiring immediate cleanup at market open"
+      }
+    ],
+    "risk_flags": [
+      "Unfilled exit order on HIMX for 46 minutes suggests order routing issue or incorrect order type for fractional shares",
+      "Scanner showing weak candidates: NBIL/NBIG both flagged SELL by indicators with consensus bearish signals despite upside gaps",
+      "LMRI down 3.97% (wrong direction for momentum long), trading 20% below VWAP - scanner quality filter failing",
+      "All top candidates have low volume spikes (0.01-0.08x avg volume) in pre-market - no real institutional participation",
+      "No validated momentum setups despite risk_on regime - quality drought continues"
+    ],
+    "what_working": [
+      "Clean account state - 99.6% cash ($27,229), minimal exposure, preserved capital through quality filter discipline"
+    ],
+    "what_not_working": [
+      "Scanner producing false positives: candidates showing technical SELL signals despite appearing on momentum_long screen",
+      "Exit execution on fractional positions - HIMX exit order stuck unfilled for extended period",
+      "Pre-market volume quality - all candidates showing <0.1x volume spike (noise, not institutional flow)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1773657986.8848622
+  },
+  {
+    "market_assessment": "Pre-market Monday 6:56 AM ET - markets closed, risk_on regime with indices up 0.67% avg, scanner showing mixed quality signals on low-liquidity names.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.06 notional) from broker reconciliation, exit pending 46 minutes unfilled, down 3.7% from peak, zero strategic value - administrative cleanup required at open"
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order hung for 46 minutes - likely won't fill until market open at 9:30 AM",
+      "Pre-market scanner data unreliable - NBIL/NBIG/LMRI showing low volume (9k-87k) on small-cap names",
+      "All top candidates have thesis_mode='required' but zero fundamental catalyst mentioned",
+      "NBIL indicator consensus SELL (49% strength) contradicts 8.89% gap up - technical divergence warning",
+      "LMRI down 3.97% gapping DOWN yet flagged as momentum_long candidate - scanner logic error",
+      "Account at -0.98% total return after 4.4 days trading, below starting equity"
+    ],
+    "what_working": [
+      "Clean risk management - only 0.01% heat exposure, well below limits",
+      "Position sizing discipline maintained - COMPOUND tier at 2.5% sizing active",
+      "No overtrading - zero trades today, 258 lifetime day trades with PDT protection active"
+    ],
+    "what_not_working": [
+      "Scanner surfacing low-quality pre-market candidates with contradictory signals",
+      "Broker sync creating administrative noise (HIMX fractional orphan position)",
+      "Win rate at 50% with -0.98% total return suggests poor risk/reward execution",
+      "Strategy win rate 50% but source win rate only 14.3% - signal quality problem"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773658612.2595217
+  },
+  {
+    "market_assessment": "Pre-market Monday 7:07 AM - market closed, risk_on regime with indexes averaging +0.66%, scanner showing low-quality gappers with poor volume confirmation",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.05 notional) from broker sync, exit pending 46 minutes unfilled - this is reconciliation noise not a real position, zero strategic value"
+      }
+    ],
+    "risk_flags": [
+      "Account effectively at zero deployment ($1.05 / $27,230 = 0.004% heat)",
+      "HIMX exit order stuck unfilled for 46 minutes - force market order at 9:30 open",
+      "Top scanner candidates are low-quality: NBIL/NBIG/LMRI all showing bearish indicators despite gap-ups",
+      "NBIL: 8.89% gap but indicator consensus SELL (49 strength), below VWAP -2.56%",
+      "NBIG: 9.25% gap but bearish options chain ($1,702 put premium, 25 vol at $9 strike)",
+      "LMRI: Actually DOWN 3.97%, shouldn't be on momentum long scanner at all",
+      "Extremely low pre-market volume across all candidates (9k-87k vs avg 1M+)",
+      "No validated specialists data on any candidate - 'required thesis mode' will block entries"
+    ],
+    "what_working": [
+      "Capital preservation - sitting in cash before open is correct given signal quality",
+      "Risk systems preventing bad entries - thesis_mode requirement blocking low-quality setups"
+    ],
+    "what_not_working": [
+      "Scanner generating false positives (LMRI down 3.97% flagged as momentum long)",
+      "Pre-market gaps without volume confirmation creating noise signals",
+      "Exit order mechanics on fractional positions - 46min unfilled suggests order routing issue"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773659264.7862892
+  },
+  {
+    "market_assessment": "Pre-market Monday 7:17 AM - markets closed, risk_on regime with indices up 0.68% average, minimal tradable volume on scanner candidates.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync error. Exit order pending 46 minutes unfilled. Pure reconciliation artifact with zero strategic value - needs immediate market order cleanup at 9:30 AM open."
+      }
+    ],
+    "risk_flags": [
+      "Exit order stuck/unfilled for 46 minutes on fractional position - suggests order routing or execution issue",
+      "HIMX position is 0.0038% of portfolio - below any meaningful threshold, pure system noise",
+      "Scanner candidates show extreme low volume (9.9k-87k vs 1-1.8M avg) - pre-market illiquidity trap",
+      "All top candidates have negative or weak technical signals (NBIL/NBIG showing SELL bias, LMRI down 3.97%)",
+      "Zero recent trades = no current momentum confirmation from our own system"
+    ],
+    "what_working": [
+      "Risk management held us out of trades - preserved capital through unclear conditions",
+      "PDT status gives us full flexibility (999 day trades remaining)",
+      "Cash position strong at $27.2k - ready for quality setups when they emerge"
+    ],
+    "what_not_working": [
+      "Scanner producing low-quality signals - all top candidates either down or showing bearish technicals despite 'momentum_long' tags",
+      "Position cleanup mechanics - fractional exit order should have filled or been escalated faster",
+      "No validated specialist thesis on any candidate - all would require thesis_mode override"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773659895.6636677
+  },
+  {
+    "market_assessment": "Pre-market Monday 7:28 AM ET - risk_on regime with indices up 0.62%, market just opening, very thin pre-market volume on scanner candidates (87K max), premature to assess intraday conditions.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional broker reconciliation artifact (0.1 shares, $1.04 notional). Exit pending 46 minutes unfilled. Zero strategic value, pure system noise from sync malfunction. Needs immediate cleanup at market open."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order stuck unfilled for 46 minutes - suggests routing/liquidity failure on fractional shares",
+      "All three scanner candidates are low-float, low-liquidity names (NBIL, NBIG, LMRI) with sub-100K pre-market volume",
+      "NBIL and NBIG showing strong SELL indicator consensus despite +8-9% moves - classic pre-market gap exhaustion setup",
+      "LMRI down -3.97% but flagged as momentum long candidate - signal logic error or late-cycle reversal play",
+      "Zero social sentiment on LMRI, minimal on NBIL/NBIG - no crowd validation",
+      "Account in slight drawdown (-0.98% total return) after 4.4 days - not critical but raises quality bar"
+    ],
+    "what_working": [
+      "Nothing actively working - no recent trades to assess, HIMX position is reconciliation noise not strategy validation"
+    ],
+    "what_not_working": [
+      "Fractional share orders failing to execute (HIMX exit stuck 46 min)",
+      "Scanner surfacing low-quality pre-market gaps with bearish technical divergence (NBIL/NBIG indicator consensus is SELL despite +8-9% moves)",
+      "Scanner flagging DOWN stocks as momentum longs (LMRI -3.97%)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773660537.3008451
+  },
+  {
+    "market_assessment": "Pre-market Monday 7:39 AM - market closed, risk_on regime with SPY/QQQ up ~0.74%, but scanning low-quality micro-caps with poor liquidity and mixed/bearish technicals.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync error. Exit order pending 46 minutes unfilled - complete system artifact with zero strategic value. Needs forced market clear at open."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order stuck 46min - likely routing failure on fractional share",
+      "Scanner producing extremely low-quality candidates (NBIL/NBIG/LMRI all sub-$15, thin volume, bearish indicators)",
+      "NBIL: 8.89% gap up but consensus SELL signals (OBV divergence, SMI overbought), only 26K volume",
+      "NBIG: Bearish options chain (25 put contracts at $9 strike, $1,702 premium, 88% ask-side), indicator consensus neutral-to-bearish",
+      "LMRI: DOWN 3.97%, below VWAP by 20%, RSI null (insufficient data), entry would violate 'never catch falling knives' principle",
+      "All three candidates have < 100K premarket volume - illiquidity risk extreme",
+      "Zero validated high-quality setups - scanner is scraping bottom of barrel"
+    ],
+    "what_working": [
+      "Risk management discipline - correctly rejecting low-quality setups",
+      "Market regime detection - risk_on confirmed by index strength"
+    ],
+    "what_not_working": [
+      "Scanner quality filters failing - producing micro-caps with bearish technicals despite momentum_long strategy",
+      "Fractional order execution - broker sync creating unfillable orders",
+      "No institutional-grade momentum stocks appearing (no AAPL/NVDA/TSLA-tier names)",
+      "Thesis requirement not being met - none of these candidates have clear bullish catalysts"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773661170.1823688
+  },
+  {
+    "market_assessment": "Pre-market Monday shows risk_on regime (+0.74% index avg) with extremely thin scanner activity (3 candidates, all low volume, weak signals).",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync malfunction. Exit order pending 46min unfilled = order routing failure. System artifact with zero strategic value."
+      }
+    ],
+    "risk_flags": [
+      "Exit order stuck 46min unfilled - suggests order routing issue or market not open yet",
+      "HIMX position is pure reconciliation noise - not a real trade",
+      "Scanner showing extremely weak momentum candidates pre-market",
+      "All 3 scanner candidates have thesis_mode='required' but no specialist validation visible",
+      "NBIL/NBIG both showing SELL consensus from indicators despite appearing as momentum_long signals",
+      "Top candidate NBIL has 26K volume on 1.8M avg = 1.4% normal volume, not a real setup"
+    ],
+    "what_working": [
+      "Nothing yet - account just started (0.0% daily PnL, 0 trades today)",
+      "Risk controls operational (COMPOUND tier active, PDT=true with 100 effective daytrades)"
+    ],
+    "what_not_working": [
+      "Pre-market scanner producing low-quality signals with indicator conflicts",
+      "Exit order execution appears broken (46min pending)",
+      "Account slightly below starting equity (-0.98% total return over 4.4 days)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773661790.9243517
+  },
+  {
+    "market_assessment": "Pre-market Monday, risk_on regime with indexes up ~0.74%, but scanner showing weak/mixed quality candidates with poor volume and conflicting technicals.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.03 notional) from broker sync malfunction, exit pending 46min unfilled, zero strategic value"
+      }
+    ],
+    "risk_flags": [
+      "Exit order on HIMX unfilled for 46 minutes - potential routing failure",
+      "All scanner candidates have critical red flags (NBIL/NBIG bearish indicators, LMRI down 4% pre-market)",
+      "Scanner showing SELL signals on top momentum candidates (NBIL: 49% bearish consensus, NBIG bearish chain bias)",
+      "Low volume spikes on all candidates (NBIL 0.014x, NBIG 0.006x) - not institutional quality",
+      "Account sitting 99.96% cash ($27,229 of $27,230) with no meaningful deployment"
+    ],
+    "what_working": [
+      "Risk management kept us out of Friday's chop - zero daily trades, zero heat",
+      "Account preservation mode functioning correctly"
+    ],
+    "what_not_working": [
+      "Scanner surfacing low-quality setups with bearish divergences",
+      "NBIL showing 5/5 SELL signals from validated indicators despite +8.9% gap",
+      "NBIG has bearish options chain ($1,702 put premium, 88% ask-side volume)",
+      "LMRI gapping DOWN 4% with massive -20% VWAP deviation",
+      "Order routing appears broken (HIMX exit stuck 46min)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773662415.945191
+  },
+  {
+    "market_assessment": "Monday premarket showing risk-on regime (+0.83% indices), low volume scanner activity with only 3 momentum candidates, all showing premarket gap moves but minimal volume confirmation.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync error. Exit order pending 46 minutes unfilled at premarket. Pure reconciliation artifact with zero trading value - needs force close at 9:30 AM open to clear system noise."
+      }
+    ],
+    "risk_flags": [
+      "Account effectively flat with no real exposure ($27.2k cash vs $27.2k equity)",
+      "Consecutive losses context: 4.5 days trading, -0.98% total return suggests recent struggle",
+      "Scanner showing extremely low volume premarket (26k-97k vs multi-million averages = 0.6-3.4% normal volume)",
+      "All top candidates are small-cap gappers with insufficient volume validation",
+      "CTMX: 47% gap on 97k volume, bearish dark pool bias, earnings TODAY (binary event risk)",
+      "NBIL/NBIG: 9% gaps with <27k volume, indicator consensus bearish/neutral despite gap direction"
+    ],
+    "what_working": [
+      "Risk management kept losses minimal (-1% drawdown from ATH)",
+      "System correctly flagged HIMX fractional position for immediate cleanup"
+    ],
+    "what_not_working": [
+      "Win rate data too sparse (0 trades today, unclear recent pattern)",
+      "Scanner producing low-quality signals with insufficient volume",
+      "Premarket gaps without institutional volume confirmation are traps not opportunities",
+      "No clear momentum pattern emerging - all candidates are thesis-required low-liquidity plays"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773663057.2380908
+  },
+  {
+    "market_assessment": "Market opened strong (SPY/QQQ/DIA avg +0.93%) in risk_on mode, but scanner volume is anemic - top candidates showing <100k premarket volume on stocks that trade 1-2M daily.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.03 notional) from broker sync error. Exit order pending 46min unfilled. System artifact with zero strategic value - just reconciliation noise."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order stuck unfilled for 46 minutes - order routing failure or fractional share rejection",
+      "Scanner showing extremely weak volume (CTMX 97k, NBIL 27k, NBIG 10k) vs their daily averages (2.8M, 1.9M, 1.5M) - sub-1% of normal",
+      "Top candidate CTMX has bearish options flow ($64k puts vs $0 calls) despite +54% gap - smart money fading the move",
+      "All three scanner candidates showing technical exhaustion signals (overbought SMI, bearish divergences)",
+      "Market opened 2min ago but volume hasn't materialized - potential fake breakout environment"
+    ],
+    "what_working": [
+      "Nothing - zero trades executed today, HIMX is a carry-over failure artifact"
+    ],
+    "what_not_working": [
+      "Fractional share handling causing order routing failures",
+      "Scanner picking up low-quality gaps with no institutional follow-through",
+      "Premarket volume spikes not translating to actual market open momentum"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "low",
+    "timestamp": 1773663679.2749534
+  },
+  {
+    "market_assessment": "Pre-market Monday 8:31 AM ET, risk_on regime with indices averaging +0.93%, low premarket volume on scanner candidates suggests waiting for 9:30 open for true price discovery.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional artifact (0.1 shares, $1.03 notional) from broker sync, exit order pending 46+ minutes unfilled, zero strategic value, blocking clean state"
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order unfilled for 46 minutes suggests order routing issue or illiquidity on fractional shares",
+      "Scanner showing CTMX +43% premarket on earnings but extreme volatility (4.60-6.98 range) with bearish options flow ($64k puts)",
+      "NBIL +8.9% but indicator consensus is SELL with 49% bearish strength, price below VWAP",
+      "Both top candidates have thesis_mode='required' but no fundamental catalyst visible beyond price action",
+      "Premarket volume extremely thin (26k-97k) - prices unreliable, high gap risk at open"
+    ],
+    "what_working": [
+      "Clean risk state: 0% heat, 0.01% open risk, $27.2k cash available",
+      "Account above $25k PDT threshold with unlimited day trades",
+      "Market regime supportive (risk_on)"
+    ],
+    "what_not_working": [
+      "Scanner producing low-quality candidates with conflicting signals",
+      "HIMX fractional position creating reconciliation noise",
+      "Current drawdown -1.02% from ATH, negative 4.5-day avg return (-0.22%)",
+      "Zero trading activity today, system appears stuck on exit cleanup"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773664307.4541936
+  },
+  {
+    "market_assessment": "Pre-market Monday at 8:41 AM ET, market regime shows risk_on with indices up ~0.93%, but liquidity is thin and true conditions won't be clear until cash open at 9:30 AM.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan position (0.1 shares, $1.04 notional) from broker sync malfunction. Exit order pending 46 minutes unfilled. This is system noise, not a strategic position. Underwater -0.6% after 80+ hours hold."
+      }
+    ],
+    "risk_flags": [
+      "Exit order routing failure on HIMX - order submitted 46 min ago but unfilled",
+      "Pre-market conditions - low liquidity, wide spreads, prices unreliable",
+      "Fractional position creating reconciliation noise in system",
+      "Scanner showing CTMX +44% but volume is only 97K vs 2.9M average (3% of normal) - this is pre-market artifact",
+      "CTMX has earnings scheduled TODAY (binary event risk) with bearish dark pool activity ($4.5M bear vs $0 bull)"
+    ],
+    "what_working": [
+      "Account preservation - staying 99% cash ($27.2K) through weekend",
+      "Risk discipline - no new positions taken in uncertain conditions",
+      "Exit system flagged HIMX correctly as underwater carryover"
+    ],
+    "what_not_working": [
+      "Order routing/execution - HIMX exit order stuck unfilled for 46 minutes",
+      "Broker sync creating phantom fractional positions that pollute decision-making",
+      "Scanner showing pre-market noise as actionable signals (CTMX +44% on 3% normal volume)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773664933.6110613
+  },
+  {
+    "market_assessment": "Pre-market Monday 8:51 AM - market opens in 39 minutes, risk_on regime with indexes up ~1%, low pre-market volume, waiting for cash open to assess true conditions",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares = $1.04) from broker sync malfunction, exit order pending 46+ minutes unfilled, system artifact not strategic position, needs immediate market order cleanup at open"
+      }
+    ],
+    "risk_flags": [
+      "Account effectively at zero deployed capital - $27,230 cash vs $1.04 position",
+      "Exit order routing failure - pending 46 minutes with zero fills suggests order book issue",
+      "Slight drawdown from ATH (-1.02%) but operationally neutral",
+      "Scanner showing CTMX +45% move but bearish dark pool ($1.5M bear vs $0 bull) and earnings scheduled TODAY - high event risk",
+      "Pre-market scanner data unreliable - CTMX showing impossible values (open=0, vwap=0, volume spike 0.03x despite +45% move)"
+    ],
+    "what_working": [
+      "Clean slate - no meaningful capital at risk",
+      "Risk_on regime with positive index momentum",
+      "Full buying power available ($108k) for quality setups"
+    ],
+    "what_not_working": [
+      "Order execution infrastructure - HIMX exit order stuck unfilled",
+      "Scanner data quality pre-market - conflicting/impossible metrics on CTMX",
+      "No established winning patterns yet this session"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773665538.680702
+  },
+  {
+    "market_assessment": "Market open (9:02 AM Monday), risk_on regime confirmed, indices up ~0.94% avg, early session with thin volume and price discovery underway.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync error. Exit order pending 46min unfilled - clear routing failure. This is system noise, not a position. Needs immediate market order cleanup at 9:30 open."
+      }
+    ],
+    "risk_flags": [
+      "HIMX exit order stuck unfilled for 46 minutes - order routing malfunction",
+      "Portfolio effectively 100% cash but system shows position - reconciliation mismatch",
+      "Heat at 0%, but HIMX cleanup blocking clean slate",
+      "Scanner showing CTMX with 46% premarket gap but ZERO open price data - data quality red flag",
+      "CTMX has earnings TODAY (per news) - massive event risk on primary scanner candidate"
+    ],
+    "what_working": [
+      "Risk management: stopped out of bad setups early last week",
+      "Capital preservation: sitting in cash during uncertain conditions",
+      "System discipline: not forcing trades in choppy conditions"
+    ],
+    "what_not_working": [
+      "Order routing: HIMX exit stuck unfilled suggests infrastructure issue",
+      "Scanner quality: top candidate (CTMX) has earnings TODAY + missing OHLC data = unreliable signal",
+      "Position tracking: broker sync creating fractional orphans that clog the system"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "additional_context": {
+      "account_health": "Clean. $27.2k equity, minimal drawdown (-1.02%), full buying power available.",
+      "himx_cleanup": "This isn't a strategic exit - it's system hygiene. Force market order at 9:30 to clear.",
+      "ctmx_warning": "Earnings catalyst TODAY makes this extremely high-risk. Premarket gap on no volume with missing price data = avoid completely.",
+      "market_opportunity": "Risk_on regime is constructive, but it's Monday morning, first 30min notorious for chop. Let real price action develop before deploying capital.",
+      "strategic_posture": "We're essentially flat. Good position to be patient, wait for clean setup with confirmed follow-through. Don't chase premarket noise."
+    },
+    "timestamp": 1773666159.2700896
+  },
+  {
+    "market_assessment": "Monday morning open in risk_on regime (indices +0.91%), low scanner volume suggests slow start, waiting for market direction to establish",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan (0.1 shares, $1.04) from broker sync glitch. Exit order pending 46min unfilled = routing failure. This is system noise requiring manual cleanup, not a real position."
+      }
+    ],
+    "risk_flags": [
+      "Exit order stuck unfilled for 46 minutes - order routing issue needs immediate attention",
+      "Scanner showing unusual candidates: CTMX up 43% pre-market but low volume (97K), extreme volatility risk",
+      "CTMX has earnings TODAY (3/16/26) - massive binary event risk, absolutely untradeable",
+      "DSGR down -2.3% being flagged as social momentum - contradictory signal quality",
+      "Scanner quality appears degraded - no clean momentum setups visible"
+    ],
+    "what_working": [
+      "Account preservation mode is working - stayed out of Friday carnage",
+      "Risk discipline holding at ~1% drawdown from ATH"
+    ],
+    "what_not_working": [
+      "Order execution infrastructure (HIMX exit order stuck)",
+      "Scanner signal quality (showing earnings plays and red stocks as 'momentum')",
+      "No viable entry candidates in current scan results"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1773666782.367355
+  },
+  {
+    "market_assessment": "Market opens risk-on (indices +0.96%) with bullish options flow, but scanner quality is extremely poor - top candidate is a fractional-cent penny stock with 97k volume and broken data.",
+    "position_health": [
+      {
+        "symbol": "HIMX",
+        "status": "dying",
+        "note": "Fractional orphan position (0.1 shares, $1.03 notional) from broker sync malfunction. Exit order pending 46min unfilled. This is reconciliation noise, not a real position. Needs immediate forced liquidation at market open."
+      }
+    ],
+    "risk_flags": [
+      "Scanner quality crisis - CTMX is $6.80 with $4.97 high/low/open=0 (corrupt data)",
+      "CTMX shows 39% gain but only 97k volume vs 2.8M avg = 3% of normal volume (illiquid trap)",
+      "CTMX has bearish options bias ($64k in puts vs $0 calls) contradicting bullish price action",
+      "DSGR down -2.3% being flagged as social momentum long (scanner logic failure)",
+      "Zero quality setups available despite 'risk-on' regime classification",
+      "Fractional position exit order failing for 46 minutes = potential order routing issue"
+    ],
+    "what_working": [
+      "Cash preservation - avoided bad setups during weekend gap",
+      "Risk discipline holding despite 'risk-on' signals"
+    ],
+    "what_not_working": [
+      "Scanner candidate quality - both top picks are fundamentally flawed",
+      "Order execution - exit order unfilled for 46min on tiny position",
+      "Data integrity - CTMX has impossible price data (open=0, high=$4.97, current=$6.80)",
+      "Signal validation - downtrending stocks being flagged as momentum longs"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1773667409.5105417
+  },
+  {
+    "market_assessment": "Market in strong risk_on mode (+0.96% indexes), momentum favorable for continuation plays, but need to watch for exhaustion on extended runners",
+    "position_health": [
+      {
+        "symbol": "DSGR",
+        "status": "at_risk",
+        "note": "Entered at $25.57 on +32% gainer, now flat at $25.56 after 2min. Classic late entry on exhausted move. Rolling VWAP -15% below price = extreme extension. Already showing -0.04% MAE with minimal time. This is a trap."
+      }
+    ],
+    "risk_flags": [
+      "DSGR entered at peak of 32% move - textbook exhaustion entry",
+      "Position sitting at day's low ($25.57) with no bounce - failed immediately",
+      "Multiple scanner candidates showing 25-30%+ gains with negative rolling VWAP divergence (BMNR -29%, NSA +23%, DSGR -15%)",
+      "Chasing extended momentum without pullback = bleeding risk",
+      "1 consecutive loss after entry - system needs recalibration on entry timing",
+      "Fast path entry bypassed quality filters that would have flagged extension"
+    ],
+    "what_working": [
+      "Risk_on regime providing runway for momentum plays",
+      "Scanner finding high-volume movers early",
+      "Trailing stop infrastructure in place"
+    ],
+    "what_not_working": [
+      "Entry timing on parabolic moves - entering AT the top not ON the breakout",
+      "Fast path bypassing critical extension checks (rolling VWAP, range position)",
+      "No respect for overbought conditions on multi-standard-deviation moves",
+      "Chasing 30%+ gainers without confirmation of continuation"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773668016.5007982
+  },
+  {
+    "market_assessment": "Strong risk-on environment (+1.04% indices), momentum stocks running hot, but showing classic late-stage exhaustion signals across multiple positions",
+    "position_health": [
+      {
+        "symbol": "MU",
+        "status": "at_risk",
+        "note": "Up 0.32% but 37 failed trailing stop attempts, RSI 67.1, indicators showing SELL bias -21%, consensus says momentum weakening"
+      },
+      {
+        "symbol": "NBIS",
+        "status": "healthy",
+        "note": "Up 1.31%, strongest performer, already tried emergency exit once but broker reloaded - pattern suggests persistent strength"
+      },
+      {
+        "symbol": "NBIG",
+        "status": "dying",
+        "note": "Up 1.54% but held since 09:35 (8min), tried exit twice, indicators bearish, this is ALREADY open and scanner showing it again at +29% - late to party"
+      },
+      {
+        "symbol": "ETHT",
+        "status": "healthy",
+        "note": "Up 0.14%, trailing stop active, clean entry 3min ago, room to run"
+      },
+      {
+        "symbol": "NSA",
+        "status": "at_risk",
+        "note": "Down 0.03%, entered 2min ago already showing -0.39% MAE, immediate drawdown on fresh entry is warning sign"
+      },
+      {
+        "symbol": "ETHU",
+        "status": "healthy",
+        "note": "Up 0.06%, carryover position, 12 trailing stop retries but holding gains"
+      },
+      {
+        "symbol": "BMNR",
+        "status": "healthy",
+        "note": "Up 0.12%, carryover, tried exit once, scanner showing it again (+11.82%) suggests sustained momentum"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: 7 positions open, max allowed is 10 but heat at 1.2% already",
+      "PATTERN: Multiple positions showing failed trailing stop placement (37 retries MU, 28 NBIG, 12 ETHU) - execution issues or volatility spikes",
+      "QUALITY DEGRADATION: Win rate 40% (4/10 today), below breakeven, recent losses should raise bar but seeing aggressive adds",
+      "TIMING CONCERN: NSA showing immediate -0.39% drawdown on 2min old position - rushed entry or deteriorating conditions",
+      "CARRYOVER CHAOS: 4 of 7 positions are broker-reloaded carryovers with 'broker_reloaded_after_local_removal' flags - system tried to exit, broker didn't comply, forced to hold",
+      "LATE CHASING: NBIG already open, scanner flagging it again at +29.06% - if we enter again from scanner we're buying the top of an 8-minute runner"
+    ],
+    "what_working": [
+      "Breakout fast-path entries (MU, ETHT, NSA all from this path)",
+      "Carryover positions showing resilience (NBIS +1.31%, BMNR +0.12%)",
+      "Risk-on regime alignment - market cooperating"
+    ],
+    "what_not_working": [
+      "Trailing stop execution - 77 total retry attempts across positions suggests technical failure or extreme volatility",
+      "Position exit discipline - multiple 'last_exit_reason' flags show system wanted out but couldn't execute",
+      "Fresh entries showing immediate drawdown (NSA -0.39% MAE in 2min)",
+      "Overbought momentum - MU RSI 67.1, BMNR RSI 68.1, indicators screaming SELL but positions still open"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1773668639.0553367
+  },
+  {
+    "market_assessment": "Risk-on regime, indices up 1.12%, but momentum runners showing classic late-session exhaustion patterns (RSI 60-80s, overbought SMI readings).",
+    "position_health": [
+      {
+        "symbol": "MU",
+        "status": "dying",
+        "note": "94 failed trailing stop attempts = protection system completely broken. RSI 67.1 overbought, +0.81% gain but can't secure profit. This is infrastructure failure, not trading."
+      },
+      {
+        "symbol": "NBIS",
+        "status": "at_risk",
+        "note": "Carryover mystery position, +0.20% but reloaded after we tried to exit. Has 3.78% MFE but showing weakness. Tiny size ($5.54 notional) but anomaly flags everywhere."
+      },
+      {
+        "symbol": "ETHU",
+        "status": "dying",
+        "note": "Crypto ETF down -1.43%, below entry. 69 failed trail attempts. In a risk-on market, crypto should fly - this is lagging badly."
+      },
+      {
+        "symbol": "NSA",
+        "status": "at_risk",
+        "note": "Brand new entry 2min ago, ALREADY down -0.39% MAE. Immediate drawdown on fresh breakout = rushed entry or fake breakout. Has working trail but early pain is warning sign."
+      }
+    ],
+    "risk_flags": [
+      "MU and ETHU trailing stop system is catastrophically broken - 94 and 69 retry attempts respectively",
+      "3 of 4 positions are struggling or dying despite strong market (+1.12% indices)",
+      "NSA entered at 09:50 into overbought conditions (RSI 82.5 on scan data) - chasing extension",
+      "Only $850 deployed (3.1% of portfolio) but it's all in deteriorating positions",
+      "Scanner showing heavy overbought readings across top candidates (NBIL RSI 57.8, NSA 82.5, all -21% to -49% SELL bias on indicators)",
+      "1 consecutive loss, win rate fallen to 41.18% - quality bar must be raised"
+    ],
+    "what_working": [
+      "Fast exits when things go wrong (prior session discipline visible)",
+      "Low deployment keeping powder dry in suspect conditions"
+    ],
+    "what_not_working": [
+      "Trailing stop infrastructure failing on 2 positions (163 combined retries)",
+      "Entering overbought momentum runners late in their move (NSA, MU both showing weakness after entry)",
+      "Carryover positions creating confusion and re-entry loops (NBIS)",
+      "Breakout entries not holding - immediate MAE on NSA, MU can't extend despite 67.1 RSI"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773669251.1025882
+  },
+  {
+    "market_assessment": "Strong risk-on Monday morning, indexes up 1.29%, momentum playing out with high-quality breakouts extending",
+    "position_health": [
+      {
+        "symbol": "ETHU",
+        "status": "healthy",
+        "note": "Up 1.06% (+$7.52), 200 seconds to green, holding gains cleanly with 3% trail in place"
+      },
+      {
+        "symbol": "DSGR",
+        "status": "healthy",
+        "note": "Flat/slight red but just entered 3min ago, up 32.58% on day, inside natural consolidation zone, trail active"
+      }
+    ],
+    "risk_flags": [
+      "Both positions entered within same 10-second window via fast_path - execution cluster risk if stops hit simultaneously",
+      "DSGR was a fast_path entry but appears as top scanner candidate again - potential signal we entered too early on the move",
+      "Win rate concerning: 11W/13L (45.8%), down -0.98% total return, below milestone target",
+      "Heat at 2.0% with only 2 positions - suggesting recent losses have raised caution appropriately"
+    ],
+    "what_working": [
+      "Fast path breakout entries executing cleanly with immediate fills",
+      "Trailing stops deploying successfully on all positions",
+      "Risk-on regime alignment - both positions match market environment",
+      "Position sizing discipline maintained at 2.5% tier"
+    ],
+    "what_not_working": [
+      "Recent win rate trend negative (45.8% overall, likely worse recently given drawdown)",
+      "Account below starting equity ($27.2K vs $27.5K start)",
+      "Scanner showing several candidates but no new entries despite strong market - suggests quality bar is appropriately high after losses"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "low",
+    "timestamp": 1773669855.4034476
+  },
+  {
+    "market_assessment": "Risk-on regime (+1.29% indexes), strong momentum across crypto-adjacent names (CTMX +56%, BMNR +12%), semiconductors (MU +5.6%), opening provides clean entry opportunities.",
+    "position_health": [
+      {
+        "symbol": "CING",
+        "status": "healthy",
+        "note": "Fresh entry 2.5min ago at $9.81, LULD bands in place (8.72-10.66), trailing stop active, zero P&L pressure"
+      },
+      {
+        "symbol": "ETHT",
+        "status": "healthy",
+        "note": "Fresh entry 1.5min ago at $18.50, crypto ETF benefiting from BMNR momentum, trailing stop active"
+      },
+      {
+        "symbol": "BMNR",
+        "status": "healthy",
+        "note": "Fresh entry 30sec ago at $23.11, riding +12.89% crypto infrastructure wave, tiny drawdown -0.1% is noise"
+      },
+      {
+        "symbol": "DSGR",
+        "status": "dying",
+        "note": "ZOMBIE POSITION - reloaded from broker twice, $23.76 notional dust, no valid entry thesis, failed exits documented, liquidate immediately"
+      },
+      {
+        "symbol": "NBIS",
+        "status": "dying",
+        "note": "ZOMBIE POSITION - $0.028 notional dust, broker artifact with failed exit history, zero economic value, purge"
+      }
+    ],
+    "risk_flags": [
+      "Two broker-reloaded zombie positions (DSGR, NBIS) creating data pollution and mental overhead despite negligible notional",
+      "1 consecutive loss + 46.4% win rate = quality bar must stay elevated",
+      "All three live positions entered within 3min window = synchronized entries create correlation risk if market reverses",
+      "BMNR already extended (+12.89%) with bearish option chain bias - late-stage entry risk",
+      "DSGR in portfolio matches scanner candidate = confusing signal, position is dead weight not active trade"
+    ],
+    "what_working": [
+      "Fast-path breakout entries on fresh momentum (3 fills in <3min shows execution speed)",
+      "Crypto-sector rotation (ETHT, BMNR cluster suggests coherent theme)",
+      "Risk-on regime alignment with position entries"
+    ],
+    "what_not_working": [
+      "Broker sync creating persistent ghost positions that refuse to die",
+      "Win rate below 50% suggests quality filter needs tightening",
+      "No clear exit discipline on zombie positions - DSGR/NBIS should not exist"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1773670499.0062642
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up 1.27% avg; market showing strong bullish momentum across sectors including semiconductors (MU +4.42%), massive volume spikes on small caps (CTMX +56.3%, NSA +28.46%), and clean breakout conditions.",
+    "position_health": [
+      {
+        "symbol": "ETHU",
+        "status": "healthy",
+        "note": "Crypto ETF flat at entry, 1% trail active, very small position ($408), minimal time decay risk"
+      },
+      {
+        "symbol": "BMNR",
+        "status": "at_risk",
+        "note": "NO TRAILING STOP despite 3% trail_pct set - protection_failed=false but has_trailing_stop=false, immediate vulnerability"
+      },
+      {
+        "symbol": "NBIL",
+        "status": "at_risk",
+        "note": "NO TRAILING STOP despite 3% trail_pct set - protection_failed=false but has_trailing_stop=false, immediate vulnerability"
+      }
+    ],
+    "risk_flags": [
+      "TWO POSITIONS LACK TRAILING STOPS: BMNR and NBIL both show trail_pct=3.0 but has_trailing_stop=false - this is a critical system failure exposing $303 to unprotected downside",
+      "7 consecutive losses (win_rate 38.2%) means quality bar must be VERY high for new entries",
+      "Size multiplier at 0.5x due to drawdown - system correctly de-risking",
+      "All three open positions entered via fast_path breakouts in last 10 minutes - very fresh, no time to prove themselves",
+      "Scanner showing extreme movers (CTMX +56%, ULY +167%) with massive RSI overbought warnings - these are late-stage pumps, not quality setups",
+      "Total open risk only $12.21 (0.04% of equity) despite 3 positions - heat management working but positions are micro-sized"
+    ],
+    "what_working": [
+      "Risk management: size multiplier correctly reduced to 0.5x after losses",
+      "Position sizing: all entries under $410 notional, respecting reduced allocation",
+      "Market regime detection: correctly identified risk_on environment",
+      "Fast execution: all fills within 1 second of signal"
+    ],
+    "what_not_working": [
+      "CRITICAL: Trailing stop implementation failing on BMNR and NBIL despite configuration",
+      "Entry quality: 7 straight losses suggests we're chasing low-quality breakouts",
+      "Win rate: 38.2% is well below breakeven threshold with our risk/reward parameters",
+      "Position follow-through: Recent entries haven't developed favorable price action"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773671123.3967774
+  },
+  {
+    "market_assessment": "Market is risk-on (SPY +1.12%, QQQ +1.22%, DIA +1.01%) with strong momentum stocks running hard - multiple +25-150%+ gainers suggest retail chasing is active.",
+    "position_health": [
+      {
+        "symbol": "ETHT",
+        "status": "healthy",
+        "note": "Up 0.45% with 1.5% trailing stop, went green in 105 seconds, clean breakout execution"
+      },
+      {
+        "symbol": "BMNR",
+        "status": "at_risk",
+        "note": "Flat at entry with 3% trail - just entered 2min ago, no price movement yet, needs confirmation"
+      },
+      {
+        "symbol": "NBIS",
+        "status": "at_risk",
+        "note": "Flat at entry with 3% trail - just entered 2min ago, no price movement yet, needs confirmation"
+      }
+    ],
+    "risk_flags": [
+      "Three positions entered within 2 minutes (10:25-10:27 ET) - rapid deployment without waiting for confirmation",
+      "Win rate is concerning: 38.46% overall (15W/24L) with -1.05% total return",
+      "Scanner showing extreme movers (CTMX +55%, NSA +29%, ULY +167%) - these are late-stage parabolic moves, not quality setups",
+      "Top candidates show bearish technical divergence (NSA RSI 82.5 overbought, NBIL/NSA showing SELL consensus)",
+      "Multiple candidates have earnings TODAY (CTMX has 8-K filing) - undisclosed catalysts create gap risk",
+      "Recent positions lack time to prove themselves - rushing into new entries before confirming current ones work"
+    ],
+    "what_working": [
+      "Fast entry execution - ETHT went green quickly",
+      "Trailing stops are in place on all positions",
+      "Position sizing discipline maintained at 2.5% ($306 per position)"
+    ],
+    "what_not_working": [
+      "Quality filter appears broken - entering 3 positions simultaneously without stagger",
+      "Win rate stuck below 40% suggests strategy/selection issues",
+      "Scanner surfacing parabolic blow-offs, not sustainable momentum (ULY +167%, CTMX +55%)",
+      "No patience for confirmation - BMNR and NBIS are dead flat at entry",
+      "Chasing extended moves - NSA up 29% already with bearish RSI divergence"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1773671756.3264914
+  },
+  {
+    "market_assessment": "Early Monday morning, 38 minutes into market open - volume typically light, price discovery phase with no clear trend data visible yet.",
+    "position_health": [
+      {
+        "symbol": "ETHT",
+        "status": "healthy",
+        "note": "Up 0.6% ($1.86 profit), recently peaked at $18.01, trailing stop active - crypto-related ETF showing early strength"
+      },
+      {
+        "symbol": "NBIS",
+        "status": "at_risk",
+        "note": "Down 0.3% ($0.90 loss), trading at entry price with no upside move yet - biotech showing immediate weakness"
+      }
+    ],
+    "risk_flags": [
+      "Both positions are 'carryover' from broker sync with zero sentiment/confidence scores - no documented entry thesis",
+      "NBIS entered at exact peak price ($128.82) with immediate decline - potential bad entry timing",
+      "Only 0.6% heat deployed ($611 of $27.2K) - extremely underutilized capital but appropriate given uncertain carryover positions",
+      "System shows -1.05% total return over 4.6 days with negative daily average - recent performance trend is red",
+      "Zero fresh trades today - watching mode but no new opportunities identified yet"
+    ],
+    "what_working": [
+      "ETHT showing positive momentum in early trading",
+      "Trailing stops are active on both positions - risk management in place",
+      "Conservative positioning after recent drawdown period"
+    ],
+    "what_not_working": [
+      "NBIS immediate red - biotech may be wrong sector or bad entry",
+      "Carryover positions lack documented strategy - flying blind on these holds",
+      "Scanner showing zero candidates - opportunity pipeline is dry"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773671911.1046405
+  },
+  {
+    "market_assessment": "Risk-on regime with SPY +0.94%, QQQ +1.06%, DIA +0.92% - strong broad market momentum favoring momentum plays.",
+    "position_health": [],
+    "risk_flags": [
+      "Two consecutive losses to start the day (0% win rate, -$1.71)",
+      "All top candidates show extreme moves (27-167% gains) - high reversal risk",
+      "Multiple candidates already overbought: NSA RSI 82.5, CTMX up 55% intraday",
+      "CTMX has bearish options chain (put premium $40k vs call $1.6k) despite +55% move - smart money hedging?",
+      "NSA indicators show strong SELL consensus (46 strength, 47% agreement) despite +29% gain",
+      "Low volume confirmation on several names (ULY 1.5x, NBIL 1.1x volume spike)",
+      "After opening losses, need EXCEPTIONAL setups - current batch shows late-stage chase setups"
+    ],
+    "what_working": [
+      "Market providing strong risk-on environment",
+      "High-quality multi-day momentum setups with proper volume confirmation"
+    ],
+    "what_not_working": [
+      "Early session entries resulted in immediate losses",
+      "Chasing extended moves without proper confirmation"
+    ],
+    "overall_sentiment": "cautious",
+    "urgency": "medium",
+    "additional_context": {
+      "quality_assessment": "All five candidates are EXTENDED moves showing chase characteristics. CTMX +55% with extreme put buying suggests trap. NSA +29% with RSI 82 and SELL consensus. NBIG +27% but only 1.3x volume. ULY +167% (!) is a moonshot not a trade. NBIL +28% with SELL signals. None meet quality bar after consecutive losses.",
+      "recommended_action": "SKIP ALL. These are late-stage runners that sophisticated traders are already hedging against. After two losses, we need A+ setups with clear risk/reward, not parabolic extensions with bearish divergences. Wait for pullback entries or fresh breakouts with confirming volume and indicator alignment.",
+      "capital_preservation_note": "Protecting $27,209 enables future opportunity. One bad chase trade into a gap-down could cost 3-5%. Missing these costs nothing."
+    },
+    "timestamp": 1773672528.1874294
+  },
+  {
+    "market_assessment": "Market just opened, no positions held, scanner showing zero candidates - either pre-market is quiet or scanner needs time to populate with momentum plays.",
+    "position_health": [],
+    "risk_flags": [
+      "Account down -1.06% from starting equity ($27,208 vs $27,500)",
+      "Small drawdown from ATH (-1.09% from $27,509)",
+      "Zero scanner candidates at 10:57 AM is unusual - either legitimately quiet market or data lag",
+      "100 effective day trades logged but account shows 290 Alpaca count - monitor PDT status carefully"
+    ],
+    "what_working": [
+      "Clean slate - no baggage from losing positions",
+      "Full buying power available ($108k with 4x leverage)",
+      "Risk parameters intact (COMPOUND tier: 2.5% sizing, 1% stops)"
+    ],
+    "what_not_working": [
+      "Overall performance trending negative (-0.23% daily average over 4.6 days)",
+      "Below starting equity suggests recent trades have been net losers",
+      "Empty scanner suggests either poor market conditions or need to wait for setup development"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773673089.5166094
+  },
+  {
+    "market_assessment": "Market session just opened, no positions deployed, scanner showing zero candidates - either extremely quiet Monday or data feed issue",
+    "position_health": [],
+    "risk_flags": [
+      "Zero scanner candidates is abnormal - potential data/feed issue or extremely quiet market",
+      "Account down -1.06% total return over 4.6 days of trading",
+      "Daily average return is -0.23% - modest bleeding pattern",
+      "Current drawdown of 1.09% from ATH shows recent weakness",
+      "No market activity visible at 11:00 ET on Monday - unusual"
+    ],
+    "what_working": [
+      "Risk management preserved capital - only -$291 total loss despite 4+ days trading",
+      "No catastrophic position failures (max deployed was only $6,802)",
+      "PDT status provides full flexibility with 999+ day trades available"
+    ],
+    "what_not_working": [
+      "Negative daily average return suggests entries lack edge or exits too early",
+      "Zero current opportunities indicates scanner criteria may be too strict or market lacks setups",
+      "Win rate data unavailable (shows 0/0) - need trade history visibility"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773673259.0168462
+  },
+  {
+    "market_assessment": "Market just opened Monday morning, no scanner candidates detected yet, zero activity suggests either calm conditions or scanner not yet populated",
+    "position_health": [],
+    "risk_flags": [
+      "Account is down -1.06% from starting equity ($27,500 \u2192 $27,209)",
+      "Below all-time high by 1.09%, indicating recent drawdown",
+      "Zero open positions but zero scanner candidates - opportunity pipeline is dry",
+      "290 Alpaca daytrade count is concerning (likely a counter artifact, but verify PDT status is accurate)",
+      "Monday morning 11:02 ET with no market color yet - typically need 30-60min post-open for clarity"
+    ],
+    "what_working": [
+      "PDT status confirmed - full daytrading capability available",
+      "Clean slate: no positions means no immediate risk or management burden",
+      "Buying power at $108,921 (4x leverage) provides deployment flexibility",
+      "No heat, no options exposure, no concentration risk"
+    ],
+    "what_not_working": [
+      "Negative daily average return (-0.23%) over 4.6 trading days",
+      "Small but real drawdown from ATH suggests recent strategy friction",
+      "Scanner producing zero candidates at 11:02 ET is a red flag - either market is dead or scanner needs attention",
+      "No recent trades visible means no pattern data to learn from"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773673360.162831
+  },
+  {
+    "market_assessment": "Market just opened Monday morning, no positions active, scanner showing zero candidates - either pre-market scan hasn't populated or market conditions are extremely poor.",
+    "position_health": [],
+    "risk_flags": [
+      "Zero scanner candidates is highly unusual - suggests either technical issue or market conditions so poor nothing meets quality threshold",
+      "Account slightly down from ATH ($27,509.93 vs $27,208.88 = -1.09% drawdown)",
+      "Fresh week start with no momentum from previous sessions",
+      "Empty scanner at 11:05 AM is concerning - typically should see opportunities by now"
+    ],
+    "what_working": [
+      "Risk management held - no open positions means no current exposure",
+      "Account remains near starting capital with minimal damage"
+    ],
+    "what_not_working": [
+      "Scanner finding zero opportunities suggests either scan parameters too strict or market lacking momentum",
+      "290 Alpaca daytrade count vs 100 internal suggests historical activity but recent caution"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773673528.8874984
+  },
+  {
+    "market_assessment": "Monday morning, no scanner candidates populated yet, market state unknown - awaiting data flow before assessment.",
+    "position_health": [],
+    "risk_flags": [
+      "Zero scanner candidates at 11:12 ET is unusual - data pipeline may be delayed or market is extremely quiet",
+      "Account sitting 100% cash ($27.2K) with no open positions - capital is idle",
+      "Small drawdown from ATH (-1.09%) suggests recent modest losses",
+      "Negative daily avg return (-0.23%) over 4.6 days indicates early struggle phase"
+    ],
+    "what_working": [
+      "Risk management is functioning - no catastrophic losses evident",
+      "Full buying power available ($108K) with PDT status allows aggressive deployment when opportunities arise"
+    ],
+    "what_not_working": [
+      "Capital deployment - money sitting idle generates zero return",
+      "Early performance trending negative suggests strategy calibration needed"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773673987.1586397
+  },
+  {
+    "market_assessment": "Risk-on environment with indices up ~1%, favorable for momentum plays but several extreme movers showing late-stage parabolic signals",
+    "position_health": [],
+    "risk_flags": [
+      "3 consecutive losses today (0% win rate) - quality bar must be raised significantly",
+      "Size multiplier at 0.5x due to recent losses - system is already protecting capital",
+      "CTMX up 70% with RSI 3.6 - extremely oversold despite massive gain, suggests violent whipsaw action",
+      "WNW up 191% with 3079x volume spike - classic pump pattern, extreme gap-down risk",
+      "NSA up 30% with RSI 82.5 and indicators screaming overbought - late to momentum",
+      "NBIS indicators show strong SELL consensus despite 11.5% gain - divergence warning"
+    ],
+    "what_working": [
+      "Nothing today - 0/3 trades profitable",
+      "Market regime is risk-on which normally supports momentum plays"
+    ],
+    "what_not_working": [
+      "All three trades today lost money",
+      "Current scanner showing extreme runners that have already moved violently",
+      "Top candidates are late-stage parabolic moves, not early momentum"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773674619.9067924
+  },
+  {
+    "market_assessment": "Strong risk-on Monday morning: SPY +1.17%, QQQ +1.35%, DIA +0.96% - broad rally with tech leading, favorable environment for momentum plays.",
+    "position_health": [],
+    "risk_flags": [
+      "3 consecutive losses (0% win rate today) - quality bar must be RAISED",
+      "Flat after small -$4 loss suggests strategy patience is working",
+      "No open positions = zero portfolio heat = full flexibility",
+      "Size multiplier at 0.5x due to recent losses - appropriately conservative"
+    ],
+    "what_working": [
+      "Risk management: staying flat during uncertain periods",
+      "Position sizing discipline: 0.5x multiplier protecting capital",
+      "Market regime recognition: correctly identifying risk_on environment"
+    ],
+    "what_not_working": [
+      "Entry timing: 3 consecutive losses suggest recent setups were low quality",
+      "Current win rate 0% today requires extreme selectivity on next entry"
+    ],
+    "scanner_quality_assessment": {
+      "CTMX": "DANGEROUS - up 64% already, RSI unavailable, extreme runner in first 90min of trading, high risk of reversal, violates 'overbought = warning' rule",
+      "BCRX": "MARGINAL - earnings miss catalyst, modest 11% gain, low volume (588k), social momentum strategy has 50% win rate but requires 2min age minimum",
+      "NSA": "RED FLAG - up 29%, RSI 82.5 (extremely overbought), indicator consensus SELL, resistance at highs, violates overbought warning rule",
+      "WNW": "EXTREME DANGER - up 225%,parabolic move, 3443x volume spike, classic blowoff top pattern, near certainty of violent reversal",
+      "ULY": "HIGH RISK - up 167%, gap and run pattern, already at day highs, minimal pullback opportunity"
+    },
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "recommendation": "SKIP ALL - Every scanner candidate is an extended runner with massive reversal risk. After 3 consecutive losses, the correct play is patience. Wait for fresh setups with proper entry structure (pullback to support, early morning breakout, not late-stage parabolic). Capital preservation > catching the last 10% of a 200% move.",
+    "timestamp": 1773675247.917274
+  },
+  {
+    "market_assessment": "Strong risk-on Monday: SPY +1.17%, QQQ +1.35%, indices green across the board, market receptive to momentum plays",
+    "position_health": [],
+    "risk_flags": [
+      "Three consecutive losses (0% win rate today) - quality bar must be raised significantly",
+      "Size multiplier reduced to 0.5x due to losing streak - system correctly protecting capital",
+      "CTMX up 64% is EXTREMELY extended - already ran from $4.68 to $8.20, high risk of reversal",
+      "NSA up 29% with RSI 82.5 - deeply overbought, indicator consensus SELL",
+      "WNW up 225% on massive 3443x volume spike - parabolic move, likely end-of-run",
+      "All top candidates are multi-day runners or extended intraday - no fresh setups visible"
+    ],
+    "what_working": [
+      "Market regime (risk-on) is favorable for momentum",
+      "Volume and momentum are present in scanner hits"
+    ],
+    "what_not_working": [
+      "Chasing extended runners - all top candidates already ran hard",
+      "Entry timing - likely entering late in moves",
+      "Setup quality - high % gainers are not automatically good trades"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "notes": {
+      "critical_observation": "After 3 straight losses, system is correctly in defensive mode (0.5x size). Every candidate shown is ALREADY extended. CTMX is up 64%, NSA shows SELL signals despite being up 29%, WNW is parabolic +225%. These are NOT quality setups - they are late-stage momentum that can reverse violently.",
+      "recommended_action": "SKIP all current candidates. Wait for fresh breakouts or pullback entries on clean charts. Protecting the remaining capital is more important than forcing trades into extended moves.",
+      "discipline_check": "The mission is to GROW the account, not blow it up chasing parabolic moves after a losing streak. Quality over quantity is the rule for a reason."
+    },
+    "timestamp": 1773675864.449238
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up 1%+, but extreme momentum movers showing parabolic/exhaustion signals",
+    "position_health": [],
+    "risk_flags": [
+      "THREE CONSECUTIVE LOSSES - quality bar must be raised significantly",
+      "CTMX: +64% runner, extremely extended above VWAP (+81%), RSI likely overbought, extreme volume spike (28x), high reversal risk",
+      "NSA: +29% runner, RSI 82.5 (severely overbought), technical indicators flashing SELL consensus, already near day high",
+      "WNW: +225% parabolic move, extreme extension (269% above VWAP), 3443x volume spike - classic pump pattern",
+      "ULY: +167% extended move, 103% above VWAP, momentum already mature",
+      "All top candidates are multi-day runners or extreme gap-ups - highest risk trade types",
+      "Size multiplier correctly reduced to 0.5x after consecutive losses",
+      "Only BCRX shows reasonable price action (+11%, early social momentum) but requires thesis and 2min signal age"
+    ],
+    "what_working": [
+      "Market regime identification (risk-on correctly identified)",
+      "Risk management responding to losses (0.5x size multiplier active)"
+    ],
+    "what_not_working": [
+      "Quality of recent setups - 3 losses in a row suggests entry timing or signal quality issues",
+      "Scanner heavily favoring extreme movers which are statistically dangerous after consecutive losses"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "medium",
+    "timestamp": 1773676488.3064253
+  },
+  {
+    "market_assessment": "Strong risk-on session with indices up 1%+ (SPY +1.17%, QQQ +1.35%, DIA +0.96%), favorable for momentum plays but scanner showing extreme runners with reversal risk",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX up 64.53% with RSI 3.6 - extremely overbought, high gap-down risk",
+      "WNW up 225% on massive volume spike (3,443x avg) - parabolic, halt/reversal danger",
+      "NSA up 29% with RSI 82.5 and consensus SELL - already extended",
+      "ULY up 167% - three-bagger in one day, extreme profit-taking risk",
+      "Four consecutive losing trades today (0% win rate) - quality bar must be MAXIMUM",
+      "All top candidates are extended runners, not early-stage momentum",
+      "Post-earnings gaps (CTMX, NSA) carry elevated overnight/reversal risk"
+    ],
+    "what_working": [
+      "Market regime is risk_on with strong index performance",
+      "High volume confirmation on moves (CTMX 28x volume, WNW 3,443x)"
+    ],
+    "what_not_working": [
+      "4 straight losses today despite favorable market - execution or setup quality issue",
+      "Chasing extended moves - these are NOT quality setups, they're lottery tickets",
+      "CTMX has earnings TODAY (8-K filings) - massive event risk"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773677104.8127234
+  },
+  {
+    "market_assessment": "Strong risk-on regime with SPY +1.17%, QQQ +1.35%, broad momentum across indices - favorable conditions for quality setups.",
+    "position_health": [],
+    "risk_flags": [
+      "FOUR consecutive losses (0% win rate today) - quality bar must be MAXIMUM",
+      "Day down -0.02% but minimal dollar loss (-$6.65) - manageable",
+      "Size multiplier at 0.5x due to consecutive losses - system protecting capital appropriately",
+      "Drawdown at 1.12% from ATH - still healthy but consecutive losses are concerning"
+    ],
+    "what_working": [
+      "Nothing is working yet today - 0/4 trades profitable"
+    ],
+    "what_not_working": [
+      "All 4 trades today have lost - pattern needs immediate identification",
+      "Current strategy mix is bleeding - need to understand what killed these trades"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "detailed_observations": {
+      "account_state": "Flat, $27.2K cash, full buying power available, PDT-enabled with unlimited day trades",
+      "scanner_quality": {
+        "CTMX": "EXTREME CAUTION - up 64% on earnings, price $7.78 vs VWAP $7.19, RSI unavailable, already extended. Options flow shows bullish chain bias but conflicting signals (bearish net premium). This is a late-stage runner with gap-up risk. VERY HIGH RISK.",
+        "BCRX": "Up 11.76% on volume spike (4x avg), StockTwits bullish (100% sentiment), but MISSED earnings by -21%. Price $9.17 vs rolling VWAP $6.73 = 36% extended. Needs thesis on why earnings miss doesn't matter. Moderate quality.",
+        "NSA": "Up 29% on 6x volume but RSI 82.5 = severely overbought. All SMI indicators flashing SELL. Already at day high area. This is a late entry on an extended move. HIGH RISK of reversal.",
+        "WNW": "Up 225% with 3,443x volume spike - obvious pump. Price $5.60 from $1.72 close. Extremely volatile, likely low float. This is a gamble, not a trade. SKIP.",
+        "ULY": "Up 167% with modest 1.7x volume spike. Some bullish indicators (OBV divergence) but price doubled overnight. Late entry, high gap-down risk. Moderate-high risk."
+      },
+      "pattern_recognition": "After 4 consecutive losses, seeing 5 high-volatility runners (64%, 167%, 225%, 29%, 11%). System may have been chasing extended moves or getting caught in reversals. These candidates are ALL extended/overbought.",
+      "capital_preservation_mode": "With 4 losses and 0.5x size multiplier active, the system is correctly being defensive. These scanner results are NOT meeting the elevated quality bar needed after consecutive losses.",
+      "regime_context": "Market is risk-on which is positive, but these specific tickers are late-stage momentum with significant reversal risk."
+    },
+    "recommendation_for_advisor": "All five scanner candidates show significant extension risk and would violate the quality-over-quantity rule after consecutive losses. CTMX (64% up, earnings volatility), NSA (RSI 82.5, overbought), WNW (225% pump), ULY (167% gap), BCRX (earnings miss, extended). Recommend SKIP ALL and wait for fresh, early-stage setups. Protecting the $27K is more important than forcing trades into extended runners.",
+    "timestamp": 1773677713.6609864
+  },
+  {
+    "market_assessment": "Risk-on Monday with SPY +0.91%, QQQ +1.09%, indices pushing higher, strong bullish momentum across major sectors",
+    "position_health": [
+      {
+        "symbol": "NBIS",
+        "status": "dying",
+        "note": "Underwater -0.14%, already hit MAE -0.07% within 42 seconds of entry, no upside momentum, 3% trailing stop at risk"
+      }
+    ],
+    "risk_flags": [
+      "Four consecutive losses today (0% win rate)",
+      "Size multiplier reduced to 0.5x due to losing streak",
+      "NBIS entered via fast_path with zero decision_confidence - quality filter may have failed",
+      "Only $153 deployed (0.6% of equity) but losing pattern persists",
+      "Fast-path entries bypassing quality checks - all 4 losses came from hasty executions"
+    ],
+    "what_working": [
+      "Market regime correctly identified as risk_on - broad indices cooperating",
+      "Risk management working: position sizing appropriately conservative after losses",
+      "Trailing stops are armed and operational"
+    ],
+    "what_not_working": [
+      "Entry execution quality: 4/4 trades lost, suggesting poor timing or setup selection",
+      "Fast-path entries appear to be jumping into stocks without proper consolidation",
+      "Momentum plays reversing immediately after entry (NBIS peaked at entry price)",
+      "Chasing moves rather than waiting for pullbacks to support"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1773678335.223986
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up ~0.8%, volatility low, but extreme momo plays (CTMX +70%, WNW +503%) suggest speculative froth that can reverse violently.",
+    "position_health": [],
+    "risk_flags": [
+      "Consecutive losses: 1W/5L today (16.7% win rate) - quality bar must be raised significantly",
+      "CTMX is a multi-day runner at +70% with RSI unavailable, massive gap risk, high probability of gap-down or halt",
+      "WNW is a +503% parabolic move - these almost always crash hard, entry here is suicide",
+      "NSA +28% already showing RSI 82.5 (extremely overbought), likely late to the party",
+      "All top scanners are extended momentum plays with severe reversal risk",
+      "Zero positions open = no current risk, but scanner quality is poor for fresh entries"
+    ],
+    "what_working": [
+      "Nothing today - 1 winner out of 6 trades suggests strategy/execution mismatch",
+      "Market regime is favorable (risk_on) but stock selection or timing is failing"
+    ],
+    "what_not_working": [
+      "Chasing extended momentum - likely entering too late on already-run stocks",
+      "Low win rate (16.7%) indicates either bad setups, poor entries, or both",
+      "Current scanner showing only extreme movers (CTMX +70%, NSA +28%, WNW +503%) = trap territory"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773678936.7633977
+  },
+  {
+    "market_assessment": "Risk-on session with SPY +0.79%, QQQ +1.00%, DIA +0.61% - solid bullish tape favoring momentum plays.",
+    "position_health": [
+      {
+        "symbol": "NBIS",
+        "status": "dying",
+        "note": "Entered 10min ago via broken fast_path with decision_confidence=0, zero specialist data, no technical brief, no momentum follow-through. Down from $130.80 entry to $132.04 current (actually slight gain but position shows 'advisor_action: exit' for good reason - this is blind speculation masked as breakout). LULD bands $118-$144 show high volatility risk."
+      }
+    ],
+    "risk_flags": [
+      "NBIS position entered via defective fast_path system (decision_confidence=0, no specialist validation)",
+      "Day stats alarming: 1 win, 5 losses, 16.7% win rate today",
+      "Consecutive recent pattern: extreme momo plays reversing violently (Observer's own words from last cycle)",
+      "Heat at 0.6% but quality of setups is severely degraded",
+      "Scanner showing 500%+ gainer (WNW) and 69% gainer (CTMX) - hallmarks of speculative froth, not institutional quality",
+      "All top candidates lack proper specialist validation - we're flying blind"
+    ],
+    "what_working": [
+      "Nothing confirmed yet today - single win from 6 trades tells us we're guessing, not trading edges"
+    ],
+    "what_not_working": [
+      "Fast_path entries without specialist confirmation (NBIS proving this right now)",
+      "Chasing extreme movers >20% without proper catalyst validation",
+      "Entering momentum trades on volume spikes alone without technical structure",
+      "Trading low-conviction setups (decision_confidence=0 is disqualifying)"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773679550.7711341
+  },
+  {
+    "market_assessment": "Mid-day Monday, no scanner candidates visible, extremely quiet conditions with minimal market participation evident.",
+    "position_health": [
+      {
+        "symbol": "NBIS",
+        "status": "dying",
+        "note": "Fractional micro-position (0.00046667 shares = $0.06 notional) from broker sync, down -0.82% but position is essentially worthless noise - should be closed to clean up portfolio"
+      }
+    ],
+    "risk_flags": [
+      "Zero scanner candidates suggests either market is dead or our scanners are not functioning",
+      "NBIS micro-position is accounting clutter from previous session",
+      "Portfolio essentially 100% cash with no deployment opportunities visible",
+      "Recent 5-day performance shows -1.07% total return, indicating difficult market conditions",
+      "No trade activity today despite being 3 hours into session"
+    ],
+    "what_working": [
+      "Cash preservation - sitting out when there's nothing quality to trade",
+      "Risk management keeping us near starting capital despite choppy period"
+    ],
+    "what_not_working": [
+      "Opportunity generation - zero viable setups on scanner",
+      "Previous 5 days averaged -0.23% daily, suggesting we've been trading in hostile conditions"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773680083.9677896
+  },
+  {
+    "market_assessment": "Mid-day Monday, no positions, scanner showing zero candidates\u2014market either extremely quiet or scanner may need verification.",
+    "position_health": [],
+    "risk_flags": [
+      "Zero scanner candidates at 12:57 ET is unusual\u2014either genuine market weakness or potential data/scanner issue",
+      "Consecutive losses at 0 but we're -1.07% overall return suggests recent reset or early account stage",
+      "No intraday activity yet despite PDT status and day 4.7 of trading",
+      "Effective daytrade count at 100 (maximum) indicates we're at PDT threshold exactly"
+    ],
+    "what_working": [
+      "Risk management intact\u2014no blown stops or overexposure",
+      "Capital preserved\u2014still near starting equity with only -1.07% drawdown from ATH"
+    ],
+    "what_not_working": [
+      "Opportunity recognition\u2014zero trades today despite being PDT-enabled",
+      "Scanner may not be surfacing viable setups or market is genuinely dead"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773680276.8818176
+  },
+  {
+    "market_assessment": "Market session in progress (1:00 PM ET Monday), no open positions, scanner showing zero candidates - either extremely selective conditions or potential data/scanner issue.",
+    "position_health": [],
+    "risk_flags": [
+      "ZERO scanner candidates is unusual for mid-day - possible scanner malfunction or extremely tight filters",
+      "Account showing small drawdown (-1.07% total return) with negative daily average (-0.23%)",
+      "Early in trading week with no positions or activity yet",
+      "High daytrade count (297 actual, 100 effective) but unlimited capacity remains"
+    ],
+    "what_working": [
+      "Risk management intact - no open exposure",
+      "Capital preserved at $27.2K (minimal drawdown from $27.5K start)",
+      "Position sizing discipline maintained (COMPOUND tier at 2.5%)"
+    ],
+    "what_not_working": [
+      "Slightly negative performance trend (-0.23% daily average over 4.7 days)",
+      "Scanner producing no actionable setups mid-day on Monday",
+      "Missing early momentum opportunities if market had morning movers"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773680445.4182715
+  },
+  {
+    "market_assessment": "Risk-on regime confirmed, SPY/QQQ both up >1%, low VIX environment, momentum stocks running hard across the board",
+    "position_health": [],
+    "risk_flags": [
+      "All top candidates are extended multi-day runners - BCRX +11%, CTMX +72%, NSA +29%, NEBX +33%, ULY +167%",
+      "CTMX up 72% on 33x volume spike - extreme gap risk, likely halt-prone",
+      "ULY up 167% - parabolic move, extremely dangerous entry point",
+      "NSA RSI 82.5, already overbought with SELL consensus from indicators",
+      "BCRX indicator consensus shows OBV divergence (SELL signal 40 strength) despite +11% move",
+      "Multiple stocks showing multi-day exhaustion patterns after large runs",
+      "Account sitting at $27,204 (down from $27,500 start, -1.07% total return) - capital preservation critical"
+    ],
+    "what_working": [
+      "Market regime is clearly bullish - indexes all green, risk appetite strong",
+      "Social momentum plays getting attention (StockTwits engagement high)",
+      "Volume spikes confirming interest in these names"
+    ],
+    "what_not_working": [
+      "Chasing extended runners - these are all late-stage momentum",
+      "Entry points are terrible - buying after 30-170% moves is gambling, not trading",
+      "Technical indicators screaming caution (overbought RSI, bearish divergences, SELL signals)"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773681073.9957752
+  },
+  {
+    "market_assessment": "Strong risk-on session: SPY +1.02%, QQQ +1.27%, DIA +0.84% with healthy breadth across indices",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX up 72% - extreme extension, highly vulnerable to violent reversal or gap down",
+      "NSA up 29% with RSI 82.5 - severely overbought, technical indicators screaming SELL",
+      "ULY up 167% on reverse merger (8-K filings) - speculative mania, high crash risk",
+      "NEBX up 33% - RSI 54 but momentum weakening, vol_accel only 0.46",
+      "BCRX bullish flow but RSI 15.4 and negative OBV divergence - momentum not confirmed"
+    ],
+    "what_working": [
+      "Market breadth is strong - all major indices green",
+      "Risk-on regime confirmed by market tide",
+      "Volume spikes present on all candidates"
+    ],
+    "what_not_working": [
+      "Every scanner candidate is either severely overbought or technically broken",
+      "Multiple stocks showing bearish technical divergences despite price gains",
+      "Speculative/reverse merger situations (ULY, CTMX) not quality momentum",
+      "No clean, early-stage momentum setups - all are extended runners"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773681693.268387
+  },
+  {
+    "market_assessment": "Risk-on regime with SPY +1.08%, QQQ +1.30%, indices rallying but scanner showing extreme movers with violent volatility signatures",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX up 67.95% on extreme volume spike (34x), parabolic move from $4.68 to $7.86, classic blowoff top pattern",
+      "WNW up 260.47% with 8,284x volume spike - this is lottery ticket territory, not momentum trading",
+      "NSA up 29.98% but RSI 82.5, SMI showing extreme overbought, indicators screaming SELL consensus",
+      "NEBX up 31.71% with bearish indicator consensus despite bullish regime - divergence warning",
+      "All top candidates show extreme gap-up opens, high risk of violent reversal",
+      "No quality base-building setups - everything is already extended",
+      "Account slightly underwater (-1.07% total return) after 4.7 days, recent losses evident"
+    ],
+    "what_working": [
+      "Market regime is risk_on, indices showing healthy gains",
+      "High volume on movers indicates genuine attention, not just algo noise"
+    ],
+    "what_not_working": [
+      "Every scanner hit is a late-stage parabolic runner already extended 30-260%",
+      "Technical indicators showing SELL signals on most candidates despite bullish price action",
+      "Social momentum plays arriving after the move is complete",
+      "Quality gap: these are chases, not entries"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773682363.7315013
+  },
+  {
+    "market_assessment": "Strong risk-on Monday: SPY +1.08%, QQQ +1.30%, indices trending higher with conviction, creating favorable conditions for momentum plays.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX: Parabolic +67.95% move on 34x volume - extreme overextension, RSI 3.6, death zone entry",
+      "WNW: Insane +260% spike on 8,284x volume - classic pump pattern, already pulled back 55% from $13.44 high to $6.04",
+      "NSA: +30% runner showing RSI 82.5, heavily overbought, indicator consensus SELL with 46% strength",
+      "All top candidates are late-stage runners - we're seeing the END of moves, not the beginning",
+      "Zero positions = zero heat, but also means we've been sidelined during a strong rally day"
+    ],
+    "what_working": [
+      "Market regime is solidly risk-on with indices up 1%+",
+      "Volume and volatility are present for opportunities",
+      "No open positions means maximum flexibility and buying power"
+    ],
+    "what_not_working": [
+      "Scanner feeding us late-stage parabolic moves after institutional profit-taking",
+      "CTMX earnings today - binary event risk on top of extreme extension",
+      "Quality setups are absent - these are all chasing extended moves",
+      "Volume spikes this extreme (34x, 8,284x) typically mark tops, not entries"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "medium",
+    "timestamp": 1773682984.2301984
+  },
+  {
+    "market_assessment": "Strong risk-on session: SPY +1.08%, QQQ +1.30%, major indices trending up with conviction - conditions favorable for momentum plays",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX: Extreme runner +67% with RSI near zero - parabolic move into earnings TODAY is maximum risk",
+      "NSA: Already extended +30% with RSI 82.5 - late chase, overbought across all indicators",
+      "WNW: Insane volatility - opened $2.25, hit $13.44, now $6.04 on 8000x volume spike - pure lottery ticket",
+      "NEBX: +31% runner showing SELL signals across all SMI indicators - momentum already reversing",
+      "All top candidates are extended runners - no fresh breakouts or healthy bases"
+    ],
+    "what_working": [
+      "Market regime is solidly risk-on with strong index performance",
+      "High volume spike plays getting initial pops"
+    ],
+    "what_not_working": [
+      "Every scanner hit is a late-stage parabolic runner",
+      "CTMX has earnings TODAY - immediate binary event risk",
+      "Technical indicators showing extreme overbought (NSA RSI 82.5) or capitulation (CTMX RSI 3.6)",
+      "No quality setups with healthy technical structure"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773683603.942053
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up 1%+, but scanner showing extreme penny stock volatility (CTMX +67%, WNW +260%) - classic late-session melt-up behavior with elevated reversal risk.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX: +67% on 34x volume spike, RSI 3.6, extreme overbought - massive gap-down risk after 8-K filing",
+      "WNW: +260% (1.72\u21926.04), 8284x volume spike, already off highs (13.44\u21926.04) - distribution pattern forming",
+      "NSA: RSI 82.5, all SMI indicators showing SELL, options chain heavily bearish (270 puts vs 31 calls) - topping signal",
+      "NEBX: +31% with all momentum indicators SELL, dark pool showing $100K bearish print - late entry trap",
+      "All candidates are extended momentum plays in the danger zone - no fresh breakouts with room to run"
+    ],
+    "what_working": [
+      "Market regime is risk-on with strong index support"
+    ],
+    "what_not_working": [
+      "Every scanner candidate is either parabolic (reversal imminent), already reversing (WNW), or showing distribution (NSA)",
+      "No quality setups with favorable risk/reward - all are chasing extended moves",
+      "High correlation to penny stock pump behavior - sector-wide flush risk"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773684231.1172867
+  },
+  {
+    "market_assessment": "Strong risk-on regime with indices up 1%+ and momentum stocks running hard, but several extended multi-day runners showing exhaustion signals",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX: +65% on day, RSI 3.6, extreme oversold on 1min but massively extended on daily timeframe - high reversal risk",
+      "NEBX: +31% intraday, RSI 61, rolling 71% through range with SELL consensus from indicators - already overbought",
+      "NSA: +30% on day, RSI 82.5 (extremely overbought), strong SELL signals across all momentum indicators - classic blow-off top pattern",
+      "ULY: +167% move, trading 103% above rolling VWAP - parabolic extension with high gap/halt risk",
+      "All top candidates are already deep into their moves - we're seeing the scanner AFTER the main thrust"
+    ],
+    "what_working": [
+      "Risk-on momentum environment is supportive",
+      "Volume spikes confirming strong participation",
+      "Social/options flow showing bullish bias on most names"
+    ],
+    "what_not_working": [
+      "Chasing extended runners - these setups arrive after 30-60%+ moves already completed",
+      "Entry timing - scanner catches moves late in the day when reversal risk peaks",
+      "RSI extremes (CTMX 3.6, NSA 82.5) indicate momentum exhaustion not acceleration"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773684851.6723342
+  },
+  {
+    "market_assessment": "Strong risk-on regime (SPY +1.10%, QQQ +1.32%, DIA +0.82%) with extreme momentum in small-cap speculative names showing massive gap-ups and extended moves",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX +64.74% with 35x volume spike - classic gap-and-trap setup, RSI unavailable, price 5% below HOD already",
+      "NEBX +30.69% with indicators screaming SELL (consensus -29, RSI 54 but SMI overbought) - late entry warning",
+      "NSA +30.11% with RSI 82.5 (extreme overbought), SELL consensus -46 - distribution risk",
+      "ULY +166.92% (!!) - astronomical move, 103% above rolling VWAP, extreme mean-reversion risk",
+      "All top candidates are extended parabolic runners - no fresh early-stage setups",
+      "Zero quality base breakouts or institutional-grade momentum available"
+    ],
+    "what_working": [
+      "Market regime is favorable (risk-on with macro support)",
+      "Volume and social sentiment confirmation present across all candidates"
+    ],
+    "what_not_working": [
+      "Every scanner hit is a late-stage parabolic extension",
+      "Technical indicators showing exhaustion/distribution on all names",
+      "No early-stage momentum or healthy pullback-and-resume patterns",
+      "Price action suggests end-of-move chasing rather than early opportunity"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773685473.1807184
+  },
+  {
+    "market_assessment": "Strong risk-on day: SPY +1.14%, QQQ +1.33%, DIA +0.93% - broad market momentum with tech leading, favorable for momentum plays.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX: Extreme move +61% with massive volume spike (35.76x), already up 76% from rolling VWAP - extreme overextension risk",
+      "NSA: +30% move with RSI 82.5 (deeply overbought), indicators showing strong SELL consensus - late-stage exhaustion",
+      "ULY: +167% parabolic move, price 103% above rolling VWAP - extreme gap-up risk with thin liquidity",
+      "All top candidates are extended runners, not fresh breakouts - high probability of violent reversals",
+      "Quality concern: Top 5 candidates all show overbought/extended conditions, missing the 'early stage' setups we need"
+    ],
+    "what_working": [
+      "Market regime is clearly risk-on, broad indices participating",
+      "Volume and social momentum confirming directional bias",
+      "No open positions means clean slate, no baggage"
+    ],
+    "what_not_working": [
+      "Scanner surfacing late-stage parabolic moves, not high-quality early entries",
+      "CTMX: Bearish dark pool, mixed options bias despite social buzz",
+      "NSA: Options chain bearish, indicators screaming overbought",
+      "NEBX: Only +31% but already showing SELL consensus from indicators",
+      "All candidates require chasing extended prices - opposite of our quality mandate"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "low",
+    "timestamp": 1773686073.3903353
+  },
+  {
+    "market_assessment": "Strong risk-on session with major indices up 1%+, market supporting momentum plays but need to watch for late-day exhaustion",
+    "position_health": [],
+    "risk_flags": [
+      "ALL CANDIDATES ARE EXTENDED: CTMX up 61%, NSA up 30%, NEBX up 32%, DSGR up 33%, ULY up 167% - extreme overbought conditions",
+      "CTMX has RSI 3.6 and bearish dark pool bias - technically dead despite social buzz",
+      "NSA showing RSI 82.5 with unanimous SELL signals from all momentum indicators",
+      "NEBX RSI 54 but consensus SELL bias - momentum already peaked",
+      "Multiple stocks showing 'indicator_consensus_bias: SELL' despite being momentum candidates",
+      "Late day entry (2:44pm ET) into parabolic moves = elevated gap-down risk overnight",
+      "Zero positions after 4.7 days trading with -1.07% total return - recent strategy not working"
+    ],
+    "what_working": [
+      "Market regime correctly identified as risk_on",
+      "Scanner finding high-volume movers successfully"
+    ],
+    "what_not_working": [
+      "Current win rate appears poor given negative return over 5 days",
+      "Every top candidate is severely extended - quality filter needed",
+      "Late-day chasing into parabolic moves violates quality-over-quantity rule",
+      "Social momentum (CTMX) showing bearish technical divergence - strategy conflict"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773686691.041969
+  },
+  {
+    "market_assessment": "Strong risk-on session with SPY +1.14%, QQQ +1.33%, DIA +0.93% - indices in clear uptrend, scanner showing multiple 30%+ gainers on high volume",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX +61% on 36x volume spike - extreme parabolic extension, RSI unavailable but likely severely overbought",
+      "NSA +30% with RSI 82.5 - technically overbought with SELL consensus from indicators",
+      "NEBX +31% with SELL consensus (46 strength) - momentum exhausting",
+      "ULY +167% move on a $5 stock - extremely volatile, massive gap risk",
+      "All top candidates are multi-day runners or massive gap-ups - reversal risk is elevated",
+      "No open positions but consecutive small daily losses visible in recent performance (-1.07% total return)"
+    ],
+    "what_working": [
+      "Market regime correctly identified as risk_on",
+      "Scanner catching legitimate momentum plays with social/volume confirmation",
+      "Quality filter appears functional - all candidates have multi-source signals"
+    ],
+    "what_not_working": [
+      "Account down from $27,500 start to $27,204 (-1.07%) over ~5 days of trading",
+      "Drawdown from ATH of $27,509 suggests recent losses",
+      "Win rate data unavailable but negative cumulative return suggests quality bar needs elevation"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1773687314.202684
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up 1%+, multiple momentum names running 30-55% on massive volume spikes\u2014classic melt-up conditions but also classic blowoff top risk",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX +55% with RSI 3.6 and SMI -94 \u2014 this is extreme oversold on a parabolic move, contradictory signals scream reversal risk",
+      "NSA +30% with RSI 82.5 (overbought), SMI 98, bearish dark pool print $235k \u2014 late-stage runner with distribution signals",
+      "NEBX +31% with SMI 87+ and SELL consensus \u2014 momentum exhaustion written all over it",
+      "All top candidates are multi-day or intraday parabolic moves \u2014 we'd be buying extended stocks at worst possible entry points",
+      "Options flow on CTMX shows bullish bias but IV percentile 0.13 (cheap) suggests smart money isn't bidding premiums up despite 55% gain",
+      "DSGR has bearish options chain and distribution_risk Wyckoff bias despite +34% \u2014 big money might be exiting into retail strength"
+    ],
+    "what_working": [
+      "Market regime is clean risk-on with broad strength in indices",
+      "Volume spikes are real (5-36x average) indicating institutional participation",
+      "Social momentum + options flow alignment on some names (CTMX, NBIG)"
+    ],
+    "what_not_working": [
+      "We're flat with no positions \u2014 missed the early morning entries when these were fresh",
+      "Every scanner candidate is already extended 30-55% \u2014 we'd be the exit liquidity",
+      "Technical indicators showing SELL/overbought on 4 of 5 top names",
+      "Recent 4.7 days trading with -1.07% total return suggests our timing has been off"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773687945.1063755
+  },
+  {
+    "market_assessment": "Strong risk-on conditions (SPY +1.15%, QQQ +1.32%, indices green across the board), momentum stocks running hot with massive volume spikes.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX up 52.56% on 37x volume spike - extreme overbought, RSI near zero indicates technical exhaustion despite momentum",
+      "CTMX has 49.84% intraday range and price 66.71% above rolling VWAP - violent reversal risk is HIGH",
+      "CTMX indicator consensus shows BUY but with weak 29% strength and only 30% agreement - technical divergence",
+      "BMNR up 14.08% but 27.77% BELOW rolling VWAP - distribution pattern with Wyckoff showing 'distribution_risk'",
+      "BMNR indicator consensus SELL with 24% strength - momentum fading despite price gains",
+      "All top candidates show extreme volatility (range_pct 49-92%) - gap risk and halt risk elevated",
+      "No positions currently open - full dry powder available but market near close (15:15 ET, 45 minutes to 4pm)"
+    ],
+    "what_working": [
+      "Risk-on environment confirmed by indices",
+      "High volume momentum plays getting attention",
+      "Social sentiment strongly bullish across all candidates"
+    ],
+    "what_not_working": [
+      "Late-day entry timing - limited runway before market close",
+      "Technical indicators showing divergences from price action (CTMX exhaustion, BMNR distribution)",
+      "Most plays are multi-day runners showing overbought conditions",
+      "Price action above VWAP on extended runners suggests late-stage momentum"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773688567.1088638
+  },
+  {
+    "market_assessment": "Risk-on regime with major indices up 1%+, but we're flat on the day with zero positions after 4.8 days of trading and -1.07% total return.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX: 52% gainer with extreme volatility - already traded from $6.07 to $8.20, now at $7.13 (down from highs). RSI 3.6 suggests oversold but this is a post-spike reversal risk.",
+      "CTMX: Options flow heavily bullish ($6M calls) but net premium bearish. Earnings TODAY. This is a binary event gamble, not momentum.",
+      "BMNR: Up 14% but already at 92% of daily range, RSI 68, indicators showing SELL signals. Late-stage chase.",
+      "NBIG: 32% gainer but indicators neutral-to-bearish, volume spike only 1.8x. Momentum may be fading.",
+      "UAMY: Options chain bearish despite 19% stock move. Dark money conflict (bullish) vs options (bearish).",
+      "All top candidates are extended runners - high risk of gap-down or violent reversal.",
+      "We're down -$300 from starting capital with only 4.8 days of data - small sample, but pattern matters."
+    ],
+    "what_working": [
+      "Market regime is favorable (risk-on)",
+      "High-volume movers are available",
+      "We have full buying power and no heat"
+    ],
+    "what_not_working": [
+      "We're seeing signals AFTER major moves (CTMX +52%, BMNR +14%, NBIG +32%)",
+      "Quality setups are missing - these are all late-stage, extended, overbought",
+      "Earnings catalysts (CTMX today) create binary risk we can't manage with stops",
+      "Recent performance suggests our entry timing or quality filter needs work"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773689190.7476702
+  },
+  {
+    "market_assessment": "Risk-on regime confirmed (SPY +1.15%, QQQ +1.32%, DIA +0.93%) with strong bullish breadth and multiple momentum runners active.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX is a violent 52% gainer already at $7.13 vs $8.20 high - extreme extension risk",
+      "Multiple low-float momentum plays (CTMX, NBIG, UAMY, DSGR) - correlated sector concentration risk if momentum reverses",
+      "CTMX has bearish options flow bias despite stock momentum - smart money hedging",
+      "No positions open but scanner heavy with extended runners - chasing risk elevated",
+      "BMNR showing distribution_risk Wyckoff bias at +14% - topping pattern forming",
+      "DSGR distribution_risk + bearish chain bias - options market pricing downside"
+    ],
+    "what_working": [
+      "Momentum breakouts in risk-on environment",
+      "Social sentiment alignment (StockTwits trending driving volume)",
+      "Volume spike confirmation (CTMX 37x, DSGR 5.3x, NBIG 1.8x)",
+      "Gap-and-go patterns holding vwap"
+    ],
+    "what_not_working": [
+      "Late-day entries on extended runners (current time 3:36 PM - only 24 mins to close)",
+      "Overbought momentum (CTMX rolled over from $8.20 to $7.13 intraday)",
+      "Bearish options divergences on momentum plays",
+      "Distribution phase patterns (BMNR, DSGR both showing distribution_risk)"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773689790.965012
+  },
+  {
+    "market_assessment": "Strong risk-on session with SPY +1.15%, QQQ +1.32%, healthy broad market rally into close",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX extreme runner +52% with massive volume spike (37x), already pulled back from $8.20 high to $7.13 - classic late-day exhaustion pattern",
+      "Multiple stocks showing distribution_risk Wyckoff bias (BMNR, DSGR) despite upward price action",
+      "CTMX has earnings TODAY - massive binary risk event with IV spike to 110%+",
+      "BMNR showing bearish dark pool flow ($690k bear vs $164k bull) despite +14% move",
+      "Most candidates are late-day scans (15:46 ET) with minimal time to develop proper entries before close"
+    ],
+    "what_working": [
+      "Broad market strength creating lift across all sectors",
+      "Social momentum signals showing strong bullish sentiment (BMNR 20/0 bull/bear, UAMY 16/0)",
+      "Volume spikes on movers indicating genuine interest (DSGR 5.3x, CTMX 37x)"
+    ],
+    "what_not_working": [
+      "Late session timing - 14 minutes to close severely limits execution quality",
+      "Technical indicators mixed to bearish on best setups (BMNR SELL consensus -24, CTMX multiple SMI SELL signals)",
+      "Momentum stocks extended far above VWAP (CTMX +66% above rolling VWAP, BMNR -27% below suggests already rejected)",
+      "Options flow contradicting price action (CTMX net bearish premium, BMNR bearish dark pool)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773690413.2894816
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up 1%+, multiple high-momentum runners with 30-50%+ gains, but many showing late-day exhaustion signals after violent intraday moves.",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX up 52% with massive volume spike (37x), already pulled back from $8.20 high to $7.13 - classic late-day fade pattern",
+      "CTMX has bearish net premium delta (-77) despite bullish flow - smart money hedging",
+      "BMNR showing distribution_risk wyckoff bias with RSI 68.1 and bearish dark pool flow",
+      "NBIG already 81% through its daily range at $12.21, opened at $11.20 - minimal upside room",
+      "Multiple symbols showing SELL or NEUTRAL indicator consensus despite strong price moves",
+      "All top candidates are extended momentum plays near end of trading day (15:56 ET) - highest risk entry time"
+    ],
+    "what_working": [
+      "Risk-on market environment is legitimate - indices confirming",
+      "Social momentum plays getting traction (StockTwits activity high)",
+      "Volume spikes on CTMX, DSGR showing real institutional interest"
+    ],
+    "what_not_working": [
+      "Chasing extended moves at 3:56 PM - timing is terrible",
+      "Technical indicators diverging bearishly on top gainers (OBV negative, SMI rolling over)",
+      "Wyckoff showing distribution_risk on BMNR, DSGR - smart money exiting",
+      "Gap-up opens already fading (CTMX down 13% from high, NBIG near resistance)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773691035.0933206
+  },
+  {
+    "market_assessment": "Market closed (4:00 PM ET Monday) - no live action to assess, scanner showing zero candidates which is unusual and may indicate data feed issue or genuinely quiet pre-market scan.",
+    "position_health": [],
+    "risk_flags": [
+      "Account down 1.07% from starting equity ($27,204 vs $27,500) - small but persistent drawdown",
+      "Zero open positions at market close - full cash position going into Tuesday",
+      "Scanner returning zero candidates - potential data issue or extremely restrictive filters",
+      "Recent performance trend negative (avg -0.22% per day over ~5 trading days)",
+      "Recent drawdown from ATH of $27,509 to current $27,204 (-1.11% from peak)"
+    ],
+    "what_working": [
+      "Risk management keeping losses contained - only down ~$300 total",
+      "Discipline to close all positions by market close (no overnight exposure)",
+      "PDT status maintained with 999 remaining day trades available"
+    ],
+    "what_not_working": [
+      "Consistent small bleed - negative average daily return suggests poor trade selection or timing",
+      "Zero scanner candidates suggests either market lacking momentum opportunities or scan parameters too strict",
+      "Progress toward $50k milestone stalled at 54.4%"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "low",
+    "timestamp": 1773691262.2449615
+  },
+  {
+    "market_assessment": "After-hours session on Monday, no positions held, account flat for the day after multi-day drawdown period.",
+    "position_health": [],
+    "risk_flags": [
+      "Account down 1.07% from starting equity ($27,500 \u2192 $27,204)",
+      "Below ATH by 1.11% - modest drawdown but shows recent losses",
+      "4.8 days of trading with negative daily average return (-0.22%)",
+      "Zero scanner candidates visible - no obvious setups entering Tuesday",
+      "Extended hours session limits opportunity - illiquid conditions"
+    ],
+    "what_working": [
+      "Risk management has prevented catastrophic loss - drawdown contained to ~1%",
+      "Currently 100% cash - maximum flexibility for fresh start Tuesday",
+      "Daytrade capacity is unlimited (PDT with 297 historical trades)",
+      "Position sizing tier (2.5%) and stop discipline (1%) remain appropriate"
+    ],
+    "what_not_working": [
+      "Recent trading has been net negative - slight equity erosion over ~5 days",
+      "Win rate and trade quality metrics suggest setup selection needs improvement",
+      "No current momentum opportunities flagged by scanners"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "none",
+    "timestamp": 1773691505.2125738
+  },
+  {
+    "market_assessment": "Risk-on environment with SPY/QQQ/DIA all up ~1%, low VIX, neutral macro \u2014 favorable conditions for momentum trading",
+    "position_health": [],
+    "risk_flags": [
+      "CTMX massive intraday reversal: opened $6.92, hit $8.20, now $6.75 \u2014 classic parabolic failure pattern",
+      "CTMX RSI only 3.6 after 44% gain \u2014 extremely overbought, violent snapback risk",
+      "NSA showing RSI 82.5 with SELL consensus \u2014 late-stage runner, reversal imminent",
+      "NEBX up 30% with SELL indicator consensus \u2014 momentum already exhausted",
+      "After-hours session: liquidity thin, spreads wide, gap risk on any overnight news",
+      "Zero open positions but 100% cash deployed previously \u2014 recent trading activity suggests capital preservation mode"
+    ],
+    "what_working": [
+      "Market regime correctly identified as risk_on",
+      "Scanner finding high-volume breakouts early",
+      "Options flow showing bullish institutional activity on several names"
+    ],
+    "what_not_working": [
+      "Every top candidate is a late-stage parabolic move \u2014 we're seeing AFTER the best gains",
+      "Multiple stocks showing bearish divergences (NSA, NEBX with SELL consensus despite gains)",
+      "CTMX already reversed 18% from highs \u2014 classic trap setup",
+      "No fresh breakouts with healthy consolidation \u2014 all extended runners"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773692134.859545
+  },
+  {
+    "market_assessment": "Risk-on regime intact \u2014 major indices up ~1%, high-quality momentum setups appearing, extended hours calm with normal liquidity",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "at_risk",
+        "note": "+30% multi-day runner at $53.47, RSI 54, indicators turning bearish (SMI sell signals), running into resistance after +68% intraday range \u2014 momentum exhaustion warning, consider taking profit before inevitable pullback"
+      }
+    ],
+    "risk_flags": [
+      "NEBX carried over with 'broker_reloaded_after_local_removal' anomaly \u2014 system tried to exit but broker resynced it, suggests prior exit attempt failed",
+      "NEBX extended 30% above prev close on day 2 of run \u2014 classic distribution setup, gap-down risk overnight is elevated",
+      "Scanner showing multiple 30%+ gainers (CTMX +44%, NSA +30%, DSGR +35%) \u2014 euphoric tape, reversals likely imminent",
+      "CTMX has earnings TODAY \u2014 massive IV spike (110%), extremely dangerous to enter near close",
+      "Top candidates have RSI 60-82 range with heavy SELL signals from momentum indicators \u2014 late-stage entries"
+    ],
+    "what_working": [
+      "Early momentum entries on gap-up runners with volume confirmation",
+      "Social momentum plays with bullish options flow (CTMX, BMNR showing strong call activity)"
+    ],
+    "what_not_working": [
+      "Holding runners past momentum peak \u2014 NEBX should have been exited at $54.69 high",
+      "Chasing extended movers in after-hours when profit-taking typically dominates"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "medium",
+    "timestamp": 1773692761.4467933
+  },
+  {
+    "market_assessment": "AFTER-HOURS session on strong risk-on day (SPY +1.01%, QQQ +1.06%), momentum names still active but extended, low liquidity creates gap risk",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION - Multi-day runner +30.69% with exit_pending=true, exit order submitted 4836 seconds ago but still showing 0 fills. System flagged 'broker_reloaded_after_local_removal' and already attempted emergency exit. RSI 54.11 with SMI sell signals after +68% intraday range. This position should NOT exist - critical infrastructure failure."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order (58db8cae-e6fb-48fe-b07e-04c2a1f19266) submitted 80+ minutes ago with ZERO fills - broker execution failure",
+      "System integrity crisis: Position marked exit_pending since 16:20 ET but still 100% open in after-hours",
+      "Extended hours execution risk: Market orders disabled, limit orders only, wider spreads on volatile biotech",
+      "NEBX anomaly_flags include 'broker_reloaded_after_local_removal' - system already tried to close this",
+      "Position has 'last_exit_reason' citing infrastructure failure and blind trading - Advisor already ordered exit",
+      "Heat at 0.3% only because single micro position ($374 notional), but execution failure is systemic concern",
+      "Account down -1.08% from starting equity despite risk-on market (+0.91% indices)"
+    ],
+    "what_working": [
+      "Risk management discipline: Only 1 position open, tiny size (0.3% heat)",
+      "Quality filter working: Passing on extended runners like CTMX (+44%), DSGR (+35%), NSA (+30%), ULY (+168%)"
+    ],
+    "what_not_working": [
+      "ORDER EXECUTION INFRASTRUCTURE: Exit order unexecuted for 80+ minutes",
+      "Position marked for exit at 16:20 ET, we are now at 16:36 ET in after-hours with zero progress",
+      "NEBX running into SMI sell signals after parabolic move - exact scenario Advisor warned against",
+      "Broker sync/exit coordination failing - position keeps reappearing after local removal attempts"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773693437.1732073
+  },
+  {
+    "market_assessment": "After-hours session, risk-on regime holding with SPY +1.01%, QQQ +1.06%, indices healthy \u2014 momentum plays still active in extended hours.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION \u2014 system already tried to exit, broker resynced it. Exit order pending since 16:40. +30% multi-day runner at $53.47, RSI 54 with SMI sell signals, extreme gap-down risk overnight. Anomaly flags: 'carryover_sync', 'broker_reloaded_after_local_removal'. This is a failed exit that must be forced closed."
+      }
+    ],
+    "risk_flags": [
+      "NEBX exit order submitted 7min ago but fill_qty still 0 \u2014 order may be unfilled in after-hours",
+      "NEBX has 'broker_reloaded_after_local_removal' \u2014 system conflict, position should not exist",
+      "Multi-day parabolic runner (+30% above prev close, +68% intraday range) held into after-hours = elevated overnight gap risk",
+      "Only 0.3% heat deployed but it's in a toxic position that refuses to close",
+      "After-hours liquidity thin \u2014 limit orders may not fill, ghost position may carry to tomorrow"
+    ],
+    "what_working": [
+      "Market regime stable (risk-on, indices +0.85% to +1.06%)",
+      "Scanner finding quality setups (CTMX +44%, volume spike 41x, bullish UW flow)",
+      "No new trades today means no fresh losses \u2014 capital preservation working"
+    ],
+    "what_not_working": [
+      "NEBX exit execution \u2014 order submitted but not filling in after-hours",
+      "Position management system allowed broker resync of already-exited position",
+      "Multi-day runner held too long (Observer warned of exhaustion, Advisor issued URGENT EXIT, still not closed)"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773694046.702714
+  },
+  {
+    "market_assessment": "After-hours Monday session with risk-on regime intact (SPY +1.01%, QQQ +1.06%), but volatility remains elevated on multi-day runners showing parabolic exhaustion signals.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION: +30.69% multi-day runner at $53.32, RSI 54 with SMI sell signals across all timeframes, shows 'broker_reloaded_after_local_removal' anomaly flag meaning system ALREADY TRIED TO EXIT THIS. Exit pending since 16:53 but still showing as open. Advisor explicitly warns 'momentum exhaustion, gap-down risk overnight elevated on extended parabolic move.' This is a zombie trade that survived an exit attempt."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order submitted 35+ minutes ago but position still open - potential broker execution failure or AH liquidity issue",
+      "NEBX has 'exit_pending: true' with exit_order_id but 'exit_finalized_at: null' - order stuck in limbo",
+      "Position carries 'anomaly_flags: broker_reloaded_after_local_removal' - system already decided to exit this once",
+      "After-hours session means limit orders only - market volatility on extended runner creates gap risk",
+      "Only $374 deployed (0.3% heat) but quality of position is toxic - multi-day parabolic exhaustion pattern",
+      "Zero recent trades today = no capital velocity, momentum engine sitting idle while holding dying position"
+    ],
+    "what_working": [
+      "Nothing actively working - no completed trades today to evaluate performance patterns"
+    ],
+    "what_not_working": [
+      "Multi-day momentum runners showing late-stage exhaustion (NEBX RSI 54 after +68% intraday range)",
+      "Parabolic moves +30%+ above previous close failing to hold gains into close",
+      "Exit execution in after-hours appears compromised - orders not filling cleanly"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773694685.0532093
+  },
+  {
+    "market_assessment": "Risk-on regime intact with SPY +0.93%, QQQ +1.09%, but EXTREME caution warranted \u2014 multiple parabolic movers showing classic exhaustion signatures (RSI 80+, multi-day runners, sell signals).",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION that should not exist. +30% multi-day runner at $53.40, RSI 54 with SMI sell signals, already flagged for EXIT by Advisor at 17:02, exit order submitted but unfilled. Position has 'broker_reloaded_after_local_removal' anomaly \u2014 system tried to exit, broker resynced it back. This is a zombie. Gap-down risk overnight is severe on parabolic extension. URGENT: Force manual exit if limit order unfilled."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX is a ghost position with exit_pending=true but still showing in portfolio 5+ minutes after exit submission",
+      "After-hours session with limit-only orders \u2014 NEBX exit may not fill, leaving overnight gap risk on parabolic stock",
+      "Scanner showing multiple exhausted runners: NEBX +30%, NSA +30% RSI 82.5, CTMX +44% after dump from $8.20 to $6.75",
+      "Quality deterioration: Top candidates are end-of-day parabolic stocks with momentum exhaustion warnings",
+      "Account near breakeven ($27,203 vs $27,500 start) after 4.8 days \u2014 no margin for error on risky setups"
+    ],
+    "what_working": [
+      "Nothing currently working \u2014 no recent trades to analyze, sole position is underwater ghost trade"
+    ],
+    "what_not_working": [
+      "Multi-day momentum continuation \u2014 NEBX entered at peak, immediately reversed",
+      "Extended runners without profit-taking discipline \u2014 letting winners become losers",
+      "After-hours position management \u2014 stuck holding risk into overnight on limit-only session"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773695303.4695332
+  },
+  {
+    "market_assessment": "Risk-on session, SPY +0.93%, QQQ +1.09%, strong momentum across indices with big movers showing 30-167% gains on extreme volume, but after-hours = limited liquidity and elevated gap risk.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION - already exited once, broker resynced it. Exit pending since 17:06. +30% multi-day runner at $53.35, RSI 54 with SMI sell signals. Indicators screaming SELL (consensus -29 strength). This is a zombie holding bleeding in after-hours with massive overnight gap-down risk. Exit order submitted but not filled - needs manual intervention."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order pending 12 minutes, not filled in after-hours - may need manual market order tomorrow",
+      "NEBX has 'broker_reloaded_after_local_removal' anomaly - system already tried to exit, this shouldn't exist",
+      "Extended hours = thin liquidity, wide spreads, high slippage risk on all positions",
+      "Heat at 0.3% but real risk is overnight gap on parabolic NEBX runner",
+      "All scanner candidates are extended multi-day runners (CTMX +44%, NEBX +31%, DSGR +35%, NSA +30%, ULY +168%)",
+      "Overbought warnings: NSA RSI 82.5, NEBX showing momentum exhaustion after 68% intraday range"
+    ],
+    "what_working": [
+      "Not applicable - zero completed trades today, no pattern validation possible"
+    ],
+    "what_not_working": [
+      "NEBX entry - caught top of parabolic move, immediately underwater, system correctly tried to exit but broker resynced",
+      "Chasing extended runners - all top candidates are 30%+ moves, high probability of mean reversion",
+      "After-hours positioning - exit orders not executing, creating overnight exposure"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773695925.9512284
+  },
+  {
+    "market_assessment": "Risk-on regime (SPY +0.93%, QQQ +1.09%) with strong momo runner activity \u2014 parabolic moves on NEBX (+30%), CTMX (+44%), ULY (+168%) all showing extreme extensions into after-hours.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "+30% parabolic runner at $53.35, RSI 54 with SMI sell signals, exit order already submitted but still showing in positions. This is a GHOST POSITION with 'broker_reloaded_after_local_removal' anomaly \u2014 system tried to exit, broker resynced it. Multi-day runner entering exhaustion zone with gap-down risk overnight."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX ghost position still open despite exit order submitted 28min ago (exit_order_id: 7bc0bb69-35f6-426c-bac0-73540d8b6515)",
+      "After-hours session \u2014 all new candidates are UNTRADABLE until 9:30am ET tomorrow",
+      "Scanner showing extreme parabolic moves (CTMX +44%, ULY +168%) \u2014 classic end-of-day exhaustion pump pattern",
+      "NEBX +68% intraday range on 2.3x volume spike = momentum exhaustion warning",
+      "All top candidates showing overbought conditions (NSA RSI 82.5, NEBX RSI 54 with sell signals)",
+      "Portfolio heat at 0.3% but NEBX represents 1.4% notional exposure with elevated gap risk"
+    ],
+    "what_working": [
+      "Nothing currently working \u2014 NEBX underwater at -0.22% and flagged for exit",
+      "Risk-on regime providing scanner candidates, but all are after-hours/untradable"
+    ],
+    "what_not_working": [
+      "Multi-day parabolic runners (NEBX example: +30% move but failing to hold, selling into resistance)",
+      "Late-day extended hour entries \u2014 unable to exit cleanly in after-hours",
+      "Ghost position syndrome \u2014 broker resyncing positions that were already exited locally"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773696531.5789537
+  },
+  {
+    "market_assessment": "After-hours session on Monday, markets bullish (SPY +0.93%, QQQ +1.09%), risk-on regime intact with strong gainer flow and social momentum plays dominating scanner.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "Ghost position flagged 'broker_reloaded_after_local_removal' \u2014 system already tried to exit but broker resynced it. Exit order pending but unfilled. Multi-day parabolic runner +30% above prev close showing classic exhaustion pattern (RSI 54 after extreme run, SMI sell signals, resistance hit after +68% intraday range). Advisor explicitly warned 'momentum exhaustion, gap-down risk overnight elevated.' Exit was ordered 13+ minutes ago but remains unfilled in after-hours. This is dangerous."
+      }
+    ],
+    "risk_flags": [
+      "NEBX exit order pending 13+ minutes unfilled in after-hours \u2014 extended hours limit orders can fail to execute",
+      "NEBX is a carryover anomaly position that was already removed once \u2014 system integrity issue",
+      "NEBX shows classic parabolic exhaustion pattern \u2014 gap-down risk overnight is real",
+      "Only $373 deployed but position represents ghost capital that should not exist",
+      "After-hours illiquidity risk: if NEBX order doesn't fill, we carry overnight exposure into Tuesday gap risk"
+    ],
+    "what_working": [
+      "Market regime is strong risk-on with indices up ~1%",
+      "Scanner showing quality social momentum setups (CTMX, CING) with bullish UW flow confirmation",
+      "Capital preservation intact \u2014 account near starting equity at $27,204"
+    ],
+    "what_not_working": [
+      "Exit execution in after-hours \u2014 NEBX order pending too long",
+      "Broker sync created ghost position that shouldn't exist",
+      "Multi-day runners proving risky \u2014 NEBX entered at peak of parabolic move"
+    ],
+    "overall_sentiment": "bullish",
+    "urgency": "high",
+    "timestamp": 1773697162.2455292
+  },
+  {
+    "market_assessment": "After-hours session, risk-on regime (+0.9% indices), but NEBX ghost position remains despite explicit EXIT order \u2014 critical failure.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "Exit order submitted 30min ago but position still open with 'exit_pending: true' and 'broker_reloaded_after_local_removal' anomaly. System tried to exit, broker resynced it. Now underwater -0.22% at $53.35, multi-day runner +30% above prev close, explicit momentum exhaustion warnings. This is a SYSTEM FAILURE \u2014 position should be GONE."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order failed or unfilled for 30+ minutes in after-hours",
+      "NEBX has 'broker_reloaded_after_local_removal' \u2014 system conflict between local state and broker",
+      "NEBX shows 'last_exit_reason' and 'exit_pending: true' but position still exists",
+      "After-hours liquidity risk: limit orders only, wider spreads, lower volume",
+      "Gap-down risk on NEBX overnight: parabolic runner +167% intraday range, RSI was 54 earlier with SMI sell signals",
+      "Account equity down -1.08% overall ($296 below starting), approaching -1.5% soft threshold"
+    ],
+    "what_working": [
+      "Risk discipline: 1 position, 0.3% heat, well under limits",
+      "Scanner finding high-quality multi-source candidates (CTMX, CING, DSGR all have bullish UW flow)",
+      "Market regime correctly identified as risk-on"
+    ],
+    "what_not_working": [
+      "Exit execution: NEBX order stuck or rejected for 30 minutes",
+      "Position sync: broker reload conflict creating ghost positions",
+      "Momentum stock timing: NEBX was entered at $53.47 on parabolic move, immediately went underwater",
+      "After-hours execution reliability"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773697779.7565246
+  },
+  {
+    "market_assessment": "Market is RISK-ON with strong breadth (SPY +0.93%, QQQ +1.09%, DIA +0.85%), after-hours session with multiple high-momentum movers showing parabolic gains (CTMX +44%, NSA +30%, ULY +168%), elevated gap-down risk overnight.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION - system already tried to exit at 1773692810, exit order pending since then but position still showing. Underwater -0.22%, multi-day runner with 'broker_reloaded_after_local_removal' anomaly. EXIT FAILED TO EXECUTE. This is a system integrity issue - position should not exist."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order submitted 70+ minutes ago but position still open - order execution failure or broker sync issue",
+      "NEBX has 'exit_pending: true' with order ID 7bc0bb69-35f6-426c-bac0-73540d8b6515 but 'exit_finalized_at: null' - exit stuck in limbo",
+      "After-hours session means limited liquidity and wider spreads - NEBX may be hard to exit cleanly",
+      "All top scanner candidates are extreme runners (CTMX +44%, ULY +168%, NSA +30%) - these are END-OF-DAY movers with massive overnight gap risk",
+      "Scanner showing RSI 55-77 range on runners with SMI sell signals - these are exhaustion setups, not quality entries",
+      "Account is -1.08% total return over 4.9 days with 0% win rate today - need to protect capital, not chase parabolic moves into close"
+    ],
+    "what_working": [
+      "Nothing is working today - 0 trades, 0 wins, no profitable patterns to report"
+    ],
+    "what_not_working": [
+      "Exit execution system - NEBX order has been pending for over an hour without filling",
+      "Late-day parabolic runners - CTMX, NSA, ULY are all showing technical exhaustion into after-hours",
+      "Multi-day momentum - NEBX was already flagged for exit and reloaded by broker, indicating system tried to cut it once"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773698402.975001
+  },
+  {
+    "market_assessment": "Risk-on regime with SPY/QQQ/DIA all up ~1%, strong momentum day producing multi-baggers (CTMX +44%, NSA +30%, NEBX +31%, ULY +168%), but after-hours session means liquidity is thin and gaps are more dangerous.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION with 'broker_reloaded_after_local_removal' anomaly flag. System already tried to exit at 18:06 ET ('exit_agent_EXIT_NOW') but broker resynced it. Position is from $53.47 entry on a +31% runner that's now +68% intraday range with RSI 54 and SMI sell signals. Exit order pending but unfilled in extended hours. This should NOT exist in the portfolio."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX is a ghost position that system explicitly tried to exit but broker force-reloaded it",
+      "Extended hours exposure on parabolic momentum stock with elevated gap-down risk overnight",
+      "Exit order submitted 12 minutes ago (18:06 ET) but still unfilled in illiquid after-hours market",
+      "Only $375 open risk but anomaly flags suggest system integrity issue requiring immediate resolution",
+      "All top scanner candidates are extended parabolic moves: CTMX +44% with bearish sentiment, NSA +30% with RSI 82.5 (severely overbought), ULY +168% on $5 stock",
+      "Quality bar is extremely low on scanner \u2014 these are end-of-day euphoria plays, not fresh morning setups"
+    ],
+    "what_working": [
+      "Nothing currently working \u2014 account is down -1.07% total return with no trades today",
+      "Market producing massive percentage moves but we're not participating (correct decision given quality)"
+    ],
+    "what_not_working": [
+      "NEBX position management \u2014 system tried to exit, broker overrode, now stuck in after-hours limbo",
+      "Scanner surfacing only low-quality parabolic exhaustion setups (CTMX, NSA, ULY all multi-day runners with overbought technicals)",
+      "Account is in slight drawdown (-1.11% from ATH) suggesting recent strategy hasn't been working"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773699022.4431367
+  },
+  {
+    "market_assessment": "After-hours session, risk-on regime continues with SPY +0.93%, QQQ +1.09%, major indices green \u2014 momentum stocks still running but extended hours adds liquidity/execution risk.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION. +30% multi-day runner at $53.32, already attempted exit twice (last_exit_reason shows system tried to close 35min ago, broker resynced it back). Exit order pending but unfilled. RSI 54 with SMI sell signals, momentum exhaustion confirmed. This is a system anomaly that represents real risk \u2014 position should NOT exist and is vulnerable to overnight gap-down on parabolic exhaustion."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX is a broker-reloaded ghost position with pending exit order unfilled \u2014 represents uncontrolled risk exposure",
+      "Extended hours execution risk \u2014 all candidates are illiquid after-hours, entry quality severely degraded",
+      "Multiple parabolic runners in scanner (CTMX +44%, NSA +30%, ULY +168%) \u2014 classic late-day melt-up setups with high reversal risk overnight",
+      "NEBX indicator consensus 'SELL' with 29% strength, RSI 54, SMI sell signals across all timeframes",
+      "Heat at 0.3% with $372 deployed in compromised position",
+      "No profitable trades today (0 total trades) \u2014 fresh session, no pattern established yet"
+    ],
+    "what_working": [
+      "N/A \u2014 no completed trades today to assess"
+    ],
+    "what_not_working": [
+      "NEBX multi-day runner entry \u2014 system already tried to exit due to momentum failure, now stuck in after-hours",
+      "Position management \u2014 broker sync issues creating ghost positions that defeat risk controls"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773699655.5287328
+  },
+  {
+    "market_assessment": "After-hours session, SPY/QQQ/DIA all green (~1%), risk-on regime continues, extended hours volatility elevated",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION - system already tried to exit, broker resynced it back. Exit pending since 18:13 ET but still showing 7 shares. Multi-day runner +30% above prev close, parabolic exhaustion pattern, RSI 54 with SMI sell signals. Advisor explicitly warned 'EXIT IMMEDIATELY'. Position has 'broker_reloaded_after_local_removal' anomaly - this should NOT exist. Gap-down risk overnight is SEVERE."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order submitted 25+ minutes ago but position still open - possible broker order failure",
+      "NEBX has 'exit_pending: true' with exit_order_id but 'remaining_qty: 0.0' yet actual qty is still 7 - data inconsistency",
+      "Ghost position syndrome: 'last_exit_reason' shows prior exit attempt, then broker reloaded it",
+      "After-hours liquidity risk - limit orders only, wider spreads, gap risk into Tuesday open",
+      "All scanner candidates are extreme momentum plays (CTMX +44%, NSA +30%, ULY +168%) - classic late-day exhaustion setups",
+      "Account heat is only 0.3% but that's misleading - NEBX represents real overnight gap-down exposure"
+    ],
+    "what_working": [
+      "Nothing currently - no winning trades today, account flat at 0.0% daily P&L",
+      "Risk management prevented new entries during uncertain conditions"
+    ],
+    "what_not_working": [
+      "Order execution/broker sync - NEBX exit order not filling after 25+ minutes",
+      "Multi-day parabolic runners (NEBX) - entered at top of +30% move, immediate reversal risk",
+      "After-hours position management - stuck in illiquid extended session with gap risk mounting",
+      "Scanner showing only extreme momentum exhaustion plays (all up 30%+ on day) - quality deterioration signal"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773700266.7081313
+  },
+  {
+    "market_assessment": "After-hours Monday session with risk-on regime (+0.93% SPY, +1.09% QQQ), but CRITICAL GHOST POSITION in NEBX that system already tried to exit and broker resynced\u2014immediate containment required",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION with 'broker_reloaded_after_local_removal' anomaly flag. Exit already attempted at 18:26 ET with reason 'underwater -0.6%, no momentum for 35 min.' Exit order pending (7bc0bb69) but position still shows. Currently flat +0.18% but this is a +30% multi-day runner at extreme extension. System correctly identified this as toxic and tried to exit\u2014broker refusing to comply. Gap-down risk overnight is SEVERE on parabolic moves like this. Position must be MANUALLY FORCED OUT if broker order won't fill."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX is a ghost position the system already voted to exit but broker resynced",
+      "Exit order pending since 18:26 ET but position still open\u2014order execution failure",
+      "After-hours liquidity risk: limit orders only, fills may be impossible",
+      "NEBX is +30% above prev close on multi-day parabolic move\u2014textbook gap-down setup",
+      "Only 1.4% heat deployed but that 1.4% is in a TOXIC position that shouldn't exist",
+      "System integrity compromise: local state disagrees with broker state"
+    ],
+    "what_working": [
+      "Risk management correctly identified NEBX as high-risk exit candidate",
+      "Advisor layer properly flagged momentum exhaustion and resistance",
+      "Scanner finding high-quality gainers (CTMX +44%, NBIG +31%, NSA +30%)"
+    ],
+    "what_not_working": [
+      "Order execution failing: exit order submitted but position still open 15 minutes later",
+      "Broker sync creating ghost positions that override local exit decisions",
+      "No successful trades today despite multiple high-probability scanner hits",
+      "Account down -1.08% total, 54% to next milestone but momentum stalled"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773700900.5336995
+  },
+  {
+    "market_assessment": "Risk-on regime with indices up ~1%, after-hours session active, high-volatility momentum plays dominating scanners with multi-day runners showing extreme gains (+30-167%).",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "Ghost position flagged for EXIT by Advisor. Multi-day runner +30% above prev close, shows 'broker_reloaded_after_local_removal' anomaly meaning system already tried to exit but broker resynced it. Exit order pending since 18:46 ET but position still shows open. This is a system integrity issue requiring immediate resolution."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: NEBX exit order submitted 5+ minutes ago but position still open - order may have failed or been rejected in after-hours",
+      "Ghost position anomaly: NEBX was removed locally but broker reloaded it, suggesting order execution disconnect",
+      "After-hours risk: Extended hours are limit-order only, exit execution may be difficult on low liquidity",
+      "All scanner candidates are extreme movers (+30% to +167%) - these are late-stage parabolic moves with high reversal risk",
+      "Multiple candidates showing overbought technicals (RSI >80, SMI sell signals) despite strong gains",
+      "Account slightly down from ATH ($27,203 vs $27,509) with 1.12% drawdown - marginal negative performance"
+    ],
+    "what_working": [
+      "Nothing currently - no winning trades today, zero daily P&L despite market up ~1%"
+    ],
+    "what_not_working": [
+      "NEBX trade: System attempted exit but position persisted, now stuck in after-hours with elevated gap risk",
+      "Execution integrity: Exit orders not completing cleanly, creating ghost positions",
+      "Scanner is surfacing only extreme late-stage runners (all +30%+) - these are low-quality chase setups"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773701519.0391219
+  },
+  {
+    "market_assessment": "Risk-on regime with SPY/QQQ/DIA all up ~1%, extended hours active, high-octane momentum names running hard into close.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION - system already tried to exit, broker resynced it. Exit pending since 19:00 ET but still showing 7 shares. Multi-day runner +30% above prev close, parabolic move exhausted, gap-down risk overnight is severe. This position should NOT exist."
+      }
+    ],
+    "risk_flags": [
+      "NEBX exit order submitted but not filled - position may be stuck in illiquid after-hours",
+      "NEBX has 'broker_reloaded_after_local_removal' anomaly - critical synchronization issue",
+      "After-hours limit order market - NEBX exit may not fill until tomorrow's open",
+      "Top scanner candidates are ALL parabolic runners (CTMX +44%, NBIG +30%, NSA +30%, ULY +167%) - classic late-day exhaustion setups",
+      "RSI extremes: NSA at 82.5, indicator consensus screaming SELL on multiple names",
+      "Zero winning trades today, account slightly down from $27.5k start"
+    ],
+    "what_working": [
+      "Market regime correctly identified as risk_on",
+      "Exit discipline attempting to work (NEBX exit signal was correct)",
+      "Scanner finding high-volatility candidates"
+    ],
+    "what_not_working": [
+      "Broker synchronization - NEBX exit not executing cleanly",
+      "All top candidates are END-OF-DAY parabolic runners showing momentum exhaustion",
+      "CTMX has bearish StockTwits sentiment despite +44% move (6 bull / 8 bear)",
+      "NSA/NBIG/CTMX all have SMI sell signals and overbought conditions",
+      "Quality gap: these are chasing runners, not catching fresh momentum"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773702169.5156903
+  },
+  {
+    "market_assessment": "Risk-on session with indices up ~1%, momentum stocks running hot in extended hours, high volatility characteristic of parabolic moves",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "GHOST POSITION - exit pending since 19:06 ET, broker reloaded after local removal, stuck at -0.47% with exit order submitted but unfilled, this should NOT exist"
+      },
+      {
+        "symbol": "CTMX",
+        "status": "at_risk",
+        "note": "Entered AH at $6.64 on +44% runner with bullish UW flow, now flat at $6.75 but this is a classic gap-fade setup - up 44% into AH on earnings day with 42x volume spike, RSI at 3.6 oversold paradox"
+      }
+    ],
+    "risk_flags": [
+      "NEBX is a zombie - exit order submitted 6min ago but not filled in AH, position marked for removal but broker won't let go",
+      "CTMX entered during extended hours on parabolic +44% move - extreme gap-down risk overnight on earnings volatility",
+      "Both positions are small-cap biotech/pharma - 100% sector concentration in highest-risk category",
+      "Total open risk only $610 (2.2% of equity) but both are binary event plays",
+      "Heat at 0.3% understates real risk - AH positions can gap violently with no stops executable"
+    ],
+    "what_working": [
+      "Nothing proven yet - no completed trades today, account essentially flat at -1.08% total return",
+      "Risk discipline holding - position sizing tight, no revenge trading visible"
+    ],
+    "what_not_working": [
+      "Extended hours entries on parabolic runners - CTMX is classic late entry on exhausted move",
+      "System struggling with position lifecycle - NEBX exit order not executing, broker sync issues",
+      "Scanner feeding extreme movers (CTMX +44%, ULY +167%, NSA +30%) which are statistically more likely to reverse than continue"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773702778.240392
+  },
+  {
+    "market_assessment": "After-hours session, low liquidity environment with extended-hours limit orders only \u2014 extremely dangerous conditions for momentum trades",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "EXIT PENDING since 19:13 ET but unfilled in AH \u2014 multi-day runner +30% on parabolic move, classic gap-down setup, system already tried to exit this once (broker resynced as ghost position), currently underwater -0.47%, URGENT: manually verify exit filled or submit market order at next regular session open"
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "EXIT PENDING since 23:13 ET but unfilled in AH \u2014 entered at 23:12 on +44% parabolic earnings runner with ZERO profit protection, immediately underwater -2.37%, classic late-entry gap-fade candidate, earnings binary risk tonight, CRITICAL: this is exactly the kind of trade our rules prohibit (late AH entry on exhausted runner with no stops)"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: Both positions have exit orders pending but UNFILLED in after-hours (limit orders only, low liquidity)",
+      "CRITICAL: $610 total exposure stuck in dying positions that cannot exit cleanly in AH",
+      "SEVERE DISCIPLINE VIOLATION: CTMX entered at 23:12 ET in after-hours on parabolic +44% runner \u2014 this violates quality-over-quantity, violates 'late entry on exhausted move' principle, violates 'AH entries have no stop protection' rule",
+      "Both positions are multi-day/same-day parabolic runners (NEBX +30%, CTMX +44%) \u2014 textbook gap-down risk profiles",
+      "Extended hours = zero trailing stop protection, exit-only via limit orders in illiquid conditions",
+      "CTMX has earnings catalyst tonight \u2014 binary event risk on underwater position",
+      "Heat at 0.6% but functionally 100% of open positions are actively dying with exit orders stuck"
+    ],
+    "what_working": [
+      "NOTHING currently working \u2014 both open positions underwater and flagged for exit",
+      "Account preservation mode: $26,598 cash preserved, only $610 at risk"
+    ],
+    "what_not_working": [
+      "Late entries on parabolic runners (CTMX entered 23:12 ET on +44% move)",
+      "After-hours trading with no stop protection",
+      "Chasing extended multi-day runners (NEBX +30% above prev close)",
+      "Entering positions with binary event risk (CTMX earnings tonight)",
+      "Scanner showing more of same: ULY +167%, DSGR +35%, CING +24% \u2014 all extended parabolic moves in AH"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773703388.670707
+  },
+  {
+    "market_assessment": "After-hours, both open positions are already flagged for exit with pending orders \u2014 NEBX is a ghost position reloaded after attempted exit, CTMX went underwater immediately and has exit pending.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "Anomaly position with 'broker_reloaded_after_local_removal' flag \u2014 system already tried to exit at 19:20 but broker resynced it. Exit order pending since 19:20, currently -0.47% with momentum exhaustion on parabolic +168% intraday move. This is a zombie."
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "Exit order pending since 19:20 (3 minutes after entry). Position went underwater immediately (-1.49% MFE, -2.37% MAE), never recovered. Extended hours entry that failed instantly. Current -2.4% unrealized."
+      }
+    ],
+    "risk_flags": [
+      "Both positions have exit orders pending but unfilled for 11+ minutes in after-hours \u2014 illiquid extended session may prevent fills",
+      "NEBX shows clear system confusion: exit attempted, position removed locally, then broker resynced it back. This suggests order routing issues",
+      "CTMX was entered in extended hours despite immediate negative price action \u2014 entry discipline breakdown",
+      "Portfolio heat at 0.6% with open risk 6.1% despite only $601 deployed suggests risk calculation anomalies",
+      "Scanner still showing CTMX as top candidate (score 1.06) while we're actively trying to exit a losing position in it \u2014 signal quality problem"
+    ],
+    "what_working": [
+      "Exit discipline: Both bad positions correctly identified and marked for exit within minutes",
+      "Risk controls: Position sizing kept exposure minimal ($374 + $235 = $609 total)",
+      "Pattern recognition: System correctly flagged NEBX momentum exhaustion and CTMX failed entry"
+    ],
+    "what_not_working": [
+      "Extended hours execution: Exit orders not filling in illiquid after-hours market",
+      "Entry timing: CTMX entered in extended hours went immediately underwater",
+      "Position lifecycle tracking: NEBX reload anomaly suggests broker sync issues",
+      "Scanner signal quality: Top candidate (CTMX) is same stock we're losing on",
+      "Entry validation: CTMX entry despite -68% intraday range exhaustion warning signs"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773703993.0973434
+  },
+  {
+    "market_assessment": "After-hours session, market showed strong risk-on behavior during day (+0.89% index avg), but now illiquid and dangerous for execution",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "Ghost position with 'broker_reloaded_after_local_removal' anomaly - system already tried to exit but broker resynced. Exit order pending since 19:20 (23min unfilled). Multi-day runner +30% entry, now -0.47%, extreme gap-down risk overnight"
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "Entered after-hours at $6.74, immediately underwater, never recovered. Exit order pending 11min (since 19:20, 3min after entry) but unfilled due to AH illiquidity. Down -2.4%, MFE -1.49%. Classic after-hours entry disaster"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: Both positions have exit orders pending but unfilled in illiquid after-hours - manual intervention may be required",
+      "Entry discipline breakdown: CTMX entered in after-hours despite known illiquidity risks, failed instantly",
+      "Ghost position risk: NEBX has anomaly flags indicating system confusion about position state",
+      "Overnight gap risk: NEBX is extended parabolic mover (+30% entry vs prev close), high probability of gap-down",
+      "Exit execution failure: Orders submitted 11-23 minutes ago with zero fills - after-hours market not functioning",
+      "Heat at 0.6% but only because exits haven't filled - real exposure is $610 (2.2% of equity) in two failing positions"
+    ],
+    "what_working": [
+      "Nothing currently - both open positions are underwater and stuck in exit limbo"
+    ],
+    "what_not_working": [
+      "After-hours entries: CTMX proves extended session entries fail immediately due to liquidity",
+      "Exit execution in AH: Limit orders sitting unfilled, exposing account to overnight gap risk",
+      "Position management on parabolic movers: NEBX entry at +30% proved to be chasing exhausted momentum"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773704638.8930545
+  },
+  {
+    "market_assessment": "After-hours session on Monday evening, risk-on regime (+0.89% indices), but illiquid extended hours creating execution hazards as evidenced by both open positions.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "Exit order pending since 19:13 (40min ago), unfilled in illiquid after-hours. Multi-day runner +30% from previous close at $53.47, already attempted exit once before but broker resynced position. MFE only +0.18%, currently -0.47%. This is a ghost position that should not exist."
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "Exit order pending since 19:20 (33min ago), unfilled. Extended hours entry at $6.74 that immediately failed (MFE -1.49%, MAE -2.37%), currently -2.4%. Position entered 3min before exit order was submitted. Entry discipline breakdown."
+      }
+    ],
+    "risk_flags": [
+      "Both positions have pending exit orders stuck in illiquid after-hours market",
+      "NEBX is a carryover with 'broker_reloaded_after_local_removal' anomaly - system already tried to exit",
+      "CTMX was entered in extended hours despite being underwater immediately - strategy violation",
+      "Total open risk $610 (2.2% of equity) but functionally dead money awaiting fills",
+      "299 day trades on Alpaca creates technical constraint pressure despite 999 effective remaining",
+      "Scanner showing overheated candidates (CTMX +44%, NSA +30% with RSI 82.5, ULY +168%)"
+    ],
+    "what_working": [
+      "Exit discipline is attempting to function (both positions have exit orders)",
+      "Account up +8.7% from $25k start despite current drawdown (-1.13% from ATH)"
+    ],
+    "what_not_working": [
+      "Extended hours entries (CTMX failed instantly)",
+      "Multi-day runner holding (NEBX exhausted)",
+      "Exit execution in illiquid sessions (both orders stuck 30-40min)",
+      "Scanner quality filter allowing parabolic/overbought setups into candidates"
+    ],
+    "overall_sentiment": "neutral",
+    "urgency": "high",
+    "timestamp": 1773705243.8707817
+  },
+  {
+    "market_assessment": "OVERNIGHT SESSION: Market closed, risk_on regime (+0.98% index avg), but we're holding two disaster positions with exit orders pending since market close.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "DOWN 20.8% from entry ($53.47\u2192$42.37), exit order pending since 19:20 but UNFILLED in after-hours, ghost position with 'broker_reloaded_after_local_removal' anomaly \u2014 system already tried to kill this once"
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "DOWN 2.4% ($6.74\u2192$6.55), exit order pending since 19:20 (3min after entry) but UNFILLED, illiquid after-hours entry that failed instantly, never went green"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: Both positions have exit orders pending for 60+ minutes with ZERO fills \u2014 after-hours liquidity trap",
+      "NEBX is a $297 realized loss waiting to happen at market open (7 shares \u00d7 $11.10 loss)",
+      "CTMX is a $56 realized loss waiting to happen (35 shares \u00d7 $1.60 loss)",
+      "Combined ~$353 in locked losses (1.3% of equity) with gap risk overnight",
+      "Entry discipline breakdown: CTMX was entered in after-hours despite being illiquid, immediately failed",
+      "NEBX shows 'broker_reloaded_after_local_removal' \u2014 this position is haunting us",
+      "Account down -1.37% total return over 5 days with 0% win rate today",
+      "Both positions violate quality-over-quantity rule \u2014 these should never have been entered"
+    ],
+    "what_working": [
+      "NOTHING \u2014 0 trades completed today, both open positions are disasters"
+    ],
+    "what_not_working": [
+      "After-hours entries: CTMX entered at 19:19 in illiquid session, instantly underwater",
+      "Multi-day extended runners: NEBX was +30% above prev close at entry, parabolic exhaustion",
+      "Exit execution: Orders pending 60+ min with no fills due to after-hours illiquidity",
+      "Position management: System tried to exit NEBX before, broker resynced it as zombie position"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773707069.9541898
+  },
+  {
+    "market_assessment": "Overnight session, market closed \u2014 positions in limbo with pending exit orders that cannot execute until 9:30 AM open, creating gap risk exposure.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "DOWN 20.8% ($53.47\u2192$42.37), exit order pending since 19:13 (106 minutes), unfilled due to market close. Ghost position with 'broker_reloaded_after_local_removal' anomaly \u2014 system already tried to exit this. Massive overnight gap-down risk on parabolic runner that moved +68% intraday."
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "DOWN 2.8% ($6.74\u2192$6.55), exit order pending since 19:20 (95 minutes), unfilled in illiquid after-hours. Extended hours entry that went underwater immediately, never recovered. Observer already flagged 'entry discipline breakdown'."
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: $525.84 trapped in positions with exit orders stuck until market open at 9:30 AM (12.5 hours away)",
+      "Gap risk: Both positions are extended runners (NEBX +30% pre-entry, CTMX +44%) with high overnight reversal probability",
+      "NEBX has 'broker_reloaded_after_local_removal' \u2014 this is a zombie position the system already killed once",
+      "Both positions show 'exit_pending: true' but orders cannot fill until regular hours",
+      "Entry discipline failure: CTMX entered in after-hours (19:19 ET) on illiquid setup, immediately failed",
+      "Heat exposure: 0.6% from just $525 \u2014 tiny positions but both deeply underwater"
+    ],
+    "what_working": [
+      "Risk management: Exit Agent correctly identified both failures and submitted exit orders",
+      "Position sizing: Small positions limit absolute dollar damage despite large percentage losses"
+    ],
+    "what_not_working": [
+      "After-hours trading: CTMX entered at 19:19 ET with no liquidity, predictably failed",
+      "Chasing parabolic runners: NEBX entered at $53.47 after +68% intraday move, now -20.8%",
+      "Exit execution: Orders pending but unfillable for 90+ minutes due to market closure",
+      "Signal quality from broker_sync: NEBX is a 'carryover' position with anomaly flags, shouldn't exist"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773708938.8665736
+  },
+  {
+    "market_assessment": "Market closed (overnight session), risk-on regime with indices +0.98% avg \u2014 favorable conditions but we're trapped in two dying extended-hours positions with exit orders pending but unfilled in illiquid conditions.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "DOWN -20.8% ($53.47 \u2192 $42.37), ghost position broker resynced after we tried to exit, exit order pending 2.5hrs unfilled, +30% extended runner into resistance, high gap-down risk overnight"
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "DOWN -2.4% ($6.74 \u2192 $6.55), exit order pending 70min unfilled, entered AH at 19:17 and failed instantly (MFE -1.49%), illiquid after-hours killing exit execution"
+      }
+    ],
+    "risk_flags": [
+      "CRITICAL: $610 (2.2% of equity) trapped in two positions with exit orders unfilled for extended periods due to after-hours illiquidity",
+      "NEBX is a GHOST POSITION \u2014 system removed it, broker resynced it, 'broker_reloaded_after_local_removal' anomaly \u2014 this should not exist",
+      "Both positions entered/held in extended hours where trailing stops are unreliable and exits can't execute",
+      "Entry discipline breakdown: CTMX entered AH 19:17 on Monday night with no liquidity, violated basic risk control",
+      "Heat at 0.6% understates true risk \u2014 these positions could gap significantly worse tomorrow morning",
+      "Daily PnL 0.0% masks unrealized losses accumulating overnight in broken positions"
+    ],
+    "what_working": [
+      "Nothing currently working \u2014 both open positions are underwater and failing to exit"
+    ],
+    "what_not_working": [
+      "Extended hours entries: CTMX entered AH, immediately rejected, can't exit",
+      "Multi-day runners: NEBX +30% parabolic move now reversing violently -20.8%",
+      "Exit execution in illiquid sessions: orders pending for hours without fills",
+      "Ghost position management: NEBX keeps reappearing after removal attempts"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773710746.8067153
+  },
+  {
+    "market_assessment": "Overnight session, Monday 21:55 ET \u2014 market closed, observing after-hours price action on existing positions and scanner signals showing continued momentum in small-cap/biotech names.",
+    "position_health": [
+      {
+        "symbol": "NEBX",
+        "status": "dying",
+        "note": "DOWN -20.8% ($53.47\u2192$42.37), exit order pending since 19:20 but UNFILLED for 2.5 hours. Ghost position with 'broker_reloaded_after_local_removal' anomaly \u2014 system already tried to remove this. Parabolic runner that reversed violently in extended hours. CRITICAL: Exit order is stale and may not execute."
+      },
+      {
+        "symbol": "CTMX",
+        "status": "dying",
+        "note": "DOWN -2.4% ($6.74\u2192$6.55), exit order pending since 19:20 (11 minutes after entry) but UNFILLED. Extended hours entry that failed immediately, never went green. Illiquid after-hours = order stuck. Position should never have been entered."
+      }
+    ],
+    "risk_flags": [
+      "BOTH positions have exit orders pending 2+ hours with ZERO fills \u2014 after-hours liquidity failure",
+      "NEBX carrying $77 unrealized loss overnight on ghost position that was already flagged for removal",
+      "Entry discipline breakdown: CTMX entered in after-hours at 19:13 ET, violated illiquid session rule",
+      "Only 1.9% of capital deployed ($526/$27,124) but 100% of deployed capital is stuck in unfilled exit orders",
+      "NEBX is a +30% parabolic runner from Friday \u2014 classic overnight gap-down setup if held to Tuesday open",
+      "Both positions flagged 'extended_hours_entry' or traded after close \u2014 system entered when it shouldn't have"
+    ],
+    "what_working": [
+      "Risk management response was CORRECT: Advisor flagged both positions for immediate exit within minutes",
+      "Account preserved at $27,124 (only -1.4% from ATH) despite position issues",
+      "Scanner still finding quality momentum setups (NBIS, DSGR showing strong technical/flow)"
+    ],
+    "what_not_working": [
+      "After-hours entry execution \u2014 CTMX should NEVER have been entered at 19:13 ET in illiquid session",
+      "Exit order execution in extended hours \u2014 2.5 hours with zero fills indicates order type/venue mismatch",
+      "Position sync logic creating 'ghost' positions that reload after removal (NEBX anomaly)",
+      "Trailing stop orders in after-hours not working (both positions show trailing stop IDs but no execution)"
+    ],
+    "overall_sentiment": "bearish",
+    "urgency": "high",
+    "timestamp": 1773712571.395276
+  }
+]

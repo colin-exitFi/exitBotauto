@@ -14,7 +14,8 @@ DEFAULT_BRIEF = {
     "crowd_direction": "with",
     "social_velocity": "flat",
     "contrarian_flag": False,
-    "error": True,
+    "reasoning": "No data available — neutral sentiment fallback",
+    "error": False,
 }
 
 PROMPT_TEMPLATE = """You are a SOCIAL SENTIMENT specialist inside Velox, an autonomous momentum trading engine.

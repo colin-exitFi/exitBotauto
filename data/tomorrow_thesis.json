@@ -1,5 +1,34 @@
 {
-  "raw_thesis": "I cannot provide a complete overnight market analysis in the format you requested because the search results contain insufficient information for a comprehensive tomorrow's trading session forecast.\n\n**Current Limitations:**\n\nThe available search results show **historical data from March 6-9, 2026**, indicating that Friday's market closed down significantly (S&P 500 down -1.33%, Nasdaq down -1.51%)[1][2]. The March E-mini S&P futures (ESH26) fell -1.39% with concerns centered on **inflation, weak US job market data, rising Treasury yields, and Middle East geopolitical tensions driving oil prices higher**[1][2].\n\n**What the data shows:**\n\n- **S&P 500 Futures Levels**: Last traded at 6,614.25 on March 8, down -1.92%[3]\n- **Key Support/Resistance**: 1st support at 6,975.25; 1st resistance at 7,041.25[1]\n- **Recent Trend**: Down -5.25% over the past month; up +10.90% over 52 weeks[2]\n- **Overnight Drivers**: Oil surge concerns, Treasury yield increases, upcoming jobs report focus[1]\n\n**Critical Gap:**\n\nThe search results do **not contain**:\n- Tonight's or early Monday morning news/earnings announcements\n- Current Fed commentary or economic data releases scheduled for tomorrow\n- Sector-specific pre-market movers\n- Individual stock earnings or specific catalysts for individual tickers\n- Asian or European overnight market performance\n\nTo provide an accurate JSON-formatted analysis with specific stock tickers and sector recommendations for tomorrow's session, I would need real-time overnight news, today's market developments, and earnings calendar data\u2014none of which are present in these search results.",
-  "market_bias": "unknown",
-  "watchlist": []
+  "sp500_futures": "Slightly bearish, trading around 6746-6811 with key support at 6462, 6453, 6390 and resistance at 6472, 6522, 6540. Recent levels show overnight range 6467-6484, last at 6746.50 (-0.13%) and 6811.50 (+0.15%)[1][5][6].",
+  "overnight_news": "Upcoming earnings: MU (Mar 18, EPS $8.50, Rev $18.97B), BABA (Mar 19, EPS $1.73, Rev $41.26B), FDX (Mar 19, EPS $4.11, Rev $26.46B). Prior session mixed close with AI spending concerns; no major geopolitics or Fed news overnight[1][2].",
+  "hot_sectors": [
+    "Semiconductors (MU earnings)",
+    "E-commerce (BABA earnings)",
+    "Transportation/Logistics (FDX earnings)",
+    "Airlines (recent rally)",
+    "Technology (AI fears, Apple product event)[1][2]"
+  ],
+  "watchlist": [
+    {
+      "ticker": "MU",
+      "reason": "Earnings on March 18, EPS $8.50 expected, key semiconductor sector mover[1]"
+    },
+    {
+      "ticker": "BABA",
+      "reason": "Earnings on March 19, EPS $1.73, Rev $41.26B, e-commerce focus[1]"
+    },
+    {
+      "ticker": "FDX",
+      "reason": "Earnings on March 19, EPS $4.11, Rev $26.46B, logistics sector impact[1]"
+    },
+    {
+      "ticker": "AAPL",
+      "reason": "Recent +3% jump on product launch announcement March 4, tech leader amid AI concerns[2]"
+    },
+    {
+      "ticker": "ES (Futures)",
+      "reason": "Key levels 6462 support, 6472 resistance; overnight action sets tone for open[1]"
+    }
+  ],
+  "market_bias": "neutral"
 }

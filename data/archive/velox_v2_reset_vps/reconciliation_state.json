@@ -1,0 +1,456 @@
+{
+  "as_of": 1773709153.2848215,
+  "date": "2026-03-17",
+  "broker": {
+    "date": "2026-03-17",
+    "equity": 27123.79,
+    "last_equity": 27230.55,
+    "day_pnl": -106.76,
+    "day_pnl_pct": -0.39,
+    "cash": 26597.95,
+    "long_market_value": 525.84,
+    "short_market_value": 0.0,
+    "position_market_value": 525.84,
+    "current_open_unrealized": -80.85,
+    "overnight_gap_pnl": 0.05,
+    "intraday_change_from_open": -25.95,
+    "intraday_realized_estimate": null,
+    "fill_count": 100,
+    "symbols_with_broker_activity": [
+      "ACXP",
+      "BCRX",
+      "BMNR",
+      "CING",
+      "CTMX",
+      "DSGR",
+      "ETHT",
+      "ETHU",
+      "NBIL",
+      "NBIS",
+      "NEBX"
+    ],
+    "broker_open_symbols": [
+      "CTMX",
+      "NEBX"
+    ],
+    "broker_closed_symbols": [
+      "ACXP",
+      "BCRX",
+      "BMNR",
+      "CING",
+      "DSGR",
+      "ETHT",
+      "ETHU",
+      "NBIL",
+      "NBIS"
+    ],
+    "carryover_symbols": [
+      "CTMX",
+      "NEBX"
+    ],
+    "carryover_fragment_symbols": [],
+    "intraday_symbols": [],
+    "broker_history_available": true,
+    "broker_fill_ledger": {
+      "trade_count": 3,
+      "realized_pnl": -8.93,
+      "closed_symbols": [
+        "ACXP",
+        "BCRX",
+        "ETHU"
+      ],
+      "reconstructable_closed_symbols": [
+        "ACXP",
+        "BCRX",
+        "ETHU"
+      ],
+      "unresolved_symbols": [
+        "BMNR",
+        "CING",
+        "DSGR",
+        "ETHT",
+        "NBIL",
+        "NBIS"
+      ],
+      "trades": [
+        {
+          "symbol": "ACXP",
+          "side": "sell",
+          "entry_price": 5.4,
+          "exit_price": 5.32,
+          "quantity": 28.0,
+          "pnl": -2.24,
+          "pnl_pct": -1.48,
+          "reason": "broker_fill_reconstructed",
+          "entry_time": 1773676501.52465,
+          "exit_time": 1773676603.25081,
+          "hold_seconds": 101.7261598110199,
+          "asset_type": "equity",
+          "strategy_tag": "broker_reconciled",
+          "entry_path": "broker_reconciliation",
+          "signal_sources": [
+            "broker_reconciliation"
+          ],
+          "provider_used": "alpaca_reconciler",
+          "decision_confidence": 0,
+          "anomaly_flags": [
+            "broker_reconstructed"
+          ],
+          "trade_date": "2026-03-17",
+          "exit_order_id": "5e8db3d7-9878-42a2-b1bd-877824a1169f",
+          "signal_price": 5.4,
+          "decision_price": 5.4,
+          "fill_price": 5.32,
+          "slippage_bps": 0.0,
+          "signal_timestamp": null,
+          "entry_order_timestamp": null,
+          "fill_timestamp": null,
+          "fill_timestamp_source": "unknown",
+          "signal_to_order_ms": null,
+          "signal_to_fill_ms": null,
+          "intended_notional": 0.0,
+          "actual_notional": 151.20000000000002,
+          "intended_qty": 28.0,
+          "actual_qty": 28.0,
+          "price_at_1m": null,
+          "price_at_3m": null,
+          "price_at_5m": null,
+          "time_to_green_seconds": null,
+          "time_to_peak_seconds": null,
+          "mfe_pct": null,
+          "mae_pct": null
+        },
+        {
+          "symbol": "BCRX",
+          "side": "sell",
+          "entry_price": 9.29,
+          "exit_price": 9.209959,
+          "quantity": 43.932185,
+          "pnl": -3.52,
+          "pnl_pct": -0.86,
+          "reason": "broker_fill_reconstructed",
+          "entry_time": 1773674041.152889,
+          "exit_time": 1773674297.522491,
+          "hold_seconds": 256.36960196495056,
+          "asset_type": "equity",
+          "strategy_tag": "broker_reconciled",
+          "entry_path": "broker_reconciliation",
+          "signal_sources": [
+            "broker_reconciliation"
+          ],
+          "provider_used": "alpaca_reconciler",
+          "decision_confidence": 0,
+          "anomaly_flags": [
+            "broker_reconstructed"
+          ],
+          "trade_date": "2026-03-17",
+          "exit_order_id": "d591aeac-90d3-4b41-8fe6-633015b406c9",
+          "signal_price": 9.29,
+          "decision_price": 9.29,
+          "fill_price": 9.209959,
+          "slippage_bps": 0.0,
+          "signal_timestamp": null,
+          "entry_order_timestamp": null,
+          "fill_timestamp": null,
+          "fill_timestamp_source": "unknown",
+          "signal_to_order_ms": null,
+          "signal_to_fill_ms": null,
+          "intended_notional": 0.0,
+          "actual_notional": 408.12999864999995,
+          "intended_qty": 43.932185,
+          "actual_qty": 43.932185,
+          "price_at_1m": null,
+          "price_at_3m": null,
+          "price_at_5m": null,
+          "time_to_green_seconds": null,
+          "time_to_peak_seconds": null,
+          "mfe_pct": null,
+          "mae_pct": null
+        },
+        {
+          "symbol": "ETHU",
+          "side": "sell",
+          "entry_price": 27.52,
+          "exit_price": 27.306205,
+          "quantity": 14.84157,
+          "pnl": -3.17,
+          "pnl_pct": -0.78,
+          "reason": "broker_fill_reconstructed",
+          "entry_time": 1773670561.294587,
+          "exit_time": 1773671458.79708,
+          "hold_seconds": 897.5024931430817,
+          "asset_type": "equity",
+          "strategy_tag": "broker_reconciled",
+          "entry_path": "broker_reconciliation",
+          "signal_sources": [
+            "broker_reconciliation"
+          ],
+          "provider_used": "alpaca_reconciler",
+          "decision_confidence": 0,
+          "anomaly_flags": [
+            "broker_reconstructed"
+          ],
+          "trade_date": "2026-03-17",
+          "exit_order_id": "2ac3049e-366f-49db-896f-f9d55944c4e8",
+          "signal_price": 27.52,
+          "decision_price": 27.52,
+          "fill_price": 27.306205,
+          "slippage_bps": 0.0,
+          "signal_timestamp": null,
+          "entry_order_timestamp": null,
+          "fill_timestamp": null,
+          "fill_timestamp_source": "unknown",
+          "signal_to_order_ms": null,
+          "signal_to_fill_ms": null,
+          "intended_notional": 0.0,
+          "actual_notional": 408.4400064,
+          "intended_qty": 14.84157,
+          "actual_qty": 14.84157,
+          "price_at_1m": null,
+          "price_at_3m": null,
+          "price_at_5m": null,
+          "time_to_green_seconds": null,
+          "time_to_peak_seconds": null,
+          "mfe_pct": null,
+          "mae_pct": null
+        }
+      ]
+    },
+    "broker_positions": {
+      "CTMX": {
+        "qty": 35.0,
+        "side": "long",
+        "avg_entry_price": 6.64,
+        "market_value": 229.25
+      },
+      "NEBX": {
+        "qty": 7.0,
+        "side": "long",
+        "avg_entry_price": 53.47,
+        "market_value": 296.59
+      }
+    }
+  },
+  "internal": {
+    "pnl_state_realized": -138.3,
+    "pnl_state_today_realized": -8.93,
+    "pnl_state_trade_count": 315,
+    "trade_history_realized": -8.93,
+    "trade_history_trade_count": 3,
+    "trade_history_win_rate_pct": 0.0,
+    "game_film_realized": -173.72,
+    "game_film_trade_count": 359,
+    "game_film_win_rate_pct": 32.9,
+    "symbols_in_trade_history": [
+      "ACXP",
+      "BCRX",
+      "ETHU"
+    ],
+    "symbols_in_game_film": [
+      "ABVX",
+      "ACXP",
+      "APEI",
+      "ATPC",
+      "BATL",
+      "BCRX",
+      "BMNR",
+      "CING",
+      "CTMX",
+      "DSGR",
+      "ETHT",
+      "ETHU",
+      "FLY",
+      "HIMX",
+      "LWLG",
+      "MU",
+      "NBIG",
+      "NBIL",
+      "NBIS",
+      "NSA",
+      "ONDS",
+      "POET",
+      "ROMA",
+      "SVCO"
+    ],
+    "analytics_total_realized_all_time": -173.72,
+    "broker_reconstructed_realized": -8.93,
+    "broker_reconstructed_trade_count": 3,
+    "broker_reconstructed_unresolved_symbols": [
+      "BMNR",
+      "CING",
+      "DSGR",
+      "ETHT",
+      "NBIL",
+      "NBIS"
+    ],
+    "broker_supplemental_trade_count": 3,
+    "pnl_state_repaired": true,
+    "internal_live_positions": {
+      "NEBX": {
+        "qty": 7.0,
+        "side": "long",
+        "entry_price": 53.47
+      },
+      "CTMX": {
+        "qty": 35.0,
+        "side": "long",
+        "entry_price": 6.74
+      }
+    }
+  },
+  "reconciliation": {
+    "broker_vs_pnl_state_diff": 0.0,
+    "broker_vs_trade_history_diff": 0.0,
+    "broker_closed_trade_estimate": -25.96,
+    "canonical_realized_source": "broker_reconstructed",
+    "canonical_realized_pnl": -8.93,
+    "status": "healthy",
+    "severity": "healthy",
+    "reasons": [
+      "broker_fill_ledger_unresolved"
+    ]
+  },
+  "canaries": [
+    {
+      "code": "broker_activity_missing_internal_history",
+      "symbol": "BMNR",
+      "severity": "critical",
+      "first_seen": 1773705717.9567122,
+      "current_magnitude": 0.0,
+      "recommended_action": "Backfill the missing broker close into internal trade history."
+    },
+    {
+      "code": "broker_activity_missing_internal_history",
+      "symbol": "CING",
+      "severity": "critical",
+      "first_seen": 1773705717.9567122,
+      "current_magnitude": 0.0,
+      "recommended_action": "Backfill the missing broker close into internal trade history."
+    },
+    {
+      "code": "broker_activity_missing_internal_history",
+      "symbol": "DSGR",
+      "severity": "critical",
+      "first_seen": 1773705717.9567122,
+      "current_magnitude": 0.0,
+      "recommended_action": "Backfill the missing broker close into internal trade history."
+    },
+    {
+      "code": "broker_activity_missing_internal_history",
+      "symbol": "ETHT",
+      "severity": "critical",
+      "first_seen": 1773705717.9567122,
+      "current_magnitude": 0.0,
+      "recommended_action": "Backfill the missing broker close into internal trade history."
+    },
+    {
+      "code": "broker_activity_missing_internal_history",
+      "symbol": "NBIL",
+      "severity": "critical",
+      "first_seen": 1773705717.9567122,
+      "current_magnitude": 0.0,
+      "recommended_action": "Backfill the missing broker close into internal trade history."
+    },
+    {
+      "code": "broker_activity_missing_internal_history",
+      "symbol": "NBIS",
+      "severity": "critical",
+      "first_seen": 1773705717.9567122,
+      "current_magnitude": 0.0,
+      "recommended_action": "Backfill the missing broker close into internal trade history."
+    },
+    {
+      "code": "broker_fill_ledger_unresolved",
+      "symbol": "BMNR",
+      "severity": "warning",
+      "first_seen": 1773672027.4806976,
+      "current_magnitude": 0.0,
+      "recommended_action": "Carryover cost basis is missing; reconcile with prior-session broker position basis."
+    },
+    {
+      "code": "broker_fill_ledger_unresolved",
+      "symbol": "CING",
+      "severity": "warning",
+      "first_seen": 1773678784.2754457,
+      "current_magnitude": 0.0,
+      "recommended_action": "Carryover cost basis is missing; reconcile with prior-session broker position basis."
+    },
+    {
+      "code": "broker_fill_ledger_unresolved",
+      "symbol": "DSGR",
+      "severity": "warning",
+      "first_seen": 1773674150.1147835,
+      "current_magnitude": 0.0,
+      "recommended_action": "Carryover cost basis is missing; reconcile with prior-session broker position basis."
+    },
+    {
+      "code": "broker_fill_ledger_unresolved",
+      "symbol": "ETHT",
+      "severity": "warning",
+      "first_seen": 1773680067.6546814,
+      "current_magnitude": 0.0,
+      "recommended_action": "Carryover cost basis is missing; reconcile with prior-session broker position basis."
+    },
+    {
+      "code": "broker_fill_ledger_unresolved",
+      "symbol": "NBIL",
+      "severity": "warning",
+      "first_seen": 1773702804.478934,
+      "current_magnitude": 0.0,
+      "recommended_action": "Carryover cost basis is missing; reconcile with prior-session broker position basis."
+    },
+    {
+      "code": "broker_fill_ledger_unresolved",
+      "symbol": "NBIS",
+      "severity": "warning",
+      "first_seen": 1773678747.048263,
+      "current_magnitude": 0.0,
+      "recommended_action": "Carryover cost basis is missing; reconcile with prior-session broker position basis."
+    }
+  ],
+  "trust": {
+    "topline_source": "broker",
+    "positions_source": "broker",
+    "exposure_source": "broker",
+    "internal_analytics_trusted": true,
+    "internal_analytics_degraded": false,
+    "broker_only_mode": false,
+    "show_internal_stats": true,
+    "dim_internal_stats": false,
+    "allow_closed_trade_analytics": true,
+    "allow_ai_summaries": true,
+    "entry_pipeline_paused": false,
+    "degraded_mode_reasons": [],
+    "consecutive_critical_mismatch": 0,
+    "broker_api_recent_429_total": 0
+  },
+  "broker_api": {
+    "window_seconds": 300,
+    "recent_429_total": 0,
+    "endpoints": {
+      "account.activities.fill": {
+        "requests": 144,
+        "errors": 0,
+        "rate_limits": 0,
+        "last_status": 200,
+        "last_call_ts": 1773709153.0606475,
+        "recent_429_window": 0
+      },
+      "account.portfolio_history": {
+        "requests": 143,
+        "errors": 1,
+        "rate_limits": 0,
+        "last_status": 200,
+        "last_call_ts": 1773709153.2246292,
+        "recent_429_window": 0
+      }
+    }
+  },
+  "meta": {
+    "consecutive_critical_mismatch": 0,
+    "entry_pause_due_to_critical": false,
+    "entry_pause_due_to_429": false,
+    "critical_tripwire_threshold": 3,
+    "broker_429_tripwire_threshold": 8
+  }
+}

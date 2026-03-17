@@ -1,95 +1,135 @@
 {
   "catalysts": [
     {
-      "ticker": "",
-      "company": "Date",
-      "drug": "Company",
-      "indication": "Drug",
-      "date": "Indication",
-      "type": "Type"
+      "ticker": "SGEN",
+      "company": "Sanofi",
+      "drug": "Cablivi (caplacizumab)",
+      "indication": "Acquired thrombotic thrombocytopenic purpura (aTTP)",
+      "date": "2026-01-05",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "--",
-      "drug": "--",
-      "indication": "--",
-      "date": "--",
-      "type": "--"
+      "ticker": "IMRA",
+      "company": "Immedica Pharma AB",
+      "drug": "Pegzilarginase",
+      "indication": "Arginase 1 deficiency (ARG1-D)",
+      "date": "2026-02-23",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-03-05",
-      "drug": "Johnson & Johnson",
-      "indication": "Tec-Dara (Tecvayli + Darzalex Faspro)",
-      "date": "Multiple myeloma",
-      "type": "Approved (BLA)"
+      "ticker": "BMRN",
+      "company": "BioMarin",
+      "drug": "Palynziq (pegvaliase)",
+      "indication": "Phenylketonuria (PKU)",
+      "date": "2026-02-28",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-03-24",
-      "drug": "GSK",
-      "indication": "Linerixibat",
-      "date": "Primary biliary cholangitis",
-      "type": "NDA accepted"
+      "ticker": "ASCB",
+      "company": "Ascendis Pharma",
+      "drug": "TransCon CNP (navepegritide)",
+      "indication": "Achondroplasia",
+      "date": "2026-02-28",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-03-28",
-      "drug": "Rocket Pharmaceuticals",
-      "indication": "Kresladi (marnetegragene autotemcel)",
-      "date": "Leukocyte adhesion deficiency-I",
-      "type": "BLA accepted"
+      "ticker": "JNJ",
+      "company": "Johnson & Johnson",
+      "drug": "Tec-Dara",
+      "indication": "Multiple myeloma",
+      "date": "2026-03-05",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-03-29",
-      "drug": "Lantheus Holdings",
-      "indication": "LNTH-2501 (Gallium-68 edotreotide)",
-      "date": "SSTR+ neuroendocrine tumors",
-      "type": "PDUFA date set"
+      "ticker": "CHKP",
+      "company": "Chiesi",
+      "drug": "Juxtapid (lomitapide)",
+      "indication": "Homozygous familial hypercholesterolemia (HoFH)",
+      "date": "2026-03-03",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-04-03",
-      "drug": "Biogen",
-      "indication": "Nusinersen high-dose regimen",
-      "date": "Spinal muscular atrophy",
-      "type": "In review (previous CRL)"
+      "ticker": "GSK",
+      "company": "GSK",
+      "drug": "Wellcovorin (leucovorin calcium)",
+      "indication": "Cerebral folate deficiency",
+      "date": "2026-03-10",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-04-05",
-      "drug": "Denali Therapeutics",
-      "indication": "Tividenofusp alfa",
-      "date": "Hunter syndrome (MPS II)",
-      "type": "BLA accepted"
+      "ticker": "GSK",
+      "company": "GSK",
+      "drug": "Linerixibat",
+      "indication": "Primary biliary cholangitis",
+      "date": "2026-03-24",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-04-06",
-      "drug": "Orca Bio",
-      "indication": "Orca-T",
-      "date": "AML, ALL, MDS",
-      "type": "BLA accepted"
+      "ticker": "RCKT",
+      "company": "Rocket Pharmaceuticals",
+      "drug": "Kresladi (marnetegragene autotemcel)",
+      "indication": "Leukocyte adhesion deficiency-I (LAD-I)",
+      "date": "2026-03-28",
+      "type": "BLA"
     },
     {
-      "ticker": "",
-      "company": "2026-04-13",
-      "drug": "Travere Therapeutics",
-      "indication": "FILSPARI (sparsentan)",
-      "date": "Focal segmental glomerulosclerosis",
-      "type": "sNDA accepted"
+      "ticker": "LNTH",
+      "company": "Lantheus Holdings",
+      "drug": "LNTH-2501 (Gallium-68 edotreotide)",
+      "indication": "Somatostatin receptor-positive neuroendocrine tumors",
+      "date": "2026-03-29",
+      "type": "NDA"
     },
     {
-      "ticker": "",
-      "company": "2026-04-23",
-      "drug": "Sanofi",
-      "indication": "Sarclisa",
-      "date": "Multiple Myeloma",
-      "type": "sBLA accepted"
+      "ticker": "BIIB",
+      "company": "Biogen",
+      "drug": "Nusinersen high-dose regimen",
+      "indication": "Spinal muscular atrophy",
+      "date": "2026-04-03",
+      "type": "NDA"
+    },
+    {
+      "ticker": "DNLI",
+      "company": "Denali Therapeutics",
+      "drug": "Tividenofusp alfa",
+      "indication": "Hunter syndrome (MPS II)",
+      "date": "2026-04-05",
+      "type": "BLA"
+    },
+    {
+      "ticker": "ORCA",
+      "company": "Orca Bio",
+      "drug": "Orca-T",
+      "indication": "Acute myeloid leukemia",
+      "date": "2026-04-06",
+      "type": "BLA"
+    },
+    {
+      "ticker": "TAVR",
+      "company": "Travere Therapeutics",
+      "drug": "FILSPARI (sparsentan)",
+      "indication": "Focal segmental glomerulosclerosis (FSGS)",
+      "date": "2026-04-13",
+      "type": "NDA"
+    },
+    {
+      "ticker": "SNY",
+      "company": "Sanofi",
+      "drug": "Sarclisa",
+      "indication": "Multiple Myeloma",
+      "date": "2026-04-23",
+      "type": "BLA"
+    },
+    {
+      "ticker": "BMY",
+      "company": "Bristol Myers Squib",
+      "drug": "Opdivo (nivolumab)",
+      "indication": "Stage III or IV classical Hodgkin Lymphoma",
+      "date": "2026-04-08",
+      "type": "BLA"
     }
   ],
   "known_approvals": [],
-  "last_pplx_refresh": 1773029302.745883,
-  "updated_at": "2026-03-08T23:08:22.746266"
+  "last_pplx_refresh": 1773720275.8661408,
+  "updated_at": "2026-03-17T04:04:35.866392"
 }

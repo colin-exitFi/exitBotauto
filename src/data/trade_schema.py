@@ -11,7 +11,18 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t = dict(trade)
     t.setdefault("asset_type", "equity")
     t.setdefault("strategy_tag", "unknown")
+    t.setdefault("signal_tier", "tier_2")
+    t.setdefault("holding_horizon", "intraday")
+    t.setdefault("market_regime", "mixed")
     t.setdefault("entry_path", "unknown")
+    t.setdefault("entry_reason_code", "unknown")
+    t.setdefault("entry_model_votes", {})
+    t.setdefault("risk_constraints_applied", [])
+    t.setdefault("ratchet_peak_pnl_pct", 0.0)
+    t.setdefault("ratchet_floor_pct", None)
+    t.setdefault("ratchet_limit_order_id", "")
+    t.setdefault("hard_stop_order_id", "")
+    t.setdefault("order_state", {})
 
     sources = t.get("signal_sources", [])
     if isinstance(sources, str):

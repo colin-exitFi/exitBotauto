@@ -1,0 +1,1655 @@
+[
+  {
+    "strategy": "IMMEDIATE MANUAL INTERVENTION REQUIRED - 39 consecutive exit failures on HIMX ghost position indicates catastrophic broker API or order routing breakdown beyond AI decision-making scope",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "CRITICAL INFRASTRUCTURE FAILURE: 0.1005 shares ($1.03 notional) with 39 failed exit attempts over 44 hours = catastrophic execution pipeline breakdown. This is not a trading position - it's a broken system artifact. The -2.1% P&L ($0.02 loss) is irrelevant. Submit MARKET order Monday 9:30 AM ET to force closure. If market order fails, escalate to broker support immediately - this indicates order routing corruption or account-level API issue that threatens all future trades."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL TRADING HALT until HIMX execution failure is resolved and root cause identified. 39 consecutive order failures indicates systemic broker integration breakdown - cannot trust ANY order execution until this is debugged."
+      }
+    ],
+    "key_insight": "This is not a trading problem, this is a CRITICAL INFRASTRUCTURE EMERGENCY. 39 failed exit attempts on a $1 position over 44 hours means the order execution pipeline is catastrophically broken at the broker API or routing layer. The Observer correctly identifies this as 'systematic execution breakdown' - no amount of AI decision-making can overcome an execution layer that cannot reliably submit/fill orders. IMMEDIATE ACTION REQUIRED: (1) Force-close HIMX via manual market order Monday open, (2) If that fails, contact Alpaca support with order ID 5e6a501d-ed45-48ae-a433-34b7095b874b, (3) Audit ALL order submission/tracking code for race conditions or state corruption, (4) Do NOT resume trading until you have 100% confidence orders can execute. The $269 drawdown is noise - the real risk is that this execution failure could strike any position at any size, leaving you unable to exit during a real loss scenario.",
+    "timestamp": 1773639935.5725095
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 System integrity crisis demands immediate cessation until data pipeline restored",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Orphaned fractional position (0.1 shares = $1.07) from broker sync with missing stop loss metadata. Transaction costs will exceed any profit. Close on market open to clean up anomaly."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL: 270 trades, 34.4% win rate, -$129.37 total P&L. 244 'breakout_fast_path' trades show systemic quality failure \u2014 36.5% WR, -$96.78. ALL recent trades show 'ZERO specialist data' pattern = trading completely blind. This is not a parameter problem, this is INFRASTRUCTURE FAILURE."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Exit reasons explicitly state 'ZERO specialist data available' across 100+ consecutive trades. Fast-path is bypassing ALL quality gates. Must enforce hard requirement: NO ENTRY without technical + sentiment + catalyst confirmation."
+      }
+    ],
+    "key_insight": "This is not a trading problem \u2014 this is a SYSTEM INTEGRITY CRISIS. Win rate collapsed from 60% (first half breakout_fast_path) to 26.5% (second half). FLY alone: 79 trades, 31.6% WR, -$52.82. Pattern is identical across all losses: 'ZERO specialist data', 'blind entry', 'no thesis validation'. The fast-path entry system is catastrophically broken and has been entering positions with literally zero intelligence for days. Recent 50 trades: 24% WR, -$43.86, Sharpe -58. The account is hemorrhaging capital on systematic infrastructure failure, not market risk. IMMEDIATE FULL HALT required until specialist data pipeline is proven operational and quality gates are enforced. Do NOT trade another dollar until you can answer: 'What is the technical setup, sentiment score, and catalyst for this entry?' If the answer is 'No data available' \u2014 the position should NEVER be entered.",
+    "timestamp": 1773640897.2048125
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 system integrity failure demands immediate investigation before any new positions",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional carryover position (0.1 shares, $1.03 notional) is a tracking anomaly from prior sessions. Observer flags 'broker_sync_missing_local' indicating system synchronization gap. This is dead capital with no thesis \u2014 liquidate on market open to clean the book."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "current": 600,
+        "suggested": 999999,
+        "reason": "EMERGENCY HALT: 270 trades, 34.4% win rate, -$129.37 total P&L. Recent 50 trades show catastrophic 24% win rate with -$43.86 loss. Game film reveals systemic failure: 'breakout_fast_path' strategy collapsed from 45% WR (first half) to 26.5% (second half). Zero specialist data on recent entries = trading completely blind. DO NOT RESUME until data pipeline is restored and validated."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.0,
+        "suggested": 999,
+        "reason": "Quality filter is catastrophically broken. Recent trades show zero specialist validation, zero agent briefs, zero thesis confirmation. Setting impossibly high sentiment threshold blocks all entries until infrastructure is repaired."
+      }
+    ],
+    "key_insight": "This is not a trading problem \u2014 this is a SYSTEM INTEGRITY CRISIS. The account is bleeding because the fast_path entry system is bypassing ALL quality gates. Recent trades show zero specialist data, zero sentiment validation, zero technical confirmation. You're executing blind entries at a 24% win rate that's destroying capital at -$0.88 per trade. The Observer explicitly flagged 'scanner quality deterioration' and 'playbook violations.' The Advisor has been screaming 'FULL TRADING HALT' for sessions. Yet positions keep getting entered via broken infrastructure. IMMEDIATE ACTIONS: (1) Exit the HIMX dust position to start with a clean slate Monday. (2) Keep scan interval at 999999 to prevent ANY new entries. (3) DO NOT trade until specialist agents (technical, sentiment, catalyst, risk, macro) are consistently returning valid data for 24+ hours. (4) When data pipeline is restored, restart with 1-2 high-conviction trades MAX per day \u2014 not 50+ blind lottery tickets. The path back to profitability requires fixing infrastructure FIRST, then rebuilding edge through quality, not quantity.",
+    "timestamp": 1773641502.1794834
+  },
+  {
+    "raw": "# STRATEGIC ADVISORY \u2014 2026-03-16 02:16 ET\n\n## SITUATION ASSESSMENT\n\n**Current State:** Market closed (Monday pre-market, no actionable trading until 4:00 AM ET). Account equity $27,231 (-0.98% from starting), holding **1 fractional zombie position** (0.1 shares HIMX @ $1.03 notional).\n\n**Critical Finding:** This is a **cleanup moment**, not a trading moment. The fractional HIMX position is a **broker sync artifact** consuming a position slot with zero strategic value.\n\n---\n\n## STRATEGIC DIRECTION\n\n**\"Execute surgical cleanup, then stand ready with raised quality bar.\"**\n\nThe 270-trade history shows a **catastrophic pattern**: 34.4% win rate driven by systematic blind entries via broken fast-path infrastructure. The recent 50-trade window is worse (24% WR, -$43.86). **This is not a market problem \u2014 this is a system integrity crisis that requires operational fixes, not parameter tweaks.**\n\n---\n\n## POSITION ADVICE\n\n### HIMX \u2014 LIQUIDATE IMMEDIATELY (Monday 9:30 AM ET open)\n\n**Action:** `EXIT`  \n**Reason:** Fractional remnant (0.1 shares = $1.03) with **zero strategic thesis**. Position tagged `carryover` from Friday 3/14 via `broker_fallback` with no signal data. Currently +3.7% ($0.04 profit) but:\n\n1. **No edge**: Entered via broker sync, not a validated setup\n2. **Slot blocker**: Consuming 1 of 10 max positions for $1 exposure\n3. **Cleanup target**: Observer explicitly flags as \"orphaned micro-position\"\n4. **No protection**: Fractional shares often exempt from trailing stops\n\n**Execution Plan:**\n- Market order at 9:30 AM ET open Monday\n- Accept any fill (profit/loss irrelevant at this size)\n- Confirm broker sync clears position from local state\n- Document as \"cleanup liquidation\" not performance trade\n\n---\n\n## SECTOR BIAS\n\n**FAVOR:** None until quality filter proven functional  \n**AVOID:** All sectors until specialist data pipeline restored\n\n**Rationale:** Game film shows **244 breakout_fast_path trades** with 36.5% WR and -$96.78 P&L. The exit reasons reveal systematic pattern:\n\n> \"ZERO specialist data available \u2014 trading blind with no technical/sentiment/catalyst intelligence\"\n\nThis phrase appears in **67+ exit reasons**. The problem isn't sector selection \u2014 it's **entering positions without validation**.\n\n**Temporary Sector Blacklist (until data integrity confirmed):**\n- Small biotech (ONDS, POET, APEI: 12.5-33% WR)\n- Micro-cap tech (FLY: 31.6% WR, -$52.82 cumulative)\n- Any symbol with <3 confirmed specialist briefs at entry\n\n---\n\n## AGGRESSION LEVEL\n\n**DECREASE** \u2014 Shift from \"capital velocity\" to \"capital preservation\" until win rate recovers above 45%.\n\n**Justification:**\n1. **Win Rate Crisis:** 34.4% overall, 24% recent-50, 25% recent-20 = **death spiral**\n2. **Sharpe Collapse:** -58.09 (recent-50) vs -23.05 (overall) = **accelerating failure**\n3. **Infrastructure Failure:** Observer reports \"specialist data pipeline failure throughout session\" with HIGH URGENCY\n\n**Operational Throttle (Immediate):**\n1. **Position Size:** Reduce from 2.0% to **1.0%** until 3-trade winning streak\n2. **Entry Threshold:** Require **ALL 5 specialist agents** online with confidence \u226560\n3. **Max Daily Trades:** Cap at **3 entries/day** (vs current 20-30/day pace)\n4. **Risk Agent Veto:** HARD STOP if `approved=False` (currently bypassed in 15+ trades)\n\n---\n\n## PARAMETER SUGGESTIONS\n\n### 1. **STOP_LOSS_PCT: 3.0 \u2192 2.0** \u2705 CRITICAL\n- **Current:** 3% trailing stop (often not deploying per Observer)\n- **Suggested:** 2% hard stop\n- **Reason:** Avg loss is -$2.39 but **fast-path entries bleeding -0.5% to -2% immediately**. Tighter stop cuts losers before they compound. Game film shows:\n  - 162 losses averaging -$2.19 (73 bps slippage per trade)\n  - Exit reasons cite \"immediately underwater -0.64%\", \"-0.89% in first minute\"\n  - **Trailing stops failing to deploy** (Observer: \"protection_failed\")\n\n**Implementation:** Hard 2% stop-loss on ALL entries until trailing stop infrastructure proven functional.\n\n---\n\n### 2. **MIN_ENTRY_SENTIMENT: 0.0 \u2192 0.4** \u2705 CRITICAL\n- **Current:** No sentiment filter (accepting 0.0 scores)\n- **Suggested:** Minimum 0.4 sentiment\n- **Reason:** Game film shows **85% of exits cite \"ZERO specialist data\"**. The `sentiment_at_entry=0` appears in majority of losing trades. Require positive sentiment confirmation to prevent blind entries.\n\n---\n\n### 3. **POSITION_SIZE_PCT: 2.0 \u2192 1.0** \u2705 CRITICAL\n- **Current:** 2% per position (~$544 notional)\n- **Suggested:** 1% per position (~$272 notional)\n- **Reason:** At 34% win rate, we're losing **2 out of every 3 trades**. Halving size cuts max loss per bad entry from -$16.32 to -$8.16 while preserving ability to scale winners.\n\n**Scaling Path:**\n- **1.0%** until 45% win rate over 20 trades\n- **1.5%** until 50% win rate over 30 trades  \n- **2.0%** only after sustained 55%+ win rate\n\n---\n\n### 4. **SCAN_INTERVAL_SECONDS: 600 \u2192 900** (10min \u2192 15min)\n- **Current:** Scanning every",
+    "timestamp": 1773641871.8967595
+  },
+  {
+    "strategy": "HOLD CASH \u2014 Market closed, zero visibility, fractional HIMX position ($1.03) is broker artifact with no strategic value",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional share (0.1 shares, $1.03 notional) from 'carryover_sync' \u2014 not a real trade, likely broker reconciliation artifact. Zero market exposure, zero strategic purpose. Clean slate for Monday open."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": []
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [],
+    "key_insight": "PRE-MARKET DEAD ZONE: It's 2:19 AM ET Monday, markets closed for 7+ hours. Zero actionable intelligence until 9:30 AM open. The HIMX fractional position is a non-issue \u2014 $1 exposure with carryover_sync flag indicates broker data cleanup, not a live trade. Real assessment begins at market open with fresh data. Current account state: 99.996% cash ($27,229), -0.98% total return, effectively zero heat. System is healthy and ready \u2014 just waiting for the bell.",
+    "timestamp": 1773642015.6982024
+  },
+  {
+    "strategy": "MAINTAIN FULL TRADING HALT \u2014 Market closed, fractional orphan position, 34.4% win rate collapse demands complete infrastructure rebuild before resuming.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Orphaned fractional position (0.1 shares = $1.03 notional) from broker sync \u2014 tracking noise with no strategic value. Clean the slate completely before Monday open. This is administrative debris, not a real position."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL HALT remains in effect. 270 trades, 34.4% win rate, -$129 total P&L, -23 Sharpe ratio. Recent 50 trades: 24% WR, -$44 P&L, -58 Sharpe. System is catastrophically broken \u2014 DO NOT lift halt until specialist pipeline, fast_path quality gates, and trailing stop infrastructure are completely rebuilt and validated."
+      },
+      {
+        "param": "REQUIRE_ALL_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Core failure: 244 'breakout_fast_path' trades with 36.5% WR entered with ZERO specialist validation. Every single recent loss exit cited 'ZERO specialist data available.' This is not optional \u2014 no position should ever open without full technical/sentiment/catalyst/risk/macro confirmation."
+      },
+      {
+        "param": "MIN_POSITION_NOTIONAL",
+        "current": null,
+        "suggested": 50.0,
+        "reason": "Fractional positions (0.02 shares, $0.43 notional) create tracking overhead with zero strategic benefit. Set minimum $50 notional to prevent dust accumulation."
+      }
+    ],
+    "key_insight": "Market is closed. Account is 99.6% cash with one $1 fractional orphan. The critical work happens NOW, during market close, not when Monday opens. The infrastructure failures are documented: (1) Fast-path bypassing ALL quality gates \u2014 244 blind entries, 36.5% WR. (2) Specialist pipeline complete blackout \u2014 every recent exit cites 'ZERO data available.' (3) Trailing stops not deploying despite config. (4) Risk agent denials ignored by entry system. DO NOT lift the halt. DO NOT enter a single position Monday until these four systems are rebuilt, tested, and validated. The win rate collapsed from 60% to 34% because we're trading blind. Fix the infrastructure first. Capital velocity means nothing if every entry is Russian roulette. The market will still be there when the systems work.",
+    "timestamp": 1773642937.6597116
+  },
+  {
+    "strategy": "FULL OPERATIONAL HALT \u2014 Account is 99.6% cash with only a $1.03 micro-position anomaly. Zero trading activity while pre-market. Quality infrastructure rebuild required before live trading resumes.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "0.1 share micro-position ($1.03 notional) is a broker sync artifact with multiple anomaly flags. This is below any rational position sizing threshold and represents data quality noise, not a deliberate trade. Clear it immediately on market open to eliminate tracking overhead."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all_sectors_pending_quality_gate_restoration"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": "unknown",
+        "suggested": false,
+        "reason": "Account shows catastrophic 34.4% win rate over 270 trades with -$129 total P&L. Observer confirms 'zero recent trades visible' and 'pre-market hours with no actionable price discovery.' System integrity must be verified before any new entries."
+      },
+      {
+        "param": "MIN_POSITION_SIZE_USD",
+        "current": "unknown",
+        "suggested": 25.0,
+        "reason": "Current state shows 0.1 share positions worth $1.03 \u2014 below transaction cost threshold and creates tracking noise. Enforce minimum $25 positions to ensure meaningful risk/reward."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Trade analytics show overwhelming pattern: 244/270 trades were 'breakout_fast_path' entries with 36.5% win rate and -$96.78 P&L. Every recent exit reason cites 'ZERO specialist data' as primary failure mode. Quality gate enforcement is mission-critical."
+      }
+    ],
+    "key_insight": "**SYSTEM HIBERNATION MODE ACTIVE**: Account is essentially flat with no live positions and no recent trading activity. This is not a trading decision moment \u2014 this is a quality control checkpoint. The game film shows systematic failure: 270 trades, 34.4% win rate, -$129 P&L, with root cause identified as 'blind fast-path entries bypassing specialist validation.' Before a single dollar is risked again, three gates must pass: (1) Specialist data pipeline fully operational and verified, (2) Position sizing logic fixed to prevent sub-$5 positions, (3) Risk agent approval mandatory for all entries. Current state = correct state. Stay here until infrastructure earns trust back.",
+    "timestamp": 1773643180.6946213
+  },
+  {
+    "strategy": "FULL OPERATIONAL HALT - System is in pre-market dead zone with zero actionable data and a fractional zombie position indicating unresolved infrastructure issues from prior session.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional carryover (0.1 shares, $1.03 notional) with 'carryover_sync' anomaly flag - this is orphaned debris from broker reconciliation, not an intentional trade. Creates tracking overhead for zero strategic value. Clean house on market open."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [],
+    "key_insight": "PRE-MARKET DEAD ZONE: Observer correctly flags 'no meaningful market data available, all exchanges closed' at 2:43 AM ET Monday. Zero trades today, zero recent activity = system likely fresh from restart. The HIMX fractional position (0.1 shares) with 'broker_sync' entry path and 'carryover_sync' anomaly is accounting debris, not a live position. CRITICAL CONTEXT: Game film shows catastrophic 34.4% win rate driven by systematic 'blind entry' pattern - 244 breakout_fast_path trades entered with ZERO specialist data validation, producing -$96.78 P&L. This is not a trading problem, it's an INFRASTRUCTURE CRISIS. The Advisor from prior session repeatedly issued 'FULL TRADING HALT' warnings that were ignored by execution layer. DO NOT RESUME TRADING until: (1) Specialist data pipeline confirmed fully online during market hours, (2) Fast-path quality gates re-enabled and tested, (3) Trailing stop deployment verified functional. The fractional HIMX position should be liquidated on open to start with clean slate. Current market regime unknown until 9:30 AM ET - any action now would be pure gambling.",
+    "timestamp": 1773643426.249459
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 System is entering blind positions with zero specialist validation in pre-market hours. This is not a trading problem, it's a data integrity crisis.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional position (0.1 shares, $1.03 notional) is a data artifact from 'carryover_sync' with anomaly flags. Up 2.1% but this is broker reconciliation noise, not a thesis-driven trade. Clean slate requires closing orphaned positions."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all_sectors"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Pre-market hours (3:43 AM ET Monday) with ZERO scanner candidates, ZERO specialist data, ZERO market activity. System entered 270 trades with 34.4% win rate because fast_path bypassed all quality gates. DO NOT RESUME until: (1) Market opens, (2) Specialist agents consistently online, (3) Scanner producing validated signals."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "244/270 trades (90%) used 'breakout_fast_path' with zero specialist briefs. This is why win rate collapsed from 60% to 34.4%. NO ENTRY without technical + sentiment + catalyst confirmation."
+      },
+      {
+        "param": "MIN_SPECIALIST_AGENTS_ONLINE",
+        "current": 0,
+        "suggested": 3,
+        "reason": "Require Technical + Sentiment + Catalyst agents responding before ANY entry. Recent pattern: 'No data available' across all 5 agents = systemic pipeline failure."
+      },
+      {
+        "param": "BLOCK_EXTENDED_HOURS_ENTRY",
+        "current": false,
+        "suggested": true,
+        "reason": "Multiple entries logged at 18:00-19:00 ET (after 16:00 close) created overnight gap risk with no exit liquidity. Block all entries outside 09:30-15:45 ET."
+      }
+    ],
+    "key_insight": "You are bleeding capital in your sleep. At 3:43 AM Monday, the bot should be DORMANT \u2014 not holding orphaned positions from broken broker syncs. The $269 loss (-0.98% total return) is 100% preventable: fast_path entered 244 positions with zero intelligence, producing 36.5% win rate vs. the 3 positions with trailing stops that went 100% (6/6 wins, +$72.94 PnL). Quality > quantity isn't a suggestion \u2014 it's the difference between profit and loss. DO NOT TRADE until specialist agents are consistently online during market hours.",
+    "timestamp": 1773647071.2858298
+  },
+  {
+    "strategy": "FULL TRADING HALT - maintain zero-risk posture until market opens and data pipeline restores",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.05 notional) down 4.3% from entry, down 8% from peak. This is reconciliation debris with exit pending since 03/15. Zero specialist validation available. Clean slate required - confirm fill on Monday open."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Pre-market Monday 04:10 ET = markets closed, zero actionable data, all specialist agents offline. DO NOT TRADE until regular hours open at 09:30 ET and specialist pipeline confirms online."
+      },
+      {
+        "param": "MIN_SPECIALIST_AGENTS_REQUIRED",
+        "current": 0,
+        "suggested": 5,
+        "reason": "270 trades show catastrophic 34.4% win rate with 162 losses. Pattern analysis proves blind entries (zero specialist data) are the root cause. REQUIRE all 5 specialist agents online before ANY entry."
+      },
+      {
+        "param": "FAST_PATH_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Fast-path entries = 244 trades, 36.5% WR, -$96.78 P&L. This is the broken infrastructure that bypassed quality gates and created the loss cascade. DISABLE until specialist validation is hardwired into entry logic."
+      }
+    ],
+    "key_insight": "This is not a trading problem - this is a DATA INTEGRITY CRISIS. The account is at -0.98% ($27,230 from $27,500 starting equity) after 270 trades with 34.4% win rate. Game film proves the failure pattern: 244/270 trades entered via 'breakout_fast_path' with ZERO specialist validation, producing 36.5% WR and -$96.78 loss. Meanwhile, the 6 trades WITH trailing stops = 100% WR, +$72.94 profit. The math is brutal: we're entering blind 90% of the time and losing money, while the 10% with protection makes all the profit. SOLUTION: Full trading halt until specialist agents are online AND hardwired into entry validation. Pre-market scan data is worthless phantom garbage (ETHT showing 3.31% on 0.5% volume). DO NOT TRADE until 09:30 ET regular hours when real price discovery exists. Then require ALL 5 specialist agents (technical, sentiment, catalyst, risk, macro) return valid briefs before ANY position opens. The HIMX fractional orphan proves our cleanup process works - exit it Monday and start fresh with a system that CAN'T trade blind.",
+    "timestamp": 1773648888.0674517
+  },
+  {
+    "symbol": "HIMX",
+    "action": "hold",
+    "reason": "Exit order already submitted correctly at 3:47 AM. Will fill at market open. This is reconciliation cleanup, not a strategic position.",
+    "timestamp": 1773650717.1043868
+  },
+  {
+    "strategy": "MARKETS CLOSED - Hold cash, prepare Monday re-entry with tighter quality gates after catastrophic fast-path failure pattern",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional ghost position (0.1 shares, $1.06 notional) with exit already pending since 05:07 ET. This is reconciliation noise, not a real trade. Observer confirms 'dying' status, down 4.3% from entry, down 8% from peak. Clean slate required before Monday open."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all - markets closed, zero actionable setups pre-market Monday"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [],
+    "key_insight": "PRE-MARKET MONDAY REALITY CHECK: Markets closed, zero liquidity, scanner showing stale weekend data. The HIMX fractional position is broker reconciliation noise awaiting market open cleanup - not a trading decision. Real issue: 270 trades, 34.4% win rate, -$129 total loss driven by systematic 'breakout_fast_path' failures (244 trades, 36.5% WR, -$96.78 loss). Game film shows catastrophic pattern: blind entries via broken fast-path bypassing ALL quality gates, zero specialist validation, immediate underwater positions, failed trailing stops. Recent 50 trades: 24% win rate, -$43.86 loss. This isn't a strategy problem - it's an EXECUTION INFRASTRUCTURE CRISIS. Friday's 156 trades produced 25.6% win rate and -$85.77 loss from systematic quality gate bypass. Monday action: DO NOT TRADE until specialist data pipeline is consistently online and fast-path quality filters are repaired. Capital preservation trumps missed opportunities - sitting 99.996% cash pre-market is the ONLY correct position.",
+    "timestamp": 1773652530.8680031
+  },
+  {
+    "strategy": "HOLD FIRE \u2014 Market closed, zero real positions, fresh week setup required before any entries",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional ghost (0.1 shares, $1.06 notional) with exit already pending since 3/15. Confirm fill at Monday open and purge from tracking \u2014 this is broker reconciliation noise, not a trade."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all_sectors_temporarily"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Pre-market Monday 5:44 AM ET = zero liquidity, no price discovery. Stand down until 9:45 AM minimum to avoid garbage signals that plagued Friday's close (9-loss streak from blind after-hours entries)."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.4,
+        "suggested": 0.7,
+        "reason": "34.4% win rate demands we ONLY take highest-conviction setups. Recent pattern: 78% of losses came from entries with missing/low specialist validation. Raise sentiment floor until data pipeline proves stable."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 1.0,
+        "suggested": 0.5,
+        "reason": "Coming off catastrophic Friday (9 consecutive losses, 25.6% weekly win rate). Halve default size until we prove 3+ consecutive winning days. Capital preservation > velocity right now."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "Tighten stops \u2014 avg loser holds 69min vs avg winner 39min, suggesting we're sitting on losers hoping for reversals. Faster exits preserve capital for next high-quality setup."
+      }
+    ],
+    "key_insight": "You're effectively starting fresh Monday with a clean slate ($27,231 equity, zero real heat) but carrying -1.02% drawdown and a broken quality filter. Friday's 9-loss streak happened because the fast-path bypassed ALL specialist validation \u2014 literally trading blind into market close. The good news: you recognized the crisis and stopped the bleeding. The critical insight: DO NOT RESUME TRADING until 9:45 AM ET minimum, and then ONLY if Observer confirms specialist agents are consistently online with real data. One more blind entry batch could turn -$269 into -$500+. Patience here is the trade.",
+    "timestamp": 1773654354.1936128
+  },
+  {
+    "strategy": "FULL TRADING HALT - Market closed, pre-market data unreliable, HIMX dust position exit pending, catastrophic 34.4% win rate demands infrastructure repair before any new entries",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.07) from broker sync with exit pending 46min unfilled. Zero strategic value, pure reconciliation noise. Force market order at 9:30 AM open to clear this immediately."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "halt",
+    "parameter_suggestions": [],
+    "key_insight": "MARKET IS CLOSED (6:15 AM ET). All 'top candidates' (NBIG/NBIL/LMRI) showing pre-market volumes of <1-8% normal flow = statistically meaningless noise. Scanner flagging these as opportunities demonstrates the EXACT data quality failure that destroyed win rate from 60% to 34.4%. The $269 drawdown (-0.98% total return) came from 177 losing trades, nearly all from blind fast-path entries with zero specialist validation. HIMX fractional exit is the ONLY action item. DO NOT TRADE until: (1) Market opens 9:30 AM, (2) Specialist agents consistently online, (3) Scanner shows REAL volume (>25% avg), (4) Risk-on regime confirmed. This is not a trading opportunity - this is a data integrity test that the system is currently FAILING.",
+    "timestamp": 1773656154.3674438
+  },
+  {
+    "raw": "# ADVISOR STRATEGIC ASSESSMENT\n**Time**: 2025-01-13 06:46 AM ET (Pre-market Monday)\n\n---\n\n## STRATEGIC DIRECTION\n**FULL TRADING HALT REMAINS IN EFFECT** - Infrastructure crisis persists, quality drought continues, zero actionable setups present.\n\n---\n\n## POSITION ADVICE\n\n### HIMX (0.1 shares, $1.07 notional)\n**ACTION**: `exit`  \n**REASON**: Fractional orphan position from broker sync with exit order stuck unfilled for 46 minutes. This is reconciliation noise, not a trade thesis. The $1.07 notional represents pure cleanup work - zero strategic value. Force market order at 9:30 AM open to clear immediately. Observer confirmed: \"down 4.3% from entry, -8% from peak, zero specialist validation.\"\n\n---\n\n## SECTOR BIAS\n**FAVOR**: None  \n**AVOID**: All sectors until data integrity restored\n\nPre-market scanner showing false positives:\n- NBIL/NBIG: Both flagged SELL by indicators despite upside gaps\n- LMRI: Down 3.97%, trading 20% below VWAP - scanner quality filter failing\n- All candidates: <0.1x volume spike = noise, not institutional flow\n\n---\n\n## AGGRESSION LEVEL\n**DECREASE** (maintain FULL HALT)\n\nContext demands maximum caution:\n- 34.4% win rate (down from historical 60%+)\n- -$129.37 total P&L\n- Scanner producing contradictory signals (momentum_long screens showing SELL indicators)\n- Zero specialist data availability across all agents\n- Pre-market showing 0.01-0.08x volume spikes (institutional absence confirmed)\n\n---\n\n## PARAMETER SUGGESTIONS\n\n| Parameter | Current | Suggested | Reason |\n|-----------|---------|-----------|--------|\n| **SCAN_INTERVAL_SECONDS** | 600 | 1800 | Reduce polling frequency 3x until quality improves - less noise, lower infrastructure load |\n| **MIN_ENTRY_SENTIMENT** | 0.4 | 0.7 | Raise sentiment bar 75% - only enter positions with strong confirmation |\n| **Position Sizing** | 1.0% | 0.5% | Cut size 50% when trading resumes - 34% win rate demands de-risking |\n\n**DO NOT ADJUST**: Stop loss, take profit levels. These are fine - problem is entry quality, not exit mechanics.\n\n---\n\n## KEY INSIGHT\n\n**The quality drought is a feature, not a bug.**\n\nObserver reports: \"risk_on regime with indexes up 0.57% avg\" BUT \"no quality setups present\" + scanner showing contradictory signals (SELL indicators on momentum_long screens). This is **exactly correct behavior** - our quality filter is working by **rejecting false signals**.\n\n**Critical realization**: We've gone from 60% win rate to 34% not because our exits broke, but because **we started entering positions we shouldn't**. The \"broken fast_path\" pattern Observer identified represents ~100 trades where we bypassed quality gates.\n\n**The path forward**:\n1. **Stay halted** until scanner shows candidates with:\n   - Volume spike >0.5x average (real institutional flow)\n   - Technical indicators aligned (no SELL signals on momentum_long screens)\n   - Specialist data available for validation\n   \n2. **HIMX cleanup**: Exit the 0.1 share orphan at 9:30 AM open. If order fails again, escalate to manual broker intervention.\n\n3. **Monday 9:45 AM checkpoint**: Re-evaluate after market open. If scanner still producing contradictory signals, extend halt through Tuesday.\n\n**Bottom line**: Missing trades costs nothing. Bad trades cost real money. We've preserved 99.6% of capital ($27,229 cash) through disciplined quality filtering. That discipline is our competitive edge right now.",
+    "timestamp": 1773658017.5470443
+  },
+  {
+    "strategy": "FULL TRADING HALT - Market closed, zero deployment, catastrophic infrastructure failure requires complete system rebuild before any new entries",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.05 notional) from broker sync malfunction. Exit pending 46min unfilled suggests order routing failure. Force market order at 9:30 AM open to clear reconciliation noise immediately. Zero strategic value, pure system artifact."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "HALT",
+    "parameter_suggestions": [],
+    "key_insight": "SYSTEM INTEGRITY CRISIS: 270 trades, 34.4% win rate (vs 60% baseline), -$129 total P&L. Recent 50 trades: 24% WR, -$44. The data is SCREAMING - 244/270 trades via 'breakout_fast_path' with ZERO specialist validation = systematic blind gambling. Observer confirms 'low-quality gappers with poor volume', 'scanner generating false positives', 'pre-market gaps without volume confirmation'. Market is CLOSED (7:07 AM pre-market Monday) with $27,230 equity sitting idle. DO NOT ENTER ANY POSITION until specialist data pipeline is verified online and producing quality signals. The 0.1 share HIMX orphan is reconciliation noise - clear it and sit in cash. Capital preservation is the only objective right now.",
+    "timestamp": 1773659833.5834844
+  },
+  {
+    "strategy": "IMMEDIATE FULL TRADING HALT - System is experiencing catastrophic infrastructure failure with 34.4% win rate, zero specialist data pipeline, and dangerous pre-market fractional position artifact that needs forced cleanup at open.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync error. Exit order pending 46min unfilled = routing failure on fractional shares. Force market order at 9:30 AM open to clear reconciliation noise. This is NOT a trading decision - it's system cleanup of broker artifact with zero strategic value."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - trading completely suspended until data integrity restored"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL SYSTEM FAILURE: Zero specialist data across all agents, scanner producing sub-$15 microcaps with bearish technicals despite momentum_long strategy, 34.4% win rate collapse from 60%+ baseline. The Observer explicitly states 'scanner producing extremely low-quality candidates' and 'zero validated high-quality setups'. DO NOT TRADE until specialist pipeline fully restored and verified."
+      },
+      {
+        "param": "MIN_MARKET_CAP",
+        "current": "unknown",
+        "suggested": 500000000,
+        "reason": "Scanner producing NBIL ($8.89), NBIG ($9.00), LMRI ($14.00) - all sub-$15 microcaps with <100K volume. These violate institutional-grade quality standards. Raise floor to $500M+ market cap to force scanner toward liquid, established names."
+      },
+      {
+        "param": "MIN_PREMARKET_VOLUME",
+        "current": "unknown",
+        "suggested": 500000,
+        "reason": "All three scan candidates have <100K premarket volume creating extreme illiquidity risk. Current NBIL only 26K volume. Require 500K+ to ensure tradeable liquidity and institutional participation."
+      }
+    ],
+    "key_insight": "This is NOT a trading problem - this is a DATA INTEGRITY CRISIS. The Observer shows ZERO specialist data available ('No data available' across all agents), the scanner is scraping the bottom of the barrel (sub-$15 microcaps with bearish indicators), and we have a stuck fractional HIMX position that's been unfillable for 46 minutes. The 34.4% win rate (down from 60%+ historically) and -$129 total loss directly correlate with blind entries when the specialist pipeline is broken. Game film shows 79 FLY losses (-$52.82) and pattern after pattern of 'ZERO specialist data' emergency exits. Market opens in 51 minutes - use that time to: (1) Force exit HIMX fractional artifact at market open, (2) Verify specialist data pipeline restoration, (3) Confirm scanner producing institutional-grade setups (AAPL/NVDA tier, not $8 microcaps). DO NOT ENTER ANY NEW POSITIONS until you can answer 'what is the technical thesis?' with actual agent data, not silence.",
+    "timestamp": 1773661643.9510188
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 System is critically broken, not market conditions",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync artifact. Exit pending 46min suggests order routing failure. Force market order at 9:30 AM to clear reconciliation noise \u2014 zero trading value, pure system debris."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL: 34.4% win rate (93W/177L) with -$129.37 total P&L indicates catastrophic system failure, not market conditions. Recent 50 trades: 24% WR, -$43.86. Win rate collapsed from 60% to 33% due to specialist data pipeline failure creating 244 blind fast_path entries. DO NOT RESUME TRADING until specialist agents consistently online and validated."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Game film shows 244/270 trades (90%) entered via 'breakout_fast_path' with ZERO specialist validation. These blind entries produced 36.5% WR vs 100% WR (6/6) for the only trades with working trailing stops. The fast_path is bypassing ALL quality gates."
+      },
+      {
+        "param": "MIN_SCANNER_VOLUME",
+        "current": "unknown",
+        "suggested": 500000,
+        "reason": "Observer flags 'extremely low volume premarket (26k-97k vs multi-million averages = 0.6-3.4% normal volume)' and 'all top candidates are small-cap gappers with insufficient volume validation.' Current scanner is producing trap signals, not opportunities."
+      }
+    ],
+    "key_insight": "This is not a trading problem \u2014 this is a SYSTEM INTEGRITY CRISIS. You have ZERO open positions, $27.2k cash, and a completely clean slate. The Observer correctly identifies the core issue: 'Scanner showing extremely low volume premarket' with 'all candidates showing premarket gap moves but minimal volume confirmation.' The game film proves the failure mode: 90% of trades entered via broken fast_path with no specialist validation, collapsing win rate from 60% to 34%. DO NOT TRADE TODAY. The Monday premarket showing 'only 3 momentum candidates' with '<27k-97k volume' is the EXACT pattern that created 162 losses. Fix the data pipeline first, trade second. Capital preservation is the only valid strategy when flying blind.",
+    "timestamp": 1773663477.572262
+  },
+  {
+    "strategy": "FULL DEFENSIVE MODE: 99% cash position correctly held through weekend. Pre-market phantoms (CTMX +44% on 3% volume) are noise. Critical infrastructure repairs needed before ANY new entries.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.04 notional) from broker sync malfunction. Exit order pending 46min unfilled = order routing failure. Force market order at 9:30 AM open to clear this system artifact immediately. This is reconciliation noise, not a strategic position. Zero value, pure distraction."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all_sectors_until_infrastructure_fixed"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "MANDATORY HALT: 34.4% win rate (down from 60%), -$129 total P&L, 12-trade max loss streak, 270 trades with catastrophic execution quality. Recent 50 trades: 24% win rate, -$43.86. System is bleeding capital through broken fast-path entries with zero specialist validation. DO NOT RESUME until specialist data pipeline consistently online for 24+ hours."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "CRITICAL SAFETY GATE: Analysis shows 244 'breakout_fast_path' trades with 36.5% win rate vs 100% win rate on 6 trailing_stop_ws exits that had proper protection. Fast-path bypassing specialist validation = systematic failure. Make this a HARD requirement - no exceptions."
+      },
+      {
+        "param": "MIN_HOLD_TIME_SECONDS",
+        "current": 0,
+        "suggested": 300,
+        "reason": "Avg hold time 59 minutes overall, but 252 trades <5min with 34.5% win rate vs 3 trades 30min-2h with 100% win rate. Panic exits destroying edge. Require 5min minimum hold to force conviction-based entries and prevent whipsaw losses."
+      }
+    ],
+    "key_insight": "You are 99% cash ($27.2K) going into Monday open - THIS IS CORRECT. Pre-market 'movers' like CTMX (+44% on 97K volume = 3% of normal) are artifacts, not opportunities. Your win rate collapsed from 60% to 34% because the fast-path entry system bypassed ALL quality gates 244 times. Observer explicitly flags: 'Exit order routing failure on HIMX', 'Scanner showing pre-market noise as actionable signals', 'Low liquidity, wide spreads, prices unreliable'. Until specialist agents (technical/sentiment/catalyst/risk/macro) provide CONSISTENT data for 24+ hours, every entry is Russian roulette. Clean up HIMX dust position at 9:30 AM, then STAND DOWN. Your edge returns when infrastructure is proven stable, not before.",
+    "timestamp": 1773665284.5949175
+  },
+  {
+    "strategy": "HOLD - Monday morning wait-and-see mode. Market just opened, single fractional orphan position requires manual cleanup, scanner degraded quality flags mean skip until market direction establishes.",
+    "position_advice": [
+      {
+        "symbol": "HIMX",
+        "action": "exit",
+        "reason": "Fractional orphan (0.1 shares, $1.04) from broker sync glitch with 46min unfilled exit order = order routing failure. This is system reconciliation noise blocking $1, not a strategic position. Manual market order at open required to clear artifact."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "earnings_today",
+        "low_volume_premarket"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "MIN_VOLUME_FILTER",
+        "current": "unknown",
+        "suggested": "500K_minimum",
+        "reason": "Observer flagged CTMX (43% up, 97K volume, earnings TODAY) as untradeable. Scanner showing degraded quality with low-volume binary event plays. Raise volume floor."
+      },
+      {
+        "param": "EARNINGS_BLACKOUT",
+        "current": "unknown",
+        "suggested": "same_day_block",
+        "reason": "CTMX has earnings TODAY 3/16 - massive binary risk. Scanner flagging these as momentum = quality deterioration. Hard block same-day earnings."
+      },
+      {
+        "param": "MARKET_OPEN_WAIT",
+        "current": "unknown",
+        "suggested": "15min",
+        "reason": "Low scanner volume (slow start), risk_on regime needs confirmation. Let first 15min establish direction before entries."
+      }
+    ],
+    "key_insight": "Account preservation working (stayed out of Friday carnage, -1% from ATH). But order execution infrastructure showing cracks (46min stuck exit order). Monday open = thesis validation time, not entry time. Let market prove direction first. HIMX orphan is $1 distraction - clear it and focus on capital protection until scanner quality improves.",
+    "timestamp": 1773667099.0524132
+  },
+  {
+    "strategy": "EMERGENCY HALT: System is critically broken \u2014 4 open positions showing broker reload chaos, 67+ failed trailing stop attempts on MU alone, 40% win rate crumbling under execution failures",
+    "position_advice": [
+      {
+        "symbol": "MU",
+        "action": "exit",
+        "reason": "67 failed trailing stop attempts = protection system completely broken, RSI 67.1 overbought, indicators showing -21% SELL bias, Observer says 'momentum weakening' \u2014 holding this is gambling on broken infrastructure"
+      },
+      {
+        "symbol": "NBIS",
+        "action": "exit",
+        "reason": "Broker-reloaded zombie (+1.31%) that system ALREADY tried to emergency exit at -1.0% stop. Observer flagged 'broker_reloaded_after_local_removal' \u2014 this is a ghost position we lost control of. Lock the gain before it reverses."
+      },
+      {
+        "symbol": "NBIG",
+        "action": "exit",
+        "reason": "CRITICAL: Entered 8min ago, already tried exit TWICE, scanner re-flagging it at +29% = late chase disaster. Observer explicitly says 'DYING' and 'late to party'. Cut it NOW."
+      },
+      {
+        "symbol": "ETHT",
+        "action": "hold",
+        "reason": "Only clean position: entered 3min ago via fast_path, up 0.14%, trailing stop active, no broker reload issues. Let it run but WATCH for protection failure."
+      },
+      {
+        "symbol": "NSA",
+        "action": "exit",
+        "reason": "Entered 2min ago ALREADY showing -0.39% MAE = immediate drawdown on fresh entry is textbook warning sign. Observer flags 'rushed entry or deteriorating conditions'. This will bleed."
+      },
+      {
+        "symbol": "ETHU",
+        "action": "exit",
+        "reason": "Broker-reloaded carryover, 12 trailing stop retries = protection unstable, barely green at +0.06%. Take the tiny win before infrastructure fails here too."
+      },
+      {
+        "symbol": "BMNR",
+        "action": "exit",
+        "reason": "Carryover with 'broker_reloaded_after_local_removal' flag, RSI 68.1 overbought, tried exit once already. Observer warns scanner re-flagging it at +11.82% suggests topping. Exit before rollover."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL SYSTEM HALT REQUIRED: 77 failed trailing stop attempts across 7 positions, 4 broker-reloaded zombies we can't exit cleanly, 40% win rate on 10 trades today shows quality collapse"
+      },
+      {
+        "param": "MAX_POSITIONS",
+        "current": 10,
+        "suggested": 3,
+        "reason": "If trading resumes after infrastructure fix, SEVERE position limit until protection systems prove reliable"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "Tighter stops won't help when trailing stop placement fails 67 times \u2014 but IF fixed, tighter stops reduce damage from execution lag"
+      }
+    ],
+    "key_insight": "THIS IS NOT A TRADING PROBLEM \u2014 THIS IS AN INFRASTRUCTURE MELTDOWN. 77 failed trailing stop retries, 4 broker-reloaded positions the system tried to exit but can't, immediate -0.39% drawdown on 2-minute-old NSA entry = the execution layer is catastrophically broken. Observer is RIGHT: 'carryover chaos', 'protection failed', 'late chasing'. You're not losing on bad setups \u2014 you're losing because POSITIONS WON'T EXIT when you tell them to. MU has been stuck for 10+ minutes with 67 retry attempts. NBIS was emergency-exited at -1% but broker reloaded it anyway. This is a code/API/broker sync failure, not a strategy failure. HALT ALL NEW ENTRIES immediately, force-exit these 7 zombies at market (accept slippage), and DO NOT RESUME until trailing stops execute on first attempt. The $10.23 daily P&L is pure luck \u2014 you're one gap-down away from -$500 when stops don't fire.",
+    "timestamp": 1773668914.9613175
+  },
+  {
+    "strategy": "ZOMBIE PURGE + CRYPTO MOMENTUM CLUSTER: Liquidate dead weight immediately, ride the crypto ETF wave with tightened stops",
+    "position_advice": [
+      {
+        "symbol": "CING",
+        "action": "exit",
+        "reason": "Down -1.03% for 9min, entered at peak ($9.75), now underwater with no recovery. Breakout failed to materialize - cut before stop hits."
+      },
+      {
+        "symbol": "ETHT",
+        "action": "hold",
+        "reason": "Fresh crypto ETF play (2min old), only -0.38%, riding BMNR sector momentum. Let it breathe but trail tight at 2%."
+      },
+      {
+        "symbol": "ETHU",
+        "action": "hold",
+        "reason": "GREEN at +0.18% after 2min, crypto theme working, properly sized. This is what winning looks like - let trailing stop do its job at 3%."
+      },
+      {
+        "symbol": "DSGR",
+        "action": "exit",
+        "reason": "ZOMBIE: $23.76 dust position, Observer says 'liquidate immediately', failed exits documented. This is data pollution blocking mental bandwidth."
+      },
+      {
+        "symbol": "NBIS",
+        "action": "exit",
+        "reason": "ZOMBIE: $0.03 notional, broker artifact with zero economic value. Purge this ghost from the system."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "crypto_etfs",
+        "crypto_infrastructure"
+      ],
+      "avoid": [
+        "extended_runners_rsi_80_plus",
+        "late_friday_entries",
+        "micro_caps_under_100m"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "ZOMBIE_DUST_THRESHOLD",
+        "current": null,
+        "suggested": 50.0,
+        "reason": "Auto-liquidate positions under $50 notional to prevent broker reload artifacts clogging the system"
+      },
+      {
+        "param": "SECTOR_CORRELATION_LIMIT",
+        "current": null,
+        "suggested": 2,
+        "reason": "Max 2 positions per sector cluster (crypto, semis, etc) - all 3 live positions entered within 3min window = synchronized risk"
+      },
+      {
+        "param": "EXTENDED_MOVE_RSI_FILTER",
+        "current": null,
+        "suggested": 75,
+        "reason": "BMNR scanner candidate already +12.89% today - skip entries on anything RSI>75 intraday to avoid exhaustion chases"
+      },
+      {
+        "param": "MIN_HOLD_BEFORE_TRAILING",
+        "current": null,
+        "suggested": 120,
+        "reason": "Don't activate trailing stops until 2min hold to prevent noise stops on fresh entries (CING got stopped out at -1% in 9min)"
+      }
+    ],
+    "key_insight": "CRYPTO THEME IS WORKING (ETHT/ETHU/BMNR cluster) but execution discipline failing: CING entered at literal peak and bled immediately, DSGR/NBIS are zombie dust clogging the pipes. The 46.4% win rate is NOT a quality problem today - it's a cleanup problem. Purge the zombies, let the crypto runners breathe, and stop entering synchronized positions within 3min (creates correlation blowup risk if market reverses). Risk-on regime is real (+1.29% indexes) so bias toward momentum, but raise the bar on entry timing - CING at $9.81 peak = late chase. Next crypto breakout, wait for 1min consolidation confirmation before entry.",
+    "timestamp": 1773670731.7114844
+  },
+  {
+    "strategy": "HOLD CURRENT POSITIONS - Early Monday price discovery phase with both positions showing functional trailing stops and reasonable risk exposure ($611 heat of $27.2K).",
+    "position_advice": [
+      {
+        "symbol": "ETHT",
+        "action": "hold",
+        "reason": "Up 0.6% ($1.86), trailing stop active, crypto-related ETF showing early strength in first 38 minutes of trading. Peak at $18.01 provides cushion. Let winner run with protection in place."
+      },
+      {
+        "symbol": "NBIS",
+        "action": "hold",
+        "reason": "Down only 0.3% ($0.90), trading at entry price $128.82. Biotech weakness could reverse in early session volatility. Trailing stop active provides downside protection. Monitor for first 30 minutes - exit if no recovery by 10:00 AM ET."
+      }
+    ],
+    "sector_bias": {
+      "favor": [
+        "crypto/blockchain",
+        "tech"
+      ],
+      "avoid": [
+        "biotech"
+      ]
+    },
+    "aggression_level": "maintain",
+    "parameter_suggestions": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 3.0,
+        "reason": "Current 3% stop is appropriate - trailing stops are WORKING (14 wins via trailing_stop_ws with 85.7% win rate and +$88.83 profit). Do not change what's working."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 3.0,
+        "suggested": 2.5,
+        "reason": "Tighten TP1 from 3% to 2.5% - recent 50-trade Sharpe ratio is -38.0 (catastrophic). Game film shows winners held average 36 min but avg_winner is only $2.93. Lock profits faster in this deteriorated win rate environment (34% overall, 32% recent 50)."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.7,
+        "suggested": 0.8,
+        "reason": "Raise quality bar - both open positions have ZERO sentiment scores from carryover broker sync. Game film shows 33.3% win rate on breakout_fast_path (273 trades, -$113.90). Require higher conviction before new entries."
+      }
+    ],
+    "key_insight": "SCANNER IS DRY BUT PROTECTION IS WORKING: Zero new candidates today is concerning, but trailing stops just saved $88.83 across 14 trades at 85.7% win rate. The carryover positions have zero documented thesis (broker sync artifacts), but both have functional stops deployed. Early Monday = watch mode is appropriate. If NBIS doesn't recover by 10 AM, cut it - biotech showing immediate weakness pattern. ETHT crypto strength aligns with risk-on bias. DO NOT chase new entries without >0.8 sentiment - recent 50-trade Sharpe of -38 means we're bleeding on low-quality setups. Capital preservation > forcing trades.",
+    "timestamp": 1773671935.3212085
+  },
+  {
+    "strategy": "IMMEDIATE FULL TRADING HALT - System is catastrophically broken with 33.8% win rate, -$159 total loss, and zero market activity showing critical infrastructure failure",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL SYSTEM FAILURE: 33.8% win rate (need 50%+), -$159 total P&L, 227 losses vs 116 wins, zero scanner candidates at 10:57 AM indicates broken market data feeds"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 1.5,
+        "reason": "When trading resumes: avg loss -$2.18 vs avg win $2.89 means stops aren't tight enough - getting run over on bad entries"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.8,
+        "suggested": 0.95,
+        "reason": "When trading resumes: quality filter is completely broken per game film analysis - 273 'breakout_fast_path' trades at 36.6% WR losing $113.90"
+      }
+    ],
+    "key_insight": "DO NOT TRADE. Zero scanner candidates at 10:57 AM ET on a Monday means either: (1) Market data feeds are down, or (2) Scanner quality filter has completely failed. Combined with catastrophic 33.8% win rate, -$159 total loss, 12-trade max loss streak, and game film showing 'broken fast-path bypassing quality gates', this system needs emergency shutdown and diagnostic repair. The Observer correctly identifies 'legitimately quiet market or data lag' but the deeper issue is systematic entry quality collapse - 273 fast-path trades losing $113.90 at 36.6% WR proves the scanner is generating false breakout signals. Until specialist data pipeline is restored (all agents showing 'No data available'), market feeds are verified operational, and a minimum 3-day paper trading test shows >45% win rate, DO NOT place another live trade. You're down -1.06% from starting equity with 4.6 days of trading - this is a 90-day account survival crisis, not a parameter tuning problem.",
+    "timestamp": 1773673112.474027
+  },
+  {
+    "strategy": "FULL TRADING HALT - zero scanner candidates indicates data feed failure, not market opportunity",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Zero scanner candidates at 11:00 ET Monday is abnormal - likely data feed issue not quiet market. Observer flagged 'potential data/feed issue'. DO NOT TRADE until scanner shows normal candidate flow."
+      },
+      {
+        "param": "MIN_SCANNER_CANDIDATES_THRESHOLD",
+        "current": null,
+        "suggested": 3,
+        "reason": "Add safety check: require minimum 3 candidates visible before allowing any entries. Prevents blind trading during data outages."
+      }
+    ],
+    "key_insight": "This is a DATA INTEGRITY issue, not a trading opportunity. Zero scanner candidates + no positions + no market activity at 11:00 ET Monday = broken feed or catastrophic system failure. The account shows -1.06% total return over 4.6 days with 33.7% win rate - we cannot afford another blind entry. WAIT for scanner to populate with normal candidate flow before considering any trades. Recent game film shows 273 breakout_fast_path trades with 36.6% win rate costing -$113.90 - the entry quality filter is fundamentally broken. Until we see 5+ scanner candidates with proper data validation, assume the system is blind and SKIP ALL.",
+    "timestamp": 1773673274.1853542
+  },
+  {
+    "strategy": "FULL TRADING HALT - System integrity crisis requires immediate stop on all new entries until specialist data pipeline is restored and validated.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "344 trades with 33.7% win rate, -$160 total loss, catastrophic data integrity failure - zero specialist agents online means every entry is blind gambling"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "When trading resumes, tighter stops needed - avg loser hold time is 94min vs 33min for winners, bleeding capital on extended holds"
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "current": 0.45,
+        "suggested": 0.7,
+        "reason": "Quality filter catastrophically broken - raise bar dramatically to filter out low-conviction setups that drove win rate from 60% to 33%"
+      }
+    ],
+    "key_insight": "THIS IS NOT A TRADING PROBLEM - THIS IS A SYSTEM INTEGRITY CRISIS. Zero specialist data available (all agents offline) means you are entering positions with NO technical analysis, NO sentiment validation, NO catalyst confirmation, NO risk assessment, and NO macro context. Observer explicitly warns 'zero activity suggests scanner not yet populated' and shows 'zero scanner candidates detected'. You cannot trade what you cannot see. The 33.7% win rate and -$160 loss across 344 trades is the mathematical result of blind entries bypassing all quality gates. IMMEDIATE ACTION REQUIRED: 1) HALT all new entries until specialist agents consistently online, 2) Fix data pipeline causing 'No data available' across all agent briefs, 3) Do NOT resume trading until you can verify real-time specialist intelligence on at least 3 consecutive scanner candidates. Every trade entered without specialist validation is a coin flip with negative edge. Protecting the remaining $27,209 requires patience over action.",
+    "timestamp": 1773673376.625063
+  },
+  {
+    "strategy": "FULL TRADING HALT - Zero scanner candidates + catastrophic 33.7% win rate + fresh Monday with no momentum = DO NOT TRADE until market proves itself",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Zero scanner candidates at 11:05 AM Monday is a massive red flag. Either technical failure or market conditions so poor nothing meets threshold. Combined with 33.7% win rate (should be 60%+), -$160 total losses, and 12-trade max loss streak - the system is fundamentally broken. DO NOT trade until scanner shows quality setups AND we diagnose what's failing."
+      },
+      {
+        "param": "MIN_SCANNER_CANDIDATES",
+        "current": 0,
+        "suggested": 3,
+        "reason": "If scanner shows zero candidates this late in session, it's telling us market is garbage. Require minimum 3 candidates before considering any trades - validates market has actual opportunities."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "Tighten stops immediately. Avg loss is -$2.17 but we're holding losers 94 minutes vs winners 33 minutes. Cut losers faster - we're bleeding out on hope."
+      }
+    ],
+    "key_insight": "STAND DOWN IMMEDIATELY. Zero scanner candidates on Monday morning + 33.7% win rate + Observer flagging 'zero candidates highly unusual' = something is catastrophically wrong. This is NOT a 'wait for opportunity' situation - this is a 'the ship is taking on water' situation. The data shows: (1) Scanner found ZERO setups by 11 AM, (2) Recent 50-trade win rate collapsed to 28%, (3) Holding losers 3x longer than winners, (4) Max loss streak of 12 trades, (5) -$160 total damage from 344 trades. You are currently BLIND (no positions, no candidates, no momentum) in a market that may be hostile. The correct action is HALT ALL TRADING until: (A) Scanner shows 3+ quality candidates, (B) We diagnose why win rate collapsed from historical 60% to 33.7%, (C) Market regime shifts to risk-on. This is not cowardice - this is capital preservation. A missed trade costs $0. Another blind entry in this environment costs real money we can't afford to lose.",
+    "timestamp": 1773673547.871996
+  },
+  {
+    "strategy": "FULL TRADING HALT - System is broken, not market conditions. Zero scanner candidates + 33.7% win rate = infrastructure failure requiring immediate repair.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Zero scanner candidates at 11:12 ET Monday is a red flag. System entered 344 trades with 33.7% win rate (-$160 loss) primarily due to blind fast-path entries with no specialist validation. Data pipeline is critically broken."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Game film shows catastrophic pattern: positions entered with 'No data available' from all 5 specialist agents produced the worst losses. Entry_manager fast_path is bypassing ALL quality gates."
+      },
+      {
+        "param": "MIN_SCANNER_CANDIDATES",
+        "current": null,
+        "suggested": 3,
+        "reason": "Zero candidates = scanner malfunction or extreme market conditions. Either way, don't trade blind."
+      }
+    ],
+    "key_insight": "This is NOT a trading problem - this is a SYSTEM INTEGRITY CRISIS. Zero scanner candidates + Observer's 'data pipeline delayed' + game film showing 273 'breakout_fast_path' trades with 36.6% win rate = your entry_manager is broken. The worst losses ($53 on FLY, $26 on ONDS, $25 on POET) all share identical signature: entered via fast_path with zero specialist validation during after-hours/late-day sessions. You're sitting on $27.2K cash because the system KNOWS something is wrong - scanner produced nothing. DO NOT OVERRIDE THIS. Fix the data pipeline first, validate specialist agents are online, then resume trading. Capital preservation beats forced action.",
+    "timestamp": 1773674003.239144
+  },
+  {
+    "strategy": "FULL TRADING HALT - system is broken, not the market. Zero specialist data = blind gambling that destroyed win rate from 60% to 33%.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL INFRASTRUCTURE FAILURE: 79 trades today, ALL entered with zero specialist data validation. This is not a trading problem - it's a system integrity crisis. The fast_path is bypassing ALL quality gates (technical, sentiment, catalyst, risk, macro agents all offline). Win rate collapsed from 60% to 33% because we're literally trading blind. Observer explicitly warns 'SCANNER QUALITY DETERIORATION' and 'PLAYBOOK VIOLATIONS'. Every entry violates our core mandate: 'Quality over quantity. A bad trade costs real money.' We cannot manage positions we entered without ANY intelligence."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "This should be a HARD GATE. No entry without at minimum: technical brief confirming setup, sentiment showing momentum alignment, catalyst validating the move. The fact that 344/344 recent trades show 'No data available' means the specialist pipeline is completely broken and fast_path is ignoring it."
+      },
+      {
+        "param": "MAX_LOSS_STREAK_HALT",
+        "current": null,
+        "suggested": 5,
+        "reason": "We hit 12 consecutive losses and 9-loss streaks multiple times. After 5 straight losses, FORCE a pause to diagnose what's broken. Consecutive losses this long = systematic failure, not bad luck."
+      }
+    ],
+    "key_insight": "This is not a 'market is tough' situation. This is a DATA PIPELINE CATASTROPHE. Observer is screaming 'HIGH URGENCY', game film shows 79/79 trades today entered with ZERO specialist validation, and I'm issuing exit orders on every position because they're all blind gambling. The breakout_fast_path is executing entries WITHOUT waiting for technical/sentiment/catalyst/risk/macro agents to respond. Until specialist data consistently flows BEFORE entries, every trade is Russian roulette. HALT ALL TRADING until the pipeline is fixed. A system that enters 344 positions with 'No data available' across all intelligence layers is not a trading system - it's a random number generator with real money.",
+    "timestamp": 1773675807.2312696
+  },
+  {
+    "favor": [],
+    "avoid": [
+      "ALL - scanner generating lottery tickets, not quality setups"
+    ],
+    "timestamp": 1773677641.9641483
+  },
+  {
+    "strategy": "IMMEDIATE FULL TRADING HALT - system is broken, not the market",
+    "position_advice": [
+      {
+        "symbol": "NBIS",
+        "action": "exit",
+        "reason": "Zero specialist data available. Position entered via broken fast_path with decision_confidence=0. No technical brief, no sentiment, no catalyst = completely blind. Observer confirms 'extreme momo plays reversing violently'. Already held 10min with no momentum follow-through. This is the EXACT pattern that created 238 losses."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - complete trading halt required"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL SYSTEM FAILURE: 16.7% win rate today (1W/5L), zero specialist data pipeline for 100% of recent entries, Observer flags 'CTMX +70%, WNW +503%, NSA +28% RSI 82.5' = parabolic exhaustion traps. Fast_path bypassing ALL quality gates. This isn't a parameter problem - the entire decision infrastructure is offline."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Mandatory hard gate: NO entries without confirmed technical + sentiment + catalyst data. 278 breakout_fast_path trades with 36.3% WR and -$120.62 P&L prove blind entries are statistical suicide."
+      },
+      {
+        "param": "SCANNER_QUALITY_THRESHOLD",
+        "current": null,
+        "suggested": "EXTREME_ONLY",
+        "reason": "Observer explicitly warns scanner is generating 'wrong signals' in risk-off regime. CTMX/WNW/NSA are extended parabolic moves = late-chase traps. Need RSI <70, volume confirmation, NOT chasing +70% runners."
+      }
+    ],
+    "key_insight": "This is NOT a trading problem - it's a SYSTEM INTEGRITY CRISIS. Today's 1W/5L (16.7% WR) + Observer's urgent warnings + zero specialist data = the bot is BLIND and executing anyway. NBIS entered 10min ago with zero validation, same pattern as 238 prior losses. The scanner is feeding parabolic exhaustion plays (CTMX +70%, WNW +503%) while specialist agents are offline. HALT ALL TRADING immediately. Fix the data pipeline, restore specialist validation gates, then resume with EXTREME caution. Every trade right now is Russian roulette with a 6-loss streak gun.",
+    "timestamp": 1773679471.4519215
+  },
+  {
+    "strategy": "FULL TRADING HALT - System in catastrophic failure state with 32.8% win rate and complete specialist data blackout",
+    "position_advice": [
+      {
+        "symbol": "NBIS",
+        "action": "exit",
+        "reason": "Fractional dust position (0.00046667 shares = $0.06) from broker sync artifact. Zero economic value, pure accounting overhead. Observer explicitly flagged 'should be closed to clean up portfolio'. This is not a trade - it's data pollution."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL SYSTEM FAILURE: 32.8% win rate (vs 60% historical), -$175.96 total loss, 238 losses vs 116 wins. Game film shows catastrophic pattern: 280 'breakout_fast_path' trades with ZERO specialist data validation = blind gambling. Observer confirms 'no scanner candidates visible' and 'extremely quiet conditions'. The bot is not trading - it's malfunctioning. HALT ALL TRADING immediately until specialist data pipeline is restored and validated."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Root cause identified: Fast-path bypass allows entries with decision_confidence=0 and no technical/sentiment/catalyst/risk/macro data. This created 280 blind entries averaging -$0.44 each. Every major loss in game film shows 'ZERO specialist data available' pattern. Must enforce hard gate: NO ENTRY without confirmed specialist intelligence."
+      },
+      {
+        "param": "MIN_DECISION_CONFIDENCE",
+        "current": 0,
+        "suggested": 65,
+        "reason": "Current 0 threshold allows completely blind entries. Game film shows entries with decision_confidence=0 correlate with immediate losses. Raise to 65 to require meaningful conviction before risking capital."
+      },
+      {
+        "param": "MAX_DAILY_TRADES",
+        "current": null,
+        "suggested": 5,
+        "reason": "85 trades today with 15% win rate = overtrading during system failure. Limit to 5 quality setups per day to force selectivity and prevent infrastructure overload."
+      }
+    ],
+    "key_insight": "This is not a market problem - this is a SYSTEM INTEGRITY CRISIS. The bot has been trading blind for weeks: 280 fast-path entries with ZERO specialist validation, 32.8% win rate, -$175.96 in losses. Observer confirms 'no scanner candidates' and 'specialist data pipeline failure'. Game film shows every major loss traces to 'ZERO specialist data available' at entry. The fix is architectural: HALT ALL TRADING until specialist agents are consistently online and validated. Then enforce REQUIRE_SPECIALIST_VALIDATION=true as hard gate. Current state is not 'bad trading' - it's systematic blind gambling with broken infrastructure. The only winning move right now is NOT TO PLAY.",
+    "timestamp": 1773680112.6940649
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 system entering positions with zero specialist data, catastrophic 33% win rate, 86 trades today with -$43.93 raw P&L. Infrastructure integrity failure requires immediate pause.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "EMERGENCY HALT: 86 trades today, 33% win rate across 359 total trades. Observer reports zero scanner candidates at 12:57 ET despite PDT status. Game film shows systematic blind entries via broken fast_path \u2014 280 breakout_fast_path trades at 36.4% WR losing $118.29. System is entering positions with 'decision_confidence=0' and zero specialist validation."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": "unknown",
+        "suggested": true,
+        "reason": "Core failure mode: positions entered with all 5 specialist agents offline (technical, sentiment, catalyst, risk, macro all returning 'No data available'). This created 78+ losing trades. Must enforce hard gate: NO ENTRY without at least 3/5 specialists online."
+      },
+      {
+        "param": "MIN_SCANNER_CANDIDATES",
+        "current": "unknown",
+        "suggested": 3,
+        "reason": "Zero scanner candidates at midday is abnormal. Either market genuinely dead or scanner broken. Don't trade when scanner shows zero opportunities \u2014 that's a data quality red flag, not a 'wait for better setups' signal."
+      }
+    ],
+    "key_insight": "**SYSTEMATIC DATA INTEGRITY CRISIS** \u2014 You have zero open positions and zero scanner candidates at 12:57 PM ET despite being PDT-enabled. This mirrors the exact failure pattern from game film: broken fast_path entering positions with no specialist validation, creating 280 trades at 36.4% WR. The 86 trades today (mostly broker reconciliations/carryovers) lost $43.93 raw P&L. **DO NOT RESUME TRADING** until: (1) Scanner consistently surfaces 3+ candidates during market hours, (2) All specialist agents return valid data for 30+ minutes straight, (3) You can demonstrate one paper trade with full data validation end-to-end. The account is stable at $27,204 (down only 1.07% from start) because you're NOT trading \u2014 that's the correct state right now. Idle cash is not 'lost opportunity' when your entry infrastructure is catastrophically broken.",
+    "timestamp": 1773680308.1598644
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 System integrity crisis with zero scanner output demands immediate stand-down.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Zero scanner candidates at 1:00 PM ET Monday = critical data pipeline failure. Observer flags 'possible scanner malfunction or extremely tight filters'. This mirrors the catastrophic data integrity failures from recent sessions that produced 32.9% overall win rate and -$173.72 total P&L."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Game film shows 280/359 trades (78%) entered via 'breakout_fast_path' with systematic specialist data failures. These blind entries produced 36.4% win rate and -$118.29 P&L. Must gate all entries on specialist confirmation."
+      },
+      {
+        "param": "MIN_SCANNER_CANDIDATES",
+        "current": 0,
+        "suggested": 3,
+        "reason": "Zero candidates at market mid-day is abnormal. Require minimum viable candidate pool before allowing any trading activity."
+      }
+    ],
+    "key_insight": "OPERATIONAL EMERGENCY: Zero scanner output + zero open positions + 32.9% system win rate = this is not a trading problem, it's a data integrity crisis. The bot should be OFFLINE until: (1) scanner produces consistent candidate flow, (2) specialist agents reliably available, (3) trailing stop infrastructure verified functional. Recent game film proves blind entries via broken fast_path destroyed capital (-$118 on 280 trades). DO NOT RESUME TRADING until Observer confirms 'scanner healthy' and specialist pipeline restored. Idle cash beats systematic losses.",
+    "timestamp": 1773680466.8346314
+  },
+  {
+    "strategy": "FULL TRADING HALT - catastrophic 33% win rate and systematic blind entry failures demand immediate suspension until specialist data pipeline is restored",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL SYSTEM FAILURE: 359 trades, 118W/241L (32.9% WR), -$173.72 total P&L. Game film shows 280/359 trades (78%) entered via broken 'breakout_fast_path' with ZERO specialist data validation. Recent 20 trades: 15% WR, -$10.56. This is not a market problem - this is a DATA INTEGRITY CRISIS."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Root cause identified: Observer confirms 'all specialist agents offline' throughout session. Every AI emergency exit cites 'ZERO specialist data' - no technical, sentiment, catalyst, risk, or macro intelligence. We are literally gambling blind."
+      },
+      {
+        "param": "FAST_PATH_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Breakout_fast_path is the primary failure mode: 280 trades, 36.4% WR, -$118.29 P&L. This bypass mechanism is entering positions without ANY quality gates, creating the exact 'blind entry' pattern that destroyed FLY (-$53.24 over 82 trades) and ONDS (-$26.36 over 25 trades)."
+      }
+    ],
+    "key_insight": "YOU ARE CURRENTLY TRADING BLIND. Stop all execution immediately. Observer's latest scan shows CTMX +72%, NSA +29% RSI 82.5, ULY +167% reverse merger mania, NEBX +33% - every single candidate is either severely overbought or fundamentally broken. Your 33% win rate proves the scanner is generating trap signals, not opportunities. The market is FEEDING you toxic setups and you're eating them because you have no intelligence layer to say 'SKIP'. Fix the specialist data pipeline first, validate it works for 24 hours with paper trades, THEN resume live trading. Every trade you take right now is -EV.",
+    "timestamp": 1773682292.8836942
+  },
+  {
+    "strategy": "FULL TRADING HALT - catastrophic system integrity failure demands immediate cessation of all entries until specialist data pipeline is restored",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL: 86 trades today, 15% win rate, -$43.93 raw P&L, -$21.52 clean P&L. Zero specialist data available = 100% blind entries. This is not trading - this is a malfunctioning system burning capital."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_DATA",
+        "current": false,
+        "suggested": true,
+        "reason": "Make specialist data validation a HARD GATE. Every single loss today (and most historical) traces to 'No data available' across all agents. Cannot manage what we cannot see."
+      },
+      {
+        "param": "MIN_HOLD_MINUTES_BEFORE_EXIT",
+        "current": 0,
+        "suggested": 3,
+        "reason": "Recent 20 trades: 15% WR shows we're panic-exiting winners and holding losers. Force 3min minimum to let thesis develop."
+      }
+    ],
+    "key_insight": "You are not trading - you are executing a systematic data integrity failure. OBSERVER shows zero open positions, strong risk-on market (SPY +1.08%, QQQ +1.30%), yet scanner is only finding parabolic exhaustion plays (CTMX +67%, NSA +30%, WNW lottery ticket). This is the EXACT pattern from game film: broken fast_path bypassing all quality gates, entering blind with no specialist validation, immediate losses. Today's 15% win rate (3W/17L in recent 20) is statistically catastrophic. HALT ALL TRADING until: 1) Specialist agents consistently online, 2) Scanner producing fresh breakouts not late runners, 3) At least 24 hours of clean data flow. The market is GIVING you opportunity (strong indices) but your infrastructure is SABOTAGING execution. Fix the system before deploying another dollar.",
+    "timestamp": 1773684102.8021572
+  },
+  {
+    "strategy": "FULL TRADING HALT - Zero open positions, catastrophic 32.9% win rate, Observer confirms extreme late-stage parabolic setups with no early-stage opportunities available",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all_sectors"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "Observer confirms 'Zero quality base breakouts or institutional-grade momentum available' - all top candidates are extended parabolic runners (CTMX +64%, ULY +166%, NSA +30%) showing classic exhaustion signals. This is a trap market, not an opportunity market."
+      },
+      {
+        "param": "MIN_VOLUME_SURGE",
+        "current": "unknown",
+        "suggested": 10.0,
+        "reason": "Current scanner is flagging low-quality late-stage runners. When trading resumes, demand 10x+ volume surge to filter out weak setups"
+      },
+      {
+        "param": "MAX_RSI_ENTRY",
+        "current": "unknown",
+        "suggested": 70,
+        "reason": "Observer flags NSA RSI 82.5, multiple candidates overbought - institute hard RSI ceiling to prevent exhaustion entries"
+      }
+    ],
+    "key_insight": "DO NOT TRADE TODAY. Observer's assessment is crystal clear: 'Every scanner hit is a late-stage parabolic extension' with 'technical indicators showing exhaustion/distribution on all names.' Zero open positions = clean slate. CTMX +64% with 35x volume is textbook trap (already 5% below HOD), ULY +166% is suicide, NSA +30% with RSI 82.5 and -46 SELL consensus is distribution. The game film shows 32.9% win rate largely driven by blind fast-path entries during system failures - we've fixed infrastructure, now we need DISCIPLINE. Risk-on regime is favorable but setup quality is catastrophic. Missing today's traps costs nothing. Entering these exhaustion moves costs real money. Stand down until scanner shows fresh base breakouts or healthy pullback-and-resume patterns. Quality over quantity isn't just a slogan - it's survival.",
+    "timestamp": 1773685912.9913063
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 infrastructure failure causing catastrophic losses, not market conditions",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "33% win rate (down from 60%), -$173 total loss, 15-trade max loss streak, 78% of trades <5min (panic exits), 241 losses vs 118 wins \u2014 this is systematic infrastructure failure, not bad luck"
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_DATA",
+        "current": false,
+        "suggested": true,
+        "reason": "Game film shows 280+ 'breakout_fast_path' trades with ZERO specialist validation entered blind, causing 64% of total losses (-$118). Every major loss exit cites 'ZERO specialist data'"
+      },
+      {
+        "param": "MIN_POSITION_HOLD_SECONDS",
+        "current": 0,
+        "suggested": 300,
+        "reason": "292 trades <5min = 81% of all trades, -$192 P&L. Avg winner held 33min vs loser 111min. System is panic-exiting winners and bag-holding losers"
+      },
+      {
+        "param": "DISABLE_AFTER_HOURS_ENTRY",
+        "current": false,
+        "suggested": true,
+        "reason": "Multiple entries at 18:00-19:00 ET flagged as 'INVALID ENTRY' and 'system error' \u2014 after-hours trading with broken infrastructure = pure risk"
+      }
+    ],
+    "key_insight": "This is not a trading problem \u2014 it's a SYSTEM INTEGRITY CRISIS. The 'breakout_fast_path' is bypassing ALL quality gates, entering 280 positions with zero specialist data, zero sentiment, zero technical validation. Observer sees it ('SCANNER QUALITY DETERIORATION'), I see it (FULL HALT recommendations ignored 50+ times), Exit Agent sees it (exiting at -0.X% immediately). But Entry Manager keeps firing blind trades. Win rate collapsed from 60%\u219233% because we're literally gambling. HALT NOW, fix the pipeline, require specialist validation on EVERY entry, then restart with 0.5% position sizes to prove the fix works. Capital preservation is the only mission until infrastructure is bulletproof.",
+    "timestamp": 1773687724.4526863
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 System is critically broken, not the market. Zero positions with flat account after 359 trades proves infrastructure failure, not trading failure.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL \u2014 do not enter ANY new positions until data pipeline is restored"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL: 33% win rate with -$174 loss from 359 trades is catastrophic. Game film shows 'broker_reconciled' strategy at 21% WR losing -$44. Observer flags ZERO quality setups available (all extended runners post-spike). This is not a parameter problem \u2014 this is a system integrity crisis."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_DATA",
+        "current": false,
+        "suggested": true,
+        "reason": "Game film proves blind entries destroyed the account: 280 'breakout_fast_path' trades at 36% WR lost -$118. Exit reasons dominated by 'ZERO specialist data' failures. Must block ALL entries without full technical/sentiment/catalyst validation."
+      },
+      {
+        "param": "MIN_HOLD_TIME_SECONDS",
+        "current": 0,
+        "suggested": 180,
+        "reason": "292 trades held <5min lost -$193 at 32% WR. Avg loser held 110min vs avg winner 33min shows we're panic-exiting winners and holding losers. Force 3min minimum to validate thesis before cutting."
+      }
+    ],
+    "key_insight": "**YOU ARE NOT LOSING BECAUSE OF BAD TRADES \u2014 YOU ARE LOSING BECAUSE YOU ARE TRADING BLIND.** Observer correctly identifies the problem: 'all top candidates are extended runners' means scanner is broken, not market conditions. Zero open positions after 4.8 days with flat P&L today proves you've already stopped the bleeding. Game film is brutal: FLY alone bled -$53 over 82 trades (32% WR), ONDS -$26 over 25 trades (32% WR), POET -$25 over 9 trades (33% WR). The pattern is identical across ALL symbols: enter blind via fast_path with zero specialist data \u2192 immediate drawdown \u2192 panic exit \u2192 repeat. This is a SYSTEM problem requiring SYSTEM solution: HALT trading, fix data pipeline, require specialist validation on ALL entries, THEN resume with 50% normal size. Trading more right now is like driving faster because your brakes failed \u2014 velocity doesn't fix infrastructure.",
+    "timestamp": 1773689541.8932884
+  },
+  {
+    "strategy": "FULL TRADING HALT - Infrastructure catastrophically broken, not market conditions",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [],
+    "key_insight": "This is not a trading problem - this is a SYSTEM INTEGRITY CRISIS. Win rate collapsed from 60% to 32.9% over 359 trades due to systematic 'blind entry' failures where positions are opened with ZERO specialist data validation. The fast_path bypass is entering positions without technical/sentiment/catalyst/risk intelligence - we're literally gambling. FLY alone: 82 trades, 26 wins, -$53.24 loss from this exact pattern. Observer confirms 'scanner quality deterioration', game film shows 280 breakout_fast_path trades at 36.4% win rate losing $-118.29. Account is CLOSED (market closed Monday 4pm) with zero positions and zero scanner candidates - this is actually GOOD because the system would just create more losses. DO NOT RESUME TRADING until: 1) Specialist data pipeline consistently online for 24hrs, 2) Fast_path quality gates restored, 3) Test trades show agent validation working. Current state = Russian roulette with capital.",
+    "timestamp": 1773691287.587904
+  },
+  {
+    "strategy": "FULL TRADING HALT \u2014 System is broken at infrastructure level, not market level. 33% win rate across 359 trades proves we're gambling blind.",
+    "position_advice": [],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "EMERGENCY HALT: 33% win rate is catastrophic. 280 breakout_fast_path trades at 36% WR = blind entries bypassing quality gates. Game film shows we're entering with ZERO specialist data validation."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_VALIDATION",
+        "current": false,
+        "suggested": true,
+        "reason": "Root cause identified: fast_path is entering positions without technical/sentiment/catalyst confirmation. Every failed exit reason mentions 'ZERO specialist data'. This must be a hard gate."
+      },
+      {
+        "param": "MIN_POSITION_HOLD_SECONDS",
+        "current": 0,
+        "suggested": 300,
+        "reason": "Avg loser hold: 110min vs avg winner hold: 33min. We're panic-exiting winners and bleeding losers. Force 5min minimum to let thesis develop."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 1.5,
+        "reason": "Tighter stops. Avg loss is -$2.13 but positions underwater -3% to -6% before exit. Cut faster before corruption spreads."
+      }
+    ],
+    "key_insight": "This is NOT a market problem \u2014 it's a SYSTEM INTEGRITY CRISIS. Observer correctly identified: 'specialist data pipeline failure throughout session.' 280 trades entered via broken fast_path with zero validation = Russian roulette. The -$173 loss is 100% preventable infrastructure failure. DO NOT TRADE until specialist agents consistently online and validated. Every position entered blind is capital destruction, not capital deployment.",
+    "timestamp": 1773691527.6194522
+  },
+  {
+    "strategy": "CRITICAL EMERGENCY EXIT REQUIRED \u2014 NEBX is a 30%+ extended runner at resistance with bearish technical signals, carried over via broker anomaly after failed local exit attempt, represents unacceptable overnight gap risk.",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "URGENT EXIT: Multi-day runner +30% above prev close at $53.47, RSI 54 with SMI sell signals, running into resistance after +68% intraday range. Observer explicitly warns 'momentum exhaustion warning, consider taking profit before inevitable pullback.' Position has 'broker_reloaded_after_local_removal' anomaly \u2014 system already tried to exit this but broker resynced it. This is a ghost position that should NOT exist. Gap-down risk overnight is elevated on extended parabolic move. EXIT IMMEDIATELY via manual market order if necessary."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL TRADING HALT REQUIRED: System is in critical infrastructure failure state. 33% win rate over 359 trades, -$173.72 total P&L, 15-trade max loss streak. Observer flags: 'euphoric tape with multiple 30%+ gainers, reversals likely imminent' + 'CTMX has earnings TODAY with 110% IV spike' + 'top candidates have RSI 60-82 with heavy SELL signals = late-stage entries.' We are chasing extended moves in wrong market conditions with broken data pipeline. DO NOT TRADE until system integrity restored."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "Tighter stops required when trading resumes. 359 trades show avg loser hold time of 110.5 minutes vs 32.8 for winners = holding losers 3.4x longer. Game film shows best exits happen <5min. Reduce stop to 2% to force faster decision-making."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "current": 2.5,
+        "suggested": 1.5,
+        "reason": "Lower TP1 threshold when trading resumes. Observer shows scanner generating 30-44% extended runners with RSI 60-82 overbought + momentum SELL signals = late-stage chase entries. These setups reverse quickly. Lock gains faster at 1.5% to protect against violent reversals Observer warns about."
+      }
+    ],
+    "key_insight": "CRITICAL EMERGENCY: NEBX position represents maximum risk \u2014 30%+ extended runner at resistance with bearish momentum divergence, carried over via broker anomaly after failed exit attempt, now exposed to overnight gap risk on parabolic exhaustion setup. EXIT IMMEDIATELY. Beyond this immediate crisis, system is in catastrophic failure state requiring FULL TRADING HALT: 33% win rate, -$173.72 P&L, chasing euphoric tape with late-stage overbought entries in risk-off regime. Observer explicitly warns 'reversals likely imminent' and flags CTMX earnings IV spike today. DO NOT ADD ANY NEW POSITIONS until NEBX is closed and system integrity verified.",
+    "timestamp": 1773693344.9240117
+  },
+  {
+    "strategy": "EMERGENCY LIQUIDATION REQUIRED \u2014 NEBX is a multi-day parabolic exhaustion zombie that has survived multiple exit attempts and shows catastrophic broker execution failure",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "CRITICAL ZOMBIE POSITION: +30.69% multi-day runner at $53.32 with RSI 54 post-spike = textbook exhaustion. Exit order submitted 35+ minutes ago (16:53 ET) but position STILL OPEN with 'exit_pending: true' and 'exit_finalized_at: null' = broker execution catastrophically broken. 'broker_reloaded_after_local_removal' flag confirms system ALREADY DECIDED TO EXIT THIS but broker resynced it like a ghost. After-hours (17:24 ET) means limit-only orders with zero liquidity on extended parabolic moves = massive overnight gap-down risk. Observer explicitly warns 'momentum exhaustion, gap-down risk overnight elevated.' This is not a trading decision \u2014 this is a SYSTEM INTEGRITY EMERGENCY. Submit MANUAL MARKET ORDER immediately to force liquidation before gap-down wipes the gain."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL TRADING HALT: 32.9% win rate over 359 trades with -$173.72 total P&L indicates systematic quality filter collapse. Game film shows catastrophic pattern: 280 'breakout_fast_path' entries with 36.4% WR losing -$118.29, ZERO specialist data on entries ('No data available' across all agents), and 44 'broker_reconciled' zombie positions at 20.5% WR losing -$44.00. The NEBX situation epitomizes the crisis: exit orders not executing, positions reloading after removal, protection systems failing. DO NOT ENTER NEW POSITIONS until broker execution pipeline is verified functional and specialist data feeds are restored."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "Tighter stops critical when win rate is 32.9% and avg loss (-$2.13) exceeds avg win (+$2.87) on a risk-adjusted basis. Avg loser holds 110 minutes vs 33 minutes for winners = bleeding capital on failed thesis. Recent 20 trades: 15% WR, -$10.56. Cut losers faster."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 1.0,
+        "suggested": 0.5,
+        "reason": "Reduce size 50% until win rate recovers above 40%. Current 32.9% WR with -$173.72 total loss and catastrophic recent performance (24% over last 50, 15% over last 20) demands defensive sizing. Game film shows FLY: 82 trades, 31.7% WR, -$53.24 loss = worst performer. System is guessing, not trading."
+      }
+    ],
+    "key_insight": "This is not a market problem \u2014 this is a SYSTEM INTEGRITY CRISIS. NEBX represents total execution pipeline failure: exit orders submitted but not filling, positions reloading after local removal, broker data contradicting system state. Combined with ZERO specialist data availability on recent entries (all agents returning 'No data available'), we are flying completely blind with broken controls. Observer confirms 'scanner quality deterioration' and 'playbook violations.' Advisor correctly identified this 35 minutes ago but the exit STILL hasn't executed. The fact that we're discussing strategy while holding a zombie position with a pending exit order that won't fill is the crisis. STOP ALL NEW TRADING, manually liquidate NEBX via market order NOW, and do not resume until: (1) broker execution verified functional, (2) specialist data feeds restored, (3) zombie position reconciliation completed. Win rate collapse from 60% to 32.9% is not bad luck \u2014 it's systematic quality gate bypass creating blind entries with no protection.",
+    "timestamp": 1773695166.6076105
+  },
+  {
+    "strategy": "IMMEDIATE GHOST POSITION LIQUIDATION \u2192 full trading halt until infrastructure restored",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "CRITICAL GHOST POSITION: Exit order submitted 28min ago (ID: 7bc0bb69) but broker resynced position. Observer flags +30% parabolic move at $53.35 with RSI 54 + SMI sell signals + 'momentum exhaustion warning'. System shows 'broker_reloaded_after_local_removal' anomaly = execution pipeline catastrophically broken. This is a zombie position that should not exist. Gap-down risk overnight on extended move is severe. MANUAL MARKET ORDER REQUIRED if standard exit fails again."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "System integrity failure: Ghost positions persisting after exit orders, 33% win rate collapse, $173.72 total loss. Observer confirms 'broker_reloaded_after_local_removal' = execution layer catastrophically broken. Cannot trade safely until fixed."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "Trailing stops failing to deploy or protect (Observer: 'protection mechanism failed'). Tighter stops won't help if infrastructure is broken, but if forced to trade, reduce exposure per position."
+      }
+    ],
+    "key_insight": "\ud83d\udea8 EXECUTION INFRASTRUCTURE FAILURE: NEBX ghost position proves the system cannot reliably exit trades. Exit order submitted 28 minutes ago but broker resynced the position = execution pipeline is broken at the order management layer. This is not a market risk \u2014 this is a SYSTEM INTEGRITY CRISIS. Observer correctly identifies this as 'zombie position' with 'broker_reloaded_after_local_removal' anomaly. The 33% win rate (down from 60%) and $173.72 loss are symptoms of this core infrastructure failure. FULL TRADING HALT mandatory until execution layer is debugged and proven reliable. Forcing exits on broken infrastructure will only create more zombies.",
+    "timestamp": 1773696960.7548695
+  },
+  {
+    "strategy": "EMERGENCY HALT: Ghost position NEBX must be force-liquidated immediately via manual broker intervention - system has failed 70+ minutes of exit attempts.",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "CRITICAL SYSTEM FAILURE: Exit order submitted 70+ minutes ago (ID: 7bc0bb69-35f6-426c-bac0-73540d8b6515) but position still open with 'exit_finalized_at: null'. This is a broker sync failure creating a zombie position. Observer confirms 'broker_reloaded_after_local_removal' anomaly - system already tried to exit once. Position is -0.22% underwater on a multi-day +30% runner entering after-hours with gap-down risk. This blocks $374 capital and corrupts position tracking. Requires MANUAL BROKER LIQUIDATION via Alpaca dashboard - the exit pipeline is catastrophically broken for this symbol."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - FULL TRADING HALT until NEBX ghost position is manually resolved"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "EMERGENCY HALT: Cannot enter new positions while exit infrastructure is proven broken. NEBX demonstrates catastrophic failure - 70+ minutes of failed exit attempts with order stuck in limbo. This is not a market problem, it's a system integrity crisis. Resume trading ONLY after: 1) NEBX manually closed via broker, 2) Exit pipeline verification on paper trades, 3) Trailing stop deployment confirmed functional."
+      }
+    ],
+    "key_insight": "OPERATIONAL EMERGENCY: The exit execution system has catastrophically failed. NEBX proves we cannot reliably close positions - an exit order from 70+ minutes ago remains unfilled with the position still open. This is existential risk: we can enter trades but cannot exit them. All 359 historical trades are irrelevant if we cannot close current positions. Immediate actions required: 1) Manual liquidation of NEBX via Alpaca dashboard, 2) Full halt of new entries until exit infrastructure is verified functional, 3) Root cause analysis of why exit order 7bc0bb69-35f6-426c-bac0-73540d8b6515 failed to execute. The 32.9% win rate and -$173 loss are secondary concerns - the primary issue is we're flying an airplane that can take off but cannot land.",
+    "timestamp": 1773698769.5883822
+  },
+  {
+    "raw": "# ADVISOR STRATEGIC ASSESSMENT\n**Context**: 18:13 ET Monday after-hours, 1 zombie position (NEBX), system stability crisis\n\n---\n\n## IMMEDIATE CRISIS: NEBX GHOST POSITION\n\n**Status**: CRITICAL OPERATIONAL FAILURE\n- Exit order submitted 25+ minutes ago (18:13 ET), still holding 7 shares\n- Position shows `exit_pending: true` but `remaining_qty: 0.0` yet actual qty = 7\n- Broker reloaded position after local removal (`broker_reloaded_after_local_removal`)\n- Multi-day runner +30% above previous close, RSI 54 with SMI sell signals\n- **Gap-down risk overnight is SEVERE** on parabolic exhaustion move\n\n**Action**: This is a broker execution failure, not a trading decision. NEBX must be manually liquidated via broker interface immediately. System cannot be trusted to close this position.\n\n---\n\n## STRATEGIC DIRECTION\n\n**FULL TRADING HALT REMAINS IN EFFECT**\n\nWin rate: 32.9% (118W/241L) over 359 trades = **systematic quality failure**  \nRecent 20 trades: 15% win rate, -$10.56 P&L = **accelerating deterioration**  \nAccount down -$296.97 (-1.08%) from starting capital despite risk-on market regime\n\n**Root cause identified**: Fast-path entry system bypassing ALL quality gates\n- 280 breakout_fast_path trades: 36.4% WR, -$118.29 P&L\n- Zero specialist data validation on entries = blind gambling\n- Trailing stop infrastructure failing (768+ failed deployments on carryover positions)\n- Observer confirms: \"Scanner generating wrong signals in risk-off regime\"\n\n---\n\n## POSITION ADVICE\n\n| Symbol | Action | Reason |\n|--------|--------|--------|\n| NEBX | **MANUAL EXIT NOW** | Zombie position, broker sync failure, exit order not filling, overnight gap risk on +30% parabolic runner with sell signals. Use broker interface to force liquidation. |\n\n---\n\n## SECTOR BIAS\n\n**Favor**: NONE - trading halt active  \n**Avoid**: ALL - system integrity compromised\n\nMarket is risk-on (SPY/QQQ/DIA all green ~1%), but our infrastructure cannot capitalize safely:\n- Scanner showing extreme momentum plays (CTMX +44%, NSA +30%, ULY +168%) = exhaustion setups\n- Playbook mismatch: Social Momentum requires risk_on but quality filter generating trap signals\n- After-hours volatility elevated with thin liquidity = maximum execution risk\n\n---\n\n## AGGRESSION LEVEL\n\n**DECREASE** \u2192 Maintain FULL HALT\n\nCurrent heat: 0.3% (misleading due to NEBX data corruption)  \nTrue exposure: Unknown due to broker sync failures  \n\n**Evidence for halt**:\n1. **Quality collapse**: 15% WR over recent 20 trades\n2. **Infrastructure failure**: 1,092+ failed exit attempts, zombie positions, broker reloads\n3. **Data integrity crisis**: Zero specialist validation causing blind entries\n4. **Execution risk**: Trailing stops not deploying despite configuration\n5. **Capital preservation**: Down -$296.97 in risk-on market = our system is the problem, not the market\n\n**Do NOT resume trading until**:\n- NEBX ghost position manually closed and confirmed\n- Specialist data pipeline consistently online for 24+ hours\n- Fast-path entry system disabled or rebuilt with proper validation\n- Trailing stop deployment verified working\n- Fresh capital deployed in paper mode to test fixes\n\n---\n\n## PARAMETER SUGGESTIONS\n\n| Parameter | Current | Suggested | Reason |\n|-----------|---------|-----------|--------|\n| `ENABLE_TRADING` | true | **FALSE** | System integrity failure - halt all automated entries |\n| `FAST_PATH_ENABLED` | true | **FALSE** | 280 blind entries with 36.4% WR caused -$118.29 loss |\n| `MIN_SPECIALIST_AGENTS` | 0 | **4** | Require technical/sentiment/catalyst/risk data before ANY entry |\n| `TRAILING_STOP_REQUIRED` | false | **TRUE** | Hard requirement - no position without confirmed protection |\n| `AFTER_HOURS_TRADING` | true | **FALSE** | 86 after-hours trades today, execution failures mounting |\n\n**DO NOT adjust**:\n- Take profit levels (working when we GET profitable trades)\n- Position sizing (problem is entry quality, not size)\n- Stop loss % (infrastructure not executing stops anyway)\n\n---\n\n## KEY INSIGHT\n\n**We are not having a trading problem. We are having a SYSTEM INTEGRITY CRISIS.**\n\nThe fast-path entry system is executing trades without:\n- Specialist data validation (technical/sentiment/catalyst all offline)\n- Risk agent approval (positions entering despite `approved=False`)\n- Trailing stop deployment (configured but not activating)\n- Quality filtering (entering at peaks of parabolic moves)\n\n**Every entry is Russian roulette**. 32.9% win rate proves the gun is loaded.\n\n**The correct action is: STOP SHOOTING.**\n\nManual exit NEBX tonight. Resume trading only after infrastructure rebuilt and paper-tested. Our edge exists (BATL: 61% WR, CTMX: 100% WR) but our execution layer is destroying it.\n\n**Capital preservation > forced action.** $27,203 protected is better than $27,203 at risk with broken controls.",
+    "timestamp": 1773700625.035137
+  },
+  {
+    "strategy": "EMERGENCY PROTOCOL: Execute NEBX exit immediately, halt all new entries until clean slate confirmed, system is hemorrhaging capital through broken infrastructure",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "CRITICAL EMERGENCY: Multi-day runner +30% above prev close sitting at $53.22, parabolic exhaustion setup with RSI screaming overbought. System shows 'exit_pending=true' with order submitted 3+ hours ago that NEVER FILLED. This is a ZOMBIE POSITION with 'broker_reloaded_after_local_removal' anomaly \u2014 system already tried to purge it but broker keeps resyncing. Gap-down risk overnight is SEVERE on extended parabolic moves. Observer explicitly warns 'momentum exhaustion, consider taking profit before inevitable pullback.' This position should NOT EXIST. Manual intervention required: submit MARKET order via broker UI if automated exit continues failing."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "all"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL TRADING HALT: 32.9% win rate (118W/241L), -$173.72 total P&L, 15% win rate over recent 20 trades. Observer confirms 'all top scanner candidates are parabolic runners showing momentum exhaustion' and 'zero winning trades today.' System is in CRITICAL FAILURE STATE \u2014 not a market problem, a SYSTEM INTEGRITY CRISIS. Scanner generating late-chase disaster setups (CTMX +44%, NBIG +30%, NSA +30% all with bearish signals). DO NOT ENTER NEW POSITIONS until root cause analysis complete."
+      },
+      {
+        "param": "MAX_OPEN_POSITIONS",
+        "current": 10,
+        "suggested": 1,
+        "reason": "IF trading resumes: reduce max positions from 10 to 1 until win rate stabilizes above 40%. Game film shows <5min holds losing -$192.65 while 30min-2h holds profit +$30.42 at 75% WR. Quality gap is MASSIVE \u2014 we're chasing momentum exhaustion instead of catching fresh setups."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "current": 1.0,
+        "suggested": 0.5,
+        "reason": "IF trading resumes: cut position size 50% during rebuild phase. Risk status shows only 0.3% heat with $27.2k equity, but 9-15 loss streaks in recent history prove current sizing is unforgiving when entry quality collapses."
+      }
+    ],
+    "key_insight": "This is not a trading slump \u2014 this is OPERATIONAL COLLAPSE. Observer identifies the root cause: scanner is surfacing parabolic runners at END-OF-DAY exhaustion (NSA +30% RSI 82.5, CTMX +44% bearish sentiment 6 bull/8 bear, all showing SMI sell signals). We're chasing tops, not catching breakouts. The NEBX zombie position epitomizes the crisis: system tried to exit 3 hours ago, broker reloaded it, exit order pending but unfilled, now holding overnight gap risk on a parabolic runner. IMMEDIATE ACTIONS: (1) Force-close NEBX via manual broker order, (2) HALT all new entries, (3) Disable scanner until quality filters fixed \u2014 no amount of parameter tuning fixes a broken signal source. Capital preservation NOW enables future opportunity. Every new entry in this state is Russian roulette with house money.",
+    "timestamp": 1773702452.621296
+  },
+  {
+    "strategy": "IMMEDIATE HALT \u2014 both positions are ghost artifacts with exit orders pending 11+ minutes in illiquid after-hours, system integrity compromised",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "EXIT ORDER ALREADY PENDING 11min (since 19:20) but unfilled in illiquid after-hours. This is a documented ghost position with 'broker_reloaded_after_local_removal' flag \u2014 system ALREADY tried to exit this at 19:20. Currently -0.47% on a +168% parabolic runner = exhaustion zone. Observer explicitly warns 'momentum exhaustion, zombie position'. Force manual market order exit if broker order continues to fail."
+      },
+      {
+        "symbol": "CTMX",
+        "action": "exit",
+        "reason": "EXIT ORDER ALREADY PENDING 11min (since 19:20, 3min after entry) but unfilled in illiquid after-hours. Entered at $6.74, went immediately underwater (-1.49% MFE, -2.37% MAE), never recovered, now -2.4%. Extended hours entry that failed instantly. Observer flags 'entry discipline breakdown' \u2014 this should never have been entered in after-hours. Force manual exit if order stalls further."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL \u2014 full trading halt required"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "CRITICAL SYSTEM FAILURE: Both open positions are ghost artifacts with stalled exit orders in illiquid after-hours. Scanner showing CTMX (score 1.06) as top candidate while we're actively losing on it = broken signal quality. Entry at 19:17 ET (after market close) violates operational bounds. This is not a market problem \u2014 this is execution infrastructure collapse."
+      },
+      {
+        "param": "AFTER_HOURS_TRADING",
+        "current": "unknown",
+        "suggested": false,
+        "reason": "CTMX entered at 19:17 ET = 3 hours 17 minutes AFTER market close. This entry should be impossible. After-hours liquidity is causing exit orders to hang indefinitely (both positions have orders pending 11+ minutes with zero fills). Disable all extended hours activity until execution pipeline is verified."
+      },
+      {
+        "param": "MIN_LIQUIDITY_THRESHOLD",
+        "current": "unknown",
+        "suggested": "2M+ daily volume + no after-hours entries",
+        "reason": "Both positions stuck with unfilled exit orders due to illiquidity. NEBX is a micro-cap parabolic runner (+168% intraday), CTMX entered in extended hours with no liquidity. System is entering positions it cannot exit."
+      }
+    ],
+    "key_insight": "EMERGENCY SHUTDOWN REQUIRED: This is not a trading loss \u2014 this is operational failure. Both positions are documented system artifacts (NEBX = broker-reloaded zombie, CTMX = after-hours entry with instant failure) with exit orders pending 11+ minutes in illiquid markets. Scanner is STILL recommending CTMX (our active loser) as top candidate. Recent analytics show 359 trades, 32.9% win rate, -$173.72 total P&L with catastrophic patterns: breakout_fast_path strategy at 36.4% WR losing -$118.29, broker_reconciled at 20.5% WR losing -$44. The system is entering blind (zero specialist data), failing to exit (stalled orders), and reloading positions the bot already tried to close. HALT ALL TRADING until: (1) exit orders for NEBX/CTMX confirm filled, (2) after-hours trading is disabled, (3) broker sync logic is audited for the 'reloaded_after_local_removal' bug, (4) scanner signal quality is fixed (should not recommend active losers). Every minute trading continues hemorrhages capital through infrastructure failure, not market risk.",
+    "timestamp": 1773704260.1543117
+  },
+  {
+    "strategy": "EMERGENCY LIQUIDATION MODE \u2014 Exit both dying positions immediately at market open, then FULL TRADING HALT until data pipeline and protection systems are restored.",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "CRITICAL: Down -20.8% ($297 locked loss), exit order pending 60+ minutes UNFILLED due to after-hours illiquidity trap. 'broker_reloaded_after_local_removal' anomaly means system already tried to kill this once \u2014 it's a zombie position. Multi-day +30% runner entered at exhaustion peak. Force market order at open to prevent gap-down adding to losses. This is not a trading decision, it's damage control."
+      },
+      {
+        "symbol": "CTMX",
+        "action": "exit",
+        "reason": "IMMEDIATE EXIT: Down -2.4% ($56 locked loss), exit order pending 60+ minutes UNFILLED. Entered at 19:19 in illiquid after-hours session, instantly underwater, never went green. Observer explicitly flags 'entry discipline breakdown \u2014 should never have been entered.' Force market order at open to close before slippage worsens. Historical CTMX: 100% win rate over 2 trades ($20.62 profit) \u2014 this third entry is destroying that record."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL SECTORS \u2014 trading halt in effect"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "FULL TRADING HALT: 32.9% win rate, -$173.72 total P&L, 15-trade max loss streak, catastrophic execution infrastructure (768+ failed trailing stops on HIMX alone). The fast_path is entering blind positions after market close (NEBX at 19:17 ET, CTMX at 19:19 ET) with ZERO specialist validation. This is not a strategy problem \u2014 this is a SYSTEM INTEGRITY CRISIS."
+      },
+      {
+        "param": "REQUIRE_SPECIALIST_DATA",
+        "current": false,
+        "suggested": true,
+        "reason": "Game film shows 280 breakout_fast_path trades with 36.4% win rate and -$118.29 P&L. Observer confirms 'ZERO specialist data available' on both current positions. Mandate all 5 specialist agents (technical/sentiment/catalyst/risk/macro) return valid data BEFORE any entry is allowed."
+      },
+      {
+        "param": "BLOCK_EXTENDED_HOURS_ENTRY",
+        "current": false,
+        "suggested": true,
+        "reason": "Both current disasters entered during after-hours (NEBX 19:17 ET, CTMX 19:19 ET) when market closed at 16:00 ET. Exit orders can't fill due to illiquidity. Recent game film: 59 trades in hour 19 with 27.1% win rate and -$68.62 P&L. Extended hours trading with this infrastructure is gambling, not edge."
+      },
+      {
+        "param": "MIN_HOLD_TIME_BEFORE_EXIT",
+        "current": 0,
+        "suggested": 180,
+        "reason": "Game film shows avg loser hold = 110.5 min vs avg winner hold = 32.8 min \u2014 we're holding losers 3.4x longer than winners. But <5min trades have 32.2% win rate and -$192.65 P&L (292 trades). Force 3min minimum to prevent panic exits on positions that just need volatility to work."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "current": 3.0,
+        "suggested": 2.0,
+        "reason": "NEBX is down -20.8% despite 3% stop \u2014 trailing stops are failing catastrophically (768+ failed attempts on single symbol). Tighter 2% hard stop creates smaller losses when protection inevitably fails. Avg loss is -$2.13 \u2014 at 2.5% position size, 2% stop = -$12.50 max loss vs current -$18.75."
+      }
+    ],
+    "key_insight": "This is not a market problem or a strategy problem \u2014 this is an OPERATIONAL EMERGENCY. The execution infrastructure is catastrophically broken: (1) Fast-path entering positions AFTER MARKET CLOSE with zero validation, (2) Trailing stops failing 768+ times on single symbols, (3) Exit orders pending 60+ minutes with zero fills, (4) Broker reloading positions the system already killed. You cannot trade profitably when the machinery itself is sabotaging you. EXIT both positions at market open, disable ALL trading, and do not resume until: (1) Specialist data pipeline proven reliable, (2) Extended hours entries hard-blocked, (3) Trailing stop infrastructure rebuilt and tested, (4) Position reconciliation logic prevents zombie reloads. The $353 locked in these two positions is TUITION \u2014 pay it and fix the foundation before it costs you the entire account.",
+    "timestamp": 1773707869.4217596
+  },
+  {
+    "strategy": "EMERGENCY HALT CONFIRMED - Two trapped extended-hours positions bleeding with unfilled exit orders for 70-150 minutes during illiquid after-hours session. System integrity catastrophically compromised.",
+    "position_advice": [
+      {
+        "symbol": "NEBX",
+        "action": "exit",
+        "reason": "CRITICAL EMERGENCY: Down -20.8% ($77.59 unrealized loss), exit order pending 150 minutes unfilled since 19:20 ET. Ghost position that broker resynced after local removal = data corruption. Entered at $53.47 peak of +30% parabolic spike, now $42.37. After-hours illiquidity preventing exit execution. Gap-down risk overnight is EXTREME on exhausted runner. FORCE MANUAL MARKET ORDER AT OPEN if broker order still unfilled."
+      },
+      {
+        "symbol": "CTMX",
+        "action": "exit",
+        "reason": "CRITICAL EMERGENCY: Down -2.4%, exit order pending 70 minutes unfilled since 19:20 ET. Entered after-hours 19:17 ET with ZERO liquidity, failed instantly (MFE -1.49%), never recovered. This is the exact entry discipline breakdown pattern Observer flagged. Position should NEVER have been entered in AH. Extended hours = no protection, no execution. FORCE MANUAL MARKET ORDER AT OPEN if unfilled."
+      }
+    ],
+    "sector_bias": {
+      "favor": [],
+      "avoid": [
+        "ALL - FULL TRADING HALT REMAINS IN EFFECT"
+      ]
+    },
+    "aggression_level": "decrease",
+    "parameter_suggestions": [
+      {
+        "param": "TRADING_ENABLED",
+        "current": true,
+        "suggested": false,
+        "reason": "SYSTEM FAILURE MODE: 2 positions trapped in after-hours with 70-150min unfilled exit orders due to illiquidity. Entry discipline collapse (CTMX entered AH 19:17). Ghost position infrastructure (NEBX broker-resynced after removal). 33% win rate unchanged. NO NEW ENTRIES until trapped positions liquidated and AH entry controls verified."
+      },
+      {
+        "param": "ALLOW_EXTENDED_HOURS_ENTRIES",
+        "current": "unknown",
+        "suggested": false,
+        "reason": "HARD DISABLE REQUIRED: CTMX entered 19:17 ET Monday proves extended hours entry controls are non-functional. After-hours entries create UNMANAGEABLE risk: no liquidity, no protection, no exit execution. Observer explicitly flags 'illiquid after-hours killing exit execution' and 'entry discipline breakdown'. This is not a parameter tweak - this is a safety-critical system failure."
+      },
+      {
+        "param": "MAX_POSITION_HOLD_EXTENDED_HOURS",
+        "current": "unknown",
+        "suggested": 0,
+        "reason": "Zero tolerance for extended hours exposure. NEBX shows 'trailing stops are unreliable' and exit orders stall for 2.5+ hours in AH. Gap risk on overnight holds is unacceptable when we can't exit positions. Close all positions before 16:00 ET market close or force exit at any price."
+      }
+    ],
+    "key_insight": "OPERATIONAL EMERGENCY SUPERSEDES ALL STRATEGY: $610 (2.2% equity) is TRAPPED in two positions that cannot exit due to after-hours illiquidity. Exit orders pending 70-150 minutes = execution infrastructure failure. NEBX is a 'ghost position' (broker resynced after local removal) indicating data integrity corruption at the position management layer. CTMX entered 19:17 ET Monday night = catastrophic entry controls failure allowing trades in zero-liquidity sessions. Heat metric shows 0.6% but real unmanaged risk is 10x higher - these positions could gap -50% at Tuesday open with no recourse. IMMEDIATE ACTIONS: (1) Force manual market orders at 09:30 ET open for both positions at ANY price - protecting remaining capital is priority #1. (2) Full system audit of extended hours controls - how did CTMX entry at 19:17 bypass all safeguards? (3) Position management data integrity review - why is NEBX a 'broker_reloaded_after_local_removal' ghost? (4) ZERO new entries until trapped capital recovered and infrastructure verified. This is not a 'bad trade day' - this is a system safety failure where positions are entering and persisting in conditions where we have no control.",
+    "timestamp": 1773711490.1894448
+  }
+]

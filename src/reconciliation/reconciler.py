@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from loguru import logger
 
+from config import settings
 from src import persistence
 from src.ai import trade_history
 from src.data.trade_schema import normalize_trade_record
@@ -23,14 +24,33 @@ class Reconciler:
         self.alpaca_client = alpaca_client
         self.entry_manager = entry_manager
         self.options_engine = options_engine
+        self._last_warning_sig = ""
+        self._last_warning_ts = 0.0
 
     def snapshot(self, trade_date: Optional[str] = None) -> Dict:
         previous = persistence.load_reconciliation_state() or {}
         broker = self.get_broker_truth(trade_date=trade_date)
+        self._backfill_broker_reconstructed_trades(broker)
+        self._sync_internal_positions_with_broker(broker)
+        self._cleanup_stale_pending_positions(broker)
         internal = self.get_internal_analytics(trade_date=trade_date or broker.get("date"), broker=broker)
         reconciliation = self.classify_mismatch(broker, internal)
         canaries = self.build_canaries(broker, internal, reconciliation, previous)
-        trust = self.build_trust_flags(reconciliation)
+        broker_api = self._broker_api_health()
+        prev_meta = previous.get("meta", {}) if isinstance(previous, dict) else {}
+        prev_consecutive_critical = int(prev_meta.get("consecutive_critical_mismatch", 0) or 0)
+        consecutive_critical = prev_consecutive_critical + 1 if reconciliation.get("status") == "critical_mismatch" else 0
+        threshold_critical = max(1, int(getattr(settings, "RECON_CRITICAL_CONSECUTIVE_ENTRY_BLOCK", 3) or 3))
+        threshold_429 = max(1, int(getattr(settings, "RECON_BROKER_429_TRIPWIRE_5M", 8) or 8))
+        entry_pause_due_to_critical = consecutive_critical >= threshold_critical
+        entry_pause_due_to_429 = int(broker_api.get("recent_429_total", 0) or 0) >= threshold_429
+        trust = self.build_trust_flags(
+            reconciliation=reconciliation,
+            consecutive_critical_mismatch=consecutive_critical,
+            entry_pause_due_to_critical=entry_pause_due_to_critical,
+            entry_pause_due_to_429=entry_pause_due_to_429,
+            broker_api=broker_api,
+        )
         payload = {
             "as_of": time.time(),
             "date": trade_date or broker.get("date") or time.strftime("%Y-%m-%d"),
@@ -39,9 +59,35 @@ class Reconciler:
             "reconciliation": reconciliation,
             "canaries": canaries,
             "trust": trust,
+            "broker_api": broker_api,
+            "meta": {
+                "consecutive_critical_mismatch": consecutive_critical,
+                "entry_pause_due_to_critical": entry_pause_due_to_critical,
+                "entry_pause_due_to_429": entry_pause_due_to_429,
+                "critical_tripwire_threshold": threshold_critical,
+                "broker_429_tripwire_threshold": threshold_429,
+            },
         }
         persistence.save_reconciliation_state(payload)
         if reconciliation.get("status") != "healthy":
+            warning_sig = "|".join(
+                [
+                    str(reconciliation.get("status", "")),
+                    str(reconciliation.get("broker_vs_pnl_state_diff", "")),
+                    str(reconciliation.get("broker_vs_trade_history_diff", "")),
+                    ",".join(sorted(reconciliation.get("reasons", []) or [])),
+                    ",".join(sorted(c.get("code", "") for c in canaries)),
+                ]
+            )
+            now_ts = float(time.time())
+            should_log = (
+                warning_sig != self._last_warning_sig
+                or (now_ts - float(self._last_warning_ts or 0.0)) >= 60.0
+            )
+            self._last_warning_sig = warning_sig
+            self._last_warning_ts = now_ts
+            if not should_log:
+                return payload
             logger.warning(
                 "BROKER TRUTH:\n"
                 f"equity={broker.get('equity')} last_equity={broker.get('last_equity')} "
@@ -60,6 +106,112 @@ class Reconciler:
                 f"canaries={','.join(c.get('code', '') for c in canaries)}"
             )
         return payload
+
+    def _backfill_broker_reconstructed_trades(self, broker: Dict):
+        broker_fill_ledger = (broker or {}).get("broker_fill_ledger", {}) if isinstance(broker, dict) else {}
+        trades = list(broker_fill_ledger.get("trades", []) or [])
+        if not trades:
+            return
+        existing = trade_history.load_all()
+        existing_keys = set()
+        for t in existing:
+            existing_keys.add(
+                (
+                    str(t.get("symbol", "")).upper(),
+                    round(float(t.get("exit_time", 0) or 0), 3),
+                    round(float(t.get("quantity", 0) or 0), 6),
+                    round(float(t.get("pnl", 0) or 0), 2),
+                    str(t.get("reason", "") or ""),
+                )
+            )
+        added = 0
+        for t in trades:
+            key = (
+                str(t.get("symbol", "")).upper(),
+                round(float(t.get("exit_time", 0) or 0), 3),
+                round(float(t.get("quantity", 0) or 0), 6),
+                round(float(t.get("pnl", 0) or 0), 2),
+                str(t.get("reason", "") or ""),
+            )
+            if key in existing_keys:
+                continue
+            trade_history.record_trade(t)
+            existing_keys.add(key)
+            added += 1
+        if added > 0:
+            logger.info(f"🧾 Backfilled {added} reconstructed broker trade(s) into history")
+
+    def _sync_internal_positions_with_broker(self, broker: Dict):
+        if not self.entry_manager or not hasattr(self.entry_manager, "sync_positions_from_brokerage"):
+            return
+        broker_positions = (broker or {}).get("broker_positions", {}) or {}
+        if not broker_positions:
+            return
+        normalized = []
+        for symbol, pos in broker_positions.items():
+            normalized.append(
+                {
+                    "symbol": str(symbol or "").upper(),
+                    "quantity": float((pos or {}).get("qty", 0) or 0),
+                    "side": str((pos or {}).get("side", "") or "long").lower(),
+                    "average_price": float((pos or {}).get("avg_entry_price", 0) or 0),
+                    "current_price": float((pos or {}).get("avg_entry_price", 0) or 0),
+                }
+            )
+        try:
+            updates = int(self.entry_manager.sync_positions_from_brokerage(normalized) or 0)
+            if updates > 0:
+                logger.info(f"🔧 Reconciler synced {updates} live position(s) from broker truth")
+        except Exception:
+            pass
+
+    def _broker_api_health(self) -> Dict:
+        if not self.alpaca_client:
+            return {"window_seconds": 300, "recent_429_total": 0, "endpoints": {}}
+        getter = getattr(self.alpaca_client, "get_reliability_snapshot", None)
+        if not callable(getter):
+            return {"window_seconds": 300, "recent_429_total": 0, "endpoints": {}}
+        try:
+            snap = getter() or {}
+            if not isinstance(snap, dict):
+                return {"window_seconds": 300, "recent_429_total": 0, "endpoints": {}}
+            return snap
+        except Exception:
+            return {"window_seconds": 300, "recent_429_total": 0, "endpoints": {}}
+
+    def _cleanup_stale_pending_positions(self, broker: Dict):
+        """
+        Remove local ghost positions that never materialized at broker.
+        We only purge long-lived `pending_new` states absent from broker symbols.
+        """
+        if not self.entry_manager:
+            return
+        positions = getattr(self.entry_manager, "positions", {}) or {}
+        if not positions:
+            return
+        broker_symbols = set((broker or {}).get("broker_positions", {}).keys())
+        now_ts = time.time()
+        stale_threshold_s = 30 * 60
+
+        for symbol, pos in list(positions.items()):
+            status = str(pos.get("order_status", "") or "").lower()
+            if status != "pending_new":
+                continue
+            if symbol in broker_symbols:
+                continue
+            entry_time = float(pos.get("entry_time", 0) or 0)
+            age_s = (now_ts - entry_time) if entry_time > 0 else stale_threshold_s + 1
+            if age_s < stale_threshold_s:
+                continue
+            logger.warning(
+                f"🧹 Reconciler purging stale pending_new ghost: {symbol} "
+                f"(age={int(age_s/60)}m, absent from broker positions)"
+            )
+            try:
+                self.entry_manager.remove_position(symbol)
+            except Exception:
+                # Fallback: direct pop if remove helper is unavailable.
+                positions.pop(symbol, None)
 
     def get_broker_truth(self, trade_date: Optional[str] = None) -> Dict:
         account = self.alpaca_client.get_account() if self.alpaca_client else {}
@@ -156,9 +308,9 @@ class Reconciler:
             "broker_fill_ledger": broker_fill_ledger,
             "broker_positions": {
                 str(p.get("symbol", "") or "").upper(): {
-                    "qty": float(p.get("qty", 0) or 0),
+                    "qty": float(p.get("qty", p.get("quantity", 0)) or 0),
                     "side": str(p.get("side", "") or "").lower(),
-                    "avg_entry_price": float(p.get("avg_entry_price", 0) or 0),
+                    "avg_entry_price": float(p.get("avg_entry_price", p.get("average_price", 0)) or 0),
                     "market_value": float(p.get("market_value", 0) or 0),
                 }
                 for p in positions
@@ -191,6 +343,26 @@ class Reconciler:
         today_trade_count = len(effective_today_trades)
         today_wins = len([t for t in effective_today_trades if float(t.get("pnl", 0) or 0) > 0])
         today_win_rate_pct = round(today_wins / max(1, today_trade_count) * 100.0, 2) if today_trade_count else 0.0
+        pnl_state_today_realized = round(float(pnl_state.get("today_realized_pnl", 0) or 0), 2)
+        pnl_state_total_realized = round(float(pnl_state.get("total_realized_pnl", 0) or 0), 2)
+        pnl_state_repaired = False
+        # Broker-derived reconstructed trades are the canonical source for today's
+        # closed-trade realized P&L when they are available.
+        if today_trade_count > 0 and abs(pnl_state_today_realized - today_realized) > 1.0:
+            delta = round(today_realized - pnl_state_today_realized, 2)
+            pnl_state["today_realized_pnl"] = today_realized
+            pnl_state["total_realized_pnl"] = round(pnl_state_total_realized + delta, 2)
+            try:
+                persistence.save_pnl_state(pnl_state)
+                pnl_state_today_realized = round(float(pnl_state.get("today_realized_pnl", 0) or 0), 2)
+                pnl_state_total_realized = round(float(pnl_state.get("total_realized_pnl", 0) or 0), 2)
+                pnl_state_repaired = True
+                logger.info(
+                    f"🧮 Reconciler repaired pnl_state today_realized -> {today_realized:.2f} "
+                    f"(delta={delta:+.2f})"
+                )
+            except Exception:
+                pass
         effective_today_symbols = sorted({
             str(t.get("symbol", "") or "").upper()
             for t in effective_today_trades
@@ -199,8 +371,8 @@ class Reconciler:
         game_film = self._load_json(DATA_DIR / "game_film.json")
         internal_positions = getattr(self.entry_manager, "positions", {}) if self.entry_manager else {}
         return {
-            "pnl_state_realized": round(float(pnl_state.get("total_realized_pnl", 0) or 0), 2),
-            "pnl_state_today_realized": round(float(pnl_state.get("today_realized_pnl", 0) or 0), 2),
+            "pnl_state_realized": pnl_state_total_realized,
+            "pnl_state_today_realized": pnl_state_today_realized,
             "pnl_state_trade_count": int(pnl_state.get("total_trades", 0) or 0),
             "trade_history_realized": today_realized,
             "trade_history_trade_count": today_trade_count,
@@ -215,6 +387,7 @@ class Reconciler:
             "broker_reconstructed_trade_count": int(broker_fill_ledger.get("trade_count", 0) or 0),
             "broker_reconstructed_unresolved_symbols": list(broker_fill_ledger.get("unresolved_symbols", []) or []),
             "broker_supplemental_trade_count": len(supplemental_trades),
+            "pnl_state_repaired": pnl_state_repaired,
             "internal_live_positions": {
                 str(symbol).upper(): {
                     "qty": float(pos.get("quantity", 0) or 0),
@@ -230,12 +403,18 @@ class Reconciler:
         broker_day_pnl = float(broker.get("day_pnl", 0) or 0)
         pnl_state_realized = float(internal.get("pnl_state_today_realized", 0) or 0)
         trade_history_realized = float(internal.get("trade_history_realized", 0) or 0)
+        broker_reconstructed_realized = float(internal.get("broker_reconstructed_realized", 0) or 0)
+        broker_reconstructed_trade_count = int(internal.get("broker_reconstructed_trade_count", 0) or 0)
+        unresolved_count = len(internal.get("broker_reconstructed_unresolved_symbols", []) or [])
         broker_supplemental_trade_count = int(internal.get("broker_supplemental_trade_count", 0) or 0)
         overnight_gap = float(broker.get("overnight_gap_pnl", 0) or 0)
         current_open_unrealized = float(broker.get("current_open_unrealized", 0) or 0)
         broker_closed_trade_estimate = round(broker_day_pnl - overnight_gap - current_open_unrealized, 2)
-        diff_pnl_state = round(broker_closed_trade_estimate - pnl_state_realized, 2)
-        diff_trade_history = round(broker_closed_trade_estimate - trade_history_realized, 2)
+        canonical_realized = broker_closed_trade_estimate
+        if broker_reconstructed_trade_count > 0:
+            canonical_realized = broker_reconstructed_realized
+        diff_pnl_state = round(canonical_realized - pnl_state_realized, 2)
+        diff_trade_history = round(canonical_realized - trade_history_realized, 2)
         effective_diff = max(abs(diff_pnl_state), abs(diff_trade_history))
         if broker_supplemental_trade_count > 0 and abs(diff_trade_history) <= 5:
             effective_diff = abs(diff_trade_history)
@@ -247,8 +426,13 @@ class Reconciler:
             broker_supplemental_trade_count > 0 and abs(diff_trade_history) <= 5
         ):
             reasons.append("internal_ledgers_diverge")
+        unresolved = set(internal.get("broker_reconstructed_unresolved_symbols") or [])
         if broker.get("broker_closed_symbols"):
-            missing = sorted(set(broker.get("broker_closed_symbols") or []) - set(internal.get("symbols_in_trade_history") or []))
+            missing = sorted(
+                set(broker.get("broker_closed_symbols") or [])
+                - set(internal.get("symbols_in_trade_history") or [])
+                - unresolved
+            )
             if missing:
                 reasons.append("broker_symbols_missing_from_internal")
             internal_missing = sorted(set(internal.get("symbols_in_trade_history") or []) - set(broker.get("symbols_with_broker_activity") or []))
@@ -258,21 +442,29 @@ class Reconciler:
             reasons.append("residual_position_drift")
         if internal.get("broker_reconstructed_unresolved_symbols"):
             reasons.append("broker_fill_ledger_unresolved")
-        if effective_diff > 10:
+        if effective_diff > 10 and unresolved_count == 0:
             reasons.append("internal_closed_trade_subset_only")
         if not broker.get("broker_history_available"):
             reasons.append("broker_history_unavailable")
 
         status = "healthy"
         severity = "healthy"
+        exposure_mismatch = self._has_live_exposure_mismatch(broker, internal)
         threshold = max(25.0, 0.005 * equity) if equity > 0 else 25.0
         if not broker.get("broker_history_available"):
             status = "minor_mismatch"
             severity = "warning"
         elif effective_diff > threshold:
-            status = "critical_mismatch"
-            severity = "critical"
-            reasons.append("broker_truth_canary_triggered")
+            if exposure_mismatch:
+                status = "critical_mismatch"
+                severity = "critical"
+                reasons.append("broker_truth_canary_triggered")
+            else:
+                # Large accounting divergence without live exposure drift should degrade
+                # analytics but not force permanent hard-stop behavior.
+                status = "minor_mismatch"
+                severity = "warning"
+                reasons.append("ledger_mismatch_no_live_exposure")
         elif effective_diff > 5:
             status = "minor_mismatch"
             severity = "warning"
@@ -280,14 +472,48 @@ class Reconciler:
             status = "minor_mismatch"
             severity = "warning"
 
+        # If only benign carryover artifacts remain and realized ledgers align,
+        # treat as healthy runtime state (with advisory reasons still attached).
+        benign_reasons = {
+            "residual_position_drift",
+            "broker_fill_ledger_unresolved",
+            "carryover_gap",
+        }
+        if (
+            not exposure_mismatch
+            and abs(diff_pnl_state) <= 1.0
+            and abs(diff_trade_history) <= 1.0
+            and reasons
+            and set(reasons).issubset(benign_reasons)
+        ):
+            status = "healthy"
+            severity = "healthy"
+
         return {
             "broker_vs_pnl_state_diff": diff_pnl_state,
             "broker_vs_trade_history_diff": diff_trade_history,
             "broker_closed_trade_estimate": broker_closed_trade_estimate,
+            "canonical_realized_source": "broker_reconstructed" if broker_reconstructed_trade_count > 0 else "broker_day_estimate",
+            "canonical_realized_pnl": round(canonical_realized, 2),
             "status": status,
             "severity": severity,
             "reasons": sorted(set(reasons)),
         }
+
+    @staticmethod
+    def _has_live_exposure_mismatch(broker: Dict, internal: Dict) -> bool:
+        broker_positions = (broker or {}).get("broker_positions", {}) or {}
+        internal_positions = (internal or {}).get("internal_live_positions", {}) or {}
+        broker_symbols = set(str(s or "").upper() for s in broker_positions.keys())
+        internal_symbols = set(str(s or "").upper() for s in internal_positions.keys())
+        if broker_symbols != internal_symbols:
+            return True
+        for symbol in broker_symbols:
+            b_qty = float((broker_positions.get(symbol, {}) or {}).get("qty", 0) or 0)
+            i_qty = float((internal_positions.get(symbol, {}) or {}).get("qty", 0) or 0)
+            if abs(b_qty - i_qty) > 0.001:
+                return True
+        return False
 
     def _build_broker_fill_ledger(self, trade_date: str, activities: List[Dict], end_positions: List[Dict]) -> Dict:
         grouped: Dict[str, List[Dict]] = {}
@@ -568,10 +794,24 @@ class Reconciler:
         return canaries
 
     @staticmethod
-    def build_trust_flags(reconciliation: Dict) -> Dict:
+    def build_trust_flags(
+        reconciliation: Dict,
+        consecutive_critical_mismatch: int = 0,
+        entry_pause_due_to_critical: bool = False,
+        entry_pause_due_to_429: bool = False,
+        broker_api: Optional[Dict] = None,
+    ) -> Dict:
         status = reconciliation.get("status", "minor_mismatch")
         broker_only = status == "critical_mismatch"
         degraded = status != "healthy"
+        degraded_reasons: List[str] = []
+        if broker_only:
+            degraded_reasons.append("critical_reconciliation")
+        if entry_pause_due_to_critical:
+            degraded_reasons.append("persistent_reconciliation_mismatch")
+        if entry_pause_due_to_429:
+            degraded_reasons.append("broker_api_rate_limited")
+        entry_pipeline_paused = bool(broker_only or entry_pause_due_to_critical or entry_pause_due_to_429)
         return {
             "topline_source": "broker",
             "positions_source": "broker",
@@ -583,6 +823,10 @@ class Reconciler:
             "dim_internal_stats": degraded and not broker_only,
             "allow_closed_trade_analytics": not broker_only,
             "allow_ai_summaries": not broker_only,
+            "entry_pipeline_paused": entry_pipeline_paused,
+            "degraded_mode_reasons": degraded_reasons,
+            "consecutive_critical_mismatch": int(consecutive_critical_mismatch or 0),
+            "broker_api_recent_429_total": int((broker_api or {}).get("recent_429_total", 0) or 0),
         }
 
     @staticmethod

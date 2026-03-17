@@ -23,6 +23,7 @@ _provider_timestamps: Dict[str, list] = {
 _api_calls: Dict[str, int] = {"claude": 0, "gpt": 0, "grok": 0, "perplexity": 0}
 _provider_backoff_until: Dict[str, float] = {}
 _provider_backoff_seconds: Dict[str, int] = {}
+_provider_external_rate_limit_hits: Dict[str, int] = {}
 _api_token_usage: Dict[str, Dict[str, float]] = {
     "claude": {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
     "gpt": {"prompt_tokens": 0.0, "completion_tokens": 0.0, "reasoning_tokens": 0.0, "cost_usd": 0.0},
@@ -211,6 +212,30 @@ def provider_is_backing_off(provider: str, now: Optional[float] = None) -> bool:
     return float(_provider_backoff_until.get(provider, 0.0) or 0.0) > now
 
 
+def _is_http_rate_limit_error(message: object) -> bool:
+    text = str(message or "").lower()
+    return "429" in text or "rate limit" in text or "too many requests" in text
+
+
+def _register_provider_backoff(provider: str, err: object, fallback_seconds: int = 12):
+    retry_after = 0
+    if isinstance(err, httpx.HTTPStatusError):
+        try:
+            retry_after = int(float((err.response.headers or {}).get("retry-after", "0") or 0))
+        except Exception:
+            retry_after = 0
+    last = int(_provider_backoff_seconds.get(provider, 0) or 0)
+    base = max(int(fallback_seconds), retry_after)
+    hits = int(_provider_external_rate_limit_hits.get(provider, 0) or 0) + 1
+    _provider_external_rate_limit_hits[provider] = hits
+    wait_seconds = min(60, max(base, last * 2 if last else base))
+    if hits >= 3:
+        wait_seconds = max(wait_seconds, 300)
+    _provider_backoff_seconds[provider] = wait_seconds
+    _provider_backoff_until[provider] = time.time() + wait_seconds
+    logger.warning(f"{provider} external rate limit detected; backing off for {wait_seconds}s (hit {hits})")
+
+
 def _get_eastern_hour() -> int:
     from datetime import datetime
 
@@ -228,6 +253,13 @@ def _get_provider_hourly_limit(provider: str, et_hour: Optional[int] = None) -> 
         et_hour = _get_eastern_hour()
 
     base_limit = int(_PROVIDER_LIMITS.get(provider, 60))
+    override_key = f"{str(provider or '').upper()}_MAX_CALLS_PER_HOUR"
+    override_value = getattr(settings, override_key, None)
+    try:
+        if override_value is not None:
+            base_limit = max(1, int(override_value))
+    except Exception:
+        pass
     if 4 <= et_hour < 20:
         return base_limit
 
@@ -394,10 +426,13 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
             payload = resp.json()
             _roll_usage_day_if_needed()
             _api_calls["gpt"] += 1
+            _provider_external_rate_limit_hits["gpt"] = 0
             _record_api_usage("gpt", payload)
             text = payload["choices"][0]["message"]["content"]
             return parse_json(text)
     except Exception as e:
+        if _is_http_rate_limit_error(e):
+            _register_provider_backoff("gpt", e, fallback_seconds=12)
         logger.error(f"GPT API error: {e}")
         return None
 
@@ -427,9 +462,12 @@ async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
             payload = resp.json()
             _roll_usage_day_if_needed()
             _api_calls["gpt"] += 1
+            _provider_external_rate_limit_hits["gpt"] = 0
             _record_api_usage("gpt", payload)
             return str(payload["choices"][0]["message"]["content"]).strip()
     except Exception as e:
+        if _is_http_rate_limit_error(e):
+            _register_provider_backoff("gpt", e, fallback_seconds=12)
         logger.error(f"GPT API error: {e}")
         return None
 

@@ -11,10 +11,10 @@ from src.agents.base_agent import call_perplexity
 
 DEFAULT_BRIEF = {
     "catalyst_type": "none",
-    "magnitude": 0,
+    "magnitude": 1,
     "timing": "pre",
-    "edge": "No catalyst identified",
-    "error": True,
+    "edge": "No data available — neutral catalyst fallback",
+    "error": False,
 }
 
 PROMPT_TEMPLATE = """You are a CATALYST RESEARCH specialist inside Velox, an autonomous momentum trading engine.

@@ -1,0 +1,28 @@
+{
+  "hard_disabled": {
+    "broker_reconciled": {
+      "disabled_at": "2026-03-17T03:08:50.454196Z",
+      "disabled_by": "game_film",
+      "pnl": -44.0,
+      "reason": "Hard disable: 20% WR over 44 trades, $-44.00 P&L",
+      "trades": 44,
+      "win_rate_pct": 20.5
+    }
+  },
+  "manual_disabled": {},
+  "manual_enabled": {},
+  "probation": {},
+  "size_reductions": {
+    "broker_reconciled": {
+      "multiplier": 0.5,
+      "reason": "Watch list throttle: 24% WR over 17 trades",
+      "updated_at": "2026-03-16T13:48:52.676458Z"
+    },
+    "carryover": {
+      "multiplier": 0.5,
+      "reason": "Watch list throttle: 21% WR over 28 trades",
+      "updated_at": "2026-03-17T03:08:50.454219Z"
+    }
+  },
+  "soft_disabled": {}
+}

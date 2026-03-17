@@ -11,9 +11,10 @@ import os
 import signal
 import sys
 import time
+from functools import partial
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from loguru import logger
 from dotenv import load_dotenv
@@ -48,6 +49,7 @@ from src import persistence
 from src.entry.entry_manager import EntryManager
 from src.exit.exit_manager import ExitManager
 from src.exit.extended_hours_guard import ExtendedHoursGuard
+from src.exit.profit_ratchet import ProfitRatchet
 from src.risk.risk_manager import RiskManager
 from src.ai.observer import Observer
 from src.ai.advisor import Advisor
@@ -67,7 +69,7 @@ from src.data.strategy_playbook import (
     normalize_bias_label,
     score_directional_biases,
 )
-from src.data.technicals import get_cached_rsi
+from src.data.technicals import compute_technicals, get_cached_rsi
 from src.options.options_monitor import OptionsMonitor
 from src.reconciliation.reconciler import Reconciler
 
@@ -112,6 +114,7 @@ class TradingBot:
         self._last_daily_reset_date = None
         self._processed_copy_trader_exit_ids = set()
         self._recorded_realized_keys = set()
+        self._symbol_loss_cooldown_until: Dict[str, float] = {}
         self._tomorrow_thesis_cache = None
         self._tomorrow_thesis_cache_at = 0.0
 
@@ -124,6 +127,7 @@ class TradingBot:
         self.twitter_client: TwitterSentimentClient = None
         self.entry_manager: EntryManager = None
         self.exit_manager: ExitManager = None
+        self.profit_ratchet: ProfitRatchet = None
         self.risk_manager: RiskManager = None
         self.options_monitor: OptionsMonitor = None
         self.reconciler: Optional[Reconciler] = None
@@ -142,6 +146,77 @@ class TradingBot:
     def _signal_handler(self, sig, frame):
         logger.warning("Shutdown signal received")
         self.stop()
+
+    async def _provider_health_check(self) -> Dict[str, Dict]:
+        """
+        Validate jury providers before entering the market loop.
+        This surfaces configuration/quota/model failures explicitly at startup.
+        """
+        from src.agents.base_agent import call_claude, call_gpt, call_grok
+
+        prompt = (
+            'Return only JSON: {"decision":"SKIP","size_pct":0,"trail_pct":3,'
+            '"reasoning":"health_check","confidence":1}'
+        )
+        checks = [("claude", call_claude), ("gpt", call_gpt), ("grok", call_grok)]
+        status: Dict[str, Dict] = {}
+        rate_limited_providers: List[str] = []
+
+        def _is_rate_limited(msg: str) -> bool:
+            text = str(msg or "").lower()
+            return "429" in text or "rate limit" in text or "too many requests" in text
+
+        for name, caller in checks:
+            started = time.time()
+            ok = False
+            err = ""
+            try:
+                result = await asyncio.wait_for(caller(prompt, max_tokens=120), timeout=30)
+                ok = isinstance(result, dict) and bool(result)
+                if not ok:
+                    err = "no_response_or_invalid_json"
+                    if name == "gpt":
+                        # GPT commonly warms up behind provider-side burst limits right after restart.
+                        await asyncio.sleep(2.0)
+                        retry = await asyncio.wait_for(caller(prompt, max_tokens=120), timeout=30)
+                        ok = isinstance(retry, dict) and bool(retry)
+                        if ok:
+                            err = ""
+            except Exception as e:
+                err = str(e)
+                if name == "gpt" and _is_rate_limited(err):
+                    await asyncio.sleep(2.0)
+                    try:
+                        retry = await asyncio.wait_for(caller(prompt, max_tokens=120), timeout=30)
+                        ok = isinstance(retry, dict) and bool(retry)
+                        if ok:
+                            err = ""
+                    except Exception as retry_e:
+                        err = str(retry_e)
+            status[name] = {
+                "ok": ok,
+                "error": err,
+                "latency_ms": int((time.time() - started) * 1000),
+            }
+            if not ok and _is_rate_limited(err):
+                rate_limited_providers.append(name)
+            if ok:
+                logger.info(f"✅ Provider health: {name} ok ({status[name]['latency_ms']}ms)")
+            else:
+                log_fn = logger.warning if _is_rate_limited(err) else logger.error
+                log_fn(
+                    f"❌ Provider health: {name} failed "
+                    f"({status[name]['latency_ms']}ms) err={err or 'unknown'}"
+                )
+
+        failed = [name for name, info in status.items() if not info.get("ok")]
+        non_rate_limit_failures = [name for name in failed if name not in rate_limited_providers]
+        if len(non_rate_limit_failures) >= 2:
+            logger.critical(
+                f"🚨 Provider panel degraded at startup: failed={failed}. "
+                "Jury reliability is reduced until providers recover."
+            )
+        return status
 
     async def initialize(self):
         """Initialize all components."""
@@ -268,8 +343,9 @@ class TradingBot:
             risk_manager=self.risk_manager,
             entry_manager=self.entry_manager,
         )
+        self.profit_ratchet = ProfitRatchet()
 
-        # Extended hours guard (dynamic limit sells when trailing stops don't work)
+        # Extended hours guard (software-managed protection outside regular session)
         self.extended_guard = ExtendedHoursGuard(
             alpaca_client=self.alpaca_client,
             polygon_client=self.polygon_client,
@@ -327,6 +403,7 @@ class TradingBot:
             "last_short_block_reason": None,
             "last_uw_stream_signal": None,
         }
+        self.ai_layers["provider_health"] = await self._provider_health_check()
 
         # ── Fail-Closed Startup: broker is canonical ──────────────────
         self._broker_ready = False
@@ -397,7 +474,6 @@ class TradingBot:
 
         # Trade updates stream: instant order fill detection
         self.trade_stream.set_fill_callback(self._on_trade_update_fill)
-        self.trade_stream.set_stop_callback(self._on_trailing_stop_filled)
         await self.trade_stream.start()
 
         # Unusual Whales realtime stream: live flow alerts + dark pool prints
@@ -425,6 +501,21 @@ class TradingBot:
                 logger.error("Broker health check returned empty account — entries BLOCKED")
         except Exception as _be:
             logger.error(f"Broker health check failed: {_be} — entries BLOCKED until next cycle")
+
+        # Force a fresh reconciliation baseline at startup so we do not carry
+        # stale critical state across restarts.
+        if self.reconciler:
+            try:
+                recon_state = await asyncio.get_event_loop().run_in_executor(None, self.reconciler.snapshot)
+                self.ai_layers["reconciliation"] = recon_state.get("reconciliation", {})
+                self.ai_layers["broker_truth"] = recon_state.get("broker", {})
+                recon = recon_state.get("reconciliation", {}) or {}
+                logger.info(
+                    f"🧭 Startup reconciliation baseline: {recon.get('status', 'unknown')} "
+                    f"reasons={','.join(recon.get('reasons', []) or [])}"
+                )
+            except Exception as e:
+                logger.warning(f"Startup reconciliation baseline failed: {e}")
 
         persistence.clear_shutdown_marker()
         logger.success("All components initialized")
@@ -573,6 +664,12 @@ class TradingBot:
                     except Exception as e:
                         logger.error(f"Scan error: {e}")
 
+                # ── BREAKOUT FAST-PATH ROUTING ────────────────────
+                try:
+                    await self._process_breakout_queue()
+                except Exception as e:
+                    logger.error(f"Breakout queue error: {e}")
+
                 # ── MONITOR pending orders (adjust stale limits) ──
                 try:
                     await self._monitor_pending_orders()
@@ -611,13 +708,6 @@ class TradingBot:
                             log_activity("trade", f"🛡️ {sym}: {action}")
                 except Exception as e:
                     logger.error(f"Extended guard error: {e}")
-
-                # ── FAST-PATH SCOUT EVALUATION ────────────────────
-                # Evaluate held scout positions on 5-second cadence.
-                try:
-                    await self._evaluate_fast_path_scouts()
-                except Exception as e:
-                    logger.error(f"Fast-path scout eval error: {e}")
 
                 await asyncio.sleep(monitor_interval)
 
@@ -1400,16 +1490,6 @@ class TradingBot:
                     self.ai_layers["last_advice"] = adv_text
                     log_activity("ai", f"🎯 Advisor: {adv_text[:300]}")
 
-                exit_agent = getattr(getattr(self, "orchestrator", None), "exit_agent", None)
-                if self.advisor and exit_agent and self.entry_manager:
-                    try:
-                        await exit_agent._check_advisor_recommendations(
-                            self.entry_manager.get_positions(),
-                            self.advisor,
-                        )
-                    except Exception as e:
-                        logger.debug(f"Advisor exit check failed: {e}")
-
                 # Tuner (every 30 min)
                 tun = await self.tuner.run(self, self.advisor.get_last_output())
                 if tun and tun.get("applied"):
@@ -1481,6 +1561,107 @@ class TradingBot:
         if str(direction or "BUY").upper() == "SHORT":
             return biases["bearish"] >= 2 and biases["bearish"] > biases["bullish"]
         return biases["bullish"] >= 2 and biases["bullish"] > biases["bearish"]
+
+    @staticmethod
+    def _entry_session_label(now: Optional[datetime] = None) -> str:
+        try:
+            import zoneinfo
+
+            et = zoneinfo.ZoneInfo("US/Eastern")
+            current = now.astimezone(et) if now else datetime.now(et)
+        except Exception:
+            current = now or datetime.now()
+        if current.weekday() >= 5:
+            return "closed"
+        hour = current.hour
+        minute = current.minute
+        if (hour == 9 and minute >= 30) or (10 <= hour < 16):
+            return "regular"
+        if (4 <= hour < 9) or (hour == 9 and minute < 30):
+            return "pre"
+        if 16 <= hour < 20:
+            return "after"
+        return "overnight"
+
+    def _derive_signal_tier(self, candidate: Dict) -> str:
+        premium_candidates = [
+            candidate.get("uw_total_premium"),
+            candidate.get("premium"),
+            candidate.get("bullish_premium"),
+            candidate.get("bearish_premium"),
+        ]
+        max_premium = 0.0
+        for value in premium_candidates:
+            try:
+                max_premium = max(max_premium, float(value or 0))
+            except Exception:
+                continue
+        if max_premium >= 500000:
+            return "tier_1"
+
+        source = str(candidate.get("source", "") or "").lower()
+        strategy_tag = str(candidate.get("strategy_tag", "") or "").lower()
+        if any(tag in source for tag in ("stocktwits", "grok_x", "watchlist")):
+            return "tier_3"
+        if strategy_tag.startswith("copy_trader_"):
+            return "tier_3"
+        return "tier_2"
+
+    @staticmethod
+    def _derive_holding_horizon(candidate: Dict) -> str:
+        if candidate.get("holding_horizon"):
+            return str(candidate.get("holding_horizon") or "intraday")
+        strategy_tag = str(candidate.get("strategy_tag", "") or "").lower()
+        if any(tag in strategy_tag for tag in ("pharma", "copy_trader", "watchlist")):
+            return "swing"
+        if candidate.get("earnings") or candidate.get("earnings_date") or candidate.get("catalyst_date"):
+            return "multiday"
+        return "intraday"
+
+    @staticmethod
+    def _build_uw_flow_summary(candidate: Dict) -> str:
+        premium = float(candidate.get("uw_total_premium", 0) or 0)
+        direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "LONG"
+        sentiment = str(candidate.get("uw_flow_sentiment", "neutral") or "neutral")
+        net_premium = str(candidate.get("uw_net_premium", "") or "None")
+        net_bias = str(candidate.get("uw_net_premium_bias", "neutral") or "neutral")
+        dark_pool_bias = str(candidate.get("uw_dark_pool_bias", "neutral") or "neutral")
+        parts = [
+            f"premium=${premium:,.0f}" if premium > 0 else "premium=None",
+            f"direction={direction}",
+            f"sentiment={sentiment}",
+            f"net_premium_bias={net_bias}",
+            f"dark_pool_bias={dark_pool_bias}",
+        ]
+        if net_premium and net_premium != "None":
+            parts.append(f"net_premium={net_premium}")
+        news = str(candidate.get("uw_news_summary", "") or "").strip()
+        chain = str(candidate.get("uw_chain_summary", "") or "").strip()
+        if news:
+            parts.append(f"news={news}")
+        if chain:
+            parts.append(f"chain={chain}")
+        return " | ".join(parts)
+
+    def _prepare_candidate_metadata(self, candidate: Dict) -> Dict:
+        prepared = dict(candidate or {})
+        direction = "SHORT" if str(prepared.get("side", "")).lower() == "short" else "BUY"
+        prepared["strategy_tag"] = str(
+            prepared.get("strategy_tag")
+            or self._derive_strategy_tag(prepared, direction)
+            or "unknown"
+        )
+        prepared["signal_tier"] = str(prepared.get("signal_tier") or self._derive_signal_tier(prepared))
+        prepared["holding_horizon"] = str(prepared.get("holding_horizon") or self._derive_holding_horizon(prepared))
+        prepared["market_regime"] = str(
+            prepared.get("market_regime")
+            or getattr(self, "scan_regime", "")
+            or getattr(self, "scan_regime_raw", "")
+            or "mixed"
+        ).lower()
+        prepared["uw_flow_summary"] = str(prepared.get("uw_flow_summary") or self._build_uw_flow_summary(prepared))
+        prepared["extended_hours"] = self._entry_session_label() in {"pre", "after"}
+        return prepared
 
     def _evaluate_trade_gate(self, candidate: Dict, direction: str) -> Dict:
         annotated = annotate_candidate(candidate)
@@ -1616,12 +1797,28 @@ class TradingBot:
         recon = (reconciliation_state.get("reconciliation", {}) or {}) if isinstance(reconciliation_state, dict) else {}
         trust = (reconciliation_state.get("trust", {}) or {}) if isinstance(reconciliation_state, dict) else {}
         positions = self.entry_manager.get_positions() if getattr(self, "entry_manager", None) else []
+        guard_status = {}
+        if getattr(self, "extended_guard", None):
+            try:
+                guard_status = self.extended_guard.get_guard_status() or {}
+            except Exception:
+                guard_status = {}
+        extended_hours = bool(getattr(self, "extended_guard", None) and self.extended_guard.is_extended_hours())
         unprotected = []
         protection_failed = []
         for pos in positions or []:
             symbol = str(pos.get("symbol", "") or "")
             if pos.get("protection_failed"):
                 protection_failed.append(symbol)
+            order_status = str(pos.get("order_status", "") or "").lower()
+            entry_pending = order_status in {"new", "accepted", "pending", "partially_filled"}
+            has_extended_guard = bool((guard_status.get(symbol, {}) or {}).get("has_limit_order"))
+            # In extended hours, the software guard order is valid protection.
+            if extended_hours and has_extended_guard:
+                continue
+            # Do not block entry pipeline for positions still in entry/pending state.
+            if entry_pending:
+                continue
             if not pos.get("has_trailing_stop") and not pos.get("swing_only"):
                 unprotected.append(symbol)
         reasons = []
@@ -1629,6 +1826,9 @@ class TradingBot:
         if recon.get("status") == "critical_mismatch" or trust.get("broker_only_mode"):
             allow_new_entries = False
             reasons.append("critical_reconciliation")
+        if trust.get("entry_pipeline_paused"):
+            allow_new_entries = False
+            reasons.extend(list(trust.get("degraded_mode_reasons", []) or ["degraded_mode_pause"]))
         if protection_failed:
             allow_new_entries = False
             reasons.append("protection_failed")
@@ -1644,8 +1844,103 @@ class TradingBot:
             "broker_only_mode": bool(trust.get("broker_only_mode")),
             "unprotected_symbols": unprotected,
             "protection_failed_symbols": protection_failed,
-            "reasons": reasons,
+            "reasons": sorted(set(reasons)),
         }
+
+    def _log_guardrail_block(self, prefix: str, reasons: list):
+        # Avoid per-cycle log floods when guardrail reasons are unchanged.
+        if not hasattr(self, "_guardrail_block_log_state"):
+            self._guardrail_block_log_state = {}
+        now = time.time()
+        key = f"{prefix}:{','.join(sorted(reasons or []))}"
+        state = self._guardrail_block_log_state.get(prefix, {})
+        last_key = state.get("key")
+        last_ts = float(state.get("ts", 0) or 0)
+        if key != last_key or (now - last_ts) >= 120:
+            logger.warning(f"{prefix} blocked by operating guardrails: {','.join(reasons or [])}")
+            self._guardrail_block_log_state[prefix] = {"key": key, "ts": now}
+
+    @staticmethod
+    def _to_float_safe(value, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except Exception:
+            return default
+
+    def _symbol_loss_cooldown_remaining(self, symbol: str) -> float:
+        if not symbol:
+            return 0.0
+        cooldowns = getattr(self, "_symbol_loss_cooldown_until", {}) or {}
+        key = str(symbol).upper()
+        until = float(cooldowns.get(key, 0.0) or 0.0)
+        remaining = max(0.0, until - time.time())
+        if remaining <= 0 and key in cooldowns:
+            cooldowns.pop(key, None)
+        return remaining
+
+    def _infer_wyckoff_bias(self, signal_data: dict) -> str:
+        """
+        Lightweight Wyckoff state from live technical context.
+        """
+        signal_data = dict(signal_data or {})
+        ema_signal = str(signal_data.get("ema_signal", "neutral") or "neutral").lower()
+        vwap_pct = self._to_float_safe(signal_data.get("rolling_vwap_pct", 0.0), 0.0)
+        range_pct = self._to_float_safe(signal_data.get("range_pct", 50.0), 50.0)
+        vol_accel = self._to_float_safe(
+            signal_data.get("vol_accel", signal_data.get("volume_spike", 1.0)), 1.0
+        )
+        rsi = self._to_float_safe(signal_data.get("rsi_14", 50.0), 50.0)
+        obv_signal = "neutral"
+        for row in (signal_data.get("validated_indicator_signals", []) or []):
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("name", "") or "").lower()
+            if "obv" in name:
+                obv_signal = str(row.get("signal", "NEUTRAL") or "NEUTRAL").lower()
+                break
+
+        if ema_signal == "bearish" or vwap_pct < -0.35:
+            return "distribution_risk"
+        if range_pct >= 94.0 and rsi >= 80.0 and vol_accel <= 1.05:
+            return "upthrust_risk"
+        if ema_signal == "bullish" and vwap_pct >= 0.15 and 55.0 <= range_pct <= 98.0 and vol_accel >= 1.2:
+            if obv_signal in ("buy", "neutral"):
+                return "accumulation_markup"
+        return "neutral_transition"
+
+    def _allow_scout_override(self, candidate: dict, verdict) -> tuple:
+        """
+        Controlled fallback when jury unanimously SKIPs despite strong momentum.
+        Keeps capital velocity without bypassing core risk gates.
+        """
+        if not bool(getattr(settings, "JURY_SCOUT_OVERRIDE_ENABLED", False)):
+            return False, "scout_override_disabled", ""
+        detail = (getattr(verdict, "consensus_detail", {}) or {})
+        agreement = str(detail.get("agreement", "") or "")
+        if agreement not in {"unanimous_skip", "degraded_unanimous_skip"}:
+            return False, "agreement_not_unanimous_skip", ""
+        if detail.get("degraded") or detail.get("rate_limited_providers"):
+            return False, "degraded_or_rate_limited_panel", ""
+
+        risk_brief = (getattr(verdict, "briefs", {}) or {}).get("risk", {}) or {}
+        if isinstance(risk_brief, dict) and risk_brief.get("approved") is False:
+            return False, "risk_denied", ""
+
+        change_pct = self._to_float_safe(candidate.get("change_pct", 0.0), 0.0)
+        vol = self._to_float_safe(candidate.get("volume_spike", 0.0), 0.0)
+        spread = self._to_float_safe(candidate.get("spread_pct", 0.0), 0.0)
+        side_hint = str(candidate.get("side", "long") or "long").lower()
+        wyckoff_bias = str(candidate.get("wyckoff_bias", "") or "")
+        if spread > 1.2:
+            return False, "wide_spread", ""
+        if wyckoff_bias in {"distribution_risk", "upthrust_risk"}:
+            return False, f"wyckoff_{wyckoff_bias}", ""
+
+        if side_hint != "short" and change_pct >= 6.0 and vol >= 3.0:
+            return True, "strong_long_momentum", "BUY"
+        if side_hint == "short" and change_pct <= -5.0 and vol >= 2.5:
+            return True, "strong_short_momentum", "SHORT"
+        return False, "momentum_not_strong_enough", ""
 
     @staticmethod
     def _compute_entry_slippage_bps(entry_price: float, signal_price: float, side: str) -> float:
@@ -1672,6 +1967,10 @@ class TradingBot:
         
         if not self.risk_manager.can_trade():
             return
+        guardrails = self._get_operating_guardrails()
+        if not guardrails.get("allow_new_entries", True):
+            self._log_guardrail_block("⚡ FAST-PATH", guardrails.get("reasons", []))
+            return
 
         # Process up to 3 breakouts per cycle to avoid flooding
         processed = 0
@@ -1689,9 +1988,12 @@ class TradingBot:
                 continue
             
             logger.info(f"⚡ FAST-PATH evaluating: {symbol} @ ${candidate['price']:.2f} ({candidate['change_pct']:+.1f}%, {candidate['volume_spike']:.1f}x vol)")
-            
+
             # Run through the same orchestrator pipeline as normal candidates
-            await self._process_candidates([candidate])
+            try:
+                await self._process_candidates([candidate])
+            finally:
+                self._fast_path_pending.discard(symbol)
             processed += 1
 
     def _prune_uw_signal_dedupe(self):
@@ -1998,6 +2300,9 @@ class TradingBot:
             return False, "swing_mode_disabled"
         if symbol in self._fast_path_pending:
             return False, "already_pending"
+        cooldown_remaining = self._symbol_loss_cooldown_remaining(symbol)
+        if cooldown_remaining > 0:
+            return False, f"loss_cooldown_{int(cooldown_remaining)}s"
         self._prune_jury_vetoes()
         jury_vetoes = getattr(self, "_jury_vetoed_symbols", {})
         vetoed_at = jury_vetoes.get(symbol)
@@ -2071,6 +2376,12 @@ class TradingBot:
             return f"{brief.get('signal')}:{brief.get('confidence', 0)}"
         if "score" in brief:
             return f"score={brief.get('score', 0)}"
+        if "can_trade" in brief:
+            return (
+                f"can_trade={brief.get('can_trade')} "
+                f"size={brief.get('size_cap_pct', 0)} "
+                f"flags={brief.get('constraint_flags', [])}"
+            )
         if "approved" in brief:
             return f"approved={brief.get('approved')} size={brief.get('max_size_pct', 0)}"
         if "regime" in brief:
@@ -2125,6 +2436,17 @@ class TradingBot:
             "conviction_level": position.get("conviction_level", "normal"),
             "risk_tier": self.risk_manager.get_risk_tier().get("name", "?") if self.risk_manager else "?",
             "strategy_tag": position.get("strategy_tag", "unknown"),
+            "signal_tier": position.get("signal_tier", "tier_2"),
+            "holding_horizon": position.get("holding_horizon", "intraday"),
+            "market_regime": position.get("market_regime", "mixed"),
+            "entry_reason_code": position.get("entry_reason_code", "unknown"),
+            "entry_model_votes": dict(position.get("entry_model_votes", {}) or {}),
+            "risk_constraints_applied": list(position.get("risk_constraints_applied", []) or []),
+            "ratchet_peak_pnl_pct": position.get("ratchet_peak_pnl_pct", 0.0),
+            "ratchet_floor_pct": position.get("ratchet_floor_pct"),
+            "ratchet_limit_order_id": position.get("ratchet_limit_order_id"),
+            "hard_stop_order_id": position.get("hard_stop_order_id"),
+            "order_state": dict(position.get("order_state", {}) or {}),
             "signal_sources": position.get("signal_sources", ["unknown"]),
             "decision_confidence": position.get("decision_confidence", 0),
             "provider_used": position.get("provider_used", ""),
@@ -2146,7 +2468,7 @@ class TradingBot:
         return trade_record
 
     def _handle_fast_path_breakout(self, symbol: str, price: float, pct_change: float, volume_spike: float):
-        """Synchronous callback-safe breakout handler (zero network, in-memory checks only)."""
+        """Synchronous callback-safe breakout handler that routes breakouts into the jury queue."""
         passes, reason = self._passes_fast_path_deterministic_screen(symbol, price, pct_change, volume_spike)
         if not passes:
             logger.debug(f"⚡ FAST-PATH reject {symbol}: {reason}")
@@ -2162,18 +2484,22 @@ class TradingBot:
             "score": abs(pct_change) / 100 + volume_spike / 10,
             "signal_timestamp": signal_timestamp,
             "strategy_tag": "breakout_fast_path",
+            "signal_tier": "tier_2",
+            "holding_horizon": "intraday",
         }
 
         self._fast_path_pending.add(symbol)
         log_activity(
             "scan",
-            f"⚡ Fast-path scout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x (signal)",
+            f"⚡ Fast-path candidate: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x",
             {"signal_timestamp": signal_timestamp},
         )
         try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self._execute_fast_path_scout_entry(candidate))
-        except RuntimeError:
+            self._breakout_queue.put_nowait(candidate)
+        except asyncio.QueueFull:
+            logger.warning(f"⚡ Breakout queue full — dropping fast-path candidate for {symbol}")
+            self._fast_path_pending.discard(symbol)
+        except Exception:
             self._fast_path_pending.discard(symbol)
 
     async def _execute_fast_path_scout_entry(self, candidate: dict):
@@ -2186,12 +2512,38 @@ class TradingBot:
         volume_spike = float(candidate.get("volume_spike", 0) or 0)
         signal_timestamp = float(candidate.get("signal_timestamp", time.time()) or time.time())
         try:
+            tech = {}
+            if self.polygon_client:
+                try:
+                    tech = await compute_technicals(symbol, price, self.polygon_client) or {}
+                except Exception:
+                    tech = {}
+            if tech:
+                candidate.update(tech)
+            wyckoff_bias = self._infer_wyckoff_bias(candidate)
+            candidate["wyckoff_bias"] = wyckoff_bias
+            if bool(getattr(settings, "FAST_PATH_BLOCK_BEARISH_WYCKOFF", True)) and wyckoff_bias in {
+                "distribution_risk",
+                "upthrust_risk",
+            }:
+                logger.info(f"⚡ FAST-PATH blocked by Wyckoff gate for {symbol}: {wyckoff_bias}")
+                return
+
+            if not self.entry_manager.is_market_open():
+                logger.info(f"⚡ FAST-PATH blocked outside market hours: {symbol}")
+                return
+
             if (
                 self.risk_manager
                 and getattr(settings, "SWING_MODE_DISABLE_FAST_PATH", True)
                 and self.risk_manager.is_swing_mode()
             ):
                 logger.info(f"⚡ FAST-PATH skipped in swing mode: {symbol}")
+                return
+            spread_pct = self._to_float_safe(candidate.get("spread_pct", 0.0), 0.0)
+            max_spread = float(getattr(settings, "FAST_PATH_MAX_SPREAD_PCT", 0.80) or 0.80)
+            if spread_pct > max_spread:
+                logger.info(f"⚡ FAST-PATH blocked by spread for {symbol}: {spread_pct:.2f}% > {max_spread:.2f}%")
                 return
             min_entry_sent = float(getattr(settings, "MIN_ENTRY_SENTIMENT", 0.3) or 0.3)
             scout_score = max(0.75, min(1.0, min_entry_sent + 0.05))
@@ -2221,6 +2573,7 @@ class TradingBot:
                 "anomaly_flags": [],
                 "change_pct": pct_change,
                 "volume_spike": volume_spike,
+                "wyckoff_bias": wyckoff_bias,
             }
             pos = await self.entry_manager.enter_position(symbol, sentiment_data)
             if not pos:
@@ -2410,14 +2763,14 @@ class TradingBot:
         self._record_realized_exit(trade_record)
 
     async def _process_candidates(self, candidates):
-        """Evaluate scanner candidates for entry with position manager veto."""
+        """Evaluate scanner candidates for entry with v2 jury semantics."""
         if not getattr(self, "_broker_ready", False):
             return
         if not self.risk_manager.can_trade():
             return
         guardrails = self._get_operating_guardrails()
         if not guardrails.get("allow_new_entries", True):
-            logger.warning(f"⛔ Entry pipeline blocked by operating guardrails: {','.join(guardrails.get('reasons', []))}")
+            self._log_guardrail_block("⛔ Entry pipeline", guardrails.get("reasons", []))
             return
 
         self._prune_jury_vetoes()
@@ -2426,34 +2779,42 @@ class TradingBot:
         human_intel_store = getattr(self, "human_intel_store", None)
         edgar_scanner = getattr(self, "edgar_scanner", None)
 
-        # Evaluate candidates — skip held tickers and recently-SKIPped to find FRESH opportunities
+        def _tier_rank(candidate_row: Dict) -> int:
+            return {"tier_1": 0, "tier_2": 1, "tier_3": 2}.get(str(candidate_row.get("signal_tier", "tier_2")), 1)
+
+        prepared_candidates = [self._prepare_candidate_metadata(candidate) for candidate in list(candidates or [])[:20]]
+        prepared_candidates.sort(
+            key=lambda row: (
+                _tier_rank(row),
+                -float(row.get("priority", 0) or 0),
+                -float(row.get("uw_total_premium", 0) or 0),
+                -float(row.get("score", 0) or 0),
+            )
+        )
+
         evaluated = 0
         held_symbols = {p.get("symbol") for p in positions}
         evaluated_symbols = set()
-        for candidate in candidates[:20]:  # Look at top 20
-            if evaluated >= 8:  # Evaluate up to 8 per cycle (more diversity)
-                break
-            symbol = candidate["symbol"]
 
-            # Skip tickers we already hold (don't waste AI calls re-evaluating held positions)
-            if symbol in held_symbols:
+        for candidate in prepared_candidates:
+            if evaluated >= 8:
+                break
+
+            symbol = str(candidate.get("symbol", "") or "").upper()
+            if not symbol or symbol in held_symbols:
                 continue
             if symbol in evaluated_symbols:
                 logger.debug(f"Skipping duplicate candidate in same cycle: {symbol}")
                 continue
             evaluated_symbols.add(symbol)
 
-            sentiment_score = candidate.get("sentiment_score", 0)
-            sentiment_data = dict(self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score})
-            signal_price = float(candidate.get("price", 0) or 0)
-            signal_timestamp = float(candidate.get("signal_timestamp", time.time()) or time.time())
-            signal_sources = self._extract_signal_sources(candidate)
-            sentiment_data["signal_price"] = signal_price
-            sentiment_data["decision_price"] = signal_price
-            sentiment_data["signal_sources"] = signal_sources
-            sentiment_data["signal_timestamp"] = signal_timestamp
-            sentiment_data["entry_path"] = "jury"
-            sentiment_data["anomaly_flags"] = list(sentiment_data.get("anomaly_flags", []) or [])
+            cooldown_remaining = self._symbol_loss_cooldown_remaining(symbol)
+            if cooldown_remaining > 0:
+                logger.info(f"🧊 ENTRY COOLDOWN {symbol}: {int(cooldown_remaining)}s after recent loss")
+                continue
+
+            candidate["wyckoff_bias"] = self._infer_wyckoff_bias(candidate)
+
             if congress_scanner and not candidate.get("congress_trades"):
                 related_congress = [
                     trade for trade in getattr(congress_scanner, "_trades", [])
@@ -2482,7 +2843,6 @@ class TradingBot:
                         candidate["insider_activity"] = insider_activity.get("summary", "")
                         candidate["insider_signal"] = insider_activity.get("signal", "watch")
 
-            # Position manager veto check
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
                 logger.info(
                     f"🧭 ENTRY TRACE {symbol}: blocked before jury by position_manager "
@@ -2490,81 +2850,119 @@ class TradingBot:
                 )
                 continue
 
-            # Specialized Agent Orchestrator — 5 agents + jury
-            if self.orchestrator:
-                try:
-                    verdict = await self.orchestrator.evaluate(
-                        symbol=symbol,
-                        price=candidate.get("price", 0),
-                        signals_data=candidate,
-                    )
-                    # Only count as "evaluated" if we actually made AI calls (not cooldown skip)
-                    if "cooldown" not in verdict.reasoning.lower():
-                        evaluated += 1
-                        # Stagger AI calls to avoid rate limits
-                        if evaluated > 1:
-                            await asyncio.sleep(1.5)
-                    self.ai_layers["last_consensus"] = verdict.to_dict()
-                    consensus_detail = getattr(verdict, "consensus_detail", {}) or {}
-                    votes = consensus_detail.get("votes", {})
-                    briefs = getattr(verdict, "briefs", {}) or {}
-                    logger.info(
-                        f"🧭 JURY TRACE {symbol}: decision={verdict.decision} conf={verdict.confidence:.1f}% "
-                        f"agreement={consensus_detail.get('agreement', 'unknown')} "
-                        f"votes={votes} degraded={consensus_detail.get('degraded', False)} "
-                        f"rate_limited={consensus_detail.get('rate_limited_providers', [])}"
-                    )
-                    logger.info(
-                        f"🧭 BRIEFS {symbol}: tech={self._summarize_brief_for_trace(briefs.get('technical', {}))} "
-                        f"sent={self._summarize_brief_for_trace(briefs.get('sentiment', {}))} "
-                        f"cat={self._summarize_brief_for_trace(briefs.get('catalyst', {}))} "
-                        f"risk={self._summarize_brief_for_trace(briefs.get('risk', {}))} "
-                        f"macro={self._summarize_brief_for_trace(briefs.get('macro', {}))}"
-                    )
-                    if verdict.decision not in ("BUY", "SHORT"):
-                        if "cooldown" not in verdict.reasoning.lower():
-                            self._record_jury_veto(symbol)
-                            from src.data.entry_controls import record_jury_veto as _persist_veto
-                            _persist_veto(symbol)
-                            logger.info(f"Jury SKIP for {symbol}: {verdict.reasoning}")
-                            log_activity("ai", f"{symbol}: SKIP — {verdict.reasoning}")
-                        continue
-                    min_conf = float(getattr(settings, "MIN_JURY_CONFIDENCE", 40) or 40)
-                    if verdict.confidence < min_conf:
-                        logger.warning(f"Jury {verdict.decision} for {symbol} below confidence floor ({verdict.confidence:.0f}% < {min_conf:.0f}%) — forcing SKIP")
-                        log_activity("ai", f"{symbol}: {verdict.decision} blocked — confidence {verdict.confidence:.0f}% < {min_conf:.0f}% threshold")
-                        self._record_jury_veto(symbol)
-                        continue
-                    direction = verdict.decision
-                    if direction in ("BUY", "SHORT"):
-                        self._clear_jury_veto(symbol)
-                        from src.data.entry_controls import clear_jury_veto as _clear_persist_veto
-                        _clear_persist_veto(symbol)
-                    # Map jury sizing to consensus_size_modifier (0-1 range)
-                    tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
-                    tier_size = tier.get("size_pct", 2.0)
-                    size_modifier = min(1.0, verdict.size_pct / tier_size) if tier_size > 0 else 1.0
-                    log_activity("trade", f"🗳️ {symbol}: {direction} verdict! conf={verdict.confidence}% size={verdict.size_pct}% trail={verdict.trail_pct}%")
-                    sentiment_data["consensus_size_modifier"] = size_modifier
-                    sentiment_data["consensus_confidence"] = verdict.confidence
-                    sentiment_data["consensus_direction"] = direction
-                    sentiment_data["jury_trail_pct"] = verdict.trail_pct
-                    sentiment_data["provider_used"] = getattr(verdict, "provider_used", "")
-                    sentiment_data["consensus_agreement"] = (
-                        (getattr(verdict, "consensus_detail", {}) or {}).get("agreement", "")
-                    )
-                    sentiment_data["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
-                except Exception as e:
-                    logger.error(f"Orchestrator error for {symbol}: {e}")
-                    continue  # Never trade without agent consensus
+            sentiment_score = float(candidate.get("sentiment_score", 0) or 0)
+            sentiment_data = dict(self.sentiment_analyzer.get_cached(symbol) or {"score": sentiment_score})
+            signal_price = float(candidate.get("price", 0) or 0)
+            signal_timestamp = float(candidate.get("signal_timestamp", time.time()) or time.time())
+            signal_sources = self._extract_signal_sources(candidate)
+            sentiment_data["signal_price"] = signal_price
+            sentiment_data["decision_price"] = signal_price
+            sentiment_data["signal_sources"] = signal_sources
+            sentiment_data["signal_timestamp"] = signal_timestamp
+            sentiment_data["entry_path"] = "jury"
+            sentiment_data["anomaly_flags"] = list(sentiment_data.get("anomaly_flags", []) or [])
+            sentiment_data["signal_tier"] = candidate.get("signal_tier", "tier_2")
+            sentiment_data["holding_horizon"] = candidate.get("holding_horizon", "intraday")
+            sentiment_data["market_regime"] = candidate.get("market_regime", "mixed")
+            sentiment_data["uw_flow_summary"] = candidate.get("uw_flow_summary", "")
+            sentiment_data["strategy_tag"] = candidate.get("strategy_tag", "unknown")
+            sentiment_data["share_notional_multiplier"] = 1.0
 
-            logger.info(f"🔑 {symbol} REACHED ENTRY BLOCK (orchestrator={bool(self.orchestrator)})")
-            direction = sentiment_data.get("consensus_direction", "BUY")
-            sentiment_data.setdefault("provider_used", "")
-            sentiment_data.setdefault("consensus_confidence", 0)
-            sentiment_data.setdefault("strategy_tag", self._derive_strategy_tag(candidate, direction))
-            sentiment_data.setdefault("share_notional_multiplier", 1.0)
-            sentiment_data.setdefault("signal_timestamp", signal_timestamp)
+            if not self.orchestrator:
+                continue
+
+            try:
+                verdict = await self.orchestrator.evaluate(
+                    symbol=symbol,
+                    price=signal_price,
+                    signals_data=candidate,
+                )
+            except Exception as e:
+                logger.error(f"Orchestrator error for {symbol}: {e}")
+                continue
+
+            if "cooldown" not in verdict.reasoning.lower():
+                evaluated += 1
+                if evaluated > 1:
+                    await asyncio.sleep(1.5)
+
+            self.ai_layers["last_consensus"] = verdict.to_dict()
+            consensus_detail = getattr(verdict, "consensus_detail", {}) or {}
+            votes = dict(consensus_detail.get("votes", {}) or {})
+            briefs = getattr(verdict, "briefs", {}) or {}
+            risk_brief = briefs.get("risk", {}) or {}
+            agreement = str(consensus_detail.get("agreement", "unknown") or "unknown")
+
+            logger.info(
+                f"🧭 JURY TRACE {symbol}: tier={candidate.get('signal_tier')} decision={verdict.decision} "
+                f"conf={verdict.confidence:.1f}% agreement={agreement} votes={votes}"
+            )
+            logger.info(
+                f"🧭 BRIEFS {symbol}: tech={self._summarize_brief_for_trace(briefs.get('technical', {}))} "
+                f"sent={self._summarize_brief_for_trace(briefs.get('sentiment', {}))} "
+                f"cat={self._summarize_brief_for_trace(briefs.get('catalyst', {}))} "
+                f"risk={self._summarize_brief_for_trace(risk_brief)} "
+                f"macro={self._summarize_brief_for_trace(briefs.get('macro', {}))}"
+            )
+
+            if verdict.decision not in {"BUY", "SHORT"}:
+                if "cooldown" not in verdict.reasoning.lower():
+                    self._record_jury_veto(symbol)
+                    from src.data.entry_controls import record_jury_veto as _persist_veto
+
+                    _persist_veto(symbol)
+                    logger.info(f"Jury SKIP for {symbol}: {verdict.reasoning}")
+                    log_activity("ai", f"{symbol}: SKIP — {verdict.reasoning}")
+                continue
+
+            min_conf = float(getattr(settings, "MIN_JURY_CONFIDENCE", 40) or 40)
+            if verdict.confidence < min_conf:
+                logger.warning(
+                    f"Jury {verdict.decision} for {symbol} below confidence floor "
+                    f"({verdict.confidence:.0f}% < {min_conf:.0f}%) — forcing SKIP"
+                )
+                log_activity(
+                    "ai",
+                    f"{symbol}: {verdict.decision} blocked — confidence {verdict.confidence:.0f}% < {min_conf:.0f}%",
+                )
+                self._record_jury_veto(symbol)
+                continue
+
+            direction = verdict.decision
+            candidate["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
+            candidate = self._prepare_candidate_metadata(candidate)
+
+            tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
+            tier_size = float(tier.get("size_pct", 2.0) or 2.0)
+            size_modifier = min(1.0, verdict.size_pct / tier_size) if tier_size > 0 else 1.0
+
+            sentiment_data["consensus_size_modifier"] = size_modifier
+            sentiment_data["consensus_confidence"] = verdict.confidence
+            sentiment_data["consensus_direction"] = direction
+            sentiment_data["jury_trail_pct"] = verdict.trail_pct
+            sentiment_data["provider_used"] = getattr(verdict, "provider_used", "")
+            sentiment_data["consensus_agreement"] = agreement
+            sentiment_data["strategy_tag"] = candidate.get("strategy_tag", "unknown")
+            sentiment_data["signal_tier"] = candidate.get("signal_tier", "tier_2")
+            sentiment_data["holding_horizon"] = candidate.get("holding_horizon", "intraday")
+            sentiment_data["market_regime"] = candidate.get("market_regime", "mixed")
+            sentiment_data["entry_model_votes"] = votes
+            sentiment_data["risk_constraints_applied"] = list(risk_brief.get("constraint_flags", []) or [])
+            sentiment_data["entry_reason_code"] = f"jury_{agreement}"
+            sentiment_data["uw_flow_summary"] = candidate.get("uw_flow_summary", "")
+            sentiment_data["extended_hours"] = bool(candidate.get("extended_hours"))
+
+            log_activity(
+                "trade",
+                f"🗳️ {symbol}: {direction} verdict tier={candidate.get('signal_tier')} "
+                f"conf={verdict.confidence:.0f}% size={verdict.size_pct:.2f}%",
+            )
+
+            self._clear_jury_veto(symbol)
+            from src.data.entry_controls import clear_jury_veto as _clear_persist_veto
+
+            _clear_persist_veto(symbol)
+
             gate = self._evaluate_trade_gate(
                 {**candidate, "strategy_tag": sentiment_data.get("strategy_tag", "unknown")},
                 direction,
@@ -2575,11 +2973,15 @@ class TradingBot:
             sentiment_data["playbook_options_mode"] = candidate.get("playbook_options_mode", "off")
             if not gate.get("allowed", False):
                 reason = gate.get("reason", "playbook_block")
-                logger.info(f"⛔ PLAYBOOK GATE {symbol}: {reason} strategy={sentiment_data['strategy_tag']} direction={direction}")
+                logger.info(
+                    f"⛔ PLAYBOOK GATE {symbol}: {reason} "
+                    f"strategy={sentiment_data['strategy_tag']} direction={direction}"
+                )
                 log_activity("trade", f"⛔ PLAYBOOK GATE: {symbol} {direction} blocked ({reason})")
                 if direction == "SHORT":
                     self._record_short_verdict_block(symbol, reason, "playbook")
                 continue
+
             if candidate.get("copy_trader_context"):
                 sentiment_data["copy_trader_context"] = candidate.get("copy_trader_context", "")
                 sentiment_data["copy_trader_handles"] = list(candidate.get("copy_trader_handles", []) or [])
@@ -2589,6 +2991,7 @@ class TradingBot:
                 sentiment_data["copy_trader_size_multiplier"] = float(
                     candidate.get("copy_trader_size_multiplier", 1.0) or 1.0
                 )
+
             raw_sentiment_score = float(sentiment_score or 0)
             effective_sentiment_score = raw_sentiment_score
             if direction == "SHORT":
@@ -2597,11 +3000,12 @@ class TradingBot:
                 sentiment_data["score"] = effective_sentiment_score
             else:
                 sentiment_data["score"] = raw_sentiment_score
+
             logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
-            # For SHORT trades, invert sentiment check (negative sentiment = good for shorts)
             check_sentiment = -effective_sentiment_score if direction == "SHORT" else effective_sentiment_score
             can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
             gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
+
             risk_status = {}
             if self.risk_manager and hasattr(self.risk_manager, "get_status"):
                 try:
@@ -2618,67 +3022,66 @@ class TradingBot:
             )
             if direction == "SHORT" and not can:
                 self._record_short_verdict_block(symbol, gate_reason, "gate")
-            if can:
-                logger.info(f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} (score={candidate['score']:.3f}, sent={sentiment_score:.2f})")
+            if not can:
+                continue
 
-                # ── OPTIONS TRADE (if enabled) ──
-                options_budget = 0.0
-                options_pct = 0.0
-                options_engine = getattr(self, "options_engine", None)
-                if options_engine:
-                    confidence = sentiment_data.get("consensus_confidence", 0)
-                    options_pct = self._determine_options_allocation_pct(candidate, direction, confidence)
+            logger.info(
+                f"{'📈' if direction == 'BUY' else '📉'} Entry signal: {symbol} {direction} "
+                f"(score={float(candidate.get('score', 0) or 0):.3f}, sent={sentiment_score:.2f})"
+            )
 
-                    if options_pct > 0:
-                        tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
-                        equity = self.risk_manager.equity if self.risk_manager else 25000
-                        total_budget = equity * tier.get("size_pct", 2.5) / 100
-                        options_budget = total_budget * (options_pct / 100)
+            options_budget = 0.0
+            options_pct = 0.0
+            options_engine = getattr(self, "options_engine", None)
+            if options_engine:
+                confidence = sentiment_data.get("consensus_confidence", 0)
+                options_pct = self._determine_options_allocation_pct(candidate, direction, confidence)
+                if options_pct > 0:
+                    tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
+                    equity = self.risk_manager.equity if self.risk_manager else 25000
+                    total_budget = equity * tier.get("size_pct", 2.5) / 100
+                    options_budget = total_budget * (options_pct / 100)
 
-                        can_open_options = True
-                        if self.risk_manager:
-                            can_open_options = self.risk_manager.can_open_options(options_budget)
-                        if can_open_options:
-                            sentiment_data["change_pct"] = candidate.get("change_pct", 0)
-                            sentiment_data["volume_spike"] = candidate.get("volume_spike", 1.0)
-                            opt_pos = await options_engine.execute_option_trade(
-                                symbol=symbol,
-                                price=candidate.get("price", 0),
-                                direction=direction,
-                                budget=options_budget,
-                                sentiment_data=sentiment_data,
-                            )
-                            if opt_pos:
-                                options_cost = float(opt_pos.get("total_cost", 0) or 0)
-                                share_mult = 1.0
-                                if total_budget > 0:
-                                    share_mult = max(0.0, 1.0 - (options_cost / total_budget))
-                                sentiment_data["share_notional_multiplier"] = share_mult
-                                sentiment_data["options_budget_used"] = options_cost
-                                if self.risk_manager:
-                                    self.risk_manager.update_options_exposure(options_engine.get_options_positions())
-                                log_activity(
-                                    "options",
-                                    f"🎯 OPTIONS ENTRY: {opt_pos['qty']}x {opt_pos['contract_symbol']} @ ${opt_pos['entry_premium']:.2f}",
-                                )
-                            else:
-                                sentiment_data["share_notional_multiplier"] = 1.0
-                        else:
+                    can_open_options = True
+                    if self.risk_manager:
+                        can_open_options = self.risk_manager.can_open_options(options_budget)
+                    if can_open_options:
+                        sentiment_data["change_pct"] = candidate.get("change_pct", 0)
+                        sentiment_data["volume_spike"] = candidate.get("volume_spike", 1.0)
+                        opt_pos = await options_engine.execute_option_trade(
+                            symbol=symbol,
+                            price=candidate.get("price", 0),
+                            direction=direction,
+                            budget=options_budget,
+                            sentiment_data=sentiment_data,
+                        )
+                        if opt_pos:
+                            options_cost = float(opt_pos.get("total_cost", 0) or 0)
+                            share_mult = 1.0
+                            if total_budget > 0:
+                                share_mult = max(0.0, 1.0 - (options_cost / total_budget))
+                            sentiment_data["share_notional_multiplier"] = share_mult
+                            sentiment_data["options_budget_used"] = options_cost
+                            if self.risk_manager:
+                                self.risk_manager.update_options_exposure(options_engine.get_options_positions())
                             log_activity(
                                 "options",
-                                f"⛔ OPTIONS BLOCKED: {symbol} would exceed portfolio premium cap",
+                                f"🎯 OPTIONS ENTRY: {opt_pos['qty']}x {opt_pos['contract_symbol']} @ ${opt_pos['entry_premium']:.2f}",
                             )
+                        else:
+                            sentiment_data["share_notional_multiplier"] = 1.0
+                    else:
+                        log_activity("options", f"⛔ OPTIONS BLOCKED: {symbol} would exceed portfolio premium cap")
 
-                # ── SHARES TRADE (always, reduced size if options took some) ──
-                if direction == "SHORT":
-                    pos = await self.entry_manager.enter_short(symbol, sentiment_data)
-                else:
-                    pos = await self.entry_manager.enter_position(symbol, sentiment_data)
-                if direction == "SHORT" and not pos:
-                    order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
-                    self._record_short_verdict_block(symbol, order_reason, "execution")
-                if pos:
-                    positions = self.entry_manager.get_positions()
+            if direction == "SHORT":
+                pos = await self.entry_manager.enter_short(symbol, sentiment_data)
+            else:
+                pos = await self.entry_manager.enter_position(symbol, sentiment_data)
+            if direction == "SHORT" and not pos:
+                order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
+                self._record_short_verdict_block(symbol, order_reason, "execution")
+            if pos:
+                positions = self.entry_manager.get_positions()
 
     async def _monitor_pending_orders(self):
         """Monitor unfilled limit orders and adjust price if stale."""
@@ -2799,6 +3202,10 @@ class TradingBot:
             pass
 
         pnl = float(trade_record.get("pnl", 0))
+        if symbol and pnl < 0:
+            cooldown_seconds = int(getattr(settings, "SYMBOL_LOSS_COOLDOWN_SECONDS", 900) or 900)
+            if cooldown_seconds > 0:
+                self._symbol_loss_cooldown_until[str(symbol).upper()] = time.time() + cooldown_seconds
         if position:
             position["exit_recorded"] = True
             position["exit_finalized_at"] = float(trade_record.get("exit_time", time.time()) or time.time())
@@ -2830,6 +3237,17 @@ class TradingBot:
                     "copy_trader_signal_count",
                     "copy_trader_convergence",
                     "copy_trader_weight",
+                    "signal_tier",
+                    "holding_horizon",
+                    "market_regime",
+                    "entry_reason_code",
+                    "entry_model_votes",
+                    "risk_constraints_applied",
+                    "ratchet_peak_pnl_pct",
+                    "ratchet_floor_pct",
+                    "ratchet_limit_order_id",
+                    "hard_stop_order_id",
+                    "order_state",
                 )
                 for field in merge_fields:
                     pos_value = position.get(field)
@@ -2984,8 +3402,6 @@ class TradingBot:
 
         tighten_mult = max(0.1, float(getattr(settings, "COPY_TRADER_EXIT_TIGHTEN_MULT", 0.6) or 0.6))
         min_trail = max(0.5, float(getattr(settings, "COPY_TRADER_EXIT_MIN_TRAIL_PCT", 1.5) or 1.5))
-        auto_exit_enabled = bool(getattr(settings, "COPY_TRADER_AUTO_EXIT_STRONG", False))
-        strong_exit_min = max(2, int(getattr(settings, "COPY_TRADER_STRONG_EXIT_MIN_SIGNALS", 2) or 2))
 
         for signal in exit_signals:
             tweet_ids = [tid for tid in signal.get("copy_trader_exit_tweet_ids", []) if tid]
@@ -3013,77 +3429,324 @@ class TradingBot:
                 processed_ids.update(new_ids)
                 continue
 
-            current_trail = max(0.5, float(pos.get("trail_pct", 3.0) or 3.0))
+            current_trail = max(0.5, float(pos.get("trail_pct", ProfitRatchet.RATCHET_TRAIL_PCT) or ProfitRatchet.RATCHET_TRAIL_PCT))
             tightened_trail = max(min_trail, min(current_trail, current_trail * tighten_mult))
-            refreshed = False
-            if tightened_trail < current_trail:
-                refreshed = await self._refresh_position_trailing_stop(pos, tightened_trail)
             pos["copy_trader_exit_action"] = signal.get("copy_trader_exit_action", "trim")
             pos["copy_trader_exit_count"] = int(signal.get("copy_trader_exit_count", 0) or 0)
             pos["copy_trader_exit_handles"] = list(signal.get("copy_trader_exit_handles", []) or [])
             pos["copy_trader_exit_context"] = signal.get("copy_trader_exit_context", "")
             pos["copy_trader_exit_at"] = time.time()
+            pos["ratchet_tighten_suggestion_pct"] = tightened_trail
             self.ai_layers["last_copy_trader_exit_signal"] = f"{symbol} {pos['copy_trader_exit_context']}"
             log_activity(
                 "trade",
                 f"📣 {symbol}: copy-trader {pos['copy_trader_exit_action']} signal"
-                f" ({pos['copy_trader_exit_count']} handles) -> trail {tightened_trail:.1f}%",
+                f" ({pos['copy_trader_exit_count']} handles) -> ratchet tighten suggestion {tightened_trail:.1f}%",
                 {
                     "symbol": symbol,
                     "handles": pos["copy_trader_exit_handles"],
-                    "refreshed": refreshed,
+                    "suggested_trail_pct": tightened_trail,
                 },
             )
 
-            if (
-                auto_exit_enabled
-                and pos.get("copy_trader_exit_action") == "exit"
-                and pos.get("copy_trader_exit_count", 0) >= strong_exit_min
-                and not pos.get("swing_only")
-            ):
-                pos["copy_trader_auto_exit_ready"] = True
-                exit_manager = getattr(self, "exit_manager", None)
-                polygon_client = getattr(self, "polygon_client", None)
-                if exit_manager and polygon_client:
-                    try:
-                        current_price = await asyncio.get_event_loop().run_in_executor(
-                            None, polygon_client.get_price, symbol
-                        )
-                    except Exception:
-                        current_price = float(pos.get("entry_price", 0) or 0)
-                    entry_price = float(pos.get("entry_price", 0) or 0)
-                    pnl_pct = 0.0
-                    if entry_price and current_price:
-                        if pos.get("side", "long") == "short":
-                            pnl_pct = ((entry_price - current_price) / entry_price) * 100
-                        else:
-                            pnl_pct = ((current_price - entry_price) / entry_price) * 100
-                    qty = float(pos.get("quantity", 0) or 0)
-                    if qty > 0:
-                        await exit_manager._execute_exit(
-                            pos,
-                            qty,
-                            current_price,
-                            "copy_trader_exit_signal",
-                            pnl_pct,
-                        )
-
             processed_ids.update(new_ids)
 
+    @staticmethod
+    def _position_exit_side(position: dict) -> str:
+        return "buy" if position.get("side", "long") == "short" else "sell"
+
+    @staticmethod
+    def _order_is_hard_stop(order: dict) -> bool:
+        client_order_id = str(order.get("client_order_id", "") or "").lower()
+        order_type = str(order.get("type", "") or "").lower()
+        return order_type == "stop" or "hardstop" in client_order_id or "hard-stop" in client_order_id
+
+    @staticmethod
+    def _order_is_ratchet(order: dict) -> bool:
+        client_order_id = str(order.get("client_order_id", "") or "").lower()
+        return "ratchet" in client_order_id
+
+    def _infer_exit_reason_from_order(self, position: dict, order: dict) -> str:
+        order_id = str(order.get("id", "") or "")
+        if order_id and order_id == str(position.get("hard_stop_order_id", "") or ""):
+            return "hard_stop"
+        if order_id and order_id == str(position.get("ratchet_limit_order_id", "") or ""):
+            return "ratchet_exit"
+        if self._order_is_hard_stop(order):
+            return "hard_stop"
+        if self._order_is_ratchet(order):
+            return "ratchet_exit"
+        return str(position.get("last_exit_reason", "") or "broker_exit_fill")
+
+    async def _cancel_order_and_confirm(self, order_id: str) -> bool:
+        if not order_id or not self.alpaca_client:
+            return True
+        cancelled = await asyncio.get_event_loop().run_in_executor(
+            None, self.alpaca_client.cancel_order, order_id
+        )
+        if not cancelled:
+            return False
+        timeout_seconds = float(getattr(settings, "PROFIT_RATCHET_ORDER_CONFIRM_SECONDS", 3.0) or 3.0)
+        return await asyncio.get_event_loop().run_in_executor(
+            None, self.alpaca_client.wait_for_order_terminal, order_id, timeout_seconds
+        )
+
+    async def _cleanup_orphaned_protection_orders(self, open_orders: List[Dict]):
+        if not self.entry_manager or not self.alpaca_client:
+            return
+        held_symbols = {str(symbol).upper() for symbol in self.entry_manager.positions.keys()}
+        for order in open_orders:
+            symbol = str(order.get("symbol", "") or "").upper()
+            if not symbol:
+                continue
+            if not (self._order_is_hard_stop(order) or self._order_is_ratchet(order)):
+                continue
+            if symbol in held_symbols:
+                continue
+            order_id = str(order.get("id", "") or "")
+            if not order_id:
+                continue
+            logger.warning(f"🧹 Canceling orphaned protection order for {symbol}: {order_id}")
+            await self._cancel_order_and_confirm(order_id)
+
+    async def _ensure_hard_stop(self, position: dict, open_orders_by_symbol: Dict[str, List[Dict]], current_price: float):
+        if not self.alpaca_client or self._entry_session_label() != "regular":
+            position.setdefault("order_state", {})["hard_stop"] = "software_managed"
+            return
+
+        symbol = position.get("symbol", "")
+        qty = int(float(position.get("quantity", 0) or 0))
+        if qty < 1:
+            return
+
+        exit_side = self._position_exit_side(position)
+        existing_orders = [
+            order for order in (open_orders_by_symbol.get(symbol, []) or [])
+            if str(order.get("side", "") or "").lower() == exit_side and self._order_is_hard_stop(order)
+        ]
+        if existing_orders:
+            active_order = existing_orders[0]
+            position["hard_stop_order_id"] = active_order.get("id", position.get("hard_stop_order_id"))
+            position.setdefault("order_state", {})["hard_stop"] = "placed"
+            return
+
+        side = position.get("side", "long")
+        stop_price = ProfitRatchet.price_for_pnl(
+            float(position.get("entry_price", current_price) or current_price),
+            ProfitRatchet.HARD_STOP_PCT,
+            side,
+        )
+        if not stop_price:
+            return
+        client_order_id = ProfitRatchet.make_client_order_id(symbol, "hard-stop", stop_price)
+        order = await asyncio.get_event_loop().run_in_executor(
+            None,
+            partial(
+                self.alpaca_client.place_stop_loss_order,
+                symbol,
+                qty,
+                stop_price,
+                side,
+                client_order_id,
+            ),
+        )
+        if order:
+            position["hard_stop_price"] = stop_price
+            position["hard_stop_order_id"] = order.get("id", "")
+            position.setdefault("order_state", {})["hard_stop"] = "placed"
+            logger.info(f"🛡️ Hard stop placed for {symbol} @ ${stop_price:.2f}")
+        else:
+            position.setdefault("order_state", {})["hard_stop"] = "missing"
+            logger.warning(f"⚠️ Failed to place hard stop for {symbol}")
+
+    async def _place_or_replace_ratchet_order(
+        self,
+        position: dict,
+        target_price: float,
+        open_orders_by_symbol: Dict[str, List[Dict]],
+    ) -> bool:
+        if not self.alpaca_client or self._entry_session_label() != "regular":
+            return False
+
+        symbol = position.get("symbol", "")
+        qty = int(float(position.get("quantity", 0) or 0))
+        if qty < 1 or target_price <= 0:
+            return False
+
+        exit_side = self._position_exit_side(position)
+        ratchet_orders = [
+            order for order in (open_orders_by_symbol.get(symbol, []) or [])
+            if str(order.get("side", "") or "").lower() == exit_side and self._order_is_ratchet(order)
+        ]
+        active_order = None
+        current_id = str(position.get("ratchet_limit_order_id", "") or "")
+        for order in ratchet_orders:
+            if current_id and str(order.get("id", "") or "") == current_id:
+                active_order = order
+                break
+        if not active_order and ratchet_orders:
+            active_order = ratchet_orders[0]
+
+        current_limit = 0.0
+        if active_order:
+            try:
+                current_limit = float(active_order.get("limit_price", 0) or 0)
+            except Exception:
+                current_limit = 0.0
+        if active_order and abs(current_limit - target_price) < 0.01:
+            position["ratchet_limit_order_id"] = active_order.get("id", position.get("ratchet_limit_order_id"))
+            position["ratchet_order_type"] = str(active_order.get("type", "limit") or "limit")
+            position.setdefault("order_state", {})["ratchet"] = "placed"
+            return True
+
+        if active_order and active_order.get("id"):
+            cancelled = await self._cancel_order_and_confirm(str(active_order.get("id") or ""))
+            if not cancelled:
+                logger.warning(f"⚠️ Could not cancel prior ratchet order for {symbol}")
+                return False
+
+        client_order_id = ProfitRatchet.make_client_order_id(symbol, "ratchet", target_price)
+        side = position.get("side", "long")
+        if side == "short":
+            order = await asyncio.get_event_loop().run_in_executor(
+                None,
+                partial(
+                    self.alpaca_client.place_limit_cover,
+                    symbol,
+                    qty,
+                    target_price,
+                    False,
+                    client_order_id,
+                    True,
+                ),
+            )
+        else:
+            order = await asyncio.get_event_loop().run_in_executor(
+                None,
+                partial(
+                    self.alpaca_client.place_limit_sell,
+                    symbol,
+                    qty,
+                    target_price,
+                    False,
+                    client_order_id,
+                    True,
+                ),
+            )
+        if not order:
+            position.setdefault("order_state", {})["ratchet"] = "missing"
+            return False
+
+        position["ratchet_limit_order_id"] = order.get("id", "")
+        position["ratchet_order_type"] = str(order.get("type", "limit") or "limit")
+        position.setdefault("order_state", {})["ratchet"] = "placed"
+        logger.info(f"📈 Ratchet order updated for {symbol} @ ${target_price:.2f}")
+        return True
+
+    async def _submit_software_managed_exit(self, position: dict, current_price: float, reason: str) -> bool:
+        if not self.alpaca_client:
+            return False
+
+        symbol = position.get("symbol", "")
+        qty = int(float(position.get("quantity", 0) or 0))
+        if qty < 1 or current_price <= 0:
+            return False
+
+        side = position.get("side", "long")
+        extended = self._entry_session_label() in {"pre", "after"}
+        if side == "short":
+            limit_price = round(current_price * 1.002, 2)
+            order = await asyncio.get_event_loop().run_in_executor(
+                None,
+                partial(
+                    self.alpaca_client.place_limit_cover,
+                    symbol,
+                    qty,
+                    limit_price,
+                    extended,
+                    ProfitRatchet.make_client_order_id(symbol, reason, limit_price),
+                    True,
+                ),
+            )
+        else:
+            limit_price = round(current_price * 0.998, 2)
+            order = await asyncio.get_event_loop().run_in_executor(
+                None,
+                partial(
+                    self.alpaca_client.place_limit_sell,
+                    symbol,
+                    qty,
+                    limit_price,
+                    extended,
+                    ProfitRatchet.make_client_order_id(symbol, reason, limit_price),
+                    True,
+                ),
+            )
+        if not order:
+            return False
+
+        position["exit_pending"] = True
+        position["exit_order_id"] = order.get("id", "")
+        position["exit_submitted_at"] = time.time()
+        position["exit_fill_qty"] = 0.0
+        position["pending_exit_qty"] = qty
+        position["remaining_qty"] = 0.0
+        position["exit_scope"] = "full"
+        position["exit_recorded"] = False
+        position["last_exit_reason"] = reason
+        position["last_exit_attempt_at"] = time.time()
+        position.setdefault("order_state", {})["exit"] = "submitted"
+        logger.warning(f"🔴 Software-managed exit submitted for {symbol}: {reason} @ ${limit_price:.2f}")
+        return True
+
+    async def _apply_profit_ratchet_action(
+        self,
+        position: dict,
+        current_price: float,
+        action: dict,
+        open_orders_by_symbol: Dict[str, List[Dict]],
+    ):
+        position["ratchet_peak_pnl_pct"] = max(
+            float(position.get("ratchet_peak_pnl_pct", 0.0) or 0.0),
+            float(action.get("peak_pnl_pct", 0.0) or 0.0),
+        )
+        position["ratchet_floor_pct"] = action.get("floor_pct")
+        position["hard_stop_price"] = action.get("hard_stop_price") or position.get("hard_stop_price")
+        position.setdefault("order_state", {})
+
+        session = self._entry_session_label()
+        regular_session = session == "regular"
+        extended_session = session in {"pre", "after"}
+
+        if regular_session:
+            await self._ensure_hard_stop(position, open_orders_by_symbol, current_price)
+            if action.get("action") == "hard_stop" and not position.get("exit_pending"):
+                hard_stop_orders = [
+                    order for order in (open_orders_by_symbol.get(position.get("symbol", ""), []) or [])
+                    if str(order.get("side", "") or "").lower() == self._position_exit_side(position)
+                    and self._order_is_hard_stop(order)
+                ]
+                if not hard_stop_orders:
+                    await self._submit_software_managed_exit(position, current_price, "hard_stop")
+            if action.get("ratchet_active"):
+                target_exit_price = float(action.get("target_exit_price", 0) or 0)
+                if target_exit_price > 0:
+                    await self._place_or_replace_ratchet_order(position, target_exit_price, open_orders_by_symbol)
+            return
+
+        if extended_session:
+            position["order_state"]["hard_stop"] = "software_managed"
+            if action.get("ratchet_active"):
+                position["order_state"]["ratchet"] = "software_managed"
+            if action.get("action") in {"hard_stop", "ratchet_exit"} and not position.get("exit_pending"):
+                await self._submit_software_managed_exit(position, current_price, str(action.get("action") or "exit"))
+
     async def _monitor_positions(self):
-        """
-        Monitor positions — but DO NOT exit them.
-        Trailing stop % on Alpaca is the ONLY exit strategy.
-        This method only:
-          1. Verifies trailing stops exist (retries if missing)
-          2. Syncs positions with Alpaca (detect fills from trailing stops)
-          3. Records completed trades to history
-        """
+        """Monitor open positions with deterministic hard-stop and profit-ratchet control."""
         positions = self.entry_manager.get_positions()
         if not positions:
             return
 
-        # Get actual Alpaca positions to detect trailing stop fills
         try:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
                 None, self.alpaca_client.get_positions
@@ -3097,7 +3760,8 @@ class TradingBot:
             logger.debug(f"Alpaca position sync error: {e}")
             return
 
-        # Also get open orders to detect pending (unfilled) entries.
+        open_orders = []
+        open_orders_by_symbol: Dict[str, List[Dict]] = {}
         pending_entry_order_keys = set()
         try:
             open_orders = await asyncio.get_event_loop().run_in_executor(
@@ -3107,12 +3771,15 @@ class TradingBot:
                 (o.get("symbol", ""), o.get("side", ""))
                 for o in open_orders
                 if o.get("status") in ("new", "accepted", "pending_new", "partially_filled")
-                and o.get("type") != "trailing_stop"
+                and not self._order_is_hard_stop(o)
+                and not self._order_is_ratchet(o)
             }
+            for order in open_orders:
+                open_orders_by_symbol.setdefault(str(order.get("symbol", "") or ""), []).append(order)
+            await self._cleanup_orphaned_protection_orders(open_orders)
         except Exception:
             pending_entry_order_keys = set()
 
-        # Fetch closed orders once for reconciliation and confirmed-exit checks.
         needs_fill_backfill = any(not p.get("fill_timestamp") for p in positions)
         symbols_missing_from_broker = any(
             p.get("symbol", "") and p.get("symbol") not in alpaca_symbols for p in positions
@@ -3184,9 +3851,6 @@ class TradingBot:
                 if pos.get("halted"):
                     logger.debug(f"{symbol}: market halted — skipping monitor checks")
                     continue
-                # ── DETECT TRAILING STOP FILLS ──
-                # If we're tracking it but Alpaca no longer has it → trailing stop fired
-                # BUT: if there's still a pending entry order, the position hasn't opened yet.
                 side = pos.get("side", "long")
                 expected_entry_side = "sell" if side == "short" else "buy"
                 if (symbol, expected_entry_side) in pending_entry_order_keys:
@@ -3235,11 +3899,12 @@ class TradingBot:
                         continue
 
                     if pos.get("_exit_recorded") or pos.get("_exit_recording"):
-                        logger.debug(f"{symbol}: trailing stop exit already being/been recorded — skipping duplicate")
+                        logger.debug(f"{symbol}: exit already being/been recorded — skipping duplicate")
                         continue
                     pos["_exit_recording"] = True
                     try:
                         exit_price = float(latest_fill_price or pos.get("entry_price", 0) or 0)
+                        reason = self._infer_exit_reason_from_order(pos, latest)
                         logger.info(
                             f"📊 {symbol} exit fill found: ${exit_price:.2f} "
                             f"(type={latest.get('type')}, filled_at={latest_key[:19]})"
@@ -3250,7 +3915,6 @@ class TradingBot:
                                 qty = float(latest.get("filled_qty", qty) or qty)
                             except Exception:
                                 qty = float(pos.get("quantity", 0) or 0)
-                        reason = str(pos.get("last_exit_reason") or "trailing_stop")
                         trade_record = self._build_confirmed_exit_trade(
                             pos,
                             fill_price=exit_price,
@@ -3268,95 +3932,30 @@ class TradingBot:
                         emoji = "✅" if pnl >= 0 else "❌"
                         logger.info(f"{emoji} EXIT CONFIRMED: {symbol} P&L: ${pnl:.2f} ({pnl_pct:+.1f}%)")
                         log_activity("trade", f"{emoji} {symbol} exit confirmed: ${pnl:.2f} ({pnl_pct:+.1f}%)")
-                        if reason.startswith("trailing_stop"):
-                            await self._close_paired_options(symbol, reason="underlying_trailing_stop")
+                        if reason.startswith("ratchet"):
+                            await self._close_paired_options(symbol, reason="underlying_ratchet_exit")
+                        elif reason.startswith("hard_stop"):
+                            await self._close_paired_options(symbol, reason="underlying_hard_stop")
                     finally:
                         pos.pop("_exit_recording", None)
                     continue
                 else:
                     pos.pop("_missing_broker_warned", None)
 
-                # ── VERIFY TRAILING STOP EXISTS ──
-                if pos.get("_trail_adjusting"):
-                    logger.debug(f"⏳ {symbol} trail being adjusted by Exit Agent — skipping monitor check")
-                    continue
-                if not pos.get("has_trailing_stop"):
-                    if self.risk_manager and hasattr(self.risk_manager, "can_exit_position"):
-                        if not self.risk_manager.can_exit_position(pos, reason="trailing_stop", log_block=False):
-                            if not pos.get("_swing_trail_deferred_logged"):
-                                logger.info(f"🌙 {symbol} swing-only same-day position — trailing stop deferred")
-                                pos["_swing_trail_deferred_logged"] = True
-                            continue
-                        pos.pop("_swing_trail_deferred_logged", None)
-                    # During extended hours, trailing stops don't work on Alpaca.
-                    # ExtendedHoursGuard handles protection. Don't retry or emergency sell.
-                    from datetime import datetime
+                current_price = float(pos.get("current_price", 0) or 0)
+                if current_price <= 0 and self.polygon_client:
                     try:
-                        import zoneinfo
-                        _et_now = datetime.now(zoneinfo.ZoneInfo("US/Eastern"))
-                        _et_h, _et_m = _et_now.hour, _et_now.minute
-                        _in_regular_hours = (_et_h == 9 and _et_m >= 30) or (10 <= _et_h < 16)
-                    except Exception:
-                        _in_regular_hours = True  # assume regular if can't determine
-
-                    if not _in_regular_hours:
-                        if not pos.get("_ext_hours_logged"):
-                            logger.info(f"🌙 {symbol} — extended hours, skipping trailing stop (guard handles protection)")
-                            pos["_ext_hours_logged"] = True
-                        continue
-
-                    # First check if Alpaca already has a trailing stop for this symbol
-                    try:
-                        open_orders = await asyncio.get_event_loop().run_in_executor(
-                            None, self.alpaca_client.get_orders, "open"
+                        current_price = await asyncio.get_event_loop().run_in_executor(
+                            None, self.polygon_client.get_price, symbol
                         )
-                        for order in open_orders:
-                            if order.get("symbol") == symbol and order.get("type") == "trailing_stop":
-                                pos["has_trailing_stop"] = True
-                                pos["trailing_stop_order_id"] = order.get("id", "")
-                                logger.info(f"🔗 Found existing trailing stop for {symbol}: {order.get('id', '')[:8]}")
-                                break
                     except Exception:
-                        pass
+                        current_price = float(pos.get("entry_price", 0) or 0)
+                if current_price <= 0:
+                    continue
 
-                    if not pos.get("has_trailing_stop"):
-                        retry_count = pos.get("_trail_retry_count", 0) + 1
-                        pos["_trail_retry_count"] = retry_count
-                        logger.warning(f"⚠️ {symbol} has NO trailing stop — attempt {retry_count}/5")
-                        raw_qty = float(pos.get("quantity", 0) or 0)
-                        qty = int(raw_qty)
-                        trail_pct = pos.get("trail_pct", 3.0)
-                        side = pos.get("side", "long")
-                        trail_fn = self.alpaca_client.place_trailing_stop_short if side == "short" and hasattr(self.alpaca_client, "place_trailing_stop_short") else self.alpaca_client.place_trailing_stop
-                        if qty >= 1:
-                            stop_order = await asyncio.get_event_loop().run_in_executor(
-                                None, trail_fn, symbol, qty, trail_pct
-                            )
-                            if stop_order:
-                                pos["has_trailing_stop"] = True
-                                pos["trailing_stop_order_id"] = stop_order.get("id")
-                                pos["_trail_retry_count"] = 0
-                                logger.success(f"📈 Trailing stop placed: {symbol} trail={trail_pct}%")
-                            elif retry_count >= 2:
-                                logger.error(f"TRAILING STOP FAILED {retry_count}x for {symbol} — FORCED EXIT via exit_manager")
-                                entry_price = float(pos.get("entry_price", 0) or 0)
-                                if side == "short":
-                                    _pnl_pct = ((entry_price - float(pos.get("current_price", entry_price))) / entry_price * 100) if entry_price else 0
-                                else:
-                                    _pnl_pct = ((float(pos.get("current_price", entry_price)) - entry_price) / entry_price * 100) if entry_price else 0
-                                await self.exit_manager._execute_exit(pos, raw_qty, float(pos.get("current_price", entry_price)), "emergency_trail_failure", _pnl_pct)
-                                log_activity("alert", f"Emergency exit: {symbol} — trailing stop failed {retry_count}x")
-                            else:
-                                logger.warning(f"Trailing stop failed for {symbol} — will retry next cycle ({retry_count}/2)")
-                        elif pos.get("_dust_remainder") and raw_qty > 0:
-                            logger.warning(f"{symbol} fractional {raw_qty:.4f} — liquidating dust via exit_manager")
-                            entry_price = float(pos.get("entry_price", 0) or 0)
-                            if side == "short":
-                                _pnl_pct = ((entry_price - float(pos.get("current_price", entry_price))) / entry_price * 100) if entry_price else 0
-                            else:
-                                _pnl_pct = ((float(pos.get("current_price", entry_price)) - entry_price) / entry_price * 100) if entry_price else 0
-                            await self.exit_manager._execute_exit(pos, raw_qty, float(pos.get("current_price", entry_price)), "dust_liquidation", _pnl_pct)
-                            log_activity("trade", f"Dust exit: {symbol} {raw_qty:.4f} shares")
+                self.entry_manager.update_peak_price(symbol, current_price)
+                action = self.profit_ratchet.check_position(pos, current_price, now=time.time())
+                await self._apply_profit_ratchet_action(pos, current_price, action, open_orders_by_symbol)
 
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")
@@ -3368,6 +3967,8 @@ class TradingBot:
         log_activity("scan", f"{direction} Breakout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x")
 
         # v1 fast-path is long-only deterministic scout entry.
+        if not bool(getattr(settings, "FAST_PATH_ENABLED", False)):
+            return
         if pct_change <= 0:
             return
         self._handle_fast_path_breakout(
@@ -3437,7 +4038,7 @@ class TradingBot:
             return
         order = data.get("order", {})
         symbol = order.get("symbol", "")
-        if not symbol or order.get("type") == "trailing_stop":
+        if not symbol:
             return
         if not self.entry_manager:
             return
@@ -3448,23 +4049,39 @@ class TradingBot:
         filled_at = self._parse_iso_ts(order.get("filled_at"))
         order_side = str(order.get("side", "") or "").lower()
         expected_exit_side = "buy" if pos.get("side", "long") == "short" else "sell"
-        if pos.get("exit_pending") and order_side == expected_exit_side:
+        order_id = str(order.get("id", "") or "")
+        matched_exit_order = order_side == expected_exit_side and (
+            pos.get("exit_pending")
+            or order_id == str(pos.get("hard_stop_order_id", "") or "")
+            or order_id == str(pos.get("ratchet_limit_order_id", "") or "")
+            or self._order_is_hard_stop(order)
+            or self._order_is_ratchet(order)
+        )
+        if matched_exit_order:
             if pos.get("exit_recorded"):
                 return
-            order_id = str(order.get("id", "") or "")
             pending_order_id = str(pos.get("exit_order_id", "") or "")
-            if pending_order_id and order_id and pending_order_id != order_id:
+            tracked_exit_ids = {
+                pending_order_id,
+                str(pos.get("hard_stop_order_id", "") or ""),
+                str(pos.get("ratchet_limit_order_id", "") or ""),
+            }
+            tracked_exit_ids.discard("")
+            if tracked_exit_ids and order_id and order_id not in tracked_exit_ids and not (
+                self._order_is_hard_stop(order) or self._order_is_ratchet(order)
+            ):
                 return
             fill_price = float(order.get("filled_avg_price", 0) or 0)
             filled_qty = float(order.get("filled_qty", pos.get("quantity", 0)) or pos.get("quantity", 0) or 0)
             if fill_price <= 0 or filled_qty <= 0:
                 return
             pos["exit_fill_qty"] = filled_qty
+            reason = self._infer_exit_reason_from_order(pos, order)
             trade_record = self._build_confirmed_exit_trade(
                 pos,
                 fill_price=fill_price,
                 qty=filled_qty,
-                reason=str(pos.get("last_exit_reason", "broker_exit_fill") or "broker_exit_fill"),
+                reason=reason,
                 exit_time=filled_at,
                 order=order,
                 fill_source="trade_update",

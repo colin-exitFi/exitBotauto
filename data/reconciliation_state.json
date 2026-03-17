@@ -1,27 +1,23 @@
 {
-  "as_of": 1773277689.032556,
-  "date": "2026-03-10",
+  "as_of": 1773720421.5201607,
+  "date": "2026-03-17",
   "broker": {
-    "date": "2026-03-10",
-    "equity": 10050.0,
-    "last_equity": 10000.0,
-    "day_pnl": 50.0,
-    "day_pnl_pct": 0.5,
-    "cash": 5000.0,
+    "date": "2026-03-17",
+    "equity": 27500.0,
+    "last_equity": 27500.0,
+    "day_pnl": 0.0,
+    "day_pnl_pct": 0.0,
+    "cash": 27500.0,
     "long_market_value": 0.0,
     "short_market_value": 0.0,
     "position_market_value": 0.0,
-    "current_open_unrealized": 50.0,
+    "current_open_unrealized": 0,
     "overnight_gap_pnl": 0.0,
-    "intraday_change_from_open": 50.0,
+    "intraday_change_from_open": 0.0,
     "intraday_realized_estimate": null,
-    "fill_count": 1,
-    "symbols_with_broker_activity": [
-      "AAPL"
-    ],
-    "broker_open_symbols": [
-      "AAPL"
-    ],
+    "fill_count": 0,
+    "symbols_with_broker_activity": [],
+    "broker_open_symbols": [],
     "broker_closed_symbols": [],
     "carryover_symbols": [],
     "carryover_fragment_symbols": [],
@@ -35,14 +31,7 @@
       "unresolved_symbols": [],
       "trades": []
     },
-    "broker_positions": {
-      "AAPL": {
-        "qty": 10.0,
-        "side": "",
-        "avg_entry_price": 0.0,
-        "market_value": 0.0
-      }
-    }
+    "broker_positions": {}
   },
   "internal": {
     "pnl_state_realized": 0.0,
@@ -61,26 +50,20 @@
     "broker_reconstructed_trade_count": 0,
     "broker_reconstructed_unresolved_symbols": [],
     "broker_supplemental_trade_count": 0,
+    "pnl_state_repaired": false,
     "internal_live_positions": {}
   },
   "reconciliation": {
     "broker_vs_pnl_state_diff": 0.0,
     "broker_vs_trade_history_diff": 0.0,
     "broker_closed_trade_estimate": 0.0,
+    "canonical_realized_source": "broker_day_estimate",
+    "canonical_realized_pnl": 0.0,
     "status": "healthy",
     "severity": "healthy",
     "reasons": []
   },
-  "canaries": [
-    {
-      "code": "broker_position_missing_internal",
-      "symbol": "AAPL",
-      "severity": "critical",
-      "first_seen": 1773277689.0325508,
-      "current_magnitude": 0.0,
-      "recommended_action": "Sync live positions from broker before trusting internal exposure."
-    }
-  ],
+  "canaries": [],
   "trust": {
     "topline_source": "broker",
     "positions_source": "broker",
@@ -91,6 +74,39 @@
     "show_internal_stats": true,
     "dim_internal_stats": false,
     "allow_closed_trade_analytics": true,
-    "allow_ai_summaries": true
+    "allow_ai_summaries": true,
+    "entry_pipeline_paused": false,
+    "degraded_mode_reasons": [],
+    "consecutive_critical_mismatch": 0,
+    "broker_api_recent_429_total": 0
+  },
+  "broker_api": {
+    "window_seconds": 300,
+    "recent_429_total": 0,
+    "endpoints": {
+      "account.activities.fill": {
+        "requests": 1,
+        "errors": 0,
+        "rate_limits": 0,
+        "last_status": 200,
+        "last_call_ts": 1773720421.4095237,
+        "recent_429_window": 0
+      },
+      "account.portfolio_history": {
+        "requests": 1,
+        "errors": 0,
+        "rate_limits": 0,
+        "last_status": 200,
+        "last_call_ts": 1773720421.518311,
+        "recent_429_window": 0
+      }
+    }
+  },
+  "meta": {
+    "consecutive_critical_mismatch": 0,
+    "entry_pause_due_to_critical": false,
+    "entry_pause_due_to_429": false,
+    "critical_tripwire_threshold": 3,
+    "broker_429_tripwire_threshold": 8
   }
 }

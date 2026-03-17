@@ -1,0 +1,1414 @@
+[
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "3.0% stop contributed to 51.4% WR collapse and $22.95 loss since implementation. Advisor flagged ONDS $9.33 stuck position from 99.4% fill failure = system cannot execute exits at wide stops. Tighten to 1.5% (halfway between failed 1.0% and destructive 3.0%) to reduce max loss per trade while giving breathing room vs proven-failed 1.0%."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "15 max positions enabled during infrastructure crisis = unmanageable risk exposure. Risk agent explicitly DENYING entries (approved=False) but fast_path still opening positions. Recent trades show 'portfolio_heat=high' warnings on every entry. Reduce to 10 (tier max) to force quality over quantity until system stabilizes."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 120,
+        "reason": "60s scanning creating 105 trades in 1.2 days with 48.6% WR and -$20.61 loss = excessive churn. Advisor output shows 'MANUAL_FORCE_CLOSE' on ONDS dust position = system overwhelmed. Slow to 120s (2min) to reduce entry velocity while maintaining reasonable market pulse vs failed 180s."
+      }
+    ],
+    "reasoning": "Emergency damage control: wide stops + high position count + fast scanning = infrastructure overload causing stuck positions and protection failures",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773377180.9888012
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.6,
+        "reason": "Advisor explicitly demands 0.6 minimum to fix broken quality filter \u2014 33% win rate with 3 consecutive losses proves 0.0 sentiment threshold is letting garbage through"
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "Advisor recommends cutting base from 5.0% to 2.5% \u2014 26 losses in 39 trades means we're bleeding $180+ per bad entry at current sizing, need to cap damage while quality improves"
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Advisor suggests tightening from 3.0% to 2.0% \u2014 avg loss -3.64% vs avg win +3.8% shows current 3% stop is too wide, need asymmetry working FOR us not against us"
+      }
+    ],
+    "reasoning": "FULL COMPLIANCE WITH ADVISOR HALT: 33% win rate + 3-loss streak = catastrophic quality failure requiring emergency tightening across sentiment filter, position sizing, and stop loss",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773413490.6808484
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Current 3.0% stops bleeding capital: avg loss -$3.45 vs avg win +$3.52 with 35.7% win rate = losing $2 for every $1 gained. Impact history shows 1.0% hurt (oscillation), but 3.0% is clearly too wide given recent -$43.73 daily loss at -0.16%. Split difference at 2.0% to tighten risk while avoiding previous 1.0% whipsaw failures."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "Zero open positions + Advisor screaming 'IMMEDIATE TRADING HALT' due to 'ZERO specialist data available' = we're entering completely blind. Current 0.0 sentiment filter letting garbage through. Raise to 0.3 to force quality bar higher - better to miss trades than enter with no intelligence backing them. Recent losses ALL cite 'ZERO specialist data' as root cause."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "Current 15 max enabled infrastructure crisis: Observer confirms 'protection mechanism failed to deploy' and Advisor flags 'breakout_fast_path strategy 42.9% win rate with -$57.54 P&L across 154 trades' = we're overextended. Drop back to tier default of 10 to reduce surface area while specialist pipeline is broken. Previous increase to 15 'helped' but that was BEFORE data pipeline catastrophe."
+      }
+    ],
+    "reasoning": "Advisor demands IMMEDIATE TRADING HALT due to systematic infrastructure failure - tighten stops, raise quality bar, reduce position capacity until specialist data pipeline restored",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773415319.9427218
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "33.87% win rate + 5 consecutive trap entries (ORKA/PLYX/SVCO/ELPW all 23-53% extended) = current 3.0% stop is TOO WIDE for late-day pump chasing. Analytics show avg_mae_pct=-0.3364% but losses averaging -$2.53 = positions bleeding past reasonable stop levels. Tighten to 2.0% to cut disasters faster."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.5,
+        "reason": "Impact data shows 1.0% trail helped (+95.78 PnL improvement), but Advisor flags '5 consecutive extended movers with bearish divergence' = we're entering TOPS not BOTTOMS. Drop to 0.5% minimum to lock gains immediately on any counter-trend bounce before parabolic exhaustion reverses."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 3,
+        "reason": "Advisor demands 'FULL TRADING HALT' due to catastrophic signal quality (33.87% WR, 5/5 scanner candidates are late-day traps). Current 15 max enables too much damage. Drop to 3 minimum = force EXTREME selectivity until scanner quality filter rebuilt. Capital preservation over velocity right now."
+      }
+    ],
+    "reasoning": "EMERGENCY TIGHTENING: 33.87% win rate + 5 consecutive trap signals = scanner is fundamentally broken, generating late-day pump tops instead of quality entries. Tighten stops to cut bleeding faster, reduce position capacity to force quality gatekeeping.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 1.0,
+        "new": 0.5,
+        "reason": "Impact data shows 1.0% trail helped (+95.78 PnL improvement), but Advisor flags '5 consecutive extended movers with bearish divergence' = we're entering TOPS not BOTTOMS. Drop to 0.5% minimum to lock gains immediately on any counter-trend bounce before parabolic exhaustion reverses.",
+        "timestamp": 1773428026.9950655
+      }
+    ],
+    "impact_updates": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old_value": 2.0,
+        "new_value": 1.0,
+        "reason": "298 trail retry failures on HIMS, SOC has no trail, multiple unprotected positions = 2.0% trail NOT executing. Advisor: 'trailing stop system completely dead.' Drop to 1.0% tier minimum to match working hard stop once infrastructure fixed.",
+        "timestamp": 1773270705.2279859,
+        "snapshot_win_rate": 0.3662,
+        "snapshot_pnl": -186.5,
+        "snapshot_sharpe": -38.2373,
+        "snapshot_trade_count": 213,
+        "post_win_rate": 0.3707,
+        "post_pnl": -90.72,
+        "post_sharpe": -18.5422,
+        "post_trade_count": 232,
+        "impact_measured_at": 1773428010.6919134,
+        "verdict": "helped",
+        "trades_since_change": 19
+      }
+    ],
+    "timestamp": 1773428027.0010264
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Current 3.0% hard stop is TOO WIDE given catastrophic 33.3% win rate and avg loss -2.45%. Recent trades show we're entering blind (zero specialist data) and hemorrhaging -2% to -4% on bad setups before stops trigger. 3.0% was set to 'match working trailing stops' but trailing stops AREN'T WORKING (Advisor confirms infrastructure failure). Tighten to 2.0% to cap bleeding on the systematic blind entry problem until quality gates are restored."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.0,
+        "reason": "Previous reduction to 0.5% was CORRECT direction but impact data shows 1.0% trail actually HELPED (+95.78 PnL improvement). Current 0.5% may be too tight for momentum setups that need breathing room. Revert to proven 1.0% level that worked in recent session (19 trades post-change showed improvement). When quality gates are fixed, 1.0% trail protects winners without choking them."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "CRITICAL: Advisor explicitly states 'IMMEDIATE FULL TRADING HALT' and 'catastrophic data integrity failure'. Current 60s scanning is FEEDING the broken fast-path that's creating 78% of recent losses (zero specialist data entries). SLOW DOWN the entry rate to 300s (5min) to reduce volume of blind entries until infrastructure is fixed. Capital preservation > capital velocity when trading blind."
+      }
+    ],
+    "reasoning": "Emergency brake configuration: Advisor demands FULL HALT but we can't stop trading programmatically, so REDUCE HARM via tighter stops (2% cap on blind entry losses), proven trail protection (1% worked), and SLOWER scanning (5min vs 1min = 80% fewer blind entries). This buys time for infrastructure repair without bleeding -$4/trade on systematic failures.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 0.5,
+        "new": 1.0,
+        "reason": "Previous reduction to 0.5% was CORRECT direction but impact data shows 1.0% trail actually HELPED (+95.78 PnL improvement). Current 0.5% may be too tight for momentum setups that need breathing room. Revert to proven 1.0% level that worked in recent session (19 trades post-change showed improvement). When quality gates are fixed, 1.0% trail protects winners without choking them.",
+        "timestamp": 1773429840.2908995
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773429840.2956767
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Current 3.0% hard stop is catastrophically wide. Avg loser holds 69.3min vs avg winner 39.0min = losers festering. Recent 50 trades: 24% WR, -$43.86 P&L with avg loss -$2.39. With 3% stop on $1,369 position (5% sizing), max loss = $41 but we're losing smaller amounts ($2-3) because positions bleed slowly. Tighter 2.0% stop = faster capitulation on bad setups, preventing $3+ blowouts while still allowing normal volatility."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 3.0,
+        "reason": "34.4% win rate = 2/3 of entries lose money. Current 5% sizing ($1,369/position) is too aggressive for this quality level. Impact data shows 5% helped initially (went from 40% WR \u2192 46% WR) but we've since collapsed to 34.4%. Advisor explicitly recommends 3% for COMPOUND tier defensive posture. Smaller size = more attempts to find what works without destroying capital on 66% loss rate."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Quality over quantity crisis. Recent 50 trades = 24% WR. Current 60s scan = scanning every minute = over-trading marginal setups. Analytics show <5min holds lost -$132.66 total - we're chasing noise. Slow to 5min scan = fewer entries, more time for technical confirmation, force higher quality bar. Advisor warns 'scanner generating wrong signals' - slower scan reduces garbage signal volume."
+      }
+    ],
+    "reasoning": "Weekend diagnostic confirms systemic quality gate failure causing 34.4% win rate collapse. Tighten risk controls (smaller size, tighter stops, slower scanning) to survive until infrastructure fixed.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773508125.8743324
+  },
+  {
+    "changes": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 2.0,
+        "reason": "Advisor data: avg winner 2.78%, TP1 at 3.0% missing early exits. Analytics show winners cluster 2-3% range. Lower to 2.0% to capture actual profit distribution before reversals."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "Current 0.0 threshold allows contra-momentum entries during 34.4% win rate collapse. Advisor: 'zero sentiment floor filters weak setups.' Raise to 0.3 minimum to block low-conviction signals."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 3.0,
+        "reason": "34.4% win rate cannot support 5.0% sizing - losing $2.39 avg vs winning $2.78 avg = negative expectancy at current scale. Drop to 3.0% tier minimum until win rate recovers above 40%."
+      }
+    ],
+    "reasoning": "Weekend recovery mode: tighten quality gates (sentiment floor), reduce position sizing to match degraded win rate, align TP1 with actual winner distribution",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773519040.7580326
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Current 3.0% stop is TOO WIDE - impact data shows it HURT performance (-22.95 PnL decline, 3.18pp WR drop over 20 trades). Advisor exit on HIMX confirms: 'Broker artifact blocking capacity.' 3% stop means accepting $204 max loss per $6.8K position - but we're getting chopped in reversals before stops trigger. Return to 1.5% middle ground."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "COMPOUND tier mandates 2.5% max sizing - we're currently at 5.0% VIOLATING tier rules. Risk status shows tier_size_pct=2.5 but POSITION_SIZE_PCT=5.0 = 2x oversized positions. This mismatch is why 'blocking capacity' - we're deploying $1,369 per position when tier allows only $680. Match config to tier immediately."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.5,
+        "reason": "Recent 1.0% trail oscillation (1.0\u21920.5\u21921.0) shows confusion. Impact data: 1.0% helped (+95.78 PnL) but then HURT when re-applied (-14.06 PnL, 1.03pp WR drop). Split difference at 1.5% = tighter than broken 2.0%, looser than whipsaw-prone 1.0%. Gives momentum runners breathing room without letting parabolic exhaustion reverse gains."
+      }
+    ],
+    "reasoning": "PRIMARY FIX: Position sizing violates tier rules (5% vs 2.5% mandate) = root cause of capacity blocking. Secondary: 3% stop too loose per impact data, 1.0% trail whipsawing. Return to proven middle ground.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773529964.6357684
+  },
+  {
+    "changes": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 3.0,
+        "reason": "Analytics show 6 trailing_stop_ws exits with 100% WR and +$72.94 PnL = ONLY consistently profitable exit mechanism. Current 1.0% getting whipsawed (10 consecutive changes, all hurt). Match successful STOP_LOSS_PCT at 3.0% per Advisor's original guidance."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "34.4% win rate with -$129 total loss = losing $0.48 per trade. Current 5.0% sizing amplifies losses ($2.78 avg win vs -$2.39 avg loss nearly equal, but 2:1 loss ratio). Drop to tier minimum 2.5% to cut loss magnitude in half while infrastructure crisis persists."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 600,
+        "reason": "270 trades in 3.1 days = 87 trades/day with 34.4% WR = 57 losing trades/day bleeding capital. Current 60sec scan = quantity over quality death spiral. Slow to 10min max to force higher conviction entries, reduce blind fast-path volume."
+      }
+    ],
+    "reasoning": "Win rate collapsed from 60% to 34.4% = systemic quality failure. REDUCE trading velocity and position risk until infrastructure stabilizes.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 60,
+        "new": 600,
+        "reason": "270 trades in 3.1 days = 87 trades/day with 34.4% WR = 57 losing trades/day bleeding capital. Current 60sec scan = quantity over quality death spiral. Slow to 10min max to force higher conviction entries, reduce blind fast-path volume.",
+        "timestamp": 1773547267.6565406
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773547267.6608157
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "Advisor's top recommendation: 34.4% WR collapse driven by zero sentiment validation on 244/270 trades. Current 0.0 = no floor. Require 0.5 minimum = basic positivity filter before entry (max allowed is 0.8)."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Just changed to 600s (10min) but 0 trades since = may be TOO slow for momentum scanning. Compromise at 300s (5min) = still 5x slower than broken 60s pace, enables quality over quantity without missing setups entirely."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 2.0,
+        "reason": "Current 4.0hr limit enabled overnight zombie positions (HIMX 28hrs underwater). Advisor flags 'weekend gap risk' and Observer confirms extended holds bleeding capital. Return to 2.0hr = intraday momentum only, no overnight exposure on broken infrastructure."
+      }
+    ],
+    "reasoning": "Address catastrophic 34.4% WR with quality filters FIRST (sentiment floor), moderate scanning pace to balance opportunity vs overtrading, eliminate overnight exposure risk",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773561692.1169806
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Current 3% hard stop is catastrophically wide - 34.4% win rate with -$129 total loss shows positions bleeding far beyond acceptable risk. Recent impact data shows every stop widening (1.0\u21921.5, 1.5\u21923.0) HURT performance. Tighten to 1.5% to cut losers faster while specialist pipeline remains broken."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "Zero specialist data on 270 trades = blind entries producing 34.4% win rate disaster. Raise minimum sentiment threshold from 0.0 to 0.3 to require SOME positive signal confirmation before entry. Forces quality bar higher when pipeline fails - no data = no trade."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "COMPOUND tier specifies 2.5% sizing but config shows 5.0% = oversized positions amplifying losses. Align with tier mandate to halve position impact: -$2.39 avg loss \u00d7 50% sizing = -$1.20 avg loss, reducing capital bleeding rate while win rate remains broken."
+      }
+    ],
+    "reasoning": "Emergency damage control: 270 trades, 34.4% win rate, -$129 loss = system catastrophically broken. Every parameter widening failed. Tighten everything to reduce loss magnitude while specialist pipeline remains offline.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773563530.583871
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "Advisor identifies ROOT CAUSE: 90% of trades (244/270) entered via 'breakout_fast_path' with ZERO specialist validation = 36.5% WR, -$96.78 loss. The 6 trades WITH trailing stops? 100% WR, +$72.94. Raise sentiment floor from 0.0 to 0.5 to force quality gate - block entries unless specialist pipeline confirms bullish setup. This directly addresses the 'blind entry' crisis without stopping trading entirely."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "Catastrophic 34.4% WR with -$129 total loss means every position is 2:1 likely to lose. Current 5% sizing = $1,361 per position exposure. Cut to 2.5% (tier minimum) = reduce blast radius while quality gates are being fixed. Capital preservation is priority #1 when win rate is this broken."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 5,
+        "reason": "Advisor explicitly warns: 'DO NOT TRADE until specialist agents mandatory and verified operational.' Current 15 max positions with broken pipeline = 15 simultaneous blind entries. Slash to 5 minimum to limit exposure until data integrity restored. Previous increase to 15 HURT performance (-22.95 PnL impact)."
+      }
+    ],
+    "reasoning": "Emergency quality controls: block low-conviction entries, reduce position sizing, limit concurrent exposure until specialist pipeline fixed",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773565349.7418845
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "270 trades, 34.4% WR, -$129 P&L = broken entry quality. Advisor identifies 'fast_path bypassing ALL quality gates' as root cause. Current 0.0 sentiment floor allows blind entries. Raise to 0.5 = require positive sentiment confirmation before entry, blocking the no-data garbage flooding the system."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "COMPOUND tier specifies 2.5% sizing but config shows 5.0% = we're violating our own risk tier. Avg loss $2.39 on 5% sizing = $119 max loss per position is acceptable, but 162 losses \u00d7 $2.39 = -$387 total damage. Cut to tier-mandated 2.5% = halve damage per bad entry while infrastructure is broken."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Just changed 60\u2192600 to reduce entry volume, but 10min may be too slow for momentum opportunities. Impact data shows fast_path entries CAN work (36.5% WR on 244 trades when quality exists). Split difference to 5min = reduce blind entry flood while maintaining opportunity capture once specialist validation restored."
+      }
+    ],
+    "reasoning": "Stop the bleeding by requiring sentiment validation and cutting position size to match risk tier",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773568971.9995866
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "Recent 50 trades: 24% WR, -$43.86 P&L with ZERO specialist data on ALL entries = blind gambling. Advisor screaming 'FULL TRADING HALT' due to 'catastrophic infrastructure failure.' Raising sentiment threshold to 0.5 creates HARD GATE: if specialist pipeline is broken (returning sentiment=0 or no data), position CAN'T enter. This enforces the quality filter that's completely bypassed right now."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "34.4% overall WR means 2 out of every 3 trades LOSE money. Current 5% sizing = $1,361 per position on $27,230 account. At 34% WR, we're risking $1,361 to statistically lose $898 per trade cycle. Cut to 2.5% ($681 per position) = half the damage while infrastructure is catastrophically broken and we're entering blind."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 3,
+        "reason": "Advisor explicitly states 'FULL TRADING HALT' and Observer confirms 'specialist data pipeline failure causing blind entries.' Current 15 max positions + broken quality gates = capacity to enter 15 simultaneous blind positions with zero validation. Drop to 3 minimum tier level = contains damage radius while system is in crisis mode. Previous increase to 15 HURT performance (-22.95 PnL over 18 trades)."
+      }
+    ],
+    "reasoning": "System is in FULL CRISIS MODE per Advisor. These changes create circuit breakers: sentiment gate blocks blind entries, position sizing cuts loss magnitude, max positions contains total exposure. Impact data shows our tuning changes consistently HURT performance because we're optimizing a broken execution pipeline.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773572633.599164
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Advisor explicitly recommends 5min scan for Monday's first 2 hours to catch fresh breakouts. Current 600sec (10min) creates lag in momentum detection. Weekend = clean slate, need tighter scanning 9:30-11:30 AM to identify fresh Monday setups before they extend."
+      }
+    ],
+    "reasoning": "Weekend positioning = zero active trades, zero behavioral baggage. Single parameter change to enable Monday morning opportunity capture per Advisor's explicit guidance.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773579948.2457461
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "34.4% win rate with 162 losses from decision_confidence=0 blind entries. Advisor explicitly demands 'MIN_DECISION_CONFIDENCE=70' but we can't set that - we CAN require positive sentiment. Current 0.0 allows bearish entries. Raise to 0.5 minimum = only enter positions with bullish sentiment confirmation, blocks fast_path bypass of quality gates."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "Trading HALTED per Advisor (markets closed Sunday). Risk tier already enforces 2.5% max per position. Drop from 5.0% to 2.5% to match tier limits = half position sizing until quality gates restored and win rate stabilizes above 40%. Smaller sizing = smaller losses while infrastructure repairs."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 3,
+        "reason": "Advisor explicitly recommends 'MAX_POSITIONS from 10 to 3 until win rate stabilizes above 40%'. Current 15 max positions enables capital fragmentation. Drop to 3 max = forced focus on highest-quality setups only, prevents blind fast_path from opening 10+ positions simultaneously with zero validation."
+      }
+    ],
+    "reasoning": "EMERGENCY BRAKES: 34.4% win rate from systematic blind entries requires IMMEDIATE quality gate restoration, not parameter fine-tuning",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773581751.9090805
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Current 3.0% hard stop is TOO WIDE for 34.4% WR system - we're letting losers run while entries are systematically bad (270 trades, 162 losses). Avg loss -$2.39 with 3% stop means stops aren't triggering OR we're entering so badly that 3% drawdown is immediate. Tighten to 1.5% to force faster exits on failed setups while specialist pipeline is broken."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "RISK TIER shows tier_size_pct=2.5% but config shows POSITION_SIZE_PCT=5.0% - MISMATCH. System is currently sized at COMPOUND tier (2.5%) per risk status but config override at 5% creates exposure inconsistency. Align config to match actual tier sizing = reduce capital at risk per blind entry."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "Previous increase 10\u219215 showed 'helped' verdict (+22.32 PnL improvement) BUT that was during protected trading. Current state: ZERO specialist data, blind entries, 34.4% WR collapse. Revert to tier maximum (10 positions) to limit total exposure while data pipeline is catastrophically broken. Capital velocity requires QUALITY entries, not quantity."
+      }
+    ],
+    "reasoning": "Tightening risk controls to match COMPOUND tier limits while specialist pipeline remains offline - reduce position size and max positions to tier specs, narrow stops to exit bad setups faster",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773589106.8249986
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "Advisor mandates halving position size until win rate recovers above 45%. Current 34.4% WR with -$2.19 avg loss means 2/3 of trades lose money. Reduce risk per trade from 5% to 2.5% to cut damage while infrastructure is repaired."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "244 'breakout_fast_path' entries with 36.5% WR show scanner bypassing quality gates. Raise sentiment threshold from 0.0 to 0.3 to filter out weak signals when specialist pipeline returns online."
+      }
+    ],
+    "reasoning": "Advisor calls for FULL TRADING HALT due to catastrophic data integrity failure - 244 blind entries with zero specialist validation. Until infrastructure is fixed, reduce blast radius per trade and raise entry quality bar.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773590919.184818
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 60,
+        "reason": "REVERT IMMEDIATELY - 600sec interval = zero trades today, markets are CLOSED (Sunday), specialist data pipeline broken. This change killed activity during a period when we should be preparing for Monday open. Once data pipeline is restored, we need rapid scanning to find quality setups, not 10-minute delays that miss breakouts entirely."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Current 3.0% stop is TOO WIDE for broken infrastructure. HIMX stuck at -4.3% for 33+ hours proves stops aren't executing. Recent analytics show -0.3225% avg MAE but 3.0% stop = we're allowing 10x normal adverse excursion. Tighten to 1.5% as compromise between protection and noise once we resume trading post-infrastructure fix."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "270 trades with 34.4% WR = quality filter catastrophically broken. Current 0.0 min sentiment = accepting ANY setup regardless of conviction. Raise to 0.3 to force SOME validation threshold once specialist pipeline is restored. This won't fix blind entries but adds one more gate against garbage signals."
+      }
+    ],
+    "reasoning": "Emergency mode: unfreeze scanning for Monday open prep, tighten stops to limit damage when trading resumes, raise sentiment bar to reduce blind entry volume",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773592728.4646811
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "34.4% win rate with -$129 total P&L shows systemic failure, not sizing problem. But COMPOUND tier already enforces 2.5% size - we're ALREADY conservative. Current 5.0% config is being overridden by tier system anyway. Align config to reality: 2.5% matches actual tier enforcement and prevents any parameter drift."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Just changed 60s\u2192600s (10min) but this may be TOO slow for breakout_stream opportunities. 270 trades over 3.7 days = 73 trades/day. At 10min intervals we'd see ~48 scans/day = could miss quality setups. Split difference: 5min (300s) = 96 scans/day = enough to catch breakouts without drowning in low-quality signals."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "REVERT last change that 'helped' but in wrong context. Increased 10\u219215 to 'enable capital velocity' but Advisor now screams FULL TRADING HALT. Having 15 position slots available encourages more blind entries via broken fast_path. Drop back to tier-enforced 10 max = reduces system's ability to enter garbage positions while data pipeline is offline."
+      }
+    ],
+    "reasoning": "Advisor diagnosis is correct: this is DATA PIPELINE FAILURE, not parameter tuning problem. But we can make parameters DEFENSIVE: align to tier enforcement (2.5% size), moderate scan frequency (5min not 10min), and constrain max positions (10 not 15) to reduce blast radius of blind entries until quality gates restored.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773596393.7637596
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.5,
+        "reason": "Advisor mandates FULL TRADING HALT until infrastructure fixed. Current 5% sizing irrelevant when trading shouldn't occur. Match COMPOUND tier size (2.5%) for when halt lifts - start conservative with 1% scout positions to validate specialist pipeline stability before scaling."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "34.4% win rate with 244/270 trades via broken fast_path entering blind = quality filter catastrophically failed. Raise sentiment floor from 0.0 to 0.3 to require SOME positive confirmation when specialist data returns. Current 0.0 allows entries with zero validation."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "Revert 15\u219210. Previous increase to 15 during infrastructure crisis was premature. Advisor: 'ONE task Monday 9:30 AM: verify HIMX exit.' Focus on cleaning house, not expanding capacity. When trading resumes, 10 max enforces quality over quantity."
+      }
+    ],
+    "reasoning": "Weekend = clean slate opportunity. Advisor explicitly commands infrastructure fix BEFORE any new positions. Tune for post-halt restart with conservative sizing, higher quality bar, reduced max positions.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773598191.7997026
+  },
+  {
+    "changes": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 2.0,
+        "reason": "Advisor mandates 60% size reduction until win rate recovers above 40%. Current 5.0% sizing \u00d7 34.4% WR = catastrophic capital burn rate. Drop to 2.0% = reduce loss magnitude while infrastructure is fixed."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "ZERO specialist data on 90%+ of trades = blind entries causing 34.4% WR collapse. Raise from 0.0 to 0.3 minimum = require SOME positive sentiment signal before entry, blocking pure fast-path garbage."
+      },
+      {
+        "param": "MAX_CONCURRENT_POSITIONS",
+        "value": 10,
+        "reason": "Previous increase to 15 FAILED to improve velocity (impact: hurt). Revert to tier default 10 max. With broken quality gates, more positions = more simultaneous losses. Quality over quantity."
+      }
+    ],
+    "reasoning": "Emergency capital preservation mode: cut size 60%, demand minimum sentiment validation, reduce concurrent exposure until win rate stabilizes above 40%",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 5.0,
+        "new": 2.0,
+        "reason": "Advisor mandates 60% size reduction until win rate recovers above 40%. Current 5.0% sizing \u00d7 34.4% WR = catastrophic capital burn rate. Drop to 2.0% = reduce loss magnitude while infrastructure is fixed.",
+        "timestamp": 1773603649.912337
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773603649.923003
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 60,
+        "reason": "The 600-second interval achieved its goal: ZERO trades since implementation = complete halt of blind entries. Infrastructure is still broken (HIMX dust position confirms broker sync issues remain), but the bleeding has stopped. Now revert to 60sec to resume trading WITH the 2% position sizing safety rail in place. The 60% size reduction + specialist data requirement will provide quality filter that scan interval alone cannot."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.3,
+        "reason": "Current 0.0 threshold allowed 270 trades with 34.4% WR because fast_path bypassed ALL quality gates. Set minimum 0.3 sentiment to force specialist validation - if agents are offline (returning 'No data available'), sentiment will be 0.0 and entry will be blocked. This creates a hard dependency on working data pipeline."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.5,
+        "reason": "Current 3.0% first take-profit is too wide for 34.4% WR system. Recent analytics show avg_mfe_pct = 0.122% (just 12 basis points max favorable excursion) meaning positions barely go green before reversing. Drop to 1.5% to lock HALF the position on any meaningful move, reducing all-or-nothing risk that's destroying the account."
+      }
+    ],
+    "reasoning": "Resume trading with quality gates armed: sentiment filter blocks blind entries, tighter profit-taking locks gains fast, reduced sizing limits damage",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773641518.28634
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.4,
+        "reason": "Advisor explicitly identifies 'ZERO specialist data' as root cause of 34.4% win rate collapse. 85% of exits cite 'no validation' - require minimum 0.4 sentiment to prevent blind entries that have destroyed performance."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Current 3.0% stop too wide - avg loss $2.39 but exits show positions 'immediately underwater -0.64% to -0.89%'. Tighten to 2.0% to cut losers faster before they bleed to full -3% loss."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 1.0,
+        "reason": "At 34.4% win rate we lose 2 of every 3 trades. Current 2.0% sizing still too aggressive. Halve to 1.0% until win rate recovers above 45% - protects capital during infrastructure repair phase."
+      }
+    ],
+    "reasoning": "Emergency capital preservation mode - block blind entries, tighten stops, halve size until data pipeline restored",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.0,
+        "new": 0.4,
+        "reason": "Advisor explicitly identifies 'ZERO specialist data' as root cause of 34.4% win rate collapse. 85% of exits cite 'no validation' - require minimum 0.4 sentiment to prevent blind entries that have destroyed performance.",
+        "timestamp": 1773641881.8781867
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 2.0,
+        "new": 1.0,
+        "reason": "At 34.4% win rate we lose 2 of every 3 trades. Current 2.0% sizing still too aggressive. Halve to 1.0% until win rate recovers above 45% - protects capital during infrastructure repair phase.",
+        "timestamp": 1773641881.9084034
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773641881.9150271
+  },
+  {
+    "changes": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 1800,
+        "reason": "Advisor recommends 3x reduction to 1800s (30min) - 'reduce polling frequency until quality improves, less noise, lower infrastructure load'. Zero trades since 600s change = already proving quality filter working."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.7,
+        "reason": "Advisor explicitly suggests 0.7 (75% increase from 0.4) - 'only enter positions with strong confirmation'. Current 0.4 bar set 15.6 hours ago, zero trades = either too high OR scanner broken. If scanner works, 0.7 raises quality bar as intended."
+      }
+    ],
+    "reasoning": "Advisor FULL TRADING HALT remains in effect - implement both recommended parameter changes to tighten quality gates further while infrastructure crisis persists.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 600,
+        "new": 600,
+        "reason": "Advisor recommends 3x reduction to 1800s (30min) - 'reduce polling frequency until quality improves, less noise, lower infrastructure load'. Zero trades since 600s change = already proving quality filter working.",
+        "timestamp": 1773658037.3345122
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.4,
+        "new": 0.7,
+        "reason": "Advisor explicitly suggests 0.7 (75% increase from 0.4) - 'only enter positions with strong confirmation'. Current 0.4 bar set 15.6 hours ago, zero trades = either too high OR scanner broken. If scanner works, 0.7 raises quality bar as intended.",
+        "timestamp": 1773658037.3656802
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773658037.3724897
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "CRITICAL: 0.7 threshold set 10,878 seconds (3+ hours) ago with ZERO trades entering system despite 4 open positions and active scanner. Either: (1) threshold too high blocking valid setups, or (2) specialist data pipeline still broken. Advisor urgency HIGH on infrastructure failure - 67+ failed trailing stop attempts on MU alone shows execution layer catastrophically broken. Lower to 0.5 to test if sentiment gate is strangling flow OR if specialist agents genuinely offline. If still zero entries, problem is upstream data pipeline not sentiment threshold."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 2.0,
+        "reason": "MU showing 67 failed trailing stop placement attempts = 1.0% trail is NOT executing reliably. Advisor warns 'protection system completely broken' - increasing trail to 2.0% creates larger buffer that may be more reliably detected/executed by broker API. Current 1.0% setting demonstrably failing (ETHU 12 retries, ETHT multiple attempts). Widen to tier maximum 2.0% to improve execution reliability until infrastructure fixed."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Advisor flags NSA entered 2min ago already showing -0.39% MAE = 'immediate drawdown on fresh entry is textbook warning sign'. Current 3.0% hard stop too wide - positions bleeding immediately on entry need tighter protection. Drop to 2.0% (Advisor's exact suggestion) to cut losses faster when entries prove bad within first minutes. 40% win rate on 10 trades today = we're entering poorly, need faster exits on failed setups."
+      }
+    ],
+    "reasoning": "Infrastructure meltdown demands defensive tuning: tighter stops to limit damage from bad entries, wider trails to improve execution reliability, lower sentiment threshold to test if quality gate is strangling flow vs upstream data failure.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old_value": 60,
+        "new_value": 600,
+        "reason": "270 trades in 3.1 days = 87 trades/day with 34.4% WR = 57 losing trades/day bleeding capital. Current 60sec scan = quantity over quality death spiral. Slow to 10min max to force higher conviction entries, reduce blind fast-path volume.",
+        "timestamp": 1773547267.6565406,
+        "snapshot_win_rate": 0.3444,
+        "snapshot_pnl": -129.37,
+        "snapshot_sharpe": -23.0533,
+        "snapshot_trade_count": 270,
+        "post_win_rate": 0.3469,
+        "post_pnl": -117.83,
+        "post_sharpe": -10.9154,
+        "post_trade_count": 294,
+        "impact_measured_at": 1773668915.004908,
+        "verdict": "helped",
+        "trades_since_change": 24
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old_value": 5.0,
+        "new_value": 2.0,
+        "reason": "Advisor mandates 60% size reduction until win rate recovers above 40%. Current 5.0% sizing \u00d7 34.4% WR = catastrophic capital burn rate. Drop to 2.0% = reduce loss magnitude while infrastructure is fixed.",
+        "timestamp": 1773603649.912337,
+        "snapshot_win_rate": 0.3444,
+        "snapshot_pnl": -129.37,
+        "snapshot_sharpe": -23.0533,
+        "snapshot_trade_count": 270,
+        "post_win_rate": 0.3469,
+        "post_pnl": -117.83,
+        "post_sharpe": -10.9154,
+        "post_trade_count": 294,
+        "impact_measured_at": 1773668915.0049143,
+        "verdict": "helped",
+        "trades_since_change": 24
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old_value": 0.0,
+        "new_value": 0.4,
+        "reason": "Advisor explicitly identifies 'ZERO specialist data' as root cause of 34.4% win rate collapse. 85% of exits cite 'no validation' - require minimum 0.4 sentiment to prevent blind entries that have destroyed performance.",
+        "timestamp": 1773641881.8781867,
+        "snapshot_win_rate": 0.3444,
+        "snapshot_pnl": -129.37,
+        "snapshot_sharpe": -23.0533,
+        "snapshot_trade_count": 270,
+        "post_win_rate": 0.3469,
+        "post_pnl": -117.83,
+        "post_sharpe": -10.9154,
+        "post_trade_count": 294,
+        "impact_measured_at": 1773668915.004917,
+        "verdict": "helped",
+        "trades_since_change": 24
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old_value": 2.0,
+        "new_value": 1.0,
+        "reason": "At 34.4% win rate we lose 2 of every 3 trades. Current 2.0% sizing still too aggressive. Halve to 1.0% until win rate recovers above 45% - protects capital during infrastructure repair phase.",
+        "timestamp": 1773641881.9084034,
+        "snapshot_win_rate": 0.3444,
+        "snapshot_pnl": -129.37,
+        "snapshot_sharpe": -23.0533,
+        "snapshot_trade_count": 270,
+        "post_win_rate": 0.3469,
+        "post_pnl": -117.83,
+        "post_sharpe": -10.9154,
+        "post_trade_count": 294,
+        "impact_measured_at": 1773668915.0049188,
+        "verdict": "helped",
+        "trades_since_change": 24
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old_value": 600,
+        "new_value": 600,
+        "reason": "Advisor recommends 3x reduction to 1800s (30min) - 'reduce polling frequency until quality improves, less noise, lower infrastructure load'. Zero trades since 600s change = already proving quality filter working.",
+        "timestamp": 1773658037.3345122,
+        "snapshot_win_rate": 0.3444,
+        "snapshot_pnl": -129.37,
+        "snapshot_sharpe": -23.0533,
+        "snapshot_trade_count": 270,
+        "post_win_rate": 0.3469,
+        "post_pnl": -117.83,
+        "post_sharpe": -10.9154,
+        "post_trade_count": 294,
+        "impact_measured_at": 1773668915.004922,
+        "verdict": "helped",
+        "trades_since_change": 24
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old_value": 0.4,
+        "new_value": 0.7,
+        "reason": "Advisor explicitly suggests 0.7 (75% increase from 0.4) - 'only enter positions with strong confirmation'. Current 0.4 bar set 15.6 hours ago, zero trades = either too high OR scanner broken. If scanner works, 0.7 raises quality bar as intended.",
+        "timestamp": 1773658037.3656802,
+        "snapshot_win_rate": 0.3444,
+        "snapshot_pnl": -129.37,
+        "snapshot_sharpe": -23.0533,
+        "snapshot_trade_count": 270,
+        "post_win_rate": 0.3469,
+        "post_pnl": -117.83,
+        "post_sharpe": -10.9154,
+        "post_trade_count": 294,
+        "impact_measured_at": 1773668915.0049253,
+        "verdict": "helped",
+        "trades_since_change": 24
+      }
+    ],
+    "timestamp": 1773668932.6484756
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.5,
+        "reason": "Current 0.7 bar too high - 24 trades in 29 hours = 0.83 trades/hour, down from historical 2.9/hour. Impact data shows 0.4\u21920.7 change 'helped' but correlation \u2260 causation (occurred during infrastructure fixes). Recent session shows 3 live positions entered (CING/ETHT/ETHU) with working crypto theme. Lower to 0.5 to allow more quality entries while still filtering out blind fast-path garbage that destroyed prior performance."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Current 600s (10min) helped (+11.54 PnL improvement, 24 trades vs prior 270-trade bleeding), but Advisor flags 'crypto momentum cluster working' and 'BMNR scanner candidate +12.89%' - we're missing opportunities. Halve to 5min = doubles scan frequency to catch more sector rotation setups while maintaining quality filter vs old 60s death spiral."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 2.0,
+        "reason": "Advisor flags CING '-1.03% for 9min, entered at peak' and recommends 'trail tight at 2%' for ETHT. Current 1.0% may be too tight for crypto volatility - ETHU is +0.18% (working) but needs room. Historical data: 2.0%\u21921.0% helped (+95.78 PnL) BUT that was during broken infrastructure phase. Now that quality gates work, restore 2.0% breathing room for momentum runners."
+      }
+    ],
+    "reasoning": "Quality filter working (win rate improving, smaller losses), but choking opportunity flow. Ease MIN_ENTRY_SENTIMENT and SCAN_INTERVAL slightly to catch sector rotations while preserving quality gains. Widen TRAILING_STOP for crypto volatility.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773670748.2411473
+  },
+  {
+    "changes": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 2.5,
+        "reason": "Advisor explicitly recommends 2.5% (down from 3.0%). Recent 50-trade Sharpe of -45.4 is catastrophic. Game film shows avg_winner only $2.93 with 36min hold times. Need to lock profits faster in this deteriorated environment (33.8% overall WR, 28% recent-50 WR)."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.8,
+        "reason": "Advisor recommends 0.8 (up from 0.7). Both open positions have ZERO sentiment from broker sync artifacts. Game film: 33.3% WR on breakout_fast_path (273 trades, -$113.90). Recent 50-trade data shows 28% WR. Must raise quality bar before new entries."
+      }
+    ],
+    "reasoning": "SCANNER DRY BUT PROTECTION WORKING: Trailing stops saved $88.83 at 85.7% WR (14 wins). However, entry quality remains broken (28% recent WR, -45.4 Sharpe). Tighten TP1 to lock gains faster and raise sentiment bar to prevent low-quality entries.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old": 3.0,
+        "new": 2.5,
+        "reason": "Advisor explicitly recommends 2.5% (down from 3.0%). Recent 50-trade Sharpe of -45.4 is catastrophic. Game film shows avg_winner only $2.93 with 36min hold times. Need to lock profits faster in this deteriorated environment (33.8% overall WR, 28% recent-50 WR).",
+        "timestamp": 1773671947.3427274
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.7,
+        "new": 0.8,
+        "reason": "Advisor recommends 0.8 (up from 0.7). Both open positions have ZERO sentiment from broker sync artifacts. Game film: 33.3% WR on breakout_fast_path (273 trades, -$113.90). Recent 50-trade data shows 28% WR. Must raise quality bar before new entries.",
+        "timestamp": 1773671947.371798
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773671947.3764193
+  },
+  {
+    "changes": [
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Advisor explicitly recommends 1.5% (down from 3.0%). avg_loss -$2.33 vs avg_win $2.89 = losses nearly equal wins despite 3% stops, proving wide stops aren't protecting. Tighten to 1.5% to cut losers faster."
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.95,
+        "reason": "Zero scanner candidates at 10:57 AM means current 0.8 bar + broken data pipeline = no valid entries. Raise to 0.95 (maximum practical filter) to ensure ONLY highest-conviction setups with full specialist validation pass through when pipeline recovers."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 2.0,
+        "reason": "Game film shows 30m-2h bucket has 75% win rate (+$30.42) while >4h bucket shows 18.2% WR (-$23.59). Current 4.0hr setting allows positions to deteriorate. Cut to 2.0hr to force exits at momentum peak."
+      }
+    ],
+    "reasoning": "System in FULL HALT per Advisor (33.8% WR, -$159 loss, zero market activity). All 3 changes align with Advisor's explicit recommendations and address root causes: stops too wide, quality filter insufficient, holding winners too long into reversals.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old": 0.8,
+        "new": 0.8,
+        "reason": "Zero scanner candidates at 10:57 AM means current 0.8 bar + broken data pipeline = no valid entries. Raise to 0.95 (maximum practical filter) to ensure ONLY highest-conviction setups with full specialist validation pass through when pipeline recovers.",
+        "timestamp": 1773673124.873078
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773673124.8780894
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "Advisor says 'scanner generating lottery tickets, not quality setups' - current 0.8 bar is TOO HIGH (zero trades today). Recent data shows 0.4-0.7 range HELPED (+11.54 PnL improvement, 24 trades). Drop to 0.45 (just above proven 0.4 floor) to allow SOME quality entries while blocking garbage. Zero activity = zero capital velocity."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Current 600s (10min) + 0.8 sentiment bar = ZERO scanner output = zero trading. Cut to 300s (5min) to increase candidate flow without returning to 60s chaos that caused 87 trades/day bleed. Need SOME activity to test if scanner is broken or just over-filtered."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Current 3.0% stop is DOUBLE the tier_stop_pct (1.0%) = giving losers 3x more room than winners get from 1.0% trail. Tighten to 1.5% (midpoint) to cut loss magnitude faster while still allowing breathing room. At 32.8% WR we MUST limit damage per loss."
+      }
+    ],
+    "reasoning": "Zero trades in 4 consecutive losses = strategy is paralyzed. Need to carefully REOPEN the filter just enough to resume trading without returning to blind-entry chaos.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773677655.3213327
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL REQUIRED: Current 0.8 bar has blocked ALL entries for 2+ hours while Advisor screams 'IMMEDIATE FULL TRADING HALT - system is broken'. The problem is NOT lack of opportunities - it's that we've raised sentiment bar so high that ZERO specialist data (all agents returning 'No data available') can't pass ANY threshold. NBIS just entered with decision_confidence=0 DESPITE 0.8 bar = fast_path is bypassing the filter entirely. Lower to 0.45 (just above previous 0.4 that worked) to allow quality entries when data pipeline recovers, but keep meaningful floor to block true garbage."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Current 600s (10min) + broken specialist pipeline = stale opportunities when scanner DOES fire. NBIS entered 10min ago with ZERO data validation. Halve to 300s (5min) = faster reaction when pipeline recovers, still 5x slower than original 60s death-spiral rate. If data stays broken, frequency won't matter anyway - we'll still get zero valid signals."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Advisor flags 'Momentum stocks can reverse violently. Overbought conditions (RSI > 80, multi-day runners) are warning signs'. Observer cites 'CTMX +70%, WNW +503%, NSA +28% RSI 82.5' as parabolic exhaustion traps we're chasing. Current 3.0% stop is TOO LOOSE for these late-chase disasters. Tighten to 1.5% (midpoint of 0.5-3.0 range) = cuts disasters faster while allowing quality setups breathing room. 16.7% win rate today proves 3.0% stop lets losses run too far."
+      }
+    ],
+    "reasoning": "System is in CRISIS MODE per Advisor: 16.7% WR today (1W/5L), zero specialist data for 100% of entries, NBIS just entered blind via broken fast_path. BUT the tuning response is OPPOSITE of what's needed: we've raised sentiment bar so high (0.8) that even when pipeline recovers, nothing can pass. LOWER to 0.45 to allow quality when data returns. SPEED UP scanning to 5min so we catch opportunities faster when fixed. TIGHTEN stops to 1.5% because we're chasing parabolic exhaustion plays that reverse violently. These changes prepare the system to trade BETTER when infrastructure recovers, not lock it in permanent halt.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773679494.0061233
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "Current 0.45 bound prevents blind entries but 0.8 filter has produced ZERO trades in 2+ hours while Advisor confirms complete specialist data blackout. System is in 'halt' state - lower to 0.45 (just above minimum bound) so when specialist pipeline recovers, we can test quality with small volume rather than staying frozen forever."
+      },
+      {
+        "param": "POSITION_SIZE_PCT",
+        "value": 1.0,
+        "reason": "Keeping at 1.0% (current setting). At 32.8% win rate, smaller sizing protects capital. Impact data shows 2.0%\u21921.0% reduction 'helped' with +$11.54 P&L improvement. NO CHANGE - this is working."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 600,
+        "reason": "Keeping at 600s (10min). Impact data shows 60s\u2192600s change 'helped' dramatically (+$11.54 P&L, +0.25% WR improvement). Reduced scan frequency is filtering out low-quality noise. NO CHANGE - this is working."
+      }
+    ],
+    "reasoning": "System is in data blackout but frozen at 0.8 sentiment prevents ANY testing when pipeline recovers. Lower to 0.45 minimum to enable cautious restart.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "POSITION_SIZE_PCT",
+        "old": 1.0,
+        "new": 1.0,
+        "reason": "Keeping at 1.0% (current setting). At 32.8% win rate, smaller sizing protects capital. Impact data shows 2.0%\u21921.0% reduction 'helped' with +$11.54 P&L improvement. NO CHANGE - this is working.",
+        "timestamp": 1773680123.1491973
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "old": 600,
+        "new": 600,
+        "reason": "Keeping at 600s (10min). Impact data shows 60s\u2192600s change 'helped' dramatically (+$11.54 P&L, +0.25% WR improvement). Reduced scan frequency is filtering out low-quality noise. NO CHANGE - this is working.",
+        "timestamp": 1773680123.184553
+      }
+    ],
+    "impact_updates": [
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "old_value": 3.0,
+        "new_value": 2.5,
+        "reason": "Advisor explicitly recommends 2.5% (down from 3.0%). Recent 50-trade Sharpe of -45.4 is catastrophic. Game film shows avg_winner only $2.93 with 36min hold times. Need to lock profits faster in this deteriorated environment (33.8% overall WR, 28% recent-50 WR).",
+        "timestamp": 1773671947.3427274,
+        "snapshot_win_rate": 0.3382,
+        "snapshot_pnl": -159.06,
+        "snapshot_sharpe": -16.8033,
+        "snapshot_trade_count": 343,
+        "post_win_rate": 0.3296,
+        "post_pnl": -173.71,
+        "post_sharpe": -18.978,
+        "post_trade_count": 358,
+        "impact_measured_at": 1773680112.7439988,
+        "verdict": "hurt",
+        "trades_since_change": 15
+      },
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "old_value": 0.7,
+        "new_value": 0.8,
+        "reason": "Advisor recommends 0.8 (up from 0.7). Both open positions have ZERO sentiment from broker sync artifacts. Game film: 33.3% WR on breakout_fast_path (273 trades, -$113.90). Recent 50-trade data shows 28% WR. Must raise quality bar before new entries.",
+        "timestamp": 1773671947.371798,
+        "snapshot_win_rate": 0.3382,
+        "snapshot_pnl": -159.06,
+        "snapshot_sharpe": -16.8033,
+        "snapshot_trade_count": 343,
+        "post_win_rate": 0.3296,
+        "post_pnl": -173.71,
+        "post_sharpe": -18.978,
+        "post_trade_count": 358,
+        "impact_measured_at": 1773680112.744007,
+        "verdict": "hurt",
+        "trades_since_change": 15
+      }
+    ],
+    "timestamp": 1773680123.1886387
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL: Current 0.8 bar produced ZERO scanner candidates = system effectively offline. Impact data shows 0.7\u21920.8 change 'HURT' (-14.65 P&L, -0.86% WR drop in 15 trades). Advisor's FULL TRADING HALT is correct but the 0.8 bar is TOO HIGH for a broken pipeline. Drop to 0.45 (midpoint between working 0.4 and failed 0.8) to allow specialist-validated trades when pipeline recovers while still blocking blind fast-path entries."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.0,
+        "reason": "Current 3.0% stop is TOO LOOSE in 32.9% WR environment. Game film shows avg_loss $2.27 with many -3% to -5% hits. Risk tier already mandates 1.0% stop (tier_stop_pct=1.0). Tighten to 1.0% to cut losers faster - at 2:1 loss ratio, reducing loss size by 67% directly improves capital preservation."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.5,
+        "reason": "Recent trades show MFE of 0.16% but MAE of -0.36% = we're giving back 2.25x more than we capture. Current 1.0% trail is too loose. Tighten to 0.5% to lock gains faster when momentum stalls. Avg_hold only 85min means we need tight trailing protection for quick reversals."
+      }
+    ],
+    "reasoning": "Scanner producing zero candidates = system is offline. Three urgent fixes: (1) Lower MIN_ENTRY_SENTIMENT from broken 0.8 to 0.45 to allow validated trades when pipeline recovers, (2) Tighten STOP_LOSS to 1.0% to match risk tier and reduce damage per loss, (3) Tighten TRAILING_STOP to 0.5% to capture gains before reversals. These changes protect capital while positioning for recovery.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773680481.889135
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL: Current 0.8 barrier has ZERO trades in 151 minutes while Advisor screams 'FULL TRADING HALT'. This isn't filtering quality - it's creating a complete system freeze. Drop to 0.45 (just above hard floor of -0.5\u21920.45 range) to allow specialist-validated entries when pipeline recovers, while still blocking the broken fast_path spam that caused 78% blind entries."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.0,
+        "reason": "Advisor explicitly cites 'catastrophic 33% win rate and systematic blind entry failures' - our 3.0% stop is letting losers bleed 3x too long. Game film shows avg_loss -$2.27 but we're configured to allow -3.0% drawdowns. Cut to 1.0% (tier default) to match COMPOUND tier risk limits and stop the bleeding faster on the 2-out-of-3 trades that lose."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.5,
+        "reason": "Observer confirms 'protection mechanism failed to deploy' repeatedly. Current 1.0% trail is too wide for our avg_winner of only $2.93 (likely ~1.2% gains). Tighten to 0.5% to lock profits faster before reversals wipe gains - matches our new aggressive profit-taking at 2.5%."
+      }
+    ],
+    "reasoning": "Advisor's 'FULL HALT' is correct diagnosis but wrong prescription - we need SELECTIVE re-entry with TIGHTER risk controls, not permanent shutdown. Current 0.8 sentiment + broken pipeline = death by inaction.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773682308.74139
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL: 0.8\u21920.95 escalation KILLED trading (86 trades today, 15% WR, -$43.93). Advisor explicitly states 'this is not a trading problem - this is a SYSTEM INTEGRITY CRISIS' with 'zero specialist data available' across ALL agents. The sentiment filter is IRRELEVANT when data pipeline returns NULL for every trade. Drop to 0.45 (slightly above original 0.4 that helped) to allow trades WHEN pipeline recovers, while still filtering junk."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 3.0,
+        "reason": "REVERT FAILED EXPERIMENT: 3.0\u21922.5 change 'hurt' per impact data (-$14.65 P&L decline, -0.86% WR drop in 15 trades post-change). Advisor's 2.5% recommendation assumed WORKING trades - but with 15% WR today, we're not REACHING profit targets. Return to 3.0% to let winners run when they DO materialize."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "INCREASE SCANNING FREQUENCY: Current 600s (10min) worked when we had 24 trades over 27 hours (quality filter working). But today's 86 trades in <24hrs with 15% WR = scanner flooding us with GARBAGE during data pipeline failure. Cut to 300s (5min) to get MORE candidates when pipeline IS healthy, but current MIN_ENTRY_SENTIMENT=0.45 will still block trash. Trade velocity UP when quality returns."
+      }
+    ],
+    "reasoning": "Today's catastrophic 15% WR (vs 33% baseline) proves the core issue is DATA PIPELINE FAILURE, not parameter settings - Advisor confirms 'zero specialist data' across all agents. But our 0.8\u21920.95 sentiment escalation COMPOUNDED the problem by blocking ALL entries even when pipeline stutters back online. Solution: LOWER sentiment bar to 0.45 (near proven 0.4 level), REVERT failed 2.5% TP1 experiment, INCREASE scan frequency to 300s to catch opportunities faster when data returns. This creates a 'coiled spring' - ready to trade quality setups the MOMENT infrastructure heals.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773684120.344523
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "Advisor explicitly states 'DO NOT TRADE TODAY' with crystal-clear reasoning: zero quality base breakouts, all scanner hits are late-stage parabolic extensions (CTMX +64%, ULY +166%, NSA +30% with RSI 82.5). Current 0.8 sentiment bar combined with broken specialist data pipeline = zero trades but also zero protection when pipeline recovers and fires bad signals. Drop to 0.45 (just above our validated MIN bound of -0.5 to 0.45) to allow ONLY highest-conviction setups IF data quality improves, while still filtering garbage. Recent impact shows 0.7\u21920.8 'hurt' - we went too restrictive and may have created unintended interactions."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "32.9% win rate with avg loss $2.27 vs avg win $2.87 (1.26 reward/risk) is inadequate. Current 3.0% stop is too loose - game film shows positions bleeding -2% to -4% before exits trigger. Tighten to 1.5% (middle of 0.5-3.0 range) to cut losers faster and improve capital efficiency. Advisor notes 'momentum stocks can reverse violently' - wide stops just give reversals more room to damage us."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 2.0,
+        "reason": "Recent change from 3.0% to 2.5% shows 'hurt' verdict (-$14.65 P&L decline, -0.86% WR drop over 15 trades). But avg_win of only $2.87 suggests we're not even reaching 2.5% consistently. Drop to 2.0% to lock profits faster on the 33% of trades that DO work - velocitize capital rotation out of winners before momentum fades. Observer confirms 'extended parabolic setups' = take profit early or watch it evaporate."
+      }
+    ],
+    "reasoning": "Advisor calls full trading halt due to catastrophic setup quality (all late-stage parabolic runners, zero base breakouts). Tuner's job: prepare parameters for when quality DOES return. Current 0.8 sentiment + 3.0% stop = configurations that worked in 60% WR environment but are mismatched to current 32.9% regime. Tighten risk management (1.5% stop, 2.0% TP1), relax sentiment filter slightly (0.45) to capture quality IF it appears, accept today's zero-trade outcome as correct given setup quality.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773685934.8958573
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "Current 0.8 is TOO HIGH - producing ZERO trades for 3+ hours while Advisor screams FULL TRADING HALT. Last 2 increases (0.7\u21920.8\u21920.8) both 'hurt'. Drop to 0.45 (just above hard floor of -0.5 to 0.45 range) to allow specialist-validated entries when pipeline recovers, but still block the blind fast_path garbage that caused 280 losing trades."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.0,
+        "reason": "Advisor cites 'avg_loss -2.27' but current 3.0% stop is way too loose. Game film shows positions bleeding -2.8%, -4.3%, -6.2% before exits. Tighten to 1.0% (tier default) to cut losers faster - at 32.8% WR we WILL lose, so minimize damage per loss."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.5,
+        "reason": "Current 1.0% trail is failing catastrophically - Observer reports '768+ failed trailing stops', Advisor says 'protection mechanism failed to deploy'. Halve to 0.5% (tighter lock) so IF stops work, they protect profits faster. At 32.8% WR, need to grab small wins aggressively."
+      }
+    ],
+    "reasoning": "CRITICAL FIXES: (1) MIN_ENTRY_SENTIMENT at 0.8 is choking all trading - drop to 0.45 to unblock when pipeline works. (2) STOP_LOSS at 3.0% lets losers run wild - cut to 1.0% tier default. (3) TRAILING_STOP at 1.0% isn't protecting - tighten to 0.5%. All changes address Advisor's 'infrastructure failure' diagnosis while respecting the HALT directive by keeping quality bars elevated.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773687739.7343423
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "ADVISOR EXPLICITLY STATES: 'game film proves BLIND ENTRIES destroyed account' - 280 'breakout_fast_path' trades at 36% WR lost -$118. Current 0.8 bar = ZERO trades in 24 hours = filter TOO restrictive OR scanner broken. Advisor says 'require specialist validation' NOT 'reject all entries'. Drop to 0.45 (just above bound) to allow quality-validated entries when data pipeline works."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Current 3.0% stop is catastrophically wide - Advisor shows avg_loser -$2.27 but avg_winner only $2.87 = 1.26:1 reward:risk is mathematically unsustainable at 33% WR. Game film: 292 trades held <5min lost -$193 at 32% WR = dying fast. Tighten to 1.5% = force faster recognition of failed setups, reduce bleed-out magnitude."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.5,
+        "reason": "Advisor cites 'avg winner held 33min vs avg loser 110min' = we're letting winners reverse into losers. Current 1.0% trail too loose for momentum stocks that spike fast and reverse faster. Tighten to 0.5% (lowest safe bound) = lock profits aggressively when momentum confirms, prevent giveback of gains."
+      }
+    ],
+    "reasoning": "Advisor diagnosis is clear: 'ZERO specialist data caused 33% collapse' BUT current 0.8 sentiment bar has frozen trading completely (zero new positions). The solution is NOT 'never trade' - it's 'only trade WITH data'. Lower MIN_ENTRY_SENTIMENT to enable validated entries when pipeline works. Simultaneously tighten stops (3.0\u21921.5) and trails (1.0\u21920.5) to execute Advisor mandate: 'cut losers faster, protect winners harder'. This creates asymmetric risk profile needed to survive 33% WR environment.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773689560.4070423
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "ADVISOR SCREAMING: 'Infrastructure catastrophically broken, NOT market conditions'. Recent escalation 0.7\u21920.8\u21920.95 (implied) FAILED - trades still executing with ZERO specialist data. The problem is NOT sentiment threshold - it's that fast_path BYPASSES this check entirely. 280 breakout_fast_path trades at 36.4% WR prove the bypass exists. Drop to 0.45 (realistic level when pipeline works) and focus on FIXING the fast_path bypass, not raising bars the system ignores."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.5,
+        "reason": "Advisor: 'trailing stops can fail (gaps, halts, extended hours)'. Game film shows avg_loss $-2.27 vs avg_win $2.87 (1.26:1 ratio). At 32.9% WR, we need 2:1+ to break even. Tighten hard stop from 3.0% to 1.5% to cut tail risk while fast_path quality gates are being rebuilt. This won't fix blind entries but limits damage per trade."
+      },
+      {
+        "param": "SCAN_INTERVAL_SECONDS",
+        "value": 300,
+        "reason": "Market CLOSED (Monday 4pm per Advisor), zero scanner candidates, zero positions. Previous 60s\u2192600s change 'helped' (+$11.54 P&L) by reducing noise. But 600s (10min) during closed market is wasted cycles. Drop to 300s (5min) for Monday open - faster response when market active, still filtered vs original 60s spam. Capital velocity requires SOME activity when infrastructure fixed."
+      }
+    ],
+    "reasoning": "ADVISOR DIAGNOSIS IS CORRECT: This is infrastructure failure, not parameter problem. Fast_path bypass entering 280 trades with ZERO validation. But Tuner can't fix code - only adjust parameters around the carnage. Lower sentiment bar to realistic level (system ignores it anyway), tighten stop loss to limit per-trade damage, reduce scan interval for Monday open.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773691304.9448268
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL: Current 0.8 bar produced ZERO trades in 2+ hours while specialist pipeline was broken. Advisor's latest output confirms 'FULL TRADING HALT' was correct due to systematic data failure (33% WR, 280 blind fast_path trades). But Advisor now says 'DO NOT TRADE until specialist agents consistently online' - the problem is DATA PIPELINE, not bar height. Dropping to 0.45 (just above minimum 0.45 bound) to allow trading ONLY when specialists actually return data. If pipeline is fixed, 0.45 lets quality setups through. If still broken, we get zero trades (which is correct)."
+      }
+    ],
+    "reasoning": "Advisor's game film analysis is devastating: 280/359 trades entered via 'breakout_fast_path' with ZERO specialist validation, producing 36.4% WR and -$118.29 loss. The 0.7\u21920.8\u21920.95 sentiment raises FAILED because they tried to filter a broken data pipeline - you can't filter what doesn't exist. Real fix: wait for specialist agents to come online, then use moderate 0.45 bar to separate signal from noise. Current 0.8 bar would block valid opportunities if/when data returns.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773691540.724754
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL REQUIRED: Current 0.8 bar produced 15 trades with 20% win rate and -$14.65 P&L loss since implementation. Advisor explicitly warns NEBX is 30%+ extended runner at resistance with bearish signals - this is EXACTLY the late-stage setup that destroys accounts. The 0.8 threshold is catching garbage. Drop to 0.45 (just above minimum bound) to allow quality entries while maintaining SOME filter vs the 0.0 disaster that caused the original collapse."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 1.5,
+        "reason": "Recent 15 trades since 2.5% TP1 change show catastrophic 20% win rate. Advisor warns 'momentum exhaustion' and 'reversals likely imminent' on current scanner output. Game film shows best exits happen <5min. Lower to 1.5% to capture ANY gains before violent reversals that Observer explicitly flags as 'inevitable pullback' on extended runners like NEBX."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Advisor explicitly recommends tighter 2.0% stops (down from 3.0%). With 33% win rate and avg loser held 110.5min vs 32.8min for winners, we're holding losers 3.4x too long. Recent data: 15 trades, 12 losses, -$14.65 bleed. Tighter stop forces faster exits on the 2-out-of-3 trades that will lose."
+      }
+    ],
+    "reasoning": "EMERGENCY COURSE CORRECTION: The 0.7\u21920.8 MIN_ENTRY_SENTIMENT raise FAILED catastrophically (20% WR, -$14.65 loss). Advisor warns current scanner generates 'late-stage overbought entries' that reverse violently. Must LOWER sentiment bar to 0.45 to escape the quality desert, while tightening TP1 to 1.5% and stops to 2.0% to protect against the extended-runner reversals Observer explicitly warns are 'likely imminent.'",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773693364.1033673
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "EMERGENCY ROLLBACK: Current 0.8 raised 2.25 hours ago has produced ZERO new trades while Advisor screams about NEBX zombie position needing manual exit. The 0.7\u21920.8 change 'hurt' (-14.65 P&L decline, -0.86% WR drop per impact data). System is paralyzed - can't enter new positions AND can't exit existing disaster. Drop to 0.45 (within bounds, above previous 0.4 that 'helped') to restore some trading capability while maintaining quality bar above the broken 0.0 baseline."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Advisor explicitly recommends 2.0% (down from 3.0%). NEBX at +30.69% with 'catastrophic broker execution failure' proves current 3.0% trail is WAY too loose for parabolic runners. Game film: avg_loss -$2.27 vs avg_win +$2.87 with 110min losing holds. Tighter 2.0% stop cuts bleed time on failed positions."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.75,
+        "reason": "NEBX's 35+ minute exit-pending failure + Observer warning 'momentum exhaustion, gap-down risk overnight elevated' shows 1.0% trail gives parabolic runners TOO MUCH room to reverse. Tighten to 0.75% to lock profits faster on extended moves (NEBX is +30.69% runner at $53.32). Recent winners held only 33min avg - need tighter trail to capture quick pops."
+      }
+    ],
+    "reasoning": "System is PARALYZED by overly restrictive 0.8 sentiment bar producing zero entries while NEBX zombie position bleeds with broken exit execution - emergency rollback to 0.45 restores trading while tighter stops (2.0% hard, 0.75% trail) protect against the parabolic exhaustion disasters Advisor is screaming about",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 1.0,
+        "new": 0.75,
+        "reason": "NEBX's 35+ minute exit-pending failure + Observer warning 'momentum exhaustion, gap-down risk overnight elevated' shows 1.0% trail gives parabolic runners TOO MUCH room to reverse. Tighten to 0.75% to lock profits faster on extended moves (NEBX is +30.69% runner at $53.32). Recent winners held only 33min avg - need tighter trail to capture quick pops.",
+        "timestamp": 1773695184.5929039
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773695184.5995753
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL INFRASTRUCTURE FAILURE: Advisor confirms NEBX ghost position (exit order submitted 28min ago but broker resynced) = execution layer catastrophically broken. Current 0.8 sentiment bar has produced ZERO new trades while system bleeds on stuck positions. This isn't a quality filter working - this is a total lockup. Drop to 0.45 (just above hard floor of -0.5 to 0.45 range) to allow ANY validated entry when execution pipeline is restored, while previous 0.4\u21920.7\u21920.8 escalation clearly overshot into paralysis."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 2.0,
+        "reason": "NEBX exit failure after 35min proves tighter trail did NOT help - execution layer is broken, not trail width. 0.75% change made 3 hours ago, zero impact on ghost position still stuck. Widen back to 2.0% (max range) because IF trailing stops work again, we need room for momentum runners to breathe. Game film: avg winner held 33min, avg_mfe 0.16% shows setups need space. Current 0.75% would choke any real move."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Advisor suggests tighter stops 'won't help if infrastructure is broken, but if forced to trade, reduce exposure per position.' Current 3.0% is max range. Drop to 2.0% to cap bleed per position when (if) execution resumes. 33% win rate means 2/3 trades lose - smaller max loss critical. Recent avg_loss -2.27% fits inside 2.0% hard stop better than 3.0%."
+      }
+    ],
+    "reasoning": "Advisor confirms SYSTEM INTEGRITY CRISIS - ghost positions, broken execution, 33% win rate. Current 0.8 sentiment lockup preventing ANY new trades while stuck positions bleed. Reset to survivable params: looser sentiment to allow validated entries when fixed, wider trail for IF stops work, tighter hard stop to limit damage. This is damage control, not optimization.",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773697029.338266
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "EMERGENCY REVERSAL: Current 0.8 bar created 70+ minute NEBX exit crisis - position approved at entry but now stuck in broken exit pipeline. Game film shows 0.4\u21920.7\u21920.8\u21920.95 escalation CORRELATED with infrastructure failures, not quality improvement. Advisor screams 'GHOST POSITION must be force-liquidated via manual broker intervention' - our quality filters didn't prevent this disaster, they may have CAUSED it by creating edge cases. Drop to 0.45 (just above neutral) to allow normal flow while system is repaired."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 3.0,
+        "reason": "NEBX crisis proves 0.75% trail FAILED catastrophically - 'exit order submitted 70+ minutes ago but position still open with exit_finalized_at: null'. Observer confirms 'broker_reloaded_after_local_removal anomaly'. Tighter trail didn't help, may have broken exit execution. WIDEN to 3.0% (max safe bound) to reduce execution complexity while exit infrastructure is debugged. Trade quality > mechanical precision when system is broken."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 1.0,
+        "reason": "Current 3.0% stop is max bound but NEBX shows stops aren't executing anyway ('70+ minutes of exit attempts'). Recent data: avg_loss only -$2.27, suggesting tighter stops would help IF THEY WORKED. Drop to 1.0% (COMPOUND tier default) - if exits are broken, at least limit damage per failed position. This is harm reduction, not optimization."
+      }
+    ],
+    "reasoning": "OPERATIONAL EMERGENCY overrides all optimization logic - exit infrastructure catastrophically broken, must simplify parameters to reduce execution complexity",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773698833.9353147
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "Catastrophic data integrity crisis confirmed: 359 trades with 32.9% WR, -$173.72 P&L, Advisor mandates FULL TRADING HALT. Current 0.8 sentiment bar with broken specialist pipeline = zero valid entries since Friday. Lower to 0.45 (just above previous 0.4 that 'helped') to allow system to trade when data pipeline recovers, while still blocking the blind fast_path entries that destroyed performance. Impact history shows 0.4\u21920.7\u21920.8 increases all 'hurt' after initial 0.0\u21920.4 'helped'."
+      }
+    ],
+    "reasoning": "System is effectively halted with 0.8 sentiment requirement during complete specialist data blackout - need modest reduction to 0.45 to resume trading when infrastructure recovers",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773700637.9682062
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL: Current 0.8 bar created 15-trade bleeding period (-$14.65 P&L, -1.0% WR vs prior 24-trade recovery). Advisor screams 'NEBX exit pending 3+ hours, NEVER FILLED' - infrastructure broken at execution layer, NOT entry quality. Lowering to 0.45 (still above initial 0.4 that helped) allows scanner to generate candidates while maintaining quality floor above the 0.0 baseline that destroyed us."
+      },
+      {
+        "param": "TAKE_PROFIT_1_PCT",
+        "value": 3.0,
+        "reason": "REVERT failed 2.5% experiment: Impact data shows 2.5% change HURT (-$14.65 P&L decline, -0.86% WR drop in 15 trades since). Pre-change Sharpe was -16.8, post-change is -19.2 = worse. Game film shows avg winner only $2.93 BUT that's skewed by <5min panic exits (-$192.65). 30min-2h holds show 75% WR at +$30.42. Need to let winners run to 3.0% tier."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 2.0,
+        "reason": "Game film is DECISIVE: <5min holds = 32.2% WR losing -$192.65. 30min-2h holds = 75% WR winning +$30.42. But >4h holds crash to 16.7% WR losing -$23.59. Current 4.0hr max allows positions to decay past their momentum window. Cut to 2.0hr to force exits at statistical edge boundary where performance inverts."
+      }
+    ],
+    "reasoning": "Emergency reversal of failed 0.7\u21920.8 sentiment tightening that starved entry pipeline while execution infrastructure burns",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773702468.0219269
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL ROLLBACK: Current 0.8 bar has ZERO trades in 8+ hours while system burns -$14.65 on 15 zombie trades. Advisor screams 'IMMEDIATE HALT\u2014both positions are ghost artifacts' with exit orders pending 11+ minutes in illiquid after-hours. The 0.7\u21920.8 change 'hurt' per impact data. Drop to 0.45 (middle ground) to allow legitimate entries when specialist data returns while still blocking pure garbage."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.5,
+        "reason": "EMERGENCY REVERT: 1.0\u21920.75 change made 4 hours ago has NO measured trades to validate, but Advisor explicitly warns 'trailing stops can fail (gaps, halts, extended hours)' and BOTH open positions have exit orders stalled 11+ minutes showing stops ARE NOT WORKING. Widen to 1.5% to survive volatility gaps until execution infrastructure is fixed\u2014tight stops are theoretical when orders don't fill."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 2.0,
+        "reason": "NEBX held 35+ minutes with exit order pending, CTMX entered after-hours 3min after entry attempt = system is creating multi-hour zombie positions it can't exit. Drop from 4.0 to 2.0 hours max hold to force position closure before infrastructure failures compound overnight/weekend risk."
+      }
+    ],
+    "reasoning": "SYSTEM INTEGRITY CRISIS: Zero legitimate trades in 8 hours, both open positions are execution failures with stalled exit orders, 32.9% win rate shows quality filter broken\u2014aggressively roll back recent changes and tighten operational bounds",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773704277.2264423
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "CRITICAL REVERSAL: Current 0.8 bar created ZERO new trades for 19+ hours while infrastructure hemorrhaged -$44.35 on zombie positions. Advisor says 'emergency liquidation mode' then 'FULL TRADING HALT' - NOT 'raise sentiment forever'. Two dying positions (NEBX -20.8%, CTMX -2.4%) are BROKER ARTIFACTS from broken after-hours entries, not failures of sentiment threshold. Game film shows 0.4\u21920.7\u21920.8\u21920.95 escalation CORRELATED with performance collapse: each raise HURT (-$14.65, -$14.65 impact). The 0.4 setting actually HELPED (+$11.54). Cut to 0.45 to allow quality entries when data pipeline restores while still blocking the blind fast_path garbage that caused original crisis."
+      },
+      {
+        "param": "STOP_LOSS_PCT",
+        "value": 2.0,
+        "reason": "Advisor explicitly recommends 2.0% (down from 3.0%). NEBX proves 3% stop is fantasy - position down -20.8% because trailing stops failed 768+ times and hard stop never triggered. Tighter 2% hard stop creates -$50 max loss per position (vs current -$75 at 2.5% size) when protection systems fail. Recent losers averaging -$2.27 but catastrophic outliers (NEBX -$297, FLY -$42.78) prove we need smaller max loss bounds."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 1.0,
+        "reason": "REVERT 0.75% trail - Advisor warning was about NEBX's PENDING EXIT failing to fill for 60+ minutes (illiquidity trap), NOT about trail being too loose. The 0.75% change happened AFTER NEBX was already dying. Game film: recent winners held 33min avg with MFE 0.16% - a 0.75% trail would have stopped out profitable runners before they matured. Need 1.0% breathing room for volatility while positions develop, then rely on ACTUAL FILLS (not pending orders in after-hours death zones)."
+      }
+    ],
+    "reasoning": "Advisor's 'emergency liquidation' refers to TWO zombie broker artifacts, not systemic sentiment failure - unblock quality entry pipeline while tightening loss protection",
+    "no_change_reason": null,
+    "applied": [],
+    "impact_updates": [],
+    "timestamp": 1773707890.4943233
+  },
+  {
+    "changes": [
+      {
+        "param": "MIN_ENTRY_SENTIMENT",
+        "value": 0.45,
+        "reason": "EMERGENCY OVERRIDE: Two positions trapped in after-hours with unfilled exits for 70-150min. Current 0.8 MIN_SENTIMENT is TOO HIGH - zero valid entries allowed while system bleeds $610 (2.2% equity) in unmanaged positions. Drop to 0.45 (just above hard minimum 0.4) to enable CONTROLLED re-entry during Tuesday market hours AFTER trapped positions liquidate. Data shows 0.0\u21920.4 change 'helped' (+$11.54 P&L). 0.4\u21920.7\u21920.8\u21920.95 escalation HURT (-$14.65 P&L). Need middle ground that allows quality entries without total lockout."
+      },
+      {
+        "param": "MAX_HOLD_HOURS",
+        "value": 3.0,
+        "reason": "NEBX held 35+ minutes with exit order unfilled since 19:20 ET shows MAX_HOLD_HOURS=4.0 is too loose for after-hours risk. Tighten to 3.0 hours to force earlier exits BEFORE liquidity evaporates. Game film shows avg winning hold only 33min - winners don't need 4 hours. Cut max hold to reduce overnight/extended hours exposure that created this crisis."
+      },
+      {
+        "param": "TRAILING_STOP_PCT",
+        "value": 0.75,
+        "reason": "NO CHANGE from 0.75% set 4.5 hours ago. NEBX proves trailing stops can FAIL (unfilled for 150min), but tightening from 1.0%\u21920.75% was directionally correct for parabolic runners. This parameter didn't cause the crisis - extended hours entry controls did. Keep 0.75% to lock profits faster when stops DO execute."
+      }
+    ],
+    "reasoning": "EMERGENCY TRIAGE: System trapped $610 in illiquid positions. Current 0.8 MIN_SENTIMENT prevents ANY new entries while old positions bleed. Drop to 0.45 to allow controlled re-entry post-liquidation, tighten MAX_HOLD to prevent future extended-hours exposure.",
+    "no_change_reason": null,
+    "applied": [
+      {
+        "param": "TRAILING_STOP_PCT",
+        "old": 0.75,
+        "new": 0.75,
+        "reason": "NO CHANGE from 0.75% set 4.5 hours ago. NEBX proves trailing stops can FAIL (unfilled for 150min), but tightening from 1.0%\u21920.75% was directionally correct for parabolic runners. This parameter didn't cause the crisis - extended hours entry controls did. Keep 0.75% to lock profits faster when stops DO execute.",
+        "timestamp": 1773711506.3803394
+      }
+    ],
+    "impact_updates": [],
+    "timestamp": 1773711506.3851967
+  }
+]

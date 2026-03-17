@@ -33,6 +33,7 @@ class ArkTradesScanner:
         self._trades: List[Dict] = []
         self._last_fetch = 0.0
         self._fetch_interval = 3600
+        self._last_fetch_error = ""
         self._load_cache()
         logger.info(f"ARK trades scanner initialized ({len(self._trades)} cached trades)")
 
@@ -85,6 +86,11 @@ class ArkTradesScanner:
     def get_recent_trades(self) -> List[Dict]:
         if self._trades and (time.time() - self._last_fetch) < self._fetch_interval:
             return self._trades
+        if (time.time() - self._last_fetch) < self._fetch_interval:
+            return self._trades
+
+        self._last_fetch = time.time()
+        errors = []
 
         for url in self.TRADE_FILE_URLS:
             try:
@@ -98,10 +104,17 @@ class ArkTradesScanner:
                 if trades:
                     self._trades = trades
                     self._last_fetch = time.time()
+                    self._last_fetch_error = ""
                     self._save_cache()
                     return self._trades
             except Exception as e:
-                logger.debug(f"ARK trade file fetch failed for {url}: {e}")
+                errors.append(f"{url}: {e}")
+
+        if errors:
+            summary = " | ".join(errors)
+            if summary != self._last_fetch_error:
+                logger.warning(f"ARK trade fetch unavailable; keeping cached data ({summary})")
+                self._last_fetch_error = summary
 
         return self._trades
 

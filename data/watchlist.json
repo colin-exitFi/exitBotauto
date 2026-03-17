@@ -1,256 +1,256 @@
 {
   "items": [
     {
-      "ticker": "BAK",
-      "conviction": 0.95,
-      "side": "long",
-      "reason": "Earnings beat: +16.2% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
-      "sources": "earnings_reaction",
-      "added_at": 1772766473.307654,
-      "last_refreshed": 1773036978.174763,
-      "expires_at": 1773296178.174763
-    },
-    {
-      "ticker": "HMR",
-      "conviction": 0.9603,
-      "side": "long",
-      "reason": "Earnings beat: +8.7% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
-      "sources": "earnings_reaction",
-      "added_at": 1772766493.8793962,
-      "last_refreshed": 1773036978.175221,
-      "expires_at": 1773296178.175221
-    },
-    {
-      "ticker": "NVNO",
-      "conviction": 0.95,
-      "side": "long",
-      "reason": "Earnings beat: +16.6% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 16.6% ($12.57 vs prev $10.79) | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
-      "sources": "earnings_reaction + premarket_scan",
-      "added_at": 1772766498.782183,
-      "last_refreshed": 1773036978.175789,
-      "expires_at": 1773296178.175789
-    },
-    {
-      "ticker": "RAIN",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "Earnings beat: +7.1% AH gap up | Earnings in 4 days (unknown) \u2014 pre-earnings run-up | Earnings in 3 days (unknown) \u2014 pre-earnings run-up | Overnight up 7.1% ($2.72 vs prev $2.54) | Earnings in 2 days (unknown) \u2014 pre-earnings run-up",
-      "sources": "earnings_reaction + premarket_scan",
-      "added_at": 1772766838.2943501,
-      "last_refreshed": 1773036978.175526,
-      "expires_at": 1773296178.175526
-    },
-    {
-      "ticker": "SOTY",
-      "conviction": 1.02,
-      "side": "long",
-      "reason": "FDA sNDA[3] Sotyktu (deucravacitinib) in 0d",
-      "sources": "pharma",
-      "added_at": 1772855418.42226,
-      "last_refreshed": 1772855418.42226,
-      "expires_at": 1773114618.42226
-    },
-    {
-      "ticker": "SEV",
-      "conviction": 0.95,
-      "side": "long",
-      "reason": "Earnings beat: +39.8% AH gap up | Overnight up 39.8% ($3.30 vs prev $2.36)",
-      "sources": "earnings_reaction + premarket_scan",
-      "added_at": 1772855426.3275661,
-      "last_refreshed": 1773036662.6740339,
-      "expires_at": 1773295862.6740339
-    },
-    {
-      "ticker": "USO",
-      "conviction": 0.9537000000000001,
-      "side": "long",
-      "reason": "StockTwits #30 trending | StockTwits #28 trending | Oil proxy for geopolitical risk; WTI biggest jump in years, highest since 2023[1 | Overnight up 13.6% ($109.44 vs prev $96.33) | StockTwits #29 trending",
-      "sources": "stocktwits + sunday_analysis + premarket_scan",
-      "added_at": 1772945965.218199,
-      "last_refreshed": 1773036981.913038,
-      "expires_at": 1773123381.913038
-    },
-    {
-      "ticker": "SLS",
-      "conviction": 0.9500000000000001,
-      "side": "long",
-      "reason": "StockTwits #29 trending | StockTwits #25 trending | Overnight up 4.7% ($5.54 vs prev $5.29) | StockTwits #18 trending",
-      "sources": "stocktwits + premarket_scan",
-      "added_at": 1772945965.2187572,
-      "last_refreshed": 1773036662.676776,
-      "expires_at": 1773295862.676776
-    },
-    {
-      "ticker": "UCO",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #28 trending | StockTwits #22 trending | Overnight up 9.6% ($33.59 vs prev $30.66) | StockTwits #23 trending | StockTwits #24 trending",
-      "sources": "stocktwits + premarket_scan",
-      "added_at": 1772945965.2195818,
-      "last_refreshed": 1773036981.914932,
-      "expires_at": 1773123381.914932
-    },
-    {
-      "ticker": "INDO",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #11 trending | StockTwits #26 trending | Overnight up 12.1% ($5.65 vs prev $5.04) | StockTwits #17 trending | StockTwits #28 trending",
-      "sources": "stocktwits + premarket_scan",
-      "added_at": 1772945965.235017,
-      "last_refreshed": 1773036981.9135711,
-      "expires_at": 1773123381.9135711
-    },
-    {
-      "ticker": "IOVA",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #20 trending | Overnight up 11.7% ($5.14 vs prev $4.60)",
-      "sources": "stocktwits + premarket_scan",
-      "added_at": 1773022837.519083,
-      "last_refreshed": 1773036662.675752,
-      "expires_at": 1773295862.675752
-    },
-    {
-      "ticker": "UVIX",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "StockTwits #18 trending | Overnight up 22.8% ($9.04 vs prev $7.36)",
-      "sources": "stocktwits + premarket_scan",
-      "added_at": 1773022837.5224488,
-      "last_refreshed": 1773036662.6745431,
-      "expires_at": 1773295862.6745431
-    },
-    {
-      "ticker": "XLK",
-      "conviction": 0.9,
+      "ticker": "AAPL",
+      "conviction": 0.8999999999999999,
       "side": "short",
-      "reason": "Tech lagged -2.6% Friday on growth fears, Magnificent 7 drops; momentum downside",
-      "sources": "sunday_analysis",
-      "added_at": 1773029287.711484,
-      "last_refreshed": 1773029287.711484,
-      "expires_at": 1773288487.711484
+      "reason": "Hottest contracts bearish: $3,411,058 premium across 3 contracts (ask-side 37%, vol/OI 19.06) | Recent +3% jump on product launch announcement March 4, tech leader amid AI concerns[2]",
+      "sources": "options_flow + perplexity",
+      "added_at": 1773720282.0446937,
+      "last_refreshed": 1773727677.9725156,
+      "expires_at": 1773986877.9725156
     },
     {
-      "ticker": "RCAT",
-      "conviction": 0.871,
-      "side": "long",
-      "reason": "StockTwits #26 trending | StockTwits #25 trending",
-      "sources": "stocktwits",
-      "added_at": 1773029311.248505,
-      "last_refreshed": 1773029534.5901551,
-      "expires_at": 1773115934.5901551
-    },
-    {
-      "ticker": "HIMS",
-      "conviction": 0.9200000000000002,
-      "side": "long",
-      "reason": "StockTwits #25 trending | StockTwits #26 trending",
-      "sources": "stocktwits",
-      "added_at": 1773029311.2500741,
-      "last_refreshed": 1773036981.914103,
-      "expires_at": 1773123381.914103
-    },
-    {
-      "ticker": "OXY",
-      "conviction": 0.89,
-      "side": "long",
-      "reason": "StockTwits #18 trending | StockTwits #19 trending",
-      "sources": "stocktwits",
-      "added_at": 1773029311.264123,
-      "last_refreshed": 1773029534.596853,
-      "expires_at": 1773115934.596853
-    },
-    {
-      "ticker": "AMAT",
-      "conviction": 0.9,
-      "side": "short",
-      "reason": "Down 6.29% amid tech/semiconductor weakness[1] | Overnight down 6.3% ($324.71 vs prev $346.38)",
-      "sources": "perplexity + premarket_scan",
-      "added_at": 1773029534.6024761,
-      "last_refreshed": 1773036662.676492,
-      "expires_at": 1773295862.676492
-    },
-    {
-      "ticker": "TLT",
+      "ticker": "SPXW",
       "conviction": 0.85,
       "side": "long",
-      "reason": "Whale flow bullish: $1,022,487 premium across 4 alerts",
+      "reason": "Whale flow bullish: $1,103,615 premium across 10 alerts",
       "sources": "options_flow",
-      "added_at": 1773036978.2852569,
-      "last_refreshed": 1773036978.2852569,
-      "expires_at": 1773296178.2852569
+      "added_at": 1773720282.0493307,
+      "last_refreshed": 1773727677.9743655,
+      "expires_at": 1773986877.9743655
+    },
+    {
+      "ticker": "XRP",
+      "conviction": 0.96,
+      "side": "long",
+      "reason": "StockTwits #26 trending | Overnight up 9.2% ($17.13 vs prev $15.68)",
+      "sources": "stocktwits + premarket_scan",
+      "added_at": 1773720284.8486905,
+      "last_refreshed": 1773727671.2741175,
+      "expires_at": 1773986871.2741175
+    },
+    {
+      "ticker": "XBI",
+      "conviction": 0.93,
+      "side": "long",
+      "reason": "StockTwits #23 trending | Whale flow bearish: $153,362 premium across 1 alerts",
+      "sources": "stocktwits + options_flow",
+      "added_at": 1773720284.8524222,
+      "last_refreshed": 1773727677.9764206,
+      "expires_at": 1773986877.9764206
+    },
+    {
+      "ticker": "ASST",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "StockTwits #21 trending | Overnight up 14.2% ($10.88 vs prev $9.53)",
+      "sources": "stocktwits + premarket_scan",
+      "added_at": 1773720284.8531725,
+      "last_refreshed": 1773727671.2721155,
+      "expires_at": 1773986871.2721155
+    },
+    {
+      "ticker": "STM",
+      "conviction": 0.89,
+      "side": "long",
+      "reason": "StockTwits #19 trending",
+      "sources": "stocktwits",
+      "added_at": 1773720284.8539608,
+      "last_refreshed": 1773720284.8539608,
+      "expires_at": 1773806684.8539608
+    },
+    {
+      "ticker": "CING",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "StockTwits #16 trending | Overnight up 24.9% ($10.75 vs prev $8.61) | StockTwits #18 trending",
+      "sources": "stocktwits + premarket_scan",
+      "added_at": 1773720284.855373,
+      "last_refreshed": 1773727682.947367,
+      "expires_at": 1773814082.947367
+    },
+    {
+      "ticker": "LYFT",
+      "conviction": 0.85,
+      "side": "long",
+      "reason": "StockTwits #15 trending | Overnight up 3.6% ($13.54 vs prev $13.08)",
+      "sources": "stocktwits + premarket_scan",
+      "added_at": 1773720284.8561933,
+      "last_refreshed": 1773727671.280566,
+      "expires_at": 1773986871.280566
+    },
+    {
+      "ticker": "MU",
+      "conviction": 0.9,
+      "side": "long",
+      "reason": "Earnings on March 18, EPS $8.50 expected, key semiconductor sector mover[1] | Overnight up 4.5% ($445.34 vs prev $426.12) | Whale flow bullish: $558,735 premium across 4 alerts",
+      "sources": "perplexity + premarket_scan + options_flow",
+      "added_at": 1773720284.8586411,
+      "last_refreshed": 1773727677.9753234,
+      "expires_at": 1773986877.9753234
     },
     {
       "ticker": "BABA",
+      "conviction": 0.9,
+      "side": "long",
+      "reason": "Earnings on March 19, EPS $1.73, Rev $41.26B, e-commerce focus[1]",
+      "sources": "perplexity",
+      "added_at": 1773720284.8595479,
+      "last_refreshed": 1773720284.8595479,
+      "expires_at": 1773893084.8595479
+    },
+    {
+      "ticker": "FDX",
+      "conviction": 0.9,
+      "side": "long",
+      "reason": "Earnings on March 19, EPS $4.11, Rev $26.46B, logistics sector impact[1]",
+      "sources": "perplexity",
+      "added_at": 1773720284.8605604,
+      "last_refreshed": 1773720284.8605604,
+      "expires_at": 1773893084.8605604
+    },
+    {
+      "ticker": "OLMA",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +12.7% AH gap up | Overnight up 12.7% ($16.59 vs prev $14.72)",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720286.8508818,
+      "last_refreshed": 1773727684.9861312,
+      "expires_at": 1773986884.9861312
+    },
+    {
+      "ticker": "SNFCA",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "Earnings beat: +7.7% AH gap up | Overnight up 7.7% ($9.19 vs prev $8.53)",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720287.9255717,
+      "last_refreshed": 1773727686.0647063,
+      "expires_at": 1773986886.0647063
+    },
+    {
+      "ticker": "PYXS",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "Earnings beat: +7.8% AH gap up | Overnight up 7.8% ($1.66 vs prev $1.54)",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720288.3230348,
+      "last_refreshed": 1773727686.4954696,
+      "expires_at": 1773986886.4954696
+    },
+    {
+      "ticker": "OPTT",
+      "conviction": 0.9581000000000001,
+      "side": "long",
+      "reason": "Earnings beat: +8.5% AH gap up | Overnight up 8.5% ($0.41 vs prev $0.38) | Reports after close today \u2014 potential gap tomorrow",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720288.735002,
+      "last_refreshed": 1773727686.9838228,
+      "expires_at": 1773986886.9838228
+    },
+    {
+      "ticker": "ICCM",
+      "conviction": 0.98,
+      "side": "long",
+      "reason": "Earnings beat: +7.2% AH gap up | Overnight up 7.2% ($0.73 vs prev $0.68)",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720289.1277547,
+      "last_refreshed": 1773727687.477175,
+      "expires_at": 1773986887.477175
+    },
+    {
+      "ticker": "XCUR",
+      "conviction": 0.95,
+      "side": "long",
+      "reason": "Earnings beat: +15.0% AH gap up | Overnight up 15.0% ($4.68 vs prev $4.07)",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720289.7872458,
+      "last_refreshed": 1773727688.268476,
+      "expires_at": 1773986888.268476
+    },
+    {
+      "ticker": "IPM",
+      "conviction": 0.9559000000000001,
+      "side": "long",
+      "reason": "Earnings beat: +8.4% AH gap up | Overnight up 8.4% ($2.12 vs prev $1.96) | Reports after close today \u2014 potential gap tomorrow",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720289.9329808,
+      "last_refreshed": 1773727688.4496963,
+      "expires_at": 1773986888.4496963
+    },
+    {
+      "ticker": "CAPS",
+      "conviction": 0.9526000000000001,
+      "side": "long",
+      "reason": "Earnings beat: +8.3% AH gap up | Overnight up 8.3% ($0.68 vs prev $0.62)",
+      "sources": "earnings_reaction + premarket_scan",
+      "added_at": 1773720290.2252054,
+      "last_refreshed": 1773727688.6780512,
+      "expires_at": 1773986888.6780512
+    },
+    {
+      "ticker": "NVDA",
+      "conviction": 0.99,
+      "side": "long",
+      "reason": "Hottest contracts bullish: $113,412,008 premium across 17 contracts (ask-side 48%, vol/OI 9.85) | StockTwits #29 trending",
+      "sources": "options_flow + stocktwits",
+      "added_at": 1773727677.9675717,
+      "last_refreshed": 1773727682.9342752,
+      "expires_at": 1773814082.9342752
+    },
+    {
+      "ticker": "TMC",
+      "conviction": 0.97,
+      "side": "long",
+      "reason": "StockTwits #27 trending",
+      "sources": "stocktwits",
+      "added_at": 1773727682.93608,
+      "last_refreshed": 1773727682.93608,
+      "expires_at": 1773814082.93608
+    },
+    {
+      "ticker": "EOPSF",
       "conviction": 0.95,
       "side": "long",
       "reason": "StockTwits #25 trending",
       "sources": "stocktwits",
-      "added_at": 1773036981.914353,
-      "last_refreshed": 1773036981.914353,
-      "expires_at": 1773123381.914353
+      "added_at": 1773727682.9370718,
+      "last_refreshed": 1773727682.9370718,
+      "expires_at": 1773814082.9370718
     },
     {
-      "ticker": "GME",
-      "conviction": 0.94,
+      "ticker": "BCRX",
+      "conviction": 0.98,
       "side": "long",
-      "reason": "StockTwits #24 trending",
+      "reason": "StockTwits #23 trending",
       "sources": "stocktwits",
-      "added_at": 1773036981.9146519,
-      "last_refreshed": 1773036981.9146519,
-      "expires_at": 1773123381.9146519
+      "added_at": 1773727682.9378932,
+      "last_refreshed": 1773727682.9378932,
+      "expires_at": 1773814082.9378932
     },
     {
-      "ticker": "BNO",
-      "conviction": 0.9680000000000001,
+      "ticker": "RHHBY",
+      "conviction": 0.89,
       "side": "long",
-      "reason": "StockTwits #18 trending",
+      "reason": "StockTwits #19 trending",
       "sources": "stocktwits",
-      "added_at": 1773036981.915178,
-      "last_refreshed": 1773036981.915178,
-      "expires_at": 1773123381.915178
+      "added_at": 1773727682.9446454,
+      "last_refreshed": 1773727682.9446454,
+      "expires_at": 1773814082.9446454
     },
     {
-      "ticker": "DRIP",
-      "conviction": 0.87,
+      "ticker": "UAMY",
+      "conviction": 0.9570000000000001,
       "side": "long",
       "reason": "StockTwits #17 trending",
       "sources": "stocktwits",
-      "added_at": 1773036981.91545,
-      "last_refreshed": 1773036981.91545,
-      "expires_at": 1773123381.91545
-    },
-    {
-      "ticker": "PL",
-      "conviction": 0.86,
-      "side": "long",
-      "reason": "StockTwits #16 trending",
-      "sources": "stocktwits",
-      "added_at": 1773036981.915713,
-      "last_refreshed": 1773036981.915713,
-      "expires_at": 1773123381.915713
-    },
-    {
-      "ticker": "TNYA",
-      "conviction": 0.9460000000000001,
-      "side": "long",
-      "reason": "Earnings beat: +8.0% AH gap up",
-      "sources": "earnings_reaction",
-      "added_at": 1773036988.3710861,
-      "last_refreshed": 1773036988.3710861,
-      "expires_at": 1773296188.3710861
-    },
-    {
-      "ticker": "FLNT",
-      "conviction": 0.98,
-      "side": "long",
-      "reason": "Earnings beat: +11.3% AH gap up",
-      "sources": "earnings_reaction",
-      "added_at": 1773036989.0298822,
-      "last_refreshed": 1773036989.0298822,
-      "expires_at": 1773296189.0298822
+      "added_at": 1773727682.9483142,
+      "last_refreshed": 1773727682.9483142,
+      "expires_at": 1773814082.9483142
     }
   ],
-  "updated_at": "2026-03-09T01:16:32.516865",
+  "updated_at": "2026-03-17T06:08:09.158346",
   "count": 25
 }

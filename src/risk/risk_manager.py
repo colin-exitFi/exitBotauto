@@ -19,7 +19,7 @@ RISK_TIERS = {
     "SURVIVAL":  {"min": 0,      "max": 500,    "size_pct": 10.0, "max_positions": 3,  "stop_pct": 2.0, "daily_loss_pct": 8.0},
     "GROWTH":    {"min": 500,    "max": 2000,   "size_pct": 7.0,  "max_positions": 5,  "stop_pct": 1.5, "daily_loss_pct": 6.0},
     "SCALING":   {"min": 2000,   "max": 10000,  "size_pct": 4.0,  "max_positions": 8,  "stop_pct": 1.5, "daily_loss_pct": 5.0},
-    "COMPOUND":  {"min": 10000,  "max": 50000,  "size_pct": 2.5,  "max_positions": 10, "stop_pct": 1.0, "daily_loss_pct": 4.0},
+    "COMPOUND":  {"min": 10000,  "max": 50000,  "size_pct": 5.0,  "max_positions": 20, "stop_pct": 1.0, "daily_loss_pct": 5.0},
     "PROTECT":   {"min": 50000,  "max": 250000, "size_pct": 1.5,  "max_positions": 12, "stop_pct": 1.0, "daily_loss_pct": 3.0},
     "PRESERVE":  {"min": 250000, "max": 1000000,"size_pct": 0.8,  "max_positions": 15, "stop_pct": 0.8, "daily_loss_pct": 2.0},
 }
@@ -221,8 +221,7 @@ class RiskManager:
 
     def adjust_for_heat(self, base_size: float) -> float:
         """Reduce size if portfolio heat is high."""
-        tier = self.get_risk_tier()
-        daily_loss_budget = self._equity * (tier["daily_loss_pct"] / 100.0)
+        daily_loss_budget = self._equity * (self.max_daily_loss_pct / 100.0)
         if daily_loss_budget <= 0:
             return 0.0
 
@@ -296,10 +295,9 @@ class RiskManager:
         if self.trading_halted:
             logger.warning("Trading halted by circuit breaker")
             return False
-        tier = self.get_risk_tier()
         daily_loss_pct = (self.daily_pnl / self._equity) * 100 if self._equity else 0
-        if daily_loss_pct <= -tier["daily_loss_pct"]:
-            logger.error(f"🚨 Daily loss limit hit: {daily_loss_pct:.2f}% (tier limit: -{tier['daily_loss_pct']}%)")
+        if daily_loss_pct <= -self.max_daily_loss_pct:
+            logger.error(f"🚨 Daily loss limit hit: {daily_loss_pct:.2f}% (v2 limit: -{self.max_daily_loss_pct}%)")
             self.trading_halted = True
             return False
         return True
@@ -456,7 +454,7 @@ class RiskManager:
             f"Streak: {self.consecutive_wins}W/{self.consecutive_losses}L"
         )
 
-        if daily_pct <= -tier["daily_loss_pct"]:
+        if daily_pct <= -self.max_daily_loss_pct:
             logger.error(f"🚨 CIRCUIT BREAKER: Daily loss {daily_pct:.2f}% → HALTING")
             self.trading_halted = True
 
@@ -500,7 +498,7 @@ class RiskManager:
                 break
 
         # Heat
-        daily_loss_budget = self._equity * (tier["daily_loss_pct"] / 100.0)
+        daily_loss_budget = self._equity * (self.max_daily_loss_pct / 100.0)
         total_heat = self._open_risk + abs(min(0, self.daily_pnl))
         heat_pct = (total_heat / daily_loss_budget * 100) if daily_loss_budget > 0 else 0
 
@@ -511,6 +509,7 @@ class RiskManager:
             "tier_max_positions": tier["max_positions"],
             "tier_stop_pct": tier["stop_pct"],
             "tier_daily_loss_pct": tier["daily_loss_pct"],
+            "daily_circuit_breaker_pct": self.max_daily_loss_pct,
             # Performance
             "trading_halted": self.trading_halted,
             "daily_pnl": round(self.daily_pnl, 2),
@@ -641,7 +640,7 @@ class RiskManager:
     def resume(self):
         tier = self.get_risk_tier()
         daily_pct = (self.daily_pnl / self._equity) * 100 if self._equity else 0
-        if daily_pct <= -tier["daily_loss_pct"]:
+        if daily_pct <= -self.max_daily_loss_pct:
             logger.error("Cannot resume: daily loss limit still exceeded")
             return False
         self.trading_halted = False

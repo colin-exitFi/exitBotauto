@@ -20,7 +20,7 @@ DEFAULT_ACTION = {
 }
 
 PROMPT_TEMPLATE = """You are an EXIT MANAGEMENT specialist inside Velox, an autonomous momentum trading engine.
-Your ONLY job: manage trailing stops on open positions. You can tighten, widen, or trigger immediate exit.
+Your ONLY job: monitor open positions and recommend mechanical exit changes. You do NOT have live execution authority.
 
 POSITION:
 - Symbol: {symbol}
@@ -40,10 +40,10 @@ AGENT BRIEFS (from other specialists):
 - Macro: {macro_brief}
 
 RULES:
-- HOLD: keep current trail, position is fine
-- TIGHTEN: reduce trail % to lock in more profit (e.g. 3% → 1.5% when up big)
-- WIDEN: increase trail % to give it more room if momentum is strong but volatile
-- EXIT_NOW: immediate market sell — only for extreme circumstances (crash, halt, thesis broken)
+- HOLD: keep current protection, position is fine
+- TIGHTEN: recommend a tighter ratchet / stop posture to lock in more profit
+- WIDEN: recommend more room if momentum is strong but volatile
+- EXIT_NOW: recommend immediate mechanical exit — recommendation only, never execute directly
 
 Trail range: 0.5% (very tight) to 5.0% (very wide). Current default is 3%.
 If we're up >5%, consider tightening. If momentum is accelerating, consider widening to ride it.
@@ -254,92 +254,34 @@ class ExitAgent:
             return False, None
 
     async def _execute_action(self, symbol: str, pos: Dict, action: Dict):
-        """Execute the exit agent's decision — adjust trailing stop or exit."""
-        if not self.broker:
-            logger.warning(f"Exit agent: no broker to execute {action['action']} for {symbol}")
-            return
-
+        """Recommendation-only in v2 stabilization."""
         act = action.get("action", "HOLD")
+        reason = str(action.get("reasoning", "") or "").strip()
+        new_trail = action.get("new_trail_pct")
+        pos["exit_agent_recommendation"] = {
+            "action": act,
+            "reasoning": reason,
+            "new_trail_pct": new_trail,
+            "timestamp": time.time(),
+        }
+        if act == "HOLD":
+            return
+        logger.info(
+            f"🚪 Exit Agent recommendation: {symbol} {act}"
+            f"{f' -> {float(new_trail):.2f}%' if new_trail is not None else ''} "
+            f"({reason})"
+        )
+        try:
+            from src.dashboard.dashboard import log_activity
 
-        if act == "EXIT_NOW":
-            qty = float(pos.get("quantity", 0) or 0)
-            if qty > 0:
-                logger.warning(f"EXIT_NOW: {symbol} — {action.get('reasoning', '')}")
-                try:
-                    exit_manager = getattr(self, "_exit_manager", None)
-                    if exit_manager:
-                        entry_price = float(pos.get("entry_price", 0) or 0)
-                        side = pos.get("side", "long")
-                        if side == "short":
-                            pnl_pct = ((entry_price - float(pos.get("current_price", entry_price))) / entry_price * 100) if entry_price else 0
-                        else:
-                            pnl_pct = ((float(pos.get("current_price", entry_price)) - entry_price) / entry_price * 100) if entry_price else 0
-                        result = await exit_manager._execute_exit(
-                            pos, qty, float(pos.get("current_price", entry_price)),
-                            f"exit_agent_EXIT_NOW: {action.get('reasoning', '')[:100]}", pnl_pct
-                        )
-                        if result:
-                            self._last_briefs.pop(symbol, None)
-                            self._last_check.pop(symbol, None)
-                    else:
-                        side = pos.get("side", "long")
-                        canceled = await self._cancel_conflicting_exit_orders(symbol, side=side)
-                        if canceled:
-                            logger.info(f"Exit agent canceled {canceled} orders for {symbol}")
-                        broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
-                        order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, qty)
-                        if order:
-                            pos["exit_pending"] = True
-                            pos["exit_order_id"] = order.get("id")
-                            pos["last_exit_reason"] = f"exit_agent_EXIT_NOW: {action.get('reasoning', '')[:100]}"
-                            self._last_briefs.pop(symbol, None)
-                            self._last_check.pop(symbol, None)
-                except Exception as e:
-                    logger.error(f"Exit agent EXIT_NOW failed for {symbol}: {e}")
-
-        elif act in ("TIGHTEN", "WIDEN"):
-            new_trail = action.get("new_trail_pct")
-            if new_trail is None:
-                return
-            old_trail = pos.get("trail_pct", 3.0)
-            if abs(new_trail - old_trail) < 0.1:
-                return  # Not enough change to bother
-
-            logger.info(f"🔧 Exit Agent adjusting {symbol} trail: {old_trail}% → {new_trail}%")
-            try:
-                # Mark position as adjusting so monitor doesn't panic
-                pos["_trail_adjusting"] = True
-                # Cancel old trailing stop and place new one
-                stop_id = pos.get("trailing_stop_order_id")
-                if stop_id:
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, self.broker.cancel_order, stop_id
-                    )
-                    await asyncio.sleep(0.3)
-
-                qty = int(float(pos.get("quantity", 0)))
-                if qty >= 1 and hasattr(self.broker, 'place_trailing_stop'):
-                    side = pos.get("side", "long")
-                    trail_fn = self.broker.place_trailing_stop_short if side == "short" and hasattr(self.broker, "place_trailing_stop_short") else self.broker.place_trailing_stop
-                    new_stop = await asyncio.get_event_loop().run_in_executor(
-                        None, trail_fn, symbol, qty, new_trail
-                    )
-                    if new_stop:
-                        pos["trail_pct"] = new_trail
-                        pos["trailing_stop_order_id"] = new_stop.get("id")
-                        logger.success(f"📈 Trail adjusted: {symbol} {old_trail}% → {new_trail}%")
-                    else:
-                        # Failed — restore old stop
-                        logger.warning(f"Trail adjust failed for {symbol} — restoring {old_trail}%")
-                        restore = await asyncio.get_event_loop().run_in_executor(
-                            None, trail_fn, symbol, qty, old_trail
-                        )
-                        if restore:
-                            pos["trailing_stop_order_id"] = restore.get("id")
-            except Exception as e:
-                logger.error(f"Exit agent trail adjust failed for {symbol}: {e}")
-            finally:
-                pos.pop("_trail_adjusting", None)  # Always clear the flag
+            message = f"Exit agent recommendation: {symbol} {act}"
+            if new_trail is not None:
+                message += f" -> {float(new_trail):.2f}%"
+            if reason:
+                message += f" ({reason})"
+            log_activity("ai", message)
+        except Exception:
+            pass
 
     async def _cancel_conflicting_exit_orders(self, symbol: str, side: str = "long") -> int:
         exit_side = "buy" if side == "short" else "sell"

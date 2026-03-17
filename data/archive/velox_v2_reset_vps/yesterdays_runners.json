@@ -1,0 +1,41 @@
+{
+  "runners": [
+    {
+      "symbol": "SVCO",
+      "date": "2026-03-13",
+      "change_pct": 53.52,
+      "close_price": 5.1,
+      "volume": 11682890.0,
+      "volume_spike": 56.513230772245834,
+      "sentiment_at_peak": 0.5556
+    },
+    {
+      "symbol": "ELPW",
+      "date": "2026-03-13",
+      "change_pct": 42.45,
+      "close_price": 5.0,
+      "volume": 14474312.0,
+      "volume_spike": 2.6225332474678926,
+      "sentiment_at_peak": 1.0
+    },
+    {
+      "symbol": "CTMX",
+      "date": "2026-03-16",
+      "change_pct": 44.02,
+      "close_price": 6.75,
+      "volume": 117437070.0,
+      "volume_spike": 40.991137642027624,
+      "sentiment_at_peak": -0.1765
+    },
+    {
+      "symbol": "ULY",
+      "date": "2026-03-16",
+      "change_pct": 167.66,
+      "close_price": 5.37,
+      "volume": 1998449.0,
+      "volume_spike": 2.201459153568082,
+      "sentiment_at_peak": 1.0
+    }
+  ],
+  "updated_at": "2026-03-16T20:05:29.178535"
+}

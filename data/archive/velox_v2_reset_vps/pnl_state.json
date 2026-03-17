@@ -1,0 +1,17 @@
+{
+  "options_total_realized_pnl": 0.0,
+  "options_total_trades": 0,
+  "options_winning_trades": 0,
+  "options_losing_trades": 0,
+  "today_realized_pnl": -43.93,
+  "today_date": "2026-03-16",
+  "total_realized_pnl": -173.3,
+  "total_trades": 315,
+  "winning_trades": 109,
+  "losing_trades": 191,
+  "best_trade": 36.18999999999991,
+  "worst_trade": -26.0,
+  "total_fees": 0.0,
+  "starting_equity": 25000.0,
+  "peak_equity": 26894.85
+}

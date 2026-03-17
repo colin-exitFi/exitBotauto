@@ -1,169 +1,168 @@
 """
-Risk Agent 🛡️ - Portfolio risk, position sizing, sector exposure, PDT, wash sales, drawdown.
-Uses Claude Sonnet (analytical).
+Risk Agent 🛡️ - Deterministic portfolio safety and size caps for Velox v2.
 """
 
 from typing import Dict, List
+
 from loguru import logger
 
-from src.agents.base_agent import call_gpt
+from config import settings
+from src.risk.risk_manager import SECTOR_MAP
 
 
 DEFAULT_BRIEF = {
-    "approved": False,
-    "max_size_pct": 0.0,
-    "reasoning": "Risk agent unavailable — defaulting to DENY for safety",
-    "portfolio_heat": "high",
-    "warnings": ["risk_agent_failed"],
-    "error": True,
+    "can_trade": True,
+    "size_cap_pct": 1.0,
+    "reasoning": "Risk agent neutral fallback — reduced size only",
+    "portfolio_heat": "medium",
+    "constraint_flags": ["risk_agent_fallback"],
+    "error": False,
 }
 
-PROMPT_TEMPLATE = """You are a RISK MANAGEMENT specialist inside Velox, an autonomous momentum trading engine.
-Your job: approve or deny new positions based on risk analysis. Capital protection is paramount.
 
-DENY FOR:
-- Wash sale violation (sold at loss within 31 days)
-- Max positions reached
-- Daily circuit breaker triggered (-3%+ daily loss)
-- Sector concentration >40%
-- Adding to a LOSING position
-- Consecutive losses >= 3 without a win (raise the bar, reduce size)
-- Portfolio heat above 80% of daily loss budget
-- Insufficient edge signal quality (low confidence, conflicting signals)
-
-APPROVE IF:
-- Hard limits are clear
-- Signals show genuine momentum with volume confirmation
-- Risk/reward is favorable given current portfolio state
-- Recent performance supports continued trading at this size
-
-If approving, set max_size_pct conservatively. After losses, reduce size. After wins, normal size.
-If uncertain about edge quality, DENY. Missing a trade costs nothing; a bad trade costs real money.
-
-PROPOSED TRADE:
-- Symbol: {symbol}
-- Direction: {direction}
-- Current price: ${price:.2f}
-
-PORTFOLIO STATE:
-- Equity: ${equity:,.2f}
-- Risk tier: {tier_name} (size={tier_size_pct}%, max_positions={tier_max_pos})
-- Open positions: {num_positions}/{tier_max_pos}
-- Daily P&L: ${daily_pnl:.2f} ({daily_pnl_pct:+.2f}%)
-- Portfolio heat: {heat_pct:.0f}% of daily loss budget
-- Consecutive losses: {consec_losses}
-- Win streak: {consec_wins}
-
-CURRENT POSITIONS:
-{positions_summary}
-
-RISK FLAGS:
-- PDT status: {pdt_status}
-- Wash sale blocked: {wash_sale}
-- Weekly P&L: ${weekly_pnl:.2f}
-- Drawdown from ATH: {drawdown_pct:.1f}%
-- Sector of new trade: {sector}
-- Sector exposure: {sector_exposure:.1f}%
-
-Should this trade be approved? If yes, what's the max position size as % of equity?
-
-Respond with ONLY valid JSON:
-{{"approved": true/false, "max_size_pct": 0.0-5.0, "reasoning": "brief explanation", "portfolio_heat": "low" or "medium" or "high", "warnings": ["list", "of", "concerns"]}}"""
+def _heat_bucket(heat_pct: float) -> str:
+    if heat_pct >= 70:
+        return "high"
+    if heat_pct >= 35:
+        return "medium"
+    return "low"
 
 
-async def analyze(symbol: str, price: float, signals: Dict,
-                  risk_manager=None, positions: List[Dict] = None,
-                  direction: str = "BUY") -> Dict:
-    """Run risk assessment. Returns structured brief."""
+async def analyze(
+    symbol: str,
+    price: float,
+    signals: Dict,
+    risk_manager=None,
+    positions: List[Dict] = None,
+    direction: str = "BUY",
+) -> Dict:
+    """Return deterministic risk sizing and hard portfolio constraints."""
     try:
         if not risk_manager:
-            return {**DEFAULT_BRIEF, "reasoning": "No risk manager available"}
+            return {**DEFAULT_BRIEF, "symbol": symbol, "reasoning": "No risk manager available"}
 
-        status = risk_manager.get_status()
-        tier = risk_manager.get_risk_tier()
-
-        # Build positions summary
         pos_list = positions or []
-        if pos_list:
-            pos_lines = []
-            for p in pos_list[:10]:
-                sym = p.get("symbol", "?")
-                entry = p.get("entry_price", 0)
-                qty = p.get("quantity", 0)
-                side = p.get("side", "long")
-                pos_lines.append(f"  {sym}: {side} {qty} @ ${entry:.2f}")
-            positions_summary = "\n".join(pos_lines)
-        else:
-            positions_summary = "  No open positions"
+        status = risk_manager.get_status() or {}
+        tier = risk_manager.get_risk_tier() or {}
+        equity = float(status.get("equity", getattr(risk_manager, "equity", 0)) or 0)
+        heat_pct = float(status.get("heat_pct", 0) or 0)
+        consecutive_losses = int(status.get("consecutive_losses", 0) or 0)
+        tier_size_pct = max(0.0, min(5.0, float(tier.get("size_pct", 1.0) or 1.0)))
+        size_cap_pct = tier_size_pct
+        constraint_flags: List[str] = []
+        can_trade = True
 
-        # Sector info
-        from src.risk.risk_manager import SECTOR_MAP
-        sector = SECTOR_MAP.get(symbol, "Unknown")
+        if risk_manager.is_wash_sale(symbol):
+            can_trade = False
+            constraint_flags.append("wash_sale")
+
+        if not risk_manager.can_trade():
+            can_trade = False
+            constraint_flags.append("trading_halted")
+
+        max_positions = int(tier.get("max_positions", 5) or 5)
+        if len(pos_list) >= max_positions:
+            can_trade = False
+            constraint_flags.append("max_positions")
+
+        sector = SECTOR_MAP.get(str(symbol or "").upper(), "unknown")
         sector_notional = sum(
-            p.get("entry_price", 0) * p.get("quantity", 0)
+            float(p.get("entry_price", 0) or 0) * float(p.get("quantity", 0) or 0)
             for p in pos_list
-            if SECTOR_MAP.get(p.get("symbol", ""), "Unknown") == sector
+            if SECTOR_MAP.get(str(p.get("symbol", "")).upper(), "unknown") == sector
         )
-        equity = status.get("equity", 1)
-        sector_exposure = (sector_notional / equity * 100) if equity > 0 else 0
+        sector_exposure = ((sector_notional / equity) * 100.0) if equity > 0 else 0.0
+        sector_cap = float(getattr(settings, "MAX_SECTOR_PCT", 40.0) or 40.0)
+        if sector_exposure >= sector_cap:
+            can_trade = False
+            constraint_flags.append("sector_cap")
+        elif sector_exposure >= sector_cap * 0.75:
+            size_cap_pct *= 0.5
+            constraint_flags.append("sector_near_cap")
 
-        # PDT check
-        pdt_status = "SAFE"
-        if equity < 25000:
-            day_trades = int(getattr(risk_manager, "_alpaca_daytrade_count", 0) or 0)
-            pdt_status = f"{day_trades}/3 day trades used (Alpaca, equity < $25K)"
+        if heat_pct >= 100.0:
+            can_trade = False
+            constraint_flags.append("gross_heat")
+        elif heat_pct >= 70.0:
+            size_cap_pct *= 0.5
+            constraint_flags.append("size_reduced_heat")
+        elif heat_pct >= 50.0:
+            size_cap_pct *= 0.7
+            constraint_flags.append("size_reduced_warm_heat")
 
-        prompt = PROMPT_TEMPLATE.format(
-            symbol=symbol,
-            direction=direction,
-            price=price,
-            equity=equity,
-            tier_name=tier.get("name", "?"),
-            tier_size_pct=tier.get("size_pct", 2),
-            tier_max_pos=tier.get("max_positions", 5),
-            num_positions=len(pos_list),
-            daily_pnl=status.get("daily_pnl", 0),
-            daily_pnl_pct=status.get("daily_pnl_pct", 0),
-            heat_pct=status.get("heat_pct", 0),
-            consec_losses=status.get("consecutive_losses", 0),
-            consec_wins=status.get("consecutive_wins", 0),
-            positions_summary=positions_summary,
-            pdt_status=pdt_status,
-            wash_sale="YES — BLOCKED" if risk_manager.is_wash_sale(symbol) else "No",
-            weekly_pnl=risk_manager.weekly_pnl,
-            drawdown_pct=status.get("drawdown_pct", 0),
-            sector=sector,
-            sector_exposure=sector_exposure,
-        )
+        if consecutive_losses >= 5:
+            size_cap_pct *= 0.35
+            constraint_flags.append("size_reduced_loss_streak")
+        elif consecutive_losses >= 3:
+            size_cap_pct *= 0.5
+            constraint_flags.append("size_reduced_consecutive_losses")
+        elif consecutive_losses >= 2:
+            size_cap_pct *= 0.75
+            constraint_flags.append("size_reduced_recent_losses")
 
-        result = await call_gpt(prompt, max_tokens=400)
-        if not result or "approved" not in result:
-            logger.warning(f"Risk agent failed for {symbol} — approving at reduced size by default")
-            return {**DEFAULT_BRIEF, "symbol": symbol}
+        signal_tier = str((signals or {}).get("signal_tier", "tier_2") or "tier_2").lower()
+        if signal_tier == "tier_3":
+            size_cap_pct *= 0.5
+            constraint_flags.append("size_reduced_tier3")
+        elif signal_tier == "tier_2":
+            size_cap_pct *= 0.85
+            constraint_flags.append("size_reduced_tier2")
+
+        spread_pct = float((signals or {}).get("spread_pct", 0) or 0)
+        if spread_pct >= 1.5:
+            can_trade = False
+            constraint_flags.append("execution_safety_failure")
+        elif spread_pct >= 0.8:
+            size_cap_pct *= 0.7
+            constraint_flags.append("size_reduced_spread")
+
+        extended = bool((signals or {}).get("extended_hours") or (signals or {}).get("extended_hours_entry"))
+        if extended and signal_tier != "tier_1" and bool(getattr(settings, "EXTENDED_HOURS_TIER1_ONLY", True)):
+            can_trade = False
+            constraint_flags.append("extended_hours_tier_block")
+        elif extended:
+            size_cap_pct *= float(getattr(settings, "EXTENDED_HOURS_SIZE_MULT", 0.5) or 0.5)
+            constraint_flags.append("size_reduced_extended_hours")
+
+        size_cap_pct = max(0.0, min(5.0, round(size_cap_pct, 3)))
+        if can_trade and size_cap_pct <= 0.0:
+            size_cap_pct = 0.25
+            constraint_flags.append("size_floor_applied")
+
+        hard_flags = [flag for flag in constraint_flags if flag in {
+            "wash_sale",
+            "trading_halted",
+            "max_positions",
+            "gross_heat",
+            "execution_safety_failure",
+            "extended_hours_tier_block",
+            "sector_cap",
+        }]
+        if hard_flags:
+            can_trade = False
+
+        reasoning = "hard constraints active" if hard_flags else "portfolio capacity available"
+        if constraint_flags:
+            reasoning += f" ({', '.join(constraint_flags[:4])})"
 
         brief = {
-            "approved": bool(result.get("approved", False)),
-            "max_size_pct": max(0.0, min(5.0, float(result.get("max_size_pct", 0)))),
-            "reasoning": str(result.get("reasoning", ""))[:200],
-            "portfolio_heat": result.get("portfolio_heat", "medium"),
-            "warnings": result.get("warnings", []),
+            "symbol": symbol,
+            "can_trade": bool(can_trade),
+            "size_cap_pct": size_cap_pct,
+            "reasoning": reasoning,
+            "portfolio_heat": _heat_bucket(heat_pct),
+            "constraint_flags": constraint_flags,
+            "sector": sector,
+            "sector_exposure_pct": round(sector_exposure, 2),
+            "tier_size_pct": round(tier_size_pct, 3),
+            "direction": direction,
+            "error": False,
         }
-
-        # Hard overrides — AI can't bypass these
-        if risk_manager.is_wash_sale(symbol):
-            brief["approved"] = False
-            brief["warnings"].append("wash_sale_blocked")
-            brief["reasoning"] = f"Wash sale: {symbol} sold at loss within 30 days"
-        if not risk_manager.can_trade():
-            brief["approved"] = False
-            brief["warnings"].append("trading_halted")
-        if len(pos_list) >= tier.get("max_positions", 5):
-            brief["approved"] = False
-            brief["warnings"].append("max_positions_reached")
-
-        logger.debug(f"🛡️ Risk {symbol}: approved={brief['approved']} size={brief['max_size_pct']}% heat={brief['portfolio_heat']}")
+        logger.debug(
+            f"🛡️ Risk {symbol}: can_trade={brief['can_trade']} "
+            f"size={brief['size_cap_pct']}% flags={brief['constraint_flags']}"
+        )
         return brief
-
     except Exception as e:
         logger.error(f"Risk agent error for {symbol}: {e}")
-        return {**DEFAULT_BRIEF, "symbol": symbol}
+        return {**DEFAULT_BRIEF, "symbol": symbol, "reasoning": f"Risk fallback after error: {e}"}

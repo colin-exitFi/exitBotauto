@@ -19,6 +19,7 @@ import uvicorn
 from loguru import logger
 
 from config import settings
+from src import persistence
 from src.agents.base_agent import (
     call_claude_text,
     call_gpt_text,
@@ -53,6 +54,19 @@ _MAX_FEED_SIZE = 100
 def set_bot(bot):
     global _bot
     _bot = bot
+
+
+def _get_reconciliation_state() -> Dict:
+    """
+    Read the latest persisted reconciliation snapshot.
+    Important: avoid calling reconciler.snapshot() in dashboard request handlers,
+    which can amplify broker API load and create self-inflicted recon churn.
+    """
+    try:
+        state = persistence.load_reconciliation_state() or {}
+        return state if isinstance(state, dict) else {}
+    except Exception:
+        return {}
 
 
 def _dashboard_connect_host(host: str) -> str:
@@ -554,14 +568,12 @@ async def get_status():
         return {"running": False, "error": "Bot not connected"}
     risk_status = _bot.risk_manager.get_status() if _bot.risk_manager else {}
     positions = _bot.entry_manager.get_positions() if _bot.entry_manager else []
-    reconciliation_state = {}
-    if getattr(_bot, "reconciler", None):
-        try:
-            reconciliation_state = _bot.reconciler.snapshot()
-        except Exception:
-            reconciliation_state = {}
+    reconciliation_state = _get_reconciliation_state()
     trust = reconciliation_state.get("trust", {}) if isinstance(reconciliation_state, dict) else {}
     recon = reconciliation_state.get("reconciliation", {}) if isinstance(reconciliation_state, dict) else {}
+    broker_api = reconciliation_state.get("broker_api", {}) if isinstance(reconciliation_state, dict) else {}
+    recon_meta = reconciliation_state.get("meta", {}) if isinstance(reconciliation_state, dict) else {}
+    ai = getattr(_bot, "ai_layers", {}) or {}
     return {
         "running": _bot.running,
         "paused": _bot.paused,
@@ -572,7 +584,39 @@ async def get_status():
         "options_execution_enabled": bool(getattr(_bot, "options_engine", None)),
         "reconciliation_status": recon.get("status", "unknown"),
         "trust_flags": trust,
+        "recon_health": {
+            "recent_429_total": int(broker_api.get("recent_429_total", 0) or 0),
+            "window_seconds": int(broker_api.get("window_seconds", 300) or 300),
+            "consecutive_critical_mismatch": int(recon_meta.get("consecutive_critical_mismatch", 0) or 0),
+            "entry_pipeline_paused": bool(trust.get("entry_pipeline_paused")),
+            "degraded_mode_reasons": list(trust.get("degraded_mode_reasons", []) or []),
+        },
+        "provider_health": ai.get("provider_health", {}),
         **risk_status,
+    }
+
+
+@app.get("/api/recon-health")
+async def get_recon_health():
+    if not _bot or not getattr(_bot, "reconciler", None):
+        return {"ok": False, "error": "Reconciler not available"}
+    state = _get_reconciliation_state()
+    if not state:
+        return {"ok": False, "error": "Reconciliation state unavailable"}
+    recon = state.get("reconciliation", {}) if isinstance(state, dict) else {}
+    trust = state.get("trust", {}) if isinstance(state, dict) else {}
+    broker_api = state.get("broker_api", {}) if isinstance(state, dict) else {}
+    meta = state.get("meta", {}) if isinstance(state, dict) else {}
+    return {
+        "ok": True,
+        "as_of": state.get("as_of"),
+        "date": state.get("date"),
+        "reconciliation": recon,
+        "trust_flags": trust,
+        "broker_api": broker_api,
+        "meta": meta,
+        "entry_pipeline_paused": bool(trust.get("entry_pipeline_paused")),
+        "degraded_mode_reasons": list(trust.get("degraded_mode_reasons", []) or []),
     }
 
 
@@ -598,16 +642,27 @@ async def get_positions():
                 pass
         if not price:
             price = p.get("entry_price", 0)
-        pnl = (price - p["entry_price"]) * p["quantity"] if p["entry_price"] else 0
-        pnl_pct = ((price - p["entry_price"]) / p["entry_price"] * 100) if p["entry_price"] else 0
+        entry_price = float(p.get("entry_price", 0) or 0)
+        quantity = float(p.get("quantity", 0) or 0)
+        if p.get("side", "long") == "short":
+            pnl = (entry_price - price) * quantity if entry_price else 0
+            pnl_pct = ((entry_price - price) / entry_price * 100) if entry_price else 0
+        else:
+            pnl = (price - entry_price) * quantity if entry_price else 0
+            pnl_pct = ((price - entry_price) / entry_price * 100) if entry_price else 0
         hold_min = (time.time() - p.get("entry_time", time.time())) / 60
-        # Protection status
-        has_trailing = p.get("has_trailing_stop", False)
-        guard_info = {}
-        if hasattr(_bot, 'extended_guard'):
-            guard_info = _bot.extended_guard.get_guard_status().get(p["symbol"], {})
-        has_guard = bool(guard_info.get("has_limit_order"))
-        protection = "🟢 Trail" if has_trailing else ("🟡 Limit" if has_guard else "🔴 NONE")
+        order_state = dict(p.get("order_state", {}) or {})
+        protection_bits = []
+        if p.get("hard_stop_order_id"):
+            protection_bits.append("hard stop")
+        if p.get("ratchet_limit_order_id"):
+            protection_bits.append("ratchet order")
+        elif p.get("ratchet_floor_pct") is not None:
+            protection_bits.append("ratchet armed")
+        session_mode = order_state.get("session_protection")
+        if session_mode == "software_managed":
+            protection_bits.append("software")
+        protection = " / ".join(protection_bits) if protection_bits else (session_mode or "none")
 
         enriched.append({
             "symbol": p["symbol"],
@@ -621,15 +676,13 @@ async def get_positions():
             "peak_price": round(p.get("peak_price", price), 2),
             "protection": protection,
             "trail_pct": p.get("trail_pct", 3.0),
-            "guard_limit": guard_info.get("limit_price", 0),
+            "strategy_tag": p.get("strategy_tag", "unknown"),
+            "signal_tier": p.get("signal_tier", "tier_2"),
+            "ratchet_floor_pct": p.get("ratchet_floor_pct"),
+            "order_status": p.get("order_status", "open"),
         })
-    if getattr(_bot, "reconciler", None):
-        try:
-            trust = (_bot.reconciler.snapshot() or {}).get("trust", {})
-            return {"positions": enriched, "trust_flags": trust}
-        except Exception:
-            pass
-    return {"positions": enriched, "trust_flags": {}}
+    trust = (_get_reconciliation_state() or {}).get("trust", {})
+    return {"positions": enriched, "trust_flags": trust}
 
 
 @app.get("/api/options")
@@ -691,6 +744,7 @@ async def get_ai_status():
         "last_position_manager": ai.get("last_position_manager"),
         "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
         "last_short_block_reason": ai.get("last_short_block_reason"),
+        "provider_health": ai.get("provider_health", {}),
     }
 
 
@@ -700,12 +754,7 @@ async def get_consensus():
     if not _bot or not hasattr(_bot, 'orchestrator') or not _bot.orchestrator:
         return {"enabled": False, "history": [], "stats": {}}
     ai = getattr(_bot, "ai_layers", {}) or {}
-    trust = {}
-    if getattr(_bot, "reconciler", None):
-        try:
-            trust = (_bot.reconciler.snapshot() or {}).get("trust", {})
-        except Exception:
-            trust = {}
+    trust = (_get_reconciliation_state() or {}).get("trust", {})
     return {
         "enabled": True,
         "history": _bot.orchestrator.get_history()[-10:],
@@ -777,12 +826,7 @@ async def get_trade_history(limit: int = 20):
     # Compute best/worst
     best = max(trades, key=lambda t: t.get("pnl", 0)) if trades else None
     worst = min(trades, key=lambda t: t.get("pnl", 0)) if trades else None
-    trust = {}
-    if getattr(_bot, "reconciler", None):
-        try:
-            trust = (_bot.reconciler.snapshot() or {}).get("trust", {})
-        except Exception:
-            trust = {}
+    trust = (_get_reconciliation_state() or {}).get("trust", {})
     return {
         "trades": trades,
         "stats": stats,
@@ -906,16 +950,9 @@ async def get_pnl():
     options_unrealized = 0.0
     starting = default_equity
     peak = max(float(pnl.get("peak_equity", 0) or 0), default_equity)
-    reconciliation_state = {}
-    broker_truth = {}
-    reconciliation = {}
-    if getattr(_bot, "reconciler", None):
-        try:
-            reconciliation_state = _bot.reconciler.snapshot()
-            broker_truth = reconciliation_state.get("broker", {}) or {}
-            reconciliation = reconciliation_state.get("reconciliation", {}) or {}
-        except Exception:
-            reconciliation_state = {}
+    reconciliation_state = _get_reconciliation_state()
+    broker_truth = reconciliation_state.get("broker", {}) or {}
+    reconciliation = reconciliation_state.get("reconciliation", {}) or {}
     if broker_truth:
         equity = float(broker_truth.get("equity", equity) or equity)
         last_equity = float(broker_truth.get("last_equity", equity) or equity)
@@ -1135,10 +1172,7 @@ async def get_metrics():
         return {}
     payload = dict(_bot.risk_manager.get_status())
     if getattr(_bot, "reconciler", None):
-        try:
-            payload["trust_flags"] = (_bot.reconciler.snapshot() or {}).get("trust", {})
-        except Exception:
-            payload["trust_flags"] = {}
+        payload["trust_flags"] = (_get_reconciliation_state() or {}).get("trust", {})
     return payload
 
 
@@ -1363,7 +1397,7 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .metric .value.muted{color:#6e7681!important}
 .metric .value.animated{animation:countUp .4s ease-out}
 .metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.big-pnl{font-size:clamp(18px,2.2vw,28px)!important;font-weight:900!important;animation:neonPulse 2s ease-in-out infinite}
+.big-pnl{font-size:clamp(16px,1.8vw,24px)!important;font-weight:900!important;line-height:1.05;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;animation:neonPulse 2s ease-in-out infinite}
 .recon-banner{display:none;margin:0 0 12px 0;padding:12px 14px;border:1px solid #8b0000;border-radius:10px;background:linear-gradient(145deg,#2a0f12,#1c0b0d);color:#ffb3b3;font-size:12px;line-height:1.45;white-space:normal;word-break:break-word;overflow-wrap:anywhere;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .recon-banner strong{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ff8e8e;margin-bottom:4px}
 .recon-banner .muted{color:#d88f8f}
@@ -1486,7 +1520,7 @@ tr:hover td{background:#161b2288}
   <div class="card full">
     <h2><span class="icon">💰</span> Trade History <span id="tradeStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="tradeSummary"></div>
-    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Sources</th><th>Slip</th><th>Latency</th></tr></thead>
+    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Tier</th><th>Ratchet</th><th>Sources</th><th>Slip</th><th>Latency</th></tr></thead>
     <tbody id="tradeHistory"></tbody></table></div>
   </div>
 
@@ -1552,7 +1586,7 @@ tr:hover td{background:#161b2288}
   <!-- Positions + Candidates side by side -->
   <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
-    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Trail%</th><th>Protection</th><th>Hold</th></tr></thead>
+    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Strategy</th><th>Tier</th><th>Ratchet</th><th>Protection</th><th>Hold</th></tr></thead>
     <tbody id="positions"></tbody></table></div>
   </div>
   <div class="card">
@@ -1904,6 +1938,17 @@ async function refresh() {
       html += '<div class="ai-card tuner"><strong>🎛️ Tuner</strong>' + (ai.last_tuner_changes || '<em>No changes yet</em>') + '</div>';
       html += '<div class="ai-card pm"><strong>🛡️ Position Manager</strong>' + (ai.last_position_manager || '<em>Pending…</em>') + '</div>';
       html += '</div>';
+      if (ai.provider_health && Object.keys(ai.provider_health).length) {
+        const rows = Object.entries(ai.provider_health).map(([name, st]) => {
+          const ok = !!(st && st.ok);
+          const latency = (st && typeof st.latency_ms === 'number') ? `${st.latency_ms}ms` : '—';
+          const err = (st && st.error) ? ` · ${st.error}` : '';
+          const color = ok ? '#3fb950' : '#f85149';
+          const state = ok ? 'ok' : 'fail';
+          return `<span style="display:block;color:${color}">${name}: ${state} (${latency})${err}</span>`;
+        }).join('');
+        html += `<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#58a6ff">🧪 Provider health:</strong>${rows}</div>`;
+      }
       if (ai.last_game_film) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#d2a8ff">🎬 Game Film:</strong> ' + ai.last_game_film + '</div>';
       if (ai.short_verdicts_blocked) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#f85149">🩳 Short blocks:</strong> ' + ai.short_verdicts_blocked + (ai.last_short_block_reason ? ' · ' + ai.last_short_block_reason : '') + '</div>';
       $('aiStatus').innerHTML = _degradedInternal ? `<div style="margin-bottom:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px;color:#8b949e">Internal AI summaries degraded by reconciliation state.<\/div>` + html : html;
@@ -1970,11 +2015,13 @@ async function refresh() {
       <td class="${cls(t.pnl_pct||0)}">${fmt(t.pnl_pct||0)}%</td>
       <td>${t.reason||'—'}</td><td>${holdStr(t.hold_seconds)}</td>
       <td>${t.strategy_tag||'—'}</td>
+      <td>${t.signal_tier||'—'}</td>
+      <td>${typeof t.ratchet_floor_pct === 'number' ? fmt(t.ratchet_floor_pct,1)+'%' : '—'}</td>
       <td style="font-size:11px;color:#8b949e">${Array.isArray(t.signal_sources)?t.signal_sources.join(', '):(t.signal_sources||'—')}</td>
       <td class="${(t.slippage_bps||0) > 0 ? 'negative' : 'positive'}">${fmt(t.slippage_bps||0, 1)}</td>
       <td class="info">${typeof t.signal_to_fill_ms==='number'?Math.round(t.signal_to_fill_ms):'—'}</td>
-    </tr>`).join('') : '<tr><td colspan="11" class="empty">No completed trades yet</td></tr>';
-    $('tradeHistory').innerHTML = (_degradedInternal ? '<tr><td colspan="11" class="empty" style="color:#8b949e">Internal trade analytics degraded by reconciliation state</td></tr>' : '') + tradeHistoryHtml;
+    </tr>`).join('') : '<tr><td colspan="13" class="empty">No completed trades yet</td></tr>';
+    $('tradeHistory').innerHTML = (_degradedInternal ? '<tr><td colspan="13" class="empty" style="color:#8b949e">Internal trade analytics degraded by reconciliation state</td></tr>' : '') + tradeHistoryHtml;
   }
   // Strategy controls
   const sc = await api('/api/strategy-controls');
@@ -2079,9 +2126,9 @@ async function refresh() {
     const statusBadge = isPending ? '<span class="tag" style="background:#e3b34122;color:#e3b341;border:1px solid #e3b34144;margin-left:4px">PENDING</span>' : '';
     return `<tr style="${isPending ? 'opacity:0.7' : ''}">
     <td><strong>${p.symbol}</strong>${statusBadge}</td><td>${(p.side||'long').toUpperCase()}</td><td>${p.quantity}</td><td>$${p.entry_price}</td>
-    <td>${isPending ? '<span style="color:#e3b341">awaiting fill</span>' : '$'+p.current_price}</td><td class="${cls(p.pnl)}">${isPending ? '—' : fmt(p.pnl)+' ('+fmt(p.pnl_pct)+'%)'}</td><td>${p.trail_pct||3}%</td><td>${isPending ? 'limit order' : (p.protection||'?')}</td><td>${isPending ? '—' : p.hold_time}</td>
+    <td>${isPending ? '<span style="color:#e3b341">awaiting fill</span>' : '$'+p.current_price}</td><td class="${cls(p.pnl)}">${isPending ? '—' : fmt(p.pnl)+' ('+fmt(p.pnl_pct)+'%)'}</td><td>${p.strategy_tag||'—'}</td><td>${p.signal_tier||'—'}</td><td>${typeof p.ratchet_floor_pct === 'number' ? fmt(p.ratchet_floor_pct,1)+'%' : '—'}</td><td>${isPending ? 'limit order' : (p.protection||'?')}</td><td>${isPending ? '—' : p.hold_time}</td>
   </tr>`;
-  }).join('') : '<tr><td colspan="6" class="empty">No open positions</td></tr>';
+  }).join('') : '<tr><td colspan="11" class="empty">No open positions</td></tr>';
   // Candidates
   const cand = await api('/api/candidates');
   const scanStatus = await api('/api/scan-status');

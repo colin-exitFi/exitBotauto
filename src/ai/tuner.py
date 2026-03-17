@@ -34,7 +34,8 @@ TUNABLE_PARAMS = {
     "POSITION_SIZE_PCT":        {"min": 1.0, "max": 10.0, "type": float},
     "MAX_CONCURRENT_POSITIONS": {"min": 3,   "max": 15,   "type": int},
     "SCAN_INTERVAL_SECONDS":    {"min": 60,  "max": 600,  "type": int},
-    "MIN_ENTRY_SENTIMENT":      {"min": -0.5,"max": 0.8,  "type": float},
+    # Keep entry sentiment from drifting into "almost never trade" territory.
+    "MIN_ENTRY_SENTIMENT":      {"min": -0.5,"max": 0.45, "type": float},
     "MAX_HOLD_HOURS":           {"min": 1,   "max": 24,   "type": float},
 }
 
@@ -50,7 +51,7 @@ TUNABLE PARAMETERS (with hard bounds you CANNOT exceed):
 - POSITION_SIZE_PCT (1.0-10.0): Position size as % of equity
 - MAX_CONCURRENT_POSITIONS (3-15): Max positions at once
 - SCAN_INTERVAL_SECONDS (60-600): How often to scan for opportunities
-- MIN_ENTRY_SENTIMENT (-0.5 to 0.8): Minimum sentiment to enter
+- MIN_ENTRY_SENTIMENT (-0.5 to 0.45): Minimum sentiment to enter
 - MAX_HOLD_HOURS (1-24): Maximum hold time
 
 RULES:

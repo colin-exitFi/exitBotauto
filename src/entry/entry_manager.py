@@ -10,6 +10,7 @@ from loguru import logger
 
 from config import settings
 from src.data import strategy_controls
+from src.exit.profit_ratchet import ProfitRatchet
 
 
 class EntryManager:
@@ -177,17 +178,39 @@ class EntryManager:
             logger.warning(f"Could not cancel conflicting protection orders for {symbol}: {e}")
             return 0
 
-    async def _place_entry_protection_order(self, symbol: str, qty: int, trail_pct: float, side: str):
+    async def _place_hard_stop_order(self, symbol: str, qty: int, entry_price: float, side: str):
         if qty < 1:
             return None, False
-        if side == "short" and hasattr(self.broker, "place_trailing_stop_short"):
-            trail_fn = self.broker.place_trailing_stop_short
-        elif hasattr(self.broker, "place_trailing_stop"):
-            trail_fn = self.broker.place_trailing_stop
-        else:
+        # Only place protection when a matching broker position already exists.
+        # This avoids Alpaca rejecting protective orders while entry orders are still pending.
+        try:
+            broker_pos = self.broker.get_position(symbol) if hasattr(self.broker, "get_position") else None
+        except Exception:
+            broker_pos = None
+        broker_side = str((broker_pos or {}).get("side", "") or "").lower()
+        if side == "short":
+            if broker_side != "short":
+                return None, False
+        elif broker_side != "long":
+            return None, False
+        if not hasattr(self.broker, "place_stop_loss_order"):
             return None, False
 
-        order = await asyncio.get_event_loop().run_in_executor(None, trail_fn, symbol, qty, trail_pct)
+        stop_price = ProfitRatchet.price_for_pnl(
+            float(entry_price or 0),
+            ProfitRatchet.HARD_STOP_PCT,
+            side,
+        )
+        client_order_id = ProfitRatchet.make_client_order_id(symbol, "hardstop", stop_price)
+        order = await asyncio.get_event_loop().run_in_executor(
+            None,
+            self.broker.place_stop_loss_order,
+            symbol,
+            qty,
+            stop_price,
+            side,
+            client_order_id,
+        )
         if order:
             return order, False
 
@@ -198,7 +221,15 @@ class EntryManager:
                     f"Cancelled {cancelled} conflicting protection orders for {symbol} before retry {attempt}/3"
                 )
             await asyncio.sleep(1)
-            order = await asyncio.get_event_loop().run_in_executor(None, trail_fn, symbol, qty, trail_pct)
+            order = await asyncio.get_event_loop().run_in_executor(
+                None,
+                self.broker.place_stop_loss_order,
+                symbol,
+                qty,
+                stop_price,
+                side,
+                client_order_id,
+            )
             if order:
                 return order, False
 
@@ -390,20 +421,6 @@ class EntryManager:
             except Exception:
                 pass
 
-        # Calculate trail percent: prefer jury recommendation, then ATR-based, then default 3%
-        trail_pct = sentiment_data.get("jury_trail_pct", None)
-        if trail_pct is None:
-            trail_pct = 3.0  # default
-            if atr_value and atr_value > 0:
-                # ATR-based trail: 1.5x ATR as percentage of price
-                trail_pct = round((atr_value * 1.5 / price) * 100, 2)
-                trail_pct = max(1.0, min(trail_pct, 4.0))  # clamp 1-4%
-        else:
-            trail_pct = max(1.0, min(5.0, float(trail_pct)))  # clamp jury recommendation
-        if swing_only:
-            swing_trail = max(1.0, float(getattr(settings, "SWING_MODE_TRAIL_PCT", 4.5) or 4.5))
-            trail_pct = max(trail_pct, swing_trail)
-
         # ── STEP 1: BUY the stock ─────────────────────────────────
         order = None
         entry_order_timestamp = None
@@ -444,24 +461,34 @@ class EntryManager:
                 break
             await asyncio.sleep(2)
 
-        # ── STEP 2: Immediately place trailing stop % ─────────────
-        # This is the ONLY exit strategy. Up or down, if it gives back trail_pct%, we're out.
-        trailing_stop_order = None
+        # ── STEP 2: Immediately place hard stop (regular hours) ──
+        hard_stop_order = None
         protection_failed = False
         if swing_only:
-            logger.info(f"🌙 Swing-only entry for {symbol}: deferring trailing stop placement until next trading day")
-        elif order and hasattr(self.broker, 'place_trailing_stop'):
-            filled_qty = int(float(order.get("filled_qty", order.get("qty", shares))))
-            if filled_qty >= 1:
-                # Small delay to let the fill register
+            logger.info(f"🌙 Swing-only entry for {symbol}: broker hard stop deferred until same-day exit budget returns")
+        elif not extended and order and hasattr(self.broker, "place_stop_loss_order"):
+            order_status = str(order.get("status", "") or "").lower()
+            try:
+                filled_qty = int(float(order.get("filled_qty", 0) or 0))
+            except Exception:
+                filled_qty = 0
+            if filled_qty >= 1 and order_status in {"filled", "partially_filled"}:
                 await asyncio.sleep(1)
-                trailing_stop_order, protection_failed = await self._place_entry_protection_order(
-                    symbol, filled_qty, trail_pct, "long"
+                stop_entry_price = float(order.get("filled_avg_price", price) or price)
+                hard_stop_order, protection_failed = await self._place_hard_stop_order(
+                    symbol, filled_qty, entry_price=stop_entry_price, side="long"
                 )
-                if trailing_stop_order:
-                    logger.success(f"📈 Trailing stop set: {symbol} {filled_qty}sh trail={trail_pct}%")
+                if hard_stop_order:
+                    logger.success(
+                        f"🛡️ Hard stop set: {symbol} {filled_qty}sh @ ${float(hard_stop_order.get('stop_price', 0) or 0):.2f}"
+                    )
                 else:
-                    logger.warning(f"⚠️ Trailing stop FAILED for {symbol}")
+                    logger.warning(f"⚠️ Hard stop FAILED for {symbol}")
+            else:
+                logger.info(
+                    f"⏳ Deferring hard stop for {symbol}: entry status={order_status or 'unknown'} "
+                    f"filled_qty={filled_qty}"
+                )
 
         if not order:
             # Check if we accidentally got filled on a limit before smart_buy cancelled it
@@ -524,6 +551,12 @@ class EntryManager:
             signal_sources = ["unknown"]
         if not signal_sources:
             signal_sources = ["unknown"]
+        hard_stop_price = ProfitRatchet.price_for_pnl(entry_price, ProfitRatchet.HARD_STOP_PCT, "long")
+        entry_votes = dict(sentiment_data.get("entry_model_votes", {}) or {})
+        risk_constraints = list(sentiment_data.get("risk_constraints_applied", []) or [])
+        signal_tier = str(sentiment_data.get("signal_tier", "tier_2") or "tier_2")
+        holding_horizon = str(sentiment_data.get("holding_horizon", "intraday") or "intraday")
+        market_regime = str(sentiment_data.get("market_regime", "mixed") or "mixed")
         position = {
             "symbol": symbol,
             "entry_price": entry_price,
@@ -544,12 +577,29 @@ class EntryManager:
             "conviction_level": conviction,
             "risk_tier": self.risk.get_risk_tier().get("name", "?") if self.risk else "?",
             "notional": actual_notional,
-            "trail_pct": trail_pct,
-            "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
-            "has_trailing_stop": trailing_stop_order is not None,
+            "trail_pct": ProfitRatchet.RATCHET_TRAIL_PCT,
+            "trailing_stop_order_id": None,
+            "has_trailing_stop": False,
+            "hard_stop_price": hard_stop_price,
+            "hard_stop_order_id": hard_stop_order.get("id") if hard_stop_order else None,
+            "ratchet_limit_order_id": None,
+            "ratchet_peak_pnl_pct": 0.0,
+            "ratchet_floor_pct": None,
+            "ratchet_order_type": None,
             "protection_failed": protection_failed,
             "order_status": order_status,
+            "order_state": {
+                "entry": order_status,
+                "hard_stop": "placed" if hard_stop_order else ("deferred" if extended or swing_only else "missing"),
+                "ratchet": "inactive",
+            },
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "signal_tier": signal_tier,
+            "holding_horizon": holding_horizon,
+            "market_regime": market_regime,
+            "entry_reason_code": sentiment_data.get("entry_reason_code", "jury_consensus"),
+            "entry_model_votes": entry_votes,
+            "risk_constraints_applied": risk_constraints,
             "entry_path": sentiment_data.get("entry_path", "jury"),
             "signal_sources": signal_sources,
             "decision_confidence": sentiment_data.get("consensus_confidence", 0),
@@ -577,10 +627,14 @@ class EntryManager:
                 f"(${actual_notional:.2f} est) — awaiting fill"
             )
         else:
-            trail_info = f" 📈 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
+            stop_info = (
+                f" 🛡️ stop=${hard_stop_price:.2f}"
+                if position["hard_stop_order_id"]
+                else " ⚠️ NO HARD STOP"
+            )
             logger.success(
                 f"✅ ENTERED: {actual_qty:.4f} {symbol} @ ${entry_price:.2f} "
-                f"(${actual_notional:.2f} total){trail_info}"
+                f"(${actual_notional:.2f} total){stop_info}"
             )
         return position
 
@@ -658,22 +712,14 @@ class EntryManager:
             self.last_order_error = "position_size_zero"
             return None
 
-        # Calculate trail percent
-        trail_pct = 3.0
+        atr_value = None
         try:
             from src.exit.exit_manager import ExitManager
             _tmp = ExitManager.__new__(ExitManager)
             _tmp.polygon = self.polygon
             atr_value = _tmp.calculate_atr(symbol)
-            if atr_value and atr_value > 0:
-                trail_pct = round((atr_value * 1.5 / price) * 100, 2)
-                trail_pct = max(1.0, min(trail_pct, 4.0))
         except Exception:
-            pass
-
-        if swing_only:
-            swing_trail = max(1.0, float(getattr(settings, "SWING_MODE_TRAIL_PCT", 4.5) or 4.5))
-            trail_pct = max(trail_pct, swing_trail)
+            atr_value = None
 
         logger.info(f"🩳 Shorting {symbol}: {shares}sh @ ${price:.2f} (${shares * price:.2f} total, conviction={conviction})")
 
@@ -706,28 +752,38 @@ class EntryManager:
             self.last_order_error = "alpaca_short_exception"
             return None
 
-        # Place trailing stop (buy to cover) for the short
-        trailing_stop_order = None
+        # Place hard stop (buy to cover) for the short during regular hours.
+        hard_stop_order = None
         protection_failed = False
         if swing_only:
-            logger.info(f"🌙 Swing-only short entry for {symbol}: deferring buy-to-cover trailing stop until next trading day")
-        elif order:
+            logger.info(f"🌙 Swing-only short entry for {symbol}: broker hard stop deferred until same-day exit budget returns")
+        elif not extended and order and hasattr(self.broker, "place_stop_loss_order"):
             await asyncio.sleep(1)
             try:
+                order_status = str(order.get("status", "") or "").lower()
                 try:
-                    stop_qty = int(float(order.get("filled_qty", order.get("qty", shares)) or shares))
+                    stop_qty = int(float(order.get("filled_qty", 0) or 0))
                 except Exception:
-                    stop_qty = int(shares)
-                trailing_stop_order, protection_failed = await self._place_entry_protection_order(
-                    symbol, stop_qty, trail_pct, "short"
-                )
-
-                if trailing_stop_order:
-                    logger.success(f"📉 SHORT trailing stop set: {symbol} {stop_qty}sh trail={trail_pct}%")
+                    stop_qty = 0
+                if stop_qty >= 1 and order_status in {"filled", "partially_filled"}:
+                    stop_entry_price = float(order.get("filled_avg_price", price) or price)
+                    hard_stop_order, protection_failed = await self._place_hard_stop_order(
+                        symbol, stop_qty, stop_entry_price, "short"
+                    )
                 else:
-                    logger.warning(f"⚠️ SHORT trailing stop FAILED for {symbol}")
+                    logger.info(
+                        f"⏳ Deferring short hard stop for {symbol}: entry status={order_status or 'unknown'} "
+                        f"filled_qty={stop_qty}"
+                    )
+
+                if hard_stop_order:
+                    logger.success(
+                        f"🛡️ SHORT hard stop set: {symbol} {stop_qty}sh @ ${float(hard_stop_order.get('stop_price', 0) or 0):.2f}"
+                    )
+                else:
+                    logger.warning(f"⚠️ SHORT hard stop FAILED for {symbol}")
             except Exception as e:
-                logger.warning(f"⚠️ SHORT trailing stop error for {symbol}: {e}")
+                logger.warning(f"⚠️ SHORT hard stop error for {symbol}: {e}")
 
         signal_sources = sentiment_data.get("signal_sources", ["unknown"])
         if isinstance(signal_sources, str):
@@ -767,6 +823,12 @@ class EntryManager:
             order_status = "filled"
         actual_notional = entry_price * actual_qty
 
+        hard_stop_price = ProfitRatchet.price_for_pnl(entry_price, ProfitRatchet.HARD_STOP_PCT, "short")
+        entry_votes = dict(sentiment_data.get("entry_model_votes", {}) or {})
+        risk_constraints = list(sentiment_data.get("risk_constraints_applied", []) or [])
+        signal_tier = str(sentiment_data.get("signal_tier", "tier_2") or "tier_2")
+        holding_horizon = str(sentiment_data.get("holding_horizon", "intraday") or "intraday")
+        market_regime = str(sentiment_data.get("market_regime", "mixed") or "mixed")
         position = {
             "symbol": symbol,
             "side": "short",
@@ -786,12 +848,29 @@ class EntryManager:
             "conviction_level": conviction,
             "risk_tier": self.risk.get_risk_tier().get("name", "?") if self.risk else "?",
             "notional": actual_notional,
-            "trail_pct": trail_pct,
-            "trailing_stop_order_id": trailing_stop_order.get("id") if trailing_stop_order else None,
-            "has_trailing_stop": trailing_stop_order is not None,
+            "trail_pct": ProfitRatchet.RATCHET_TRAIL_PCT,
+            "trailing_stop_order_id": None,
+            "has_trailing_stop": False,
+            "hard_stop_price": hard_stop_price,
+            "hard_stop_order_id": hard_stop_order.get("id") if hard_stop_order else None,
+            "ratchet_limit_order_id": None,
+            "ratchet_peak_pnl_pct": 0.0,
+            "ratchet_floor_pct": None,
+            "ratchet_order_type": None,
             "protection_failed": protection_failed,
             "order_status": order_status,
+            "order_state": {
+                "entry": order_status,
+                "hard_stop": "placed" if hard_stop_order else ("deferred" if extended or swing_only else "missing"),
+                "ratchet": "inactive",
+            },
             "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "signal_tier": signal_tier,
+            "holding_horizon": holding_horizon,
+            "market_regime": market_regime,
+            "entry_reason_code": sentiment_data.get("entry_reason_code", "jury_consensus"),
+            "entry_model_votes": entry_votes,
+            "risk_constraints_applied": risk_constraints,
             "entry_path": sentiment_data.get("entry_path", "jury"),
             "signal_sources": signal_sources,
             "decision_confidence": sentiment_data.get("consensus_confidence", 0),
@@ -813,8 +892,12 @@ class EntryManager:
             "_exit_recorded": False,
         }
         self.positions[symbol] = position
-        trail_info = f" 📉 trail={trail_pct}%" if position["has_trailing_stop"] else " ⚠️ NO TRAILING STOP"
-        logger.success(f"🩳 SHORTED: {actual_qty:.4f} {symbol} @ ${entry_price:.2f} (${actual_notional:.2f}){trail_info}")
+        stop_info = (
+            f" 🛡️ stop=${hard_stop_price:.2f}"
+            if position["hard_stop_order_id"]
+            else " ⚠️ NO HARD STOP"
+        )
+        logger.success(f"🩳 SHORTED: {actual_qty:.4f} {symbol} @ ${entry_price:.2f} (${actual_notional:.2f}){stop_info}")
         return position
 
     async def add_to_scout(self, symbol: str, sentiment_data: Dict) -> Optional[Dict]:
@@ -975,18 +1058,27 @@ class EntryManager:
         try:
             brokerage_positions = self.broker.get_positions()
             self.sync_positions_from_brokerage(brokerage_positions)
-            # Check for existing trailing stop orders and mark positions accordingly
+            # Recover existing hard-stop / ratchet orders into local state.
             try:
                 open_orders = self.broker.get_orders(status="open")
                 for order in open_orders:
                     sym = order.get("symbol", "")
-                    otype = order.get("type", "")
-                    if sym in self.positions and otype == "trailing_stop":
-                        self.positions[sym]["has_trailing_stop"] = True
-                        self.positions[sym]["trailing_stop_order_id"] = order.get("id", "")
-                        logger.info(f"🔗 {sym} has existing trailing stop order {order.get('id', '')[:8]}...")
+                    pos = self.positions.get(sym)
+                    if not pos:
+                        continue
+                    otype = str(order.get("type", "") or "").lower()
+                    side = str(order.get("side", "") or "").lower()
+                    client_order_id = str(order.get("client_order_id", "") or "")
+                    expected_exit_side = "buy" if pos.get("side", "long") == "short" else "sell"
+                    if side != expected_exit_side:
+                        continue
+                    if otype == "stop":
+                        pos["hard_stop_order_id"] = order.get("id", "")
+                    elif "ratchet" in client_order_id or otype in {"limit", "stop_limit"}:
+                        pos["ratchet_limit_order_id"] = order.get("id", "")
+                        pos["ratchet_order_type"] = otype
             except Exception as e:
-                logger.warning(f"Could not check existing trailing stop orders: {e}")
+                logger.warning(f"Could not recover existing protection orders: {e}")
 
             logger.success(f"Loaded {len(self.positions)} existing positions from Alpaca")
         except Exception as e:
@@ -1034,6 +1126,19 @@ class EntryManager:
             existing = self.positions.get(sym)
             if existing:
                 old_qty = float(existing.get("quantity", 0) or 0)
+                existing.setdefault("hard_stop_price", ProfitRatchet.price_for_pnl(avg_price, ProfitRatchet.HARD_STOP_PCT, side))
+                existing.setdefault("hard_stop_order_id", "")
+                existing.setdefault("ratchet_limit_order_id", "")
+                existing.setdefault("ratchet_peak_pnl_pct", 0.0)
+                existing.setdefault("ratchet_floor_pct", None)
+                existing.setdefault("ratchet_order_type", None)
+                existing.setdefault("signal_tier", "tier_2")
+                existing.setdefault("holding_horizon", "intraday")
+                existing.setdefault("market_regime", "mixed")
+                existing.setdefault("entry_reason_code", "unknown")
+                existing.setdefault("entry_model_votes", {})
+                existing.setdefault("risk_constraints_applied", [])
+                existing.setdefault("order_state", {"entry": str(existing.get("order_status", "open") or "open")})
                 if abs(old_qty - qty) > 1e-6:
                     existing["quantity"] = qty
                     existing["side"] = side
@@ -1098,6 +1203,30 @@ class EntryManager:
                 "actual_notional": avg_price * qty,
                 "intended_qty": qty,
                 "actual_qty": qty,
+                "hard_stop_price": ProfitRatchet.price_for_pnl(avg_price, ProfitRatchet.HARD_STOP_PCT, side),
+                "hard_stop_order_id": "",
+                "ratchet_limit_order_id": "",
+                "ratchet_peak_pnl_pct": max(
+                    0.0,
+                    ProfitRatchet.calc_pnl_pct(
+                        avg_price,
+                        max(avg_price, cur_price) if side == "long" else min(avg_price, cur_price),
+                        side,
+                    ),
+                ),
+                "ratchet_floor_pct": None,
+                "ratchet_order_type": None,
+                "signal_tier": "tier_2",
+                "holding_horizon": "intraday",
+                "market_regime": "mixed",
+                "entry_reason_code": "broker_sync",
+                "entry_model_votes": {},
+                "risk_constraints_applied": [],
+                "order_state": {
+                    "entry": "open",
+                    "hard_stop": "unknown",
+                    "ratchet": "inactive",
+                },
                 "anomaly_flags": ["carryover_sync"],
                 "scout_escalated": False,
                 "swing_only": False,
@@ -1149,8 +1278,13 @@ class EntryManager:
             }
 
     def update_peak_price(self, symbol: str, current_price: float):
-        """Update peak price for trailing stop tracking."""
+        """Update favorable excursion tracking for ratchet logic."""
         if symbol in self.positions:
             pos = self.positions[symbol]
-            if current_price > pos.get("peak_price", 0):
+            side = str(pos.get("side", "long") or "long").lower()
+            peak_price = float(pos.get("peak_price", current_price) or current_price)
+            if side == "short":
+                if current_price < peak_price:
+                    pos["peak_price"] = current_price
+            elif current_price > peak_price:
                 pos["peak_price"] = current_price
