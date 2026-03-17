@@ -705,12 +705,11 @@ async def get_portfolio():
     try:
         positions = _bot.alpaca_client.get_positions()
         balances = _bot.alpaca_client.get_balances()
-        total_value = sum(p["current_price"] * p["quantity"] for p in positions) + balances.get("cash", 0)
         return {
             "positions": positions,
-            "cash": round(balances.get("cash", 0), 2),
-            "buying_power": round(balances.get("buying_power", 0), 2),
-            "total_value": round(total_value, 2),
+            "cash": round(float(balances.get("cash", 0) or 0), 2),
+            "buying_power": round(float(balances.get("buying_power", 0) or 0), 2),
+            "total_value": round(float(balances.get("equity", 0) or 0), 2),
         }
     except Exception as e:
         logger.error(f"Portfolio fetch error: {e}")
