@@ -4215,9 +4215,8 @@ class TradingBot:
         persistence.save_pnl_state(getattr(self, 'pnl_state', {}))
         persistence.save_ai_state(self.ai_layers)
         positions = self.entry_manager.get_positions() if self.entry_manager else []
-        if positions and self.exit_manager:
-            logger.warning(f"Closing {len(positions)} positions on shutdown")
-            await self.exit_manager.close_all(positions, "shutdown")
+        if positions:
+            logger.info(f"🛡️ Preserving {len(positions)} positions through restart (broker hard stops protect them)")
         logger.success("✅ Shutdown complete")
 
     def stop(self):
