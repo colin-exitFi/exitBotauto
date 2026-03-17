@@ -574,26 +574,27 @@ class Scanner:
         if price < self.min_price or price > self.max_price:
             return False
 
-        # Skip non-standard tickers
         sym = s.get("symbol", "")
         if not sym or len(sym) > 5 or not sym.isalpha():
             return False
 
-        # For social/manual-context tickers, be more lenient on momentum
-        # (they're trending for a reason — social momentum IS momentum)
         source_parts = set(self._source_parts(s.get("source", "")))
         is_social = s.get("source") in ("stocktwits", "both") or "stocktwits" in source_parts
         is_human = "human_intel" in source_parts or bool(s.get("human_intel"))
         is_copy_trader = "copy_trader" in source_parts or bool(s.get("copy_trader_context"))
         is_watchlist = bool(s.get("watchlist_reason")) or "watchlist" in source_parts or bool(s.get("watchlist_conviction"))
-        min_mom = 0.0 if (is_human or is_watchlist or is_copy_trader) else (0.5 if is_social else self.min_momentum)
+        is_uw_flow = "unusual_whales" in source_parts or "whale" in source_parts or bool(s.get("uw_flow_sentiment")) or bool(s.get("unusual_options"))
 
+        if is_uw_flow or is_human or is_watchlist or is_copy_trader:
+            s["signal_tier"] = "tier_1" if is_uw_flow else "tier_2"
+            return True
+
+        min_mom = 0.5 if is_social else self.min_momentum
         change = abs(s.get("change_pct", 0))
         if change < min_mom:
             return False
 
-        # Volume check — require some volume but lower bar for social tickers
-        min_vol = 100_000 if (is_human or is_watchlist or is_copy_trader) else (200_000 if is_social else self.min_volume)
+        min_vol = 200_000 if is_social else self.min_volume
         vol = s.get("volume", 0)
         avg_vol = s.get("avg_volume", 0)
         effective_vol = max(vol, avg_vol)

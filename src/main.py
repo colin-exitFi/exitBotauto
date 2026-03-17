@@ -1672,46 +1672,8 @@ class TradingBot:
         )
         annotated["strategy_tag"] = strategy_tag
         annotated.update(annotate_candidate(annotated))
-
-        regime = str(
-            annotated.get("market_regime")
-            or getattr(self, "scan_regime", "")
-            or getattr(self, "scan_regime_raw", "")
-            or "mixed"
-        ).lower()
-        if not annotated.get("playbook_live", False):
-            return {"allowed": False, "reason": "playbook_disabled", "candidate": annotated}
-
-        allowed_regimes = {
-            str(r).strip().lower() for r in (annotated.get("playbook_allowed_regimes") or []) if str(r).strip()
-        }
-        if allowed_regimes and regime not in allowed_regimes:
-            return {"allowed": False, "reason": "regime_block", "candidate": annotated}
-
-        raw_signal_ts = annotated.get("signal_timestamp", None)
-        signal_ts = None if raw_signal_ts in (None, "") else float(raw_signal_ts)
-        signal_age = None if signal_ts is None else max(0.0, time.time() - signal_ts)
-        min_signal_age = max(0, int(annotated.get("playbook_min_signal_age_seconds", 0) or 0))
-        if signal_age is not None and signal_age < min_signal_age:
-            return {"allowed": False, "reason": "awaiting_confirmation", "candidate": annotated}
-
-        if annotated.get("playbook_requires_uw_confirmation") and not self._candidate_has_uw_confirmation(annotated, direction):
-            return {"allowed": False, "reason": "uw_unconfirmed", "candidate": annotated}
-
-        thesis_mode = str(annotated.get("playbook_thesis_mode", "intraday") or "intraday").lower()
-        if thesis_mode == "required":
-            thesis = self._load_tomorrow_thesis()
-            bias = normalize_bias_label(thesis.get("market_bias"))
-            watchlist = extract_watchlist_symbols(thesis)
-            if bias == "unknown" and not watchlist:
-                return {"allowed": False, "reason": "thesis_not_actionable", "candidate": annotated}
-            if annotated.get("playbook_watchlist_only") and watchlist:
-                if str(annotated.get("symbol", "")).upper() not in watchlist:
-                    return {"allowed": False, "reason": "not_in_watchlist", "candidate": annotated}
-            if bias in ("bullish", "bearish") and not bias_matches_direction(bias, direction):
-                return {"allowed": False, "reason": "thesis_bias_conflict", "candidate": annotated}
-
-        return {"allowed": True, "reason": "ok", "candidate": annotated}
+        # v2 stabilization: playbook gate is bypassed. Jury decides, risk sizes.
+        return {"allowed": True, "reason": "v2_passthrough", "candidate": annotated}
 
     def _determine_options_allocation_pct(self, candidate: Dict, direction: str, confidence: float) -> float:
         annotated = annotate_candidate(candidate)
