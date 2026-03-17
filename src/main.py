@@ -1781,7 +1781,13 @@ class TradingBot:
             # Do not block entry pipeline for positions still in entry/pending state.
             if entry_pending:
                 continue
-            if not pos.get("has_trailing_stop") and not pos.get("swing_only"):
+            has_protection = (
+                pos.get("has_trailing_stop")
+                or pos.get("hard_stop_order_id")
+                or pos.get("swing_only")
+                or (pos.get("order_state") or {}).get("hard_stop") in {"placed", "software_managed"}
+            )
+            if not has_protection:
                 unprotected.append(symbol)
         reasons = []
         allow_new_entries = True
