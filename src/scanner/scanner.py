@@ -230,19 +230,27 @@ class Scanner:
             try:
                 for item in self.watchlist.get_all()[:25]:
                     symbol = str(item.get("ticker", "")).upper().strip()
+                    source = str(item.get("sources", "watchlist") or "watchlist")
+                    source_lower = source.lower()
                     if not symbol:
                         continue
-                    watchlist_candidates.append({
+                    row = {
                         "symbol": symbol,
                         "price": 0,
                         "change_pct": 0,
                         "volume": 0,
-                        "source": str(item.get("sources", "watchlist") or "watchlist"),
+                        "source": source,
                         "side": item.get("side", "long"),
                         "watchlist_reason": item.get("reason", ""),
                         "watchlist_conviction": float(item.get("conviction", 0) or 0),
                         "priority": 1,
-                    })
+                    }
+                    if "congress" in source_lower:
+                        row["signal_tier"] = "tier_1"
+                        row["holding_horizon"] = "swing"
+                        row["strategy_tag"] = "congress_follow"
+                        row["priority"] = 2
+                    watchlist_candidates.append(row)
                 if watchlist_candidates:
                     logger.info(f"📋 Watchlist source: {len(watchlist_candidates)} curated tickers")
             except Exception as e:
@@ -583,10 +591,18 @@ class Scanner:
         is_human = "human_intel" in source_parts or bool(s.get("human_intel"))
         is_copy_trader = "copy_trader" in source_parts or bool(s.get("copy_trader_context"))
         is_watchlist = bool(s.get("watchlist_reason")) or "watchlist" in source_parts or bool(s.get("watchlist_conviction"))
+        is_congress = (
+            "congress" in source_parts
+            or "congress" in str(s.get("watchlist_reason", "") or "").lower()
+            or bool(s.get("congress_trades"))
+        )
         is_uw_flow = "unusual_whales" in source_parts or "whale" in source_parts or bool(s.get("uw_flow_sentiment")) or bool(s.get("unusual_options"))
 
-        if is_uw_flow or is_human or is_watchlist or is_copy_trader:
-            s["signal_tier"] = "tier_1" if is_uw_flow else "tier_2"
+        if is_uw_flow or is_human or is_watchlist or is_copy_trader or is_congress:
+            s["signal_tier"] = "tier_1" if (is_uw_flow or is_congress) else "tier_2"
+            if is_congress:
+                s.setdefault("holding_horizon", "swing")
+                s.setdefault("strategy_tag", "congress_follow")
             spread = float(s.get("spread_pct", 0) or 0)
             if spread > 1.5:
                 return False

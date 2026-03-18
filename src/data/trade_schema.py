@@ -13,6 +13,7 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t.setdefault("strategy_tag", "unknown")
     t.setdefault("signal_tier", "tier_2")
     t.setdefault("holding_horizon", "intraday")
+    t.setdefault("entry_quality", "neutral")
     t.setdefault("market_regime", "mixed")
     t.setdefault("entry_path", "unknown")
     t.setdefault("entry_reason_code", "unknown")
@@ -23,6 +24,13 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t.setdefault("ratchet_limit_order_id", "")
     t.setdefault("hard_stop_order_id", "")
     t.setdefault("order_state", {})
+    t.setdefault("overnight_context", "")
+    t.setdefault("extended_hours_entry", False)
+    t.setdefault("dead_money_tightened", False)
+    t.setdefault("dead_money", False)
+    t.setdefault("giveback_pct", None)
+    t.setdefault("loss_category", None)
+    t.setdefault("post_exit_1h_price", None)
 
     sources = t.get("signal_sources", [])
     if isinstance(sources, str):

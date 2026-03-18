@@ -610,6 +610,10 @@ class EntryManager:
             "actual_notional": actual_notional,
             "intended_qty": float(requested_qty or 0),
             "actual_qty": actual_qty,
+            "entry_quality": sentiment_data.get("entry_quality", "neutral"),
+            "overnight_context": sentiment_data.get("overnight_context", ""),
+            "dead_money_tightened": False,
+            "dead_money": False,
             "anomaly_flags": list(sentiment_data.get("anomaly_flags", []) or []),
             "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
             "copy_trader_context": sentiment_data.get("copy_trader_context", ""),
@@ -881,6 +885,10 @@ class EntryManager:
             "actual_notional": actual_notional,
             "intended_qty": float(requested_qty or 0),
             "actual_qty": actual_qty,
+            "entry_quality": sentiment_data.get("entry_quality", "neutral"),
+            "overnight_context": sentiment_data.get("overnight_context", ""),
+            "dead_money_tightened": False,
+            "dead_money": False,
             "anomaly_flags": list(sentiment_data.get("anomaly_flags", []) or []),
             "scout_escalated": bool(sentiment_data.get("scout_escalated", False)),
             "copy_trader_context": sentiment_data.get("copy_trader_context", ""),
@@ -1135,6 +1143,10 @@ class EntryManager:
                 existing.setdefault("signal_tier", "tier_2")
                 existing.setdefault("holding_horizon", "intraday")
                 existing.setdefault("market_regime", "mixed")
+                existing.setdefault("entry_quality", "neutral")
+                existing.setdefault("overnight_context", "")
+                existing.setdefault("dead_money_tightened", False)
+                existing.setdefault("dead_money", False)
                 existing.setdefault("entry_reason_code", "unknown")
                 existing.setdefault("entry_model_votes", {})
                 existing.setdefault("risk_constraints_applied", [])

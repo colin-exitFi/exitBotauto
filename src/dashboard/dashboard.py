@@ -823,6 +823,8 @@ async def get_ai_status():
         "last_tuner_changes": ai.get("last_tuner_changes"),
         "last_game_film": ai.get("last_game_film_summary"),
         "last_position_manager": ai.get("last_position_manager"),
+        "overnight_bias_summary": ai.get("overnight_bias_summary"),
+        "overnight_bias": ai.get("overnight_bias", {}),
         "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
         "last_short_block_reason": ai.get("last_short_block_reason"),
         "provider_health": ai.get("provider_health", {}),
@@ -2033,6 +2035,7 @@ async function refresh() {
       html += '<div class="ai-card tuner"><strong>🎛️ Tuner</strong>' + (ai.last_tuner_changes || '<em>No changes yet</em>') + '</div>';
       html += '<div class="ai-card pm"><strong>🛡️ Position Manager</strong>' + (ai.last_position_manager || '<em>Pending…</em>') + '</div>';
       html += '</div>';
+      if (ai.overnight_bias_summary) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#58a6ff">🌙 Overnight bias:</strong> ' + ai.overnight_bias_summary + '</div>';
       if (ai.provider_health && Object.keys(ai.provider_health).length) {
         const rows = Object.entries(ai.provider_health).map(([name, st]) => {
           const ok = !!(st && st.ok);

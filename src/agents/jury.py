@@ -60,10 +60,12 @@ SPREAD: {spread_pct}%
 SETUP TAG: {strategy_tag}
 SIGNAL TIER: {signal_tier}
 HOLDING HORIZON: {holding_horizon}
+ENTRY TIMING: {entry_quality} — stock is at {range_pct:.1f}% of day range
 MARKET REGIME: {market_regime}
 SIDE BIAS: {side_bias}
 FADE CONTEXT: {fade_context}
 ECONOMIC CALENDAR: {economic_calendar}
+OVERNIGHT INDEX CONTEXT: {overnight_context}
 HUMAN INTEL: {human_intel}
 PRO TRADER CONTEXT: {copy_trader_context}
 UW NEWS: {uw_news}
@@ -163,10 +165,13 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             strategy_tag=sd.get("strategy_tag", "unknown"),
             signal_tier=sd.get("signal_tier", "tier_2"),
             holding_horizon=sd.get("holding_horizon", "intraday"),
+            entry_quality=sd.get("entry_quality", "neutral"),
+            range_pct=float(sd.get("range_pct", 50) or 50),
             market_regime=sd.get("market_regime", "mixed"),
             side_bias=side_bias,
             fade_context=fade_context,
             economic_calendar=sd.get("economic_calendar", "None"),
+            overnight_context=sd.get("overnight_context", "Unavailable"),
             human_intel=sd.get("human_intel", "None"),
             copy_trader_context=sd.get("copy_trader_context", "None"),
             uw_news=sd.get("uw_news_summary", "None"),

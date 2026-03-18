@@ -15,6 +15,7 @@ from loguru import logger
 import anthropic
 
 from config import settings
+from src.signals.overnight_context import OvernightContext
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 MODEL = getattr(settings, "CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
@@ -108,9 +109,17 @@ class Observer:
                 _session_label = "AFTER-HOURS — extended hours trading active, limit orders only"
             else:
                 _session_label = "OVERNIGHT — market closed"
+            overnight_bias = {}
+            if hasattr(bot, "get_overnight_bias_context"):
+                try:
+                    overnight_bias = bot.get_overnight_bias_context()
+                except Exception:
+                    overnight_bias = {}
+            overnight_summary = OvernightContext.format_summary(overnight_bias)
 
             prompt = f"""Current date/time: {_now_et}
 SESSION: {_session_label}
+OVERNIGHT INDEX CONTEXT: {overnight_summary}
 Current state:
 
 ACCOUNT:

@@ -38,6 +38,7 @@ from src.signals.fred import FredClient
 from src.signals.human_intel import HumanIntelStore
 from src.signals.unusual_options import UnusualOptionsScanner
 from src.signals.congress import CongressScanner
+from src.signals.overnight_context import OvernightContext
 from src.signals.unusual_whales import UnusualWhalesClient
 from src.signals.short_interest import ShortInterestScanner
 from src.signals.sector_rotation import SectorRotationModel
@@ -133,6 +134,7 @@ class TradingBot:
         self.risk_manager: RiskManager = None
         self.options_monitor: OptionsMonitor = None
         self.reconciler: Optional[Reconciler] = None
+        self.overnight_context: Optional[OvernightContext] = None
 
         # AI layers
         self.observer: Observer = None
@@ -355,6 +357,10 @@ class TradingBot:
 
         # Consensus engine (legacy — kept for fallback/dashboard compat)
         self.consensus_engine = ConsensusEngine()
+        self.overnight_context = OvernightContext(
+            alpaca_client=self.alpaca_client,
+            polygon_client=self.polygon_client,
+        )
 
         # Options engine
         from src.options.options_engine import OptionsEngine
@@ -401,6 +407,8 @@ class TradingBot:
             "last_game_film_summary": None,
             "last_position_manager": None,
             "last_consensus": None,
+            "overnight_bias_summary": None,
+            "overnight_bias": {},
             "short_verdicts_blocked": 0,
             "last_short_block_reason": None,
             "last_uw_stream_signal": None,
@@ -1646,6 +1654,68 @@ class TradingBot:
             parts.append(f"chain={chain}")
         return " | ".join(parts)
 
+    def get_overnight_bias_context(self, refresh: bool = False) -> Dict:
+        if not self.overnight_context:
+            return {}
+        try:
+            bias = self.overnight_context.get_bias(refresh=refresh) or {}
+        except Exception as e:
+            logger.debug(f"Overnight bias fetch failed: {e}")
+            return {}
+        self.ai_layers["overnight_bias"] = bias
+        self.ai_layers["overnight_bias_summary"] = OvernightContext.format_summary(bias)
+        return bias
+
+    @staticmethod
+    def _derive_entry_quality(candidate: Dict) -> str:
+        try:
+            range_pct = float(candidate.get("range_pct", 50) or 50)
+        except Exception:
+            range_pct = 50.0
+        try:
+            change_pct = float(candidate.get("change_pct", 0) or 0)
+        except Exception:
+            change_pct = 0.0
+        if range_pct > 95:
+            return "at_highs"
+        if range_pct < 70 and change_pct > 3:
+            return "pullback"
+        return "neutral"
+
+    @staticmethod
+    def _current_session_type_label(session_label: str) -> str:
+        if session_label == "pre":
+            return "pre"
+        if session_label == "after":
+            return "after"
+        if session_label == "regular":
+            return "regular"
+        return "overnight"
+
+    @staticmethod
+    def _target_size_pct_for_candidate(
+        candidate: Dict,
+        verdict,
+        risk_cap_pct: float,
+    ) -> float:
+        signal_tier = str(candidate.get("signal_tier", "tier_2") or "tier_2").lower()
+        agreement = str((getattr(verdict, "consensus_detail", {}) or {}).get("agreement", "") or "").lower()
+        confidence = float(getattr(verdict, "confidence", 0) or 0)
+        target = float(getattr(verdict, "size_pct", 0) or 0)
+        if signal_tier == "tier_1" and agreement == "unanimous":
+            target = max(target, 6.0)
+        elif signal_tier == "tier_1" and agreement in {"majority", "majority_conflict", "majority_two_model"}:
+            target = max(target, 5.0)
+        elif signal_tier == "tier_1" and agreement == "tier1_probe":
+            target = max(target, 2.5)
+        elif signal_tier == "tier_2" and agreement in {"majority", "majority_conflict", "majority_two_model", "unanimous"}:
+            target = max(target, 4.0)
+        elif signal_tier == "tier_3":
+            target = min(target, 1.5)
+        if confidence >= 70:
+            target *= 1.1
+        return max(0.0, min(float(risk_cap_pct or 0) or 0.0, target))
+
     def _prepare_candidate_metadata(self, candidate: Dict) -> Dict:
         prepared = dict(candidate or {})
         direction = "SHORT" if str(prepared.get("side", "")).lower() == "short" else "BUY"
@@ -1663,7 +1733,14 @@ class TradingBot:
             or "mixed"
         ).lower()
         prepared["uw_flow_summary"] = str(prepared.get("uw_flow_summary") or self._build_uw_flow_summary(prepared))
-        prepared["extended_hours"] = self._entry_session_label() in {"pre", "after"}
+        session_label = self._entry_session_label()
+        prepared["extended_hours"] = session_label in {"pre", "after"}
+        prepared["session_type"] = self._current_session_type_label(session_label)
+        prepared["entry_quality"] = str(prepared.get("entry_quality") or self._derive_entry_quality(prepared))
+        prepared["overnight_context"] = str(
+            prepared.get("overnight_context")
+            or OvernightContext.format_summary(self.get_overnight_bias_context())
+        )
         return prepared
 
     def _evaluate_trade_gate(self, candidate: Dict, direction: str) -> Dict:
@@ -3012,7 +3089,9 @@ class TradingBot:
 
             tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
             tier_size = float(tier.get("size_pct", 2.0) or 2.0)
-            size_modifier = min(1.0, verdict.size_pct / tier_size) if tier_size > 0 else 1.0
+            risk_cap_pct = float(risk_brief.get("size_cap_pct", risk_brief.get("max_size_pct", tier_size)) or tier_size)
+            effective_size_pct = self._target_size_pct_for_candidate(candidate, verdict, risk_cap_pct)
+            size_modifier = min(1.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
 
             sentiment_data["consensus_size_modifier"] = size_modifier
             sentiment_data["consensus_confidence"] = verdict.confidence
@@ -3029,11 +3108,13 @@ class TradingBot:
             sentiment_data["entry_reason_code"] = f"jury_{agreement}"
             sentiment_data["uw_flow_summary"] = candidate.get("uw_flow_summary", "")
             sentiment_data["extended_hours"] = bool(candidate.get("extended_hours"))
+            sentiment_data["entry_quality"] = candidate.get("entry_quality", "neutral")
+            sentiment_data["overnight_context"] = candidate.get("overnight_context", "")
 
             log_activity(
                 "trade",
                 f"🗳️ {symbol}: {direction} verdict tier={candidate.get('signal_tier')} "
-                f"conf={verdict.confidence:.0f}% size={verdict.size_pct:.2f}%",
+                f"conf={verdict.confidence:.0f}% size={effective_size_pct:.2f}%",
             )
 
             self._clear_jury_veto(symbol)
@@ -3373,6 +3454,37 @@ class TradingBot:
                     position.get("anomaly_flags", []),
                     trade_record.get("anomaly_flags", []),
                 )
+                peak_pct = float(
+                    position.get(
+                        "ratchet_peak_pnl_pct",
+                        position.get("mfe_pct", trade_record.get("pnl_pct", 0)),
+                    )
+                    or 0
+                )
+                realized_pct = float(trade_record.get("pnl_pct", 0) or 0)
+                trade_record["giveback_pct"] = ProfitRatchet.compute_giveback_pct(peak_pct, realized_pct)
+                trade_record["dead_money_tightened"] = bool(position.get("dead_money_tightened"))
+                trade_record["dead_money"] = bool(position.get("dead_money"))
+                trade_record["entry_quality"] = position.get("entry_quality", trade_record.get("entry_quality", "neutral"))
+                trade_record["extended_hours_entry"] = bool(
+                    position.get("extended_hours_entry", trade_record.get("extended_hours_entry", False))
+                )
+                trade_record["overnight_context"] = str(
+                    position.get("overnight_context", trade_record.get("overnight_context", "")) or ""
+                )
+                if realized_pct < 0 and not trade_record.get("loss_category"):
+                    if trade_record.get("entry_quality") == "at_highs":
+                        trade_record["loss_category"] = "bad_timing"
+                    elif trade_record.get("extended_hours_entry") and float(trade_record.get("hold_seconds", 0) or 0) < 300:
+                        trade_record["loss_category"] = "extended_hours_fakeout"
+                    elif bool(position.get("dead_money_tightened")):
+                        trade_record["loss_category"] = "dead_money"
+                    elif peak_pct < 0.3:
+                        trade_record["loss_category"] = "dead_money"
+                    elif peak_pct > 0:
+                        trade_record["loss_category"] = "partial_favorable"
+                    else:
+                        trade_record["loss_category"] = "wrong_signal"
 
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
@@ -3625,20 +3737,34 @@ class TradingBot:
             order for order in (open_orders_by_symbol.get(symbol, []) or [])
             if str(order.get("side", "") or "").lower() == exit_side and self._order_is_hard_stop(order)
         ]
-        if existing_orders:
-            active_order = existing_orders[0]
-            position["hard_stop_order_id"] = active_order.get("id", position.get("hard_stop_order_id"))
-            position.setdefault("order_state", {})["hard_stop"] = "placed"
-            return
-
         side = position.get("side", "long")
-        stop_price = ProfitRatchet.price_for_pnl(
-            float(position.get("entry_price", current_price) or current_price),
-            ProfitRatchet.HARD_STOP_PCT,
-            side,
+        stop_price = float(
+            position.get("hard_stop_price")
+            or ProfitRatchet.price_for_pnl(
+                float(position.get("entry_price", current_price) or current_price),
+                ProfitRatchet.HARD_STOP_PCT,
+                side,
+            )
+            or 0
         )
         if not stop_price:
             return
+        active_order = existing_orders[0] if existing_orders else None
+        if active_order:
+            try:
+                current_stop_price = float(active_order.get("stop_price", 0) or 0)
+            except Exception:
+                current_stop_price = 0.0
+            if abs(current_stop_price - stop_price) < 0.01:
+                position["hard_stop_order_id"] = active_order.get("id", position.get("hard_stop_order_id"))
+                position.setdefault("order_state", {})["hard_stop"] = "placed"
+                return
+            if active_order.get("id"):
+                cancelled = await self._cancel_order_and_confirm(str(active_order.get("id") or ""))
+                if not cancelled:
+                    logger.warning(f"⚠️ Could not replace hard stop for {symbol}")
+                    position.setdefault("order_state", {})["hard_stop"] = "replace_failed"
+                    return
         client_order_id = ProfitRatchet.make_client_order_id(symbol, "hard-stop", stop_price)
         order = await asyncio.get_event_loop().run_in_executor(
             None,
@@ -3813,6 +3939,7 @@ class TradingBot:
         )
         position["ratchet_floor_pct"] = action.get("floor_pct")
         position["hard_stop_price"] = action.get("hard_stop_price") or position.get("hard_stop_price")
+        position["dead_money"] = bool(action.get("dead_money"))
         position.setdefault("order_state", {})
 
         session = self._entry_session_label()
@@ -3821,6 +3948,12 @@ class TradingBot:
 
         if regular_session:
             await self._ensure_hard_stop(position, open_orders_by_symbol, current_price)
+            if action.get("dead_money") and not position.get("dead_money_tightened"):
+                position["dead_money_tightened"] = True
+                logger.warning(
+                    f"💀 Dead money: {position.get('symbol', '?')} tightening stop "
+                    f"{ProfitRatchet.HARD_STOP_PCT:.1f}% → {float(action.get('hard_stop_pct', ProfitRatchet.DEAD_MONEY_TIGHT_STOP_PCT)):.1f}%"
+                )
             if action.get("action") == "hard_stop" and not position.get("exit_pending"):
                 hard_stop_orders = [
                     order for order in (open_orders_by_symbol.get(position.get("symbol", ""), []) or [])
@@ -3837,6 +3970,8 @@ class TradingBot:
 
         if extended_session:
             position["order_state"]["hard_stop"] = "software_managed"
+            if action.get("dead_money"):
+                position["dead_money_tightened"] = True
             if action.get("ratchet_active"):
                 position["order_state"]["ratchet"] = "software_managed"
             if action.get("action") in {"hard_stop", "ratchet_exit"} and not position.get("exit_pending"):
