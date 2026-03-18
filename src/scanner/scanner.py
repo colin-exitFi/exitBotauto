@@ -587,6 +587,16 @@ class Scanner:
 
         if is_uw_flow or is_human or is_watchlist or is_copy_trader:
             s["signal_tier"] = "tier_1" if is_uw_flow else "tier_2"
+            spread = float(s.get("spread_pct", 0) or 0)
+            if spread > 1.5:
+                return False
+            range_pct = float(s.get("range_pct", 0) or 0)
+            if range_pct > 95:
+                anomaly_flags = list(s.get("anomaly_flags", []) or [])
+                if "extended_near_day_high" not in anomaly_flags:
+                    anomaly_flags.append("extended_near_day_high")
+                s["anomaly_flags"] = anomaly_flags
+                s["extension_warning"] = "near_day_high"
             return True
 
         min_mom = 0.5 if is_social else self.min_momentum

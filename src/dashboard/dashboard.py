@@ -39,6 +39,8 @@ _RUNNERS_FILE = _DATA_DIR / "yesterdays_runners.json"
 _WATCHLIST_FILE = _DATA_DIR / "watchlist.json"
 _CHAT_HISTORY_LIMIT = 8
 _CHAT_ACTIVITY_LIMIT = 15
+_PANEL_STARTING_EQUITY = 27500.0
+_ALPACA_TERMINAL_CACHE_TTL = 5.0
 _CHAT_STOPWORDS = {
     "A", "AN", "AND", "ARE", "AS", "AT", "BE", "BUT", "BY", "DO", "FOR", "FROM",
     "FRIDAY", "HOURS", "I", "IF", "IN", "IS", "IT", "ITS", "LOOK", "ME", "MONDAY",
@@ -49,11 +51,13 @@ _CHAT_STOPWORDS = {
 # Activity feed — circular buffer of bot thoughts/actions
 _activity_feed: List[Dict] = []
 _MAX_FEED_SIZE = 100
+_alpaca_terminal_cache = {"updated_at": 0.0, "payload": None}
 
 
 def set_bot(bot):
-    global _bot
+    global _bot, _alpaca_terminal_cache
     _bot = bot
+    _alpaca_terminal_cache = {"updated_at": 0.0, "payload": None}
 
 
 def _get_reconciliation_state() -> Dict:
@@ -63,10 +67,88 @@ def _get_reconciliation_state() -> Dict:
     which can amplify broker API load and create self-inflicted recon churn.
     """
     try:
+        if (
+            _bot
+            and getattr(_bot, "reconciler", None)
+            and not getattr(_bot, "running", False)
+            and hasattr(_bot.reconciler, "snapshot")
+        ):
+            try:
+                fallback = _bot.reconciler.snapshot() or {}
+                if isinstance(fallback, dict) and fallback:
+                    return fallback
+            except Exception:
+                pass
         state = persistence.load_reconciliation_state() or {}
+        if isinstance(state, dict) and state:
+            return state
         return state if isinstance(state, dict) else {}
     except Exception:
         return {}
+
+
+def _get_cached_alpaca_terminal_snapshot() -> Dict:
+    global _alpaca_terminal_cache
+    cached = _alpaca_terminal_cache.get("payload")
+    updated_at = float(_alpaca_terminal_cache.get("updated_at", 0.0) or 0.0)
+    now_ts = time.time()
+    if cached and (now_ts - updated_at) <= _ALPACA_TERMINAL_CACHE_TTL:
+        return dict(cached)
+    if not _bot or not getattr(_bot, "alpaca_client", None):
+        return dict(cached or {})
+    try:
+        account = _bot.alpaca_client.get_account()
+        positions = _bot.alpaca_client.get_positions()
+        equity = float(account.get("equity", _PANEL_STARTING_EQUITY) or _PANEL_STARTING_EQUITY)
+        last_equity = float(account.get("last_equity", equity) or equity)
+        cash = float(account.get("cash", 0) or 0)
+        buying_power = float(account.get("buying_power", 0) or 0)
+        unrealized = round(
+            sum(
+                float(
+                    row.get(
+                        "unrealized_pl",
+                        row.get("unrealized_pnl", row.get("open_pnl", 0)),
+                    )
+                    or 0
+                )
+                for row in positions
+            ),
+            2,
+        )
+        prior_peak = 0.0
+        if _bot and hasattr(_bot, "pnl_state"):
+            try:
+                prior_peak = float((_bot.pnl_state or {}).get("peak_equity", 0) or 0)
+            except Exception:
+                prior_peak = 0.0
+        if cached:
+            try:
+                prior_peak = max(prior_peak, float(cached.get("peak_equity", 0) or 0))
+            except Exception:
+                pass
+        peak_equity = max(_PANEL_STARTING_EQUITY, prior_peak, equity)
+        if _bot and hasattr(_bot, "pnl_state"):
+            try:
+                _bot.pnl_state["peak_equity"] = peak_equity
+            except Exception:
+                pass
+        payload = {
+            "equity": round(equity, 2),
+            "last_equity": round(last_equity, 2),
+            "cash": round(cash, 2),
+            "buying_power": round(buying_power, 2),
+            "unrealized": round(unrealized, 2),
+            "day_pnl": round(equity - last_equity, 2),
+            "day_pnl_pct": round(((equity - last_equity) / last_equity * 100.0), 2) if last_equity else 0.0,
+            "peak_equity": round(peak_equity, 2),
+            "updated_at": now_ts,
+        }
+        _alpaca_terminal_cache = {"updated_at": now_ts, "payload": payload}
+        return dict(payload)
+    except Exception as e:
+        logger.debug(f"Alpaca terminal snapshot unavailable: {e}")
+        return dict(cached or {})
 
 
 def _dashboard_connect_host(host: str) -> str:
@@ -704,12 +786,12 @@ async def get_portfolio():
         return {"positions": [], "cash": 0, "total_value": 0, "buying_power": 0}
     try:
         positions = _bot.alpaca_client.get_positions()
-        balances = _bot.alpaca_client.get_balances()
+        account = _bot.alpaca_client.get_account()
         return {
             "positions": positions,
-            "cash": round(float(balances.get("cash", 0) or 0), 2),
-            "buying_power": round(float(balances.get("buying_power", 0) or 0), 2),
-            "total_value": round(float(balances.get("equity", 0) or 0), 2),
+            "cash": round(float(account.get("cash", 0) or 0), 2),
+            "buying_power": round(float(account.get("buying_power", 0) or 0), 2),
+            "total_value": round(float(account.get("equity", 0) or 0), 2),
         }
     except Exception as e:
         logger.error(f"Portfolio fetch error: {e}")
@@ -873,17 +955,41 @@ async def enable_strategy(tag: str, reason: str = ""):
 
 @app.get("/api/equity-curve")
 async def get_equity_curve(limit: int = 120):
-    """Return realized-equity curve points derived from trade history."""
+    """Return broker-backed equity curve points, with internal fallback if unavailable."""
+    if limit < 1:
+        limit = 1
+    if _bot and getattr(_bot, "alpaca_client", None):
+        try:
+            history = _bot.alpaca_client.get_portfolio_history(period="1D", timeframe="15Min") or {}
+            timestamps = list(history.get("timestamp") or []) if isinstance(history, dict) else []
+            equities = list(history.get("equity") or []) if isinstance(history, dict) else []
+            if timestamps and equities:
+                count = min(len(timestamps), len(equities))
+                points = [
+                    {
+                        "timestamp": timestamps[idx],
+                        "cumulative_pnl": round(float(equities[idx]) - _PANEL_STARTING_EQUITY, 2),
+                        "equity": round(float(equities[idx]), 2),
+                    }
+                    for idx in range(count)
+                ]
+                return {
+                    "starting_equity": round(_PANEL_STARTING_EQUITY, 2),
+                    "count": count,
+                    "points": points[-limit:],
+                    "source": "alpaca",
+                }
+        except Exception as e:
+            logger.debug(f"Broker equity curve unavailable: {e}")
+
     from src.ai import trade_history
 
     stats = trade_history.get_analytics()
     curve = stats.get("equity_curve", [])
-    if limit < 1:
-        limit = 1
     points = curve[-limit:]
-    starting = settings.TOTAL_CAPITAL
+    starting = _PANEL_STARTING_EQUITY
     if _bot and getattr(_bot, "pnl_state", None):
-        starting = _bot.pnl_state.get("starting_equity", settings.TOTAL_CAPITAL)
+        starting = _bot.pnl_state.get("starting_equity", _PANEL_STARTING_EQUITY)
 
     series = [
         {
@@ -897,32 +1003,13 @@ async def get_equity_curve(limit: int = 120):
         "starting_equity": round(starting, 2),
         "count": len(curve),
         "points": series,
+        "source": "internal",
     }
 
 
 def _resolve_starting_equity(pnl: Dict, broker_truth: Dict) -> float:
-    """Resolve the most trustworthy starting equity baseline for dashboard math."""
-    candidates = [float(getattr(settings, "TOTAL_CAPITAL", 25000) or 25000)]
-    if _bot and getattr(_bot, "risk_manager", None):
-        try:
-            candidates.append(float(getattr(_bot.risk_manager, "_starting_equity", 0) or 0))
-        except Exception:
-            pass
-    try:
-        candidates.append(float(pnl.get("starting_equity", 0) or 0))
-    except Exception:
-        pass
-    try:
-        last_equity = float((broker_truth or {}).get("last_equity", 0) or 0)
-        equity = float((broker_truth or {}).get("equity", 0) or 0)
-        if last_equity > 0:
-            candidates.append(last_equity)
-        elif equity > 0:
-            candidates.append(equity)
-    except Exception:
-        pass
-    resolved = max(c for c in candidates if c and c > 0)
-    return round(resolved, 2)
+    """Dashboard baseline is fixed to the funded v2 starting capital."""
+    return float(_PANEL_STARTING_EQUITY)
 
 
 @app.get("/api/pnl")
@@ -940,9 +1027,11 @@ async def get_pnl():
     best = pnl.get("best_trade", 0)
     worst = pnl.get("worst_trade", 0)
 
-    default_equity = float(getattr(settings, "TOTAL_CAPITAL", 25000.0) or 25000.0)
+    default_equity = _resolve_starting_equity(pnl, {})
     equity = default_equity
     last_equity = equity
+    cash = 0.0
+    buying_power = 0.0
     broker_day_pnl = 0.0
     broker_day_pnl_pct = 0.0
     unrealized = 0
@@ -952,23 +1041,24 @@ async def get_pnl():
     reconciliation_state = _get_reconciliation_state()
     broker_truth = reconciliation_state.get("broker", {}) or {}
     reconciliation = reconciliation_state.get("reconciliation", {}) or {}
-    if broker_truth:
+    alpaca_snapshot = _get_cached_alpaca_terminal_snapshot()
+    if alpaca_snapshot:
+        equity = float(alpaca_snapshot.get("equity", equity) or equity)
+        last_equity = float(alpaca_snapshot.get("last_equity", equity) or equity)
+        cash = float(alpaca_snapshot.get("cash", 0) or 0)
+        buying_power = float(alpaca_snapshot.get("buying_power", 0) or 0)
+        broker_day_pnl = float(alpaca_snapshot.get("day_pnl", 0) or 0)
+        broker_day_pnl_pct = float(alpaca_snapshot.get("day_pnl_pct", 0) or 0)
+        unrealized = float(alpaca_snapshot.get("unrealized", 0) or 0)
+        peak = max(peak, float(alpaca_snapshot.get("peak_equity", equity) or equity))
+    elif broker_truth:
         equity = float(broker_truth.get("equity", equity) or equity)
         last_equity = float(broker_truth.get("last_equity", equity) or equity)
+        cash = float(broker_truth.get("cash", 0) or 0)
+        buying_power = float(broker_truth.get("buying_power", 0) or 0)
         broker_day_pnl = float(broker_truth.get("day_pnl", 0) or 0)
         broker_day_pnl_pct = float(broker_truth.get("day_pnl_pct", 0) or 0)
         unrealized = float(broker_truth.get("current_open_unrealized", 0) or 0)
-    elif _bot.alpaca_client:
-        try:
-            acct = _bot.alpaca_client.get_account()
-            equity = float(acct.get("equity", default_equity))
-            last_equity = float(acct.get("last_equity", equity) or equity)
-            broker_day_pnl = round(equity - last_equity, 2)
-            broker_day_pnl_pct = round((broker_day_pnl / last_equity * 100.0), 2) if last_equity else 0.0
-            alpaca_positions = _bot.alpaca_client.get_positions()
-            unrealized = sum(float(p.get("unrealized_pnl", p.get("unrealized_pl", p.get("open_pnl", 0)))) for p in alpaca_positions)
-        except Exception:
-            pass
     starting = _resolve_starting_equity(pnl, broker_truth)
     if equity > peak:
         peak = equity
@@ -1004,7 +1094,8 @@ async def get_pnl():
         "equity": round(equity, 2),
         "starting_equity": round(starting, 2),
         "peak_equity": round(peak, 2),
-        "cash": round(float(broker_truth.get("cash", 0) or 0), 2),
+        "cash": round(cash, 2),
+        "buying_power": round(buying_power, 2),
         "portfolio_value": round(equity, 2),
         "total_pnl": round(total_pnl, 2),
         "total_realized": round(total_realized, 2),
@@ -1396,7 +1487,7 @@ body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 .metric .value.muted{color:#6e7681!important}
 .metric .value.animated{animation:countUp .4s ease-out}
 .metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.big-pnl{font-size:clamp(16px,1.8vw,24px)!important;font-weight:900!important;line-height:1.05;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;animation:neonPulse 2s ease-in-out infinite}
+.big-pnl{font-size:17px!important;font-weight:800!important;line-height:1.1;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;animation:neonPulse 2s ease-in-out infinite}
 .recon-banner{display:none;margin:0 0 12px 0;padding:12px 14px;border:1px solid #8b0000;border-radius:10px;background:linear-gradient(145deg,#2a0f12,#1c0b0d);color:#ffb3b3;font-size:12px;line-height:1.45;white-space:normal;word-break:break-word;overflow-wrap:anywhere;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .recon-banner strong{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ff8e8e;margin-bottom:4px}
 .recon-banner .muted{color:#d88f8f}
@@ -1837,7 +1928,12 @@ async function refresh() {
     const degradedInternal = !!trust.internal_analytics_degraded;
     _brokerOnlyMode = brokerOnly;
     _degradedInternal = degradedInternal;
-    $('totalPnl').textContent = '$' + (pnl.total_pnl||0).toFixed(2);
+    $('totalPnl').textContent = (pnl.total_pnl || 0).toLocaleString(undefined, {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
     $('totalPnl').className = 'value big-pnl ' + cls(pnl.total_pnl||0);
     setPnl('equity', pnl.equity||0);
     setPnl('todayPnl', pnl.today_realized||0);

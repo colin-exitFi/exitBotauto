@@ -26,6 +26,7 @@ class Reconciler:
         self.options_engine = options_engine
         self._last_warning_sig = ""
         self._last_warning_ts = 0.0
+        self._recent_backfilled_trade_keys = set()
 
     def snapshot(self, trade_date: Optional[str] = None) -> Dict:
         previous = persistence.load_reconciliation_state() or {}
@@ -110,6 +111,7 @@ class Reconciler:
     def _backfill_broker_reconstructed_trades(self, broker: Dict):
         broker_fill_ledger = (broker or {}).get("broker_fill_ledger", {}) if isinstance(broker, dict) else {}
         trades = list(broker_fill_ledger.get("trades", []) or [])
+        self._recent_backfilled_trade_keys = set()
         if not trades:
             return
         existing = trade_history.load_all()
@@ -125,6 +127,7 @@ class Reconciler:
                 )
             )
         added = 0
+        skipped_duplicates = 0
         for t in trades:
             key = (
                 str(t.get("symbol", "")).upper(),
@@ -135,11 +138,97 @@ class Reconciler:
             )
             if key in existing_keys:
                 continue
+            if self._find_recent_history_trade(existing, t, window_seconds=30.0):
+                skipped_duplicates += 1
+                continue
+            if str(t.get("reason", "") or "").lower() == "broker_fill_reconstructed" and self._find_recent_history_trade(
+                existing,
+                t,
+                window_seconds=60.0,
+                reason_prefixes=("ratchet", "hard_stop"),
+            ):
+                skipped_duplicates += 1
+                continue
             trade_history.record_trade(t)
             existing_keys.add(key)
+            existing.append(t)
+            self._recent_backfilled_trade_keys.add(key)
             added += 1
         if added > 0:
             logger.info(f"🧾 Backfilled {added} reconstructed broker trade(s) into history")
+        if skipped_duplicates > 0:
+            logger.info(f"🧾 Skipped {skipped_duplicates} duplicate reconstructed broker trade(s)")
+
+    @staticmethod
+    def _is_partial_trade(trade: Dict) -> bool:
+        reason = str((trade or {}).get("reason", "") or "").lower()
+        exit_scope = str((trade or {}).get("exit_scope", "") or "").lower()
+        if exit_scope == "partial":
+            return True
+        return reason.endswith("_1") or reason.startswith("partial_")
+
+    @staticmethod
+    def _trade_identity_key(trade: Dict) -> tuple:
+        return (
+            str((trade or {}).get("symbol", "") or "").upper(),
+            round(float((trade or {}).get("exit_time", 0) or 0), 3),
+            round(float((trade or {}).get("quantity", 0) or 0), 6),
+            round(float((trade or {}).get("pnl", 0) or 0), 2),
+            str((trade or {}).get("reason", "") or ""),
+        )
+
+    def _find_recent_history_trade(
+        self,
+        history: List[Dict],
+        trade: Dict,
+        window_seconds: float = 30.0,
+        reason_prefixes: Optional[tuple] = None,
+    ) -> Optional[Dict]:
+        symbol = str((trade or {}).get("symbol", "") or "").upper()
+        asset_type = str((trade or {}).get("asset_type", "equity") or "equity").lower()
+        try:
+            exit_time = float((trade or {}).get("exit_time", 0) or 0)
+        except Exception:
+            exit_time = 0.0
+        if not symbol or exit_time <= 0 or self._is_partial_trade(trade):
+            return None
+        prefixes = tuple(str(prefix or "").lower() for prefix in (reason_prefixes or ()) if str(prefix or "").strip())
+        for existing in reversed(history or []):
+            if self._is_partial_trade(existing):
+                continue
+            if str(existing.get("asset_type", "equity") or "equity").lower() != asset_type:
+                continue
+            if str(existing.get("symbol", "") or "").upper() != symbol:
+                continue
+            existing_reason = str(existing.get("reason", "") or "").lower()
+            if prefixes and not any(existing_reason.startswith(prefix) for prefix in prefixes):
+                continue
+            try:
+                existing_exit_time = float(existing.get("exit_time", 0) or 0)
+            except Exception:
+                continue
+            if existing_exit_time <= 0:
+                continue
+            if abs(existing_exit_time - exit_time) <= float(window_seconds or 0.0):
+                return existing
+        return None
+
+    def _lookup_position_metadata(self, symbol: str) -> Dict:
+        symbol_key = str(symbol or "").upper()
+        if not symbol_key or not self.entry_manager:
+            return {}
+        positions = getattr(self.entry_manager, "positions", {}) or {}
+        current = positions.get(symbol_key) or positions.get(symbol) or {}
+        if current:
+            return dict(current)
+        getter = getattr(self.entry_manager, "get_recently_removed_position", None)
+        if callable(getter):
+            recent = getter(symbol_key) or {}
+            if recent:
+                return dict(recent)
+        recent_removed = (getattr(self.entry_manager, "_recently_removed_positions", {}) or {}).get(symbol_key) or {}
+        recent_snapshot = recent_removed.get("position", {}) if isinstance(recent_removed, dict) else {}
+        return dict(recent_snapshot or {})
 
     def _sync_internal_positions_with_broker(self, broker: Dict):
         if not self.entry_manager or not hasattr(self.entry_manager, "sync_positions_from_brokerage"):
@@ -225,7 +314,19 @@ class Reconciler:
         long_mv = float(account.get("long_market_value", 0) or 0)
         short_mv = float(account.get("short_market_value", 0) or 0)
         position_mv = long_mv + abs(short_mv)
-        current_open_unrealized = round(sum(float(p.get("unrealized_pnl", 0) or 0) for p in positions), 2)
+        current_open_unrealized = round(
+            sum(
+                float(
+                    p.get(
+                        "unrealized_pl",
+                        p.get("unrealized_pnl", p.get("open_pnl", 0)),
+                    )
+                    or 0
+                )
+                for p in positions
+            ),
+            2,
+        )
         day_pnl = round(equity - last_equity, 2)
         day_pnl_pct = round((day_pnl / last_equity * 100.0), 2) if last_equity else 0.0
 
@@ -327,18 +428,25 @@ class Reconciler:
             t for t in history
             if self._trade_day_key_from_trade(t) == target_day
         ]
-        today_symbols = sorted({
-            str(t.get("symbol", "") or "").upper()
+        today_history_keys = {
+            self._trade_identity_key(t)
             for t in today_history
-            if str(t.get("symbol", "") or "").strip()
-        })
+        }
+        today_history_keys |= set(getattr(self, "_recent_backfilled_trade_keys", set()) or set())
         broker_fill_ledger = (broker or {}).get("broker_fill_ledger", {}) if isinstance(broker, dict) else {}
         supplemental_trades = [
             normalize_trade_record(t)
             for t in (broker_fill_ledger.get("trades", []) or [])
-            if str(t.get("symbol", "") or "").upper() not in set(today_symbols)
+            if self._trade_identity_key(t) not in today_history_keys
         ]
-        effective_today_trades = list(today_history) + supplemental_trades
+        effective_today_trades = []
+        seen_trade_keys = set()
+        for trade in list(today_history) + supplemental_trades:
+            trade_key = self._trade_identity_key(trade)
+            if trade_key in seen_trade_keys:
+                continue
+            seen_trade_keys.add(trade_key)
+            effective_today_trades.append(trade)
         today_realized = round(sum(float(t.get("pnl", 0) or 0) for t in effective_today_trades), 2)
         today_trade_count = len(effective_today_trades)
         today_wins = len([t for t in effective_today_trades if float(t.get("pnl", 0) or 0) > 0])
@@ -583,6 +691,13 @@ class Reconciler:
             pnl_pct = ((exit_price - entry_price) / entry_price * 100.0) if entry_price else 0.0
             if side == "short":
                 pnl_pct = -pnl_pct
+            metadata = self._lookup_position_metadata(symbol)
+            signal_sources = metadata.get("signal_sources", ["broker_reconciliation"])
+            if isinstance(signal_sources, str):
+                signal_sources = [part.strip() for part in signal_sources.split(",") if part.strip()]
+            anomaly_flags = list(metadata.get("anomaly_flags", []) or [])
+            if "broker_reconstructed" not in anomaly_flags:
+                anomaly_flags.append("broker_reconstructed")
             trade = normalize_trade_record({
                 "symbol": symbol,
                 "side": order_side,
@@ -596,12 +711,18 @@ class Reconciler:
                 "exit_time": exit_ts,
                 "hold_seconds": max(0.0, exit_ts - float(segment.get("entry_time", exit_ts) or exit_ts)),
                 "asset_type": "equity",
-                "strategy_tag": "broker_reconciled",
-                "entry_path": "broker_reconciliation",
-                "signal_sources": ["broker_reconciliation"],
-                "provider_used": "alpaca_reconciler",
-                "decision_confidence": 0,
-                "anomaly_flags": ["broker_reconstructed"],
+                "strategy_tag": metadata.get("strategy_tag", "unknown"),
+                "signal_tier": metadata.get("signal_tier", "tier_2"),
+                "holding_horizon": metadata.get("holding_horizon", "intraday"),
+                "market_regime": metadata.get("market_regime", "mixed"),
+                "entry_reason_code": metadata.get("entry_reason_code", "unknown"),
+                "entry_model_votes": dict(metadata.get("entry_model_votes", {}) or {}),
+                "risk_constraints_applied": list(metadata.get("risk_constraints_applied", []) or []),
+                "entry_path": metadata.get("entry_path", "broker_reconciliation"),
+                "signal_sources": signal_sources or ["broker_reconciliation"],
+                "provider_used": metadata.get("provider_used", "alpaca_reconciler"),
+                "decision_confidence": metadata.get("decision_confidence", 0),
+                "anomaly_flags": anomaly_flags,
                 "trade_date": trade_date,
                 "exit_order_id": segment.get("order_ids", [""])[-1] if segment.get("order_ids") else "",
             })
@@ -855,4 +976,3 @@ class Reconciler:
         if ts <= 0:
             return ""
         return cls._trade_day_key(ts)
-

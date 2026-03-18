@@ -12,10 +12,10 @@ from config import settings
 
 class ProfitRatchet:
     HARD_STOP_PCT = float(getattr(settings, "PROFIT_RATCHET_HARD_STOP_PCT", -3.0) or -3.0)
-    RATCHET_ACTIVATION_PCT = float(getattr(settings, "PROFIT_RATCHET_ACTIVATION_PCT", 1.0) or 1.0)
-    INITIAL_FLOOR_PCT = float(getattr(settings, "PROFIT_RATCHET_INITIAL_FLOOR_PCT", 0.5) or 0.5)
-    RATCHET_TRAIL_PCT = float(getattr(settings, "PROFIT_RATCHET_TRAIL_PCT", 2.0) or 2.0)
-    MIN_HOLD_SECONDS = int(getattr(settings, "PROFIT_RATCHET_MIN_HOLD_SECONDS", 1800) or 1800)
+    RATCHET_ACTIVATION_PCT = float(getattr(settings, "PROFIT_RATCHET_ACTIVATION_PCT", 1.5) or 1.5)
+    INITIAL_FLOOR_PCT = float(getattr(settings, "PROFIT_RATCHET_INITIAL_FLOOR_PCT", 0.25) or 0.25)
+    RATCHET_TRAIL_PCT = float(getattr(settings, "PROFIT_RATCHET_TRAIL_PCT", 4.0) or 4.0)
+    MIN_HOLD_SECONDS = int(getattr(settings, "PROFIT_RATCHET_MIN_HOLD_SECONDS", 900) or 900)
     DAILY_CIRCUIT_BREAKER_PCT = -abs(float(getattr(settings, "MAX_DAILY_LOSS_PCT", 5.0) or 5.0))
 
     @classmethod

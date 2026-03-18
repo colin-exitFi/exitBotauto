@@ -1157,6 +1157,7 @@ class EntryManager:
 
             entry_time, entry_time_source = self._estimate_carryover_entry_time(sym, side, closed_orders)
             recent_removed = (getattr(self, "_recently_removed_positions", {}) or {}).get(sym)
+            recent_snapshot = dict((recent_removed or {}).get("position", {}) or {})
             reload_reason = "broker_sync_missing_local"
             open_exit_order = None
             if recent_removed:
@@ -1192,11 +1193,11 @@ class EntryManager:
                 "order_id": "",
                 "partial_exit": False,
                 "from_brokerage": True,
-                "strategy_tag": "carryover",
-                "entry_path": "broker_sync",
-                "signal_sources": ["broker_sync"],
-                "decision_confidence": 0,
-                "provider_used": "",
+                "strategy_tag": recent_snapshot.get("strategy_tag", "carryover"),
+                "entry_path": recent_snapshot.get("entry_path", "broker_sync"),
+                "signal_sources": list(recent_snapshot.get("signal_sources", ["broker_sync"]) or ["broker_sync"]),
+                "decision_confidence": recent_snapshot.get("decision_confidence", 0),
+                "provider_used": recent_snapshot.get("provider_used", ""),
                 "signal_price": avg_price,
                 "decision_price": avg_price,
                 "intended_notional": avg_price * qty,
@@ -1216,18 +1217,18 @@ class EntryManager:
                 ),
                 "ratchet_floor_pct": None,
                 "ratchet_order_type": None,
-                "signal_tier": "tier_2",
-                "holding_horizon": "intraday",
-                "market_regime": "mixed",
-                "entry_reason_code": "broker_sync",
-                "entry_model_votes": {},
-                "risk_constraints_applied": [],
+                "signal_tier": recent_snapshot.get("signal_tier", "tier_2"),
+                "holding_horizon": recent_snapshot.get("holding_horizon", "intraday"),
+                "market_regime": recent_snapshot.get("market_regime", "mixed"),
+                "entry_reason_code": recent_snapshot.get("entry_reason_code", "broker_sync"),
+                "entry_model_votes": dict(recent_snapshot.get("entry_model_votes", {}) or {}),
+                "risk_constraints_applied": list(recent_snapshot.get("risk_constraints_applied", []) or []),
                 "order_state": {
                     "entry": "open",
                     "hard_stop": "unknown",
                     "ratchet": "inactive",
                 },
-                "anomaly_flags": ["carryover_sync"],
+                "anomaly_flags": list(recent_snapshot.get("anomaly_flags", []) or ["carryover_sync"]),
                 "scout_escalated": False,
                 "swing_only": False,
                 "_exit_recorded": False,
@@ -1263,6 +1264,12 @@ class EntryManager:
         """Return list of tracked positions."""
         return list(self.positions.values())
 
+    def get_recently_removed_position(self, symbol: str) -> Optional[Dict]:
+        recent_removed = getattr(self, "_recently_removed_positions", {}) or {}
+        entry = recent_removed.get(str(symbol or "").upper()) or {}
+        snapshot = entry.get("position", {}) if isinstance(entry, dict) else {}
+        return dict(snapshot or {}) if snapshot else None
+
     def remove_position(self, symbol: str):
         """Remove a position after full exit."""
         pos = self.positions.pop(symbol, None)
@@ -1275,6 +1282,7 @@ class EntryManager:
                 "exit_order_id": pos.get("exit_order_id", ""),
                 "quantity": pos.get("quantity", 0),
                 "side": pos.get("side", "long"),
+                "position": dict(pos),
             }
 
     def update_peak_price(self, symbol: str, current_price: float):

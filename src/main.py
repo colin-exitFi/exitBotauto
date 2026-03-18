@@ -114,7 +114,9 @@ class TradingBot:
         self._last_daily_reset_date = None
         self._processed_copy_trader_exit_ids = set()
         self._recorded_realized_keys = set()
-        self._symbol_loss_cooldown_until: Dict[str, float] = {}
+        self._symbol_reentry_cooldown_until: Dict[str, float] = {}
+        self._latest_broker_position_symbols = set()
+        self._latest_broker_positions_synced_at = 0.0
         self._tomorrow_thesis_cache = None
         self._tomorrow_thesis_cache_at = 0.0
 
@@ -429,6 +431,7 @@ class TradingBot:
                 logger.info(f"Restored {restored_count} broker-confirmed positions from disk")
             if ghost_count:
                 logger.warning(f"Tombstoned {ghost_count} ghost positions not found on broker")
+        self._cache_broker_position_symbols(self.entry_manager.get_positions())
 
         # Options positions: restore + reconcile with broker snapshot
         if self.options_engine:
@@ -1835,16 +1838,113 @@ class TradingBot:
         except Exception:
             return default
 
-    def _symbol_loss_cooldown_remaining(self, symbol: str) -> float:
+    def _reentry_cooldown_store(self) -> Dict[str, float]:
+        cooldowns = getattr(self, "_symbol_reentry_cooldown_until", None)
+        if cooldowns is None:
+            cooldowns = getattr(self, "_symbol_loss_cooldown_until", {}) or {}
+            self._symbol_reentry_cooldown_until = cooldowns
+        return cooldowns
+
+    def _set_symbol_reentry_cooldown(self, symbol: str, seconds: float):
+        key = str(symbol or "").upper()
+        if not key:
+            return
+        seconds = float(seconds or 0.0)
+        cooldowns = self._reentry_cooldown_store()
+        if seconds <= 0:
+            cooldowns.pop(key, None)
+            return
+        cooldowns[key] = time.time() + seconds
+
+    def _symbol_reentry_cooldown_remaining(self, symbol: str) -> float:
         if not symbol:
             return 0.0
-        cooldowns = getattr(self, "_symbol_loss_cooldown_until", {}) or {}
+        cooldowns = self._reentry_cooldown_store()
         key = str(symbol).upper()
         until = float(cooldowns.get(key, 0.0) or 0.0)
         remaining = max(0.0, until - time.time())
         if remaining <= 0 and key in cooldowns:
             cooldowns.pop(key, None)
         return remaining
+
+    def _symbol_loss_cooldown_remaining(self, symbol: str) -> float:
+        return self._symbol_reentry_cooldown_remaining(symbol)
+
+    def _cache_broker_position_symbols(self, positions: Optional[List[Dict]]) -> set:
+        symbols = {
+            str((row or {}).get("symbol", "") or "").upper()
+            for row in (positions or [])
+            if str((row or {}).get("symbol", "") or "").strip()
+        }
+        self._latest_broker_position_symbols = symbols
+        self._latest_broker_positions_synced_at = time.time()
+        return symbols
+
+    async def _get_latest_broker_position_symbols(self, max_age_seconds: float = 15.0) -> set:
+        cached = set(getattr(self, "_latest_broker_position_symbols", set()) or set())
+        last_sync = float(getattr(self, "_latest_broker_positions_synced_at", 0.0) or 0.0)
+        if cached and (time.time() - last_sync) <= float(max_age_seconds or 0.0):
+            return cached
+        if not self.alpaca_client:
+            return cached
+        try:
+            positions = await asyncio.get_event_loop().run_in_executor(
+                None, self.alpaca_client.get_positions
+            )
+        except Exception as e:
+            logger.debug(f"Broker position cache refresh failed: {e}")
+            return cached
+        return self._cache_broker_position_symbols(positions)
+
+    @staticmethod
+    def _is_partial_exit_trade(trade_record: dict) -> bool:
+        reason = str((trade_record or {}).get("reason", "") or "").lower()
+        exit_scope = str((trade_record or {}).get("exit_scope", "") or "").lower()
+        if exit_scope == "partial":
+            return True
+        return reason.endswith("_1") or reason.startswith("partial_")
+
+    def _find_recent_realized_trade(
+        self,
+        symbol: str,
+        exit_time: float,
+        window_seconds: float = 30.0,
+        asset_type: str = "equity",
+        reason_prefixes: Optional[List[str]] = None,
+    ) -> Optional[dict]:
+        symbol_key = str(symbol or "").upper()
+        if not symbol_key:
+            return None
+        try:
+            target_exit = float(exit_time or 0.0)
+        except Exception:
+            target_exit = 0.0
+        if target_exit <= 0:
+            return None
+        prefixes = tuple(str(prefix or "").lower() for prefix in (reason_prefixes or []) if str(prefix or "").strip())
+        try:
+            history = trade_history.load_all()
+        except Exception:
+            return None
+        for existing in reversed(history or []):
+            if str(existing.get("asset_type", "equity") or "equity").lower() != str(asset_type or "equity").lower():
+                continue
+            if str(existing.get("symbol", "") or "").upper() != symbol_key:
+                continue
+            if self._is_partial_exit_trade(existing):
+                continue
+            existing_reason = str(existing.get("reason", "") or "").lower()
+            if prefixes and not any(existing_reason.startswith(prefix) for prefix in prefixes):
+                continue
+            try:
+                existing_exit = float(existing.get("exit_time", 0) or 0)
+            except Exception:
+                continue
+            if existing_exit <= 0:
+                continue
+            if abs(existing_exit - target_exit) <= float(window_seconds or 0.0):
+                return existing
+        return None
 
     def _infer_wyckoff_bias(self, signal_data: dict) -> str:
         """
@@ -2268,9 +2368,9 @@ class TradingBot:
             return False, "swing_mode_disabled"
         if symbol in self._fast_path_pending:
             return False, "already_pending"
-        cooldown_remaining = self._symbol_loss_cooldown_remaining(symbol)
+        cooldown_remaining = self._symbol_reentry_cooldown_remaining(symbol)
         if cooldown_remaining > 0:
-            return False, f"loss_cooldown_{int(cooldown_remaining)}s"
+            return False, f"reentry_cooldown_{int(cooldown_remaining)}s"
         self._prune_jury_vetoes()
         jury_vetoes = getattr(self, "_jury_vetoed_symbols", {})
         vetoed_at = jury_vetoes.get(symbol)
@@ -2286,7 +2386,12 @@ class TradingBot:
             return False, "insufficient_volume"
 
         positions = self.entry_manager.get_positions() if self.entry_manager else []
-        held_symbols = {p.get("symbol") for p in positions}
+        held_symbols = {
+            str(p.get("symbol", "") or "").upper()
+            for p in positions
+            if str(p.get("symbol", "") or "").strip()
+        }
+        held_symbols |= set(getattr(self, "_latest_broker_position_symbols", set()) or set())
         if symbol in held_symbols:
             return False, "already_held"
 
@@ -2761,7 +2866,12 @@ class TradingBot:
         )
 
         evaluated = 0
-        held_symbols = {p.get("symbol") for p in positions}
+        held_symbols = {
+            str(p.get("symbol", "") or "").upper()
+            for p in positions
+            if str(p.get("symbol", "") or "").strip()
+        }
+        held_symbols |= await self._get_latest_broker_position_symbols()
         evaluated_symbols = set()
 
         for candidate in prepared_candidates:
@@ -2776,9 +2886,9 @@ class TradingBot:
                 continue
             evaluated_symbols.add(symbol)
 
-            cooldown_remaining = self._symbol_loss_cooldown_remaining(symbol)
+            cooldown_remaining = self._symbol_reentry_cooldown_remaining(symbol)
             if cooldown_remaining > 0:
-                logger.info(f"🧊 ENTRY COOLDOWN {symbol}: {int(cooldown_remaining)}s after recent loss")
+                logger.info(f"🧊 ENTRY COOLDOWN {symbol}: {int(cooldown_remaining)}s after recent exit")
                 continue
 
             candidate["wyckoff_bias"] = self._infer_wyckoff_bias(candidate)
@@ -3169,11 +3279,34 @@ class TradingBot:
         except Exception:
             pass
 
+        if not self._is_partial_exit_trade(trade_record):
+            recent_trade = self._find_recent_realized_trade(
+                symbol=symbol,
+                exit_time=float(trade_record.get("exit_time", time.time()) or time.time()),
+                window_seconds=30.0,
+                asset_type=asset_type,
+            )
+            if recent_trade:
+                recorded_keys.add(trade_key)
+                if position:
+                    position["exit_recorded"] = True
+                    position["exit_finalized_at"] = float(
+                        recent_trade.get("exit_time", trade_record.get("exit_time", time.time())) or time.time()
+                    )
+                logger.info(
+                    f"🧾 Skipping duplicate realized exit for {symbol}: "
+                    f"matched existing {recent_trade.get('reason', 'trade')} within 30s"
+                )
+                return
+
         pnl = float(trade_record.get("pnl", 0))
-        if symbol and pnl < 0:
+        reason = str(trade_record.get("reason", "") or "").lower()
+        if symbol and reason.startswith("ratchet"):
+            self._set_symbol_reentry_cooldown(symbol, 1800)
+        elif symbol and pnl < 0:
             cooldown_seconds = int(getattr(settings, "SYMBOL_LOSS_COOLDOWN_SECONDS", 900) or 900)
             if cooldown_seconds > 0:
-                self._symbol_loss_cooldown_until[str(symbol).upper()] = time.time() + cooldown_seconds
+                self._set_symbol_reentry_cooldown(symbol, cooldown_seconds)
         if position:
             position["exit_recorded"] = True
             position["exit_finalized_at"] = float(trade_record.get("exit_time", time.time()) or time.time())
@@ -3719,6 +3852,7 @@ class TradingBot:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
                 None, self.alpaca_client.get_positions
             )
+            self._cache_broker_position_symbols(alpaca_positions)
             if self.entry_manager and hasattr(self.entry_manager, "sync_positions_from_brokerage"):
                 self.entry_manager.sync_positions_from_brokerage(alpaca_positions)
                 positions = self.entry_manager.get_positions()
@@ -3873,6 +4007,19 @@ class TradingBot:
                     try:
                         exit_price = float(latest_fill_price or pos.get("entry_price", 0) or 0)
                         reason = self._infer_exit_reason_from_order(pos, latest)
+                        if self._find_recent_realized_trade(
+                            symbol=symbol,
+                            exit_time=float(latest_fill_ts or time.time()),
+                            window_seconds=60.0,
+                            asset_type="equity",
+                            reason_prefixes=["ratchet", "hard_stop"],
+                        ):
+                            logger.info(
+                                f"🧾 {symbol}: skipping duplicate broker reconciliation exit "
+                                "because a ratchet/hard-stop trade was already recorded"
+                            )
+                            pos["_exit_recorded"] = True
+                            continue
                         logger.info(
                             f"📊 {symbol} exit fill found: ${exit_price:.2f} "
                             f"(type={latest.get('type')}, filled_at={latest_key[:19]})"
