@@ -1074,7 +1074,6 @@ async def get_pnl():
             options_unrealized = 0.0
 
     total_pnl = equity - starting
-    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     drawdown = ((peak - equity) / peak * 100) if peak > 0 else 0
     roi = ((equity - starting) / starting * 100) if starting > 0 else 0
     analytics = {}
@@ -1094,6 +1093,7 @@ async def get_pnl():
         avg_signal_to_fill_ms = (analytics.get("overall", {}) or {}).get("avg_signal_to_fill_ms")
     except Exception:
         avg_signal_to_fill_ms = None
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     try:
         api_costs = get_api_cost_stats()
     except Exception:
