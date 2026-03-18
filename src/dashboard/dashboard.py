@@ -1084,6 +1084,13 @@ async def get_pnl():
     try:
         from src.ai import trade_history
         analytics = trade_history.get_analytics()
+        total_trades = int(analytics.get("total_trades", total_trades) or total_trades)
+        wins = int(analytics.get("wins", wins) or wins)
+        losses = int(analytics.get("losses", losses) or losses)
+        trade_rows = trade_history.load_all()
+        if trade_rows:
+            best = round(max(float(t.get("pnl", 0) or 0) for t in trade_rows), 2)
+            worst = round(min(float(t.get("pnl", 0) or 0) for t in trade_rows), 2)
         avg_signal_to_fill_ms = (analytics.get("overall", {}) or {}).get("avg_signal_to_fill_ms")
     except Exception:
         avg_signal_to_fill_ms = None

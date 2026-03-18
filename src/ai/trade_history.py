@@ -42,9 +42,81 @@ def load_all() -> List[Dict]:
             data = data.get("trades", [])
         if not isinstance(data, list):
             return []
-        return [normalize_trade_record(t) for t in data]
+        return _dedupe_history([normalize_trade_record(t) for t in data])
     except Exception:
         return []
+
+
+def _dedupe_history(history: List[Dict]) -> List[Dict]:
+    """
+    Deduplicate reconstructed broker fills against already-recorded exits.
+
+    Preference order:
+    1. Non-broker_reconstructed reasons over broker_fill_reconstructed
+    2. First seen record for the same exit-order or same symbol/time bucket
+    """
+    if not history:
+        return []
+
+    def _quality(trade: Dict) -> int:
+        reason = str(trade.get("reason", "") or "")
+        if reason == "broker_fill_reconstructed":
+            return 0
+        return 1
+
+    deduped: List[Dict] = []
+    seen_by_order: Dict[str, Dict] = {}
+    seen_by_bucket: Dict[tuple, Dict] = {}
+
+    ordered = sorted(
+        history,
+        key=lambda t: float(
+            t.get("exit_time", t.get("fill_timestamp", t.get("recorded_at", 0))) or 0
+        ),
+    )
+
+    for trade in ordered:
+        order_id = str(
+            trade.get("exit_order_id")
+            or trade.get("order_id")
+            or ""
+        ).strip()
+        symbol = str(trade.get("symbol", "") or "").upper()
+        exit_time = float(trade.get("exit_time", trade.get("fill_timestamp", trade.get("recorded_at", 0))) or 0)
+        qty = round(float(trade.get("quantity", 0) or 0), 4)
+        bucket = (symbol, int(exit_time // 30), qty)
+
+        existing = None
+        existing_key = None
+        use_order_key = False
+        if order_id and order_id in seen_by_order:
+            existing = seen_by_order[order_id]
+            existing_key = order_id
+            use_order_key = True
+        elif bucket in seen_by_bucket:
+            existing = seen_by_bucket[bucket]
+            existing_key = bucket
+
+        if existing is None:
+            deduped.append(trade)
+            if order_id:
+                seen_by_order[order_id] = trade
+            seen_by_bucket[bucket] = trade
+            continue
+
+        if _quality(trade) > _quality(existing):
+            try:
+                deduped.remove(existing)
+            except ValueError:
+                pass
+            deduped.append(trade)
+            if order_id:
+                seen_by_order[order_id] = trade
+            if not use_order_key and existing_key is not None:
+                seen_by_bucket[existing_key] = trade
+            seen_by_bucket[bucket] = trade
+
+    return deduped
 
 
 def get_recent(n: int = 50) -> List[Dict]:
