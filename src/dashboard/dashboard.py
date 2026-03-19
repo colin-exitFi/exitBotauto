@@ -2094,7 +2094,7 @@ async function refresh() {
       const status = pnl.reconciliation_status || 'unknown';
       const reasons = (pnl.reconciliation_reasons || []).map(humanizeReason).filter(Boolean);
       const canaries = (pnl.reconciliation_canaries || []).slice(0, 3);
-      if (status && status !== 'healthy') {
+      if (status && status !== 'healthy' && status !== 'minor_mismatch') {
         reconBanner.style.display = 'block';
         const shownReasons = canaries.length
           ? canaries.map((c) => humanizeReason(c.code))

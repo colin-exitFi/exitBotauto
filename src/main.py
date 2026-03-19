@@ -2049,8 +2049,8 @@ class TradingBot:
             allow_new_entries = False
             reasons.append("protection_failed")
         if len(unprotected) > 0:
-            allow_new_entries = False
-            reasons.append("unprotected_positions")
+            logger.debug(f"Unprotected positions (informational only): {unprotected}")
+            # v2.2: no longer blocks entries. Ratchet + hard stops handle protection.
         if risk_status.get("trading_halted"):
             allow_new_entries = False
             reasons.append("risk_halted")
