@@ -2224,7 +2224,7 @@ async function refresh() {
     $('tradeSummary').innerHTML = th.trades.length ? `
       <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Trades</div></div>
       <div class="summary-item"><div class="val ${(s.win_rate_pct||0)>=50?'positive':'negative'}">${(s.win_rate_pct||0).toFixed(1)}%</div><div class="lbl">Win Rate</div></div>
-      <div class="summary-item"><div class="val ${cls(th.broker_total_pnl ?? s.total_pnl||0)}">${fmt(th.broker_total_pnl ?? s.total_pnl||0)}</div><div class="lbl">Total P&L</div></div>
+      <div class="summary-item"><div class="val ${cls(th.broker_total_pnl!=null?th.broker_total_pnl:(s.total_pnl||0))}">${fmt(th.broker_total_pnl!=null?th.broker_total_pnl:(s.total_pnl||0))}</div><div class="lbl">Total P&L</div></div>
       <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">${best?best.symbol+' Best':'Best'}</div></div>
       <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">${worst?worst.symbol+' Worst':'Worst'}</div></div>
       <div class="summary-item" title="${bestStrategy?bestStrategy.name:''}"><div class="val val-sm ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name.replace('_',' '):'—'}</div><div class="lbl">Top Strategy</div></div>
