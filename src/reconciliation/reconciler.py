@@ -13,6 +13,7 @@ from config import settings
 from src import persistence
 from src.ai import trade_history
 from src.data.trade_schema import normalize_trade_record
+from src.data.strategy_tags import normalize_strategy_tag
 
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
@@ -711,7 +712,7 @@ class Reconciler:
                 "exit_time": exit_ts,
                 "hold_seconds": max(0.0, exit_ts - float(segment.get("entry_time", exit_ts) or exit_ts)),
                 "asset_type": "equity",
-                "strategy_tag": metadata.get("strategy_tag", "unknown"),
+                "strategy_tag": normalize_strategy_tag(metadata.get("strategy_tag", "unknown")),
                 "signal_tier": metadata.get("signal_tier", "tier_2"),
                 "holding_horizon": metadata.get("holding_horizon", "intraday"),
                 "market_regime": metadata.get("market_regime", "mixed"),

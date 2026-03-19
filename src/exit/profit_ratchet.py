@@ -20,6 +20,7 @@ class ProfitRatchet:
     SWING_RATCHET_TRAIL_PCT = float(getattr(settings, "SWING_RATCHET_TRAIL_PCT", 6.0) or 6.0)
     SWING_RATCHET_MIN_HOLD_SECONDS = int(getattr(settings, "SWING_RATCHET_MIN_HOLD_SECONDS", 14400) or 14400)
     DEAD_MONEY_HOURS = float(getattr(settings, "DEAD_MONEY_HOURS", 4.0) or 4.0)
+    SWING_DEAD_MONEY_HOURS = float(getattr(settings, "SWING_DEAD_MONEY_HOURS", 8.0) or 8.0)
     DEAD_MONEY_TIGHT_STOP_PCT = float(getattr(settings, "DEAD_MONEY_TIGHT_STOP_PCT", -1.5) or -1.5)
     DAILY_CIRCUIT_BREAKER_PCT = -abs(float(getattr(settings, "MAX_DAILY_LOSS_PCT", 5.0) or 5.0))
 
@@ -181,6 +182,7 @@ class ProfitRatchet:
                 "initial_floor_pct": cls.INITIAL_FLOOR_PCT,
                 "trail_pct": cls.SWING_RATCHET_TRAIL_PCT,
                 "min_hold_seconds": cls.SWING_RATCHET_MIN_HOLD_SECONDS,
+                "dead_money_hours": cls.SWING_DEAD_MONEY_HOURS,
             }
         return {
             "holding_horizon": holding_horizon or "intraday",
@@ -188,6 +190,7 @@ class ProfitRatchet:
             "initial_floor_pct": cls.INITIAL_FLOOR_PCT,
             "trail_pct": cls.RATCHET_TRAIL_PCT,
             "min_hold_seconds": cls.MIN_HOLD_SECONDS,
+            "dead_money_hours": cls.DEAD_MONEY_HOURS,
         }
 
     @classmethod
@@ -206,9 +209,11 @@ class ProfitRatchet:
         peak_price = cls._compute_peak_price(position, current_price, side)
         peak_pnl_pct = cls.calc_pnl_pct(entry_price, peak_price, side)
         current_pnl_pct = cls.calc_pnl_pct(entry_price, current_price, side)
-        activation_reference = min(cls.RATCHET_ACTIVATION_PCT, cls.profile_for_position(position)["activation_pct"])
+        profile = cls.profile_for_position(position)
+        activation_reference = min(cls.RATCHET_ACTIVATION_PCT, profile["activation_pct"])
+        dead_money_hours = float(profile.get("dead_money_hours", cls.DEAD_MONEY_HOURS) or cls.DEAD_MONEY_HOURS)
         return (
-            hold_hours >= cls.DEAD_MONEY_HOURS
+            hold_hours >= dead_money_hours
             and peak_pnl_pct < activation_reference
             and current_pnl_pct < 0
         )

@@ -51,18 +51,20 @@ from src.entry.entry_manager import EntryManager
 from src.exit.exit_manager import ExitManager
 from src.exit.extended_hours_guard import ExtendedHoursGuard
 from src.exit.profit_ratchet import ProfitRatchet
-from src.risk.risk_manager import RiskManager
+from src.risk.risk_manager import RiskManager, SECTOR_MAP
 from src.ai.observer import Observer
 from src.ai.advisor import Advisor
 from src.ai.tuner import Tuner
 from src.ai.game_film import GameFilm
 from src.ai.position_manager import PositionManager
 from src.ai import trade_history
+from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
 from src.ai.consensus import ConsensusEngine
 from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
 from src.data.trade_schema import normalize_trade_record
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
+from src.data.strategy_tags import normalize_strategy_tag
 from src.data.strategy_playbook import (
     annotate_candidate,
     bias_matches_direction,
@@ -73,6 +75,9 @@ from src.data.strategy_playbook import (
 from src.data.technicals import compute_technicals, get_cached_rsi
 from src.options.options_monitor import OptionsMonitor
 from src.reconciliation.reconciler import Reconciler
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
+_SHADOW_TRADES_FILE = _DATA_DIR / "shadow_trades.json"
 
 
 class TradingBot:
@@ -1716,10 +1721,158 @@ class TradingBot:
             target *= 1.1
         return max(0.0, min(float(risk_cap_pct or 0) or 0.0, target))
 
+    @staticmethod
+    def _position_strategy_counts(positions: List[Dict]) -> Dict[str, int]:
+        counts: Dict[str, int] = {}
+        for pos in positions or []:
+            strategy_tag = normalize_strategy_tag(pos.get("strategy_tag", "unknown"), fallback="unknown")
+            counts[strategy_tag] = counts.get(strategy_tag, 0) + 1
+        return counts
+
+    @staticmethod
+    def _sector_bucket(row: Dict) -> str:
+        symbol = str(row.get("symbol", "") or "").upper()
+        return str(row.get("sector") or SECTOR_MAP.get(symbol, "unknown") or "unknown").lower()
+
+    @staticmethod
+    def _extract_disabled_strategy(risk_brief: Dict) -> str:
+        for flag in list((risk_brief or {}).get("constraint_flags", []) or []):
+            text = str(flag or "").strip().lower()
+            if text.startswith("strategy_disabled_"):
+                return text.replace("strategy_disabled_", "", 1) or "unknown"
+        return ""
+
+    @staticmethod
+    def _shadow_direction_for_strategy(strategy_tag: str) -> str:
+        return "SHORT" if "short" in str(strategy_tag or "").lower() else "BUY"
+
+    @staticmethod
+    def _load_shadow_trades() -> List[Dict]:
+        data = persistence.safe_load_json(_SHADOW_TRADES_FILE, default=list)
+        if isinstance(data, list):
+            return data
+        return []
+
+    @classmethod
+    def _update_shadow_trade_extrema(cls, record: Dict) -> Dict:
+        entry_price = float(record.get("signal_price", 0) or 0)
+        if entry_price <= 0:
+            return record
+        direction = str(record.get("direction", "BUY") or "BUY").upper()
+        returns: List[float] = []
+        for key in ("price_1h", "price_4h", "price_eod"):
+            price = record.get(key)
+            if not isinstance(price, (int, float)):
+                continue
+            observed_price = float(price or 0)
+            if observed_price <= 0:
+                continue
+            if direction == "SHORT":
+                returns.append(((entry_price - observed_price) / entry_price) * 100.0)
+            else:
+                returns.append(((observed_price - entry_price) / entry_price) * 100.0)
+        if returns:
+            record["mfe"] = round(max(returns), 2)
+            record["mae"] = round(min(returns), 2)
+        return record
+
+    @staticmethod
+    def _shadow_eod_due(signal_ts: float, now_ts: Optional[float] = None) -> bool:
+        if signal_ts <= 0:
+            return False
+        now_ts = float(now_ts or time.time())
+        try:
+            import zoneinfo
+
+            et = zoneinfo.ZoneInfo("US/Eastern")
+            signal_dt = datetime.fromtimestamp(signal_ts, et)
+            now_dt = datetime.fromtimestamp(now_ts, et)
+        except Exception:
+            signal_dt = datetime.fromtimestamp(signal_ts)
+            now_dt = datetime.fromtimestamp(now_ts)
+        if now_dt.date() > signal_dt.date():
+            return True
+        return now_dt.date() == signal_dt.date() and (now_dt.hour, now_dt.minute) >= (16, 0)
+
+    async def _fetch_shadow_price(self, symbol: str) -> float:
+        if not symbol:
+            return 0.0
+        loop = asyncio.get_event_loop()
+        if self.alpaca_client:
+            try:
+                price = await loop.run_in_executor(None, self.alpaca_client.get_latest_price, symbol)
+                price = float(price or 0)
+                if price > 0:
+                    return price
+            except Exception:
+                pass
+        if self.polygon_client:
+            try:
+                price = await loop.run_in_executor(None, self.polygon_client.get_price, symbol)
+                price = float(price or 0)
+                if price > 0:
+                    return price
+            except Exception:
+                pass
+        return 0.0
+
+    def _persist_shadow_record(self, record: Dict):
+        rows = self._load_shadow_trades()
+        rows.append(self._update_shadow_trade_extrema(dict(record or {})))
+        persistence.atomic_write_json(_SHADOW_TRADES_FILE, rows, indent=2)
+
+    async def _refresh_shadow_records(self, limit: int = 20):
+        rows = self._load_shadow_trades()
+        if not rows:
+            return
+        now_ts = time.time()
+        updated = False
+        refreshed = 0
+        price_cache: Dict[str, float] = {}
+
+        for row in rows:
+            if refreshed >= max(1, int(limit or 1)):
+                break
+            signal_ts = float(row.get("timestamp", 0) or 0)
+            if signal_ts <= 0:
+                continue
+            symbol = str(row.get("symbol", "") or "").upper()
+            if not symbol:
+                continue
+
+            age_seconds = max(0.0, now_ts - signal_ts)
+            due_fields: List[str] = []
+            if row.get("price_1h") is None and age_seconds >= 3600:
+                due_fields.append("price_1h")
+            if row.get("price_4h") is None and age_seconds >= 14400:
+                due_fields.append("price_4h")
+            if row.get("price_eod") is None and self._shadow_eod_due(signal_ts, now_ts=now_ts):
+                due_fields.append("price_eod")
+            if not due_fields:
+                continue
+
+            if symbol not in price_cache:
+                price_cache[symbol] = await self._fetch_shadow_price(symbol)
+            latest_price = float(price_cache.get(symbol, 0) or 0)
+            if latest_price <= 0:
+                continue
+
+            for field in due_fields:
+                row[field] = round(latest_price, 4)
+            self._update_shadow_trade_extrema(row)
+            updated = True
+            refreshed += 1
+
+        if updated:
+            persistence.atomic_write_json(_SHADOW_TRADES_FILE, rows, indent=2)
+
+    async def refresh_shadow_trades(self):
+        await self._refresh_shadow_records()
+
     def _prepare_candidate_metadata(self, candidate: Dict) -> Dict:
         prepared = dict(candidate or {})
         direction = "SHORT" if str(prepared.get("side", "")).lower() == "short" else "BUY"
-        prepared["strategy_tag"] = str(
+        prepared["strategy_tag"] = normalize_strategy_tag(
             prepared.get("strategy_tag")
             or self._derive_strategy_tag(prepared, direction)
             or "unknown"
@@ -1745,7 +1898,7 @@ class TradingBot:
 
     def _evaluate_trade_gate(self, candidate: Dict, direction: str) -> Dict:
         annotated = annotate_candidate(candidate)
-        strategy_tag = str(
+        strategy_tag = normalize_strategy_tag(
             annotated.get("strategy_tag")
             or self._derive_strategy_tag(annotated, direction)
             or "unknown"
@@ -1757,7 +1910,7 @@ class TradingBot:
 
     def _determine_options_allocation_pct(self, candidate: Dict, direction: str, confidence: float) -> float:
         annotated = annotate_candidate(candidate)
-        strategy_tag = str(
+        strategy_tag = normalize_strategy_tag(
             annotated.get("strategy_tag")
             or self._derive_strategy_tag(annotated, direction)
             or "unknown"
@@ -2924,6 +3077,7 @@ class TradingBot:
             return
 
         self._prune_jury_vetoes()
+        await self._refresh_shadow_records()
         positions = self.entry_manager.get_positions()
         congress_scanner = getattr(self, "congress_scanner", None)
         human_intel_store = getattr(self, "human_intel_store", None)
@@ -2967,6 +3121,29 @@ class TradingBot:
             if cooldown_remaining > 0:
                 logger.info(f"🧊 ENTRY COOLDOWN {symbol}: {int(cooldown_remaining)}s after recent exit")
                 continue
+
+            strategy_tag = normalize_strategy_tag(candidate.get("strategy_tag", "unknown"), fallback="unknown")
+            candidate["strategy_tag"] = strategy_tag
+            positions_by_strategy = self._position_strategy_counts(positions)
+            max_for_strategy = int(STRATEGY_MAX_POSITIONS.get(strategy_tag, 20) or 20)
+            current_count = int(positions_by_strategy.get(strategy_tag, 0) or 0)
+            if current_count >= max_for_strategy:
+                logger.info(f"📊 BOOK CAP {symbol}: {strategy_tag} at {current_count}/{max_for_strategy}")
+                continue
+            if strategy_tag == "momentum_long":
+                candidate_sector = self._sector_bucket(candidate)
+                sector_count = sum(
+                    1
+                    for pos in positions
+                    if normalize_strategy_tag(pos.get("strategy_tag", "unknown"), fallback="unknown") == "momentum_long"
+                    and self._sector_bucket(pos) == candidate_sector
+                )
+                if sector_count >= 3:
+                    logger.info(
+                        f"📊 SECTOR CAP {symbol}: {candidate_sector} already has "
+                        f"{sector_count} momentum_long positions"
+                    )
+                    continue
 
             candidate["wyckoff_bias"] = self._infer_wyckoff_bias(candidate)
 
@@ -3047,6 +3224,7 @@ class TradingBot:
             briefs = getattr(verdict, "briefs", {}) or {}
             risk_brief = briefs.get("risk", {}) or {}
             agreement = str(consensus_detail.get("agreement", "unknown") or "unknown")
+            disabled_strategy = self._extract_disabled_strategy(risk_brief)
 
             logger.info(
                 f"🧭 JURY TRACE {symbol}: tier={candidate.get('signal_tier')} decision={verdict.decision} "
@@ -3059,6 +3237,32 @@ class TradingBot:
                 f"risk={self._summarize_brief_for_trace(risk_brief)} "
                 f"macro={self._summarize_brief_for_trace(briefs.get('macro', {}))}"
             )
+
+            if disabled_strategy:
+                shadow_record = {
+                    "symbol": symbol,
+                    "strategy_tag": disabled_strategy,
+                    "direction": self._shadow_direction_for_strategy(disabled_strategy),
+                    "signal_tier": candidate.get("signal_tier", "tier_2"),
+                    "entry_quality": candidate.get("entry_quality", "neutral"),
+                    "signal_price": round(signal_price, 4),
+                    "spread_pct": float(candidate.get("spread_pct", 0) or 0),
+                    "range_pct": float(candidate.get("range_pct", 0) or 0),
+                    "timestamp": time.time(),
+                    "price_1h": None,
+                    "price_4h": None,
+                    "price_eod": None,
+                    "mfe": None,
+                    "mae": None,
+                }
+                self._persist_shadow_record(shadow_record)
+                logger.info(
+                    f"👻 SHADOW {symbol}: {disabled_strategy} disabled — hypothetical entry @ ${signal_price:.2f} "
+                    f"entry_quality={candidate.get('entry_quality')} spread={candidate.get('spread_pct')} "
+                    f"range_pct={candidate.get('range_pct')}"
+                )
+                log_activity("shadow", f"👻 {symbol} {disabled_strategy} hypothetical @ ${signal_price:.2f}")
+                continue
 
             if verdict.decision not in {"BUY", "SHORT"}:
                 if "cooldown" not in verdict.reasoning.lower():
@@ -3084,14 +3288,22 @@ class TradingBot:
                 continue
 
             direction = verdict.decision
-            candidate["strategy_tag"] = self._derive_strategy_tag(candidate, direction)
+            candidate["strategy_tag"] = normalize_strategy_tag(
+                self._derive_strategy_tag(candidate, direction),
+                fallback="unknown",
+            )
             candidate = self._prepare_candidate_metadata(candidate)
+
+            if candidate.get("strategy_tag") == "uw_flow_short" and agreement == "tier1_probe":
+                logger.info(f"📉 PROBE BLOCK {symbol}: uw_flow_short requires 2-of-3 jury agreement")
+                log_activity("trade", f"📉 PROBE BLOCK: {symbol} uw_flow_short requires 2-of-3 jury agreement")
+                continue
 
             tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
             tier_size = float(tier.get("size_pct", 2.0) or 2.0)
             risk_cap_pct = float(risk_brief.get("size_cap_pct", risk_brief.get("max_size_pct", tier_size)) or tier_size)
             effective_size_pct = self._target_size_pct_for_candidate(candidate, verdict, risk_cap_pct)
-            size_modifier = min(1.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
+            size_modifier = max(0.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
 
             sentiment_data["consensus_size_modifier"] = size_modifier
             sentiment_data["consensus_confidence"] = verdict.confidence
@@ -3331,6 +3543,7 @@ class TradingBot:
         Centralized to avoid drift between polling and websocket exit paths.
         """
         trade_record = normalize_trade_record(trade_record)
+        trade_record["strategy_tag"] = normalize_strategy_tag(trade_record.get("strategy_tag", "unknown"))
         symbol = str(trade_record.get("symbol", "") or "")
         asset_type = str(trade_record.get("asset_type", "equity") or "equity").lower()
         position = None

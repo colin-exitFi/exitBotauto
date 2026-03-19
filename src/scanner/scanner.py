@@ -234,6 +234,16 @@ class Scanner:
                     source_lower = source.lower()
                     if not symbol:
                         continue
+                    if "congress" in source_lower and not self._is_recent_calendar_signal(
+                        item.get("filed_date")
+                        or item.get("transaction_date")
+                        or item.get("disclosure_date")
+                        or item.get("last_refreshed")
+                        or item.get("added_at"),
+                        max_days=7,
+                    ):
+                        logger.info(f"🏛️ Congress watchlist stale skip: {symbol}")
+                        continue
                     row = {
                         "symbol": symbol,
                         "price": 0,
@@ -244,6 +254,9 @@ class Scanner:
                         "watchlist_reason": item.get("reason", ""),
                         "watchlist_conviction": float(item.get("conviction", 0) or 0),
                         "priority": 1,
+                        "filed_date": item.get("filed_date"),
+                        "transaction_date": item.get("transaction_date"),
+                        "disclosure_date": item.get("disclosure_date"),
                     }
                     if "congress" in source_lower:
                         row["signal_tier"] = "tier_1"
@@ -573,6 +586,23 @@ class Scanner:
 
     def get_last_market_regime(self) -> str:
         return self._last_market_regime
+
+    @staticmethod
+    def _is_recent_calendar_signal(raw_value, max_days: int = 7) -> bool:
+        if raw_value in (None, "", 0):
+            return False
+        try:
+            if isinstance(raw_value, (int, float)):
+                filed_dt = datetime.fromtimestamp(float(raw_value))
+            else:
+                text = str(raw_value).strip()
+                if len(text) >= 10 and text[4] == "-" and text[7] == "-":
+                    filed_dt = datetime.strptime(text[:10], "%Y-%m-%d")
+                else:
+                    filed_dt = datetime.fromtimestamp(float(text))
+            return (datetime.now() - filed_dt).days <= int(max_days or 0)
+        except Exception:
+            return False
 
     # ── Filtering (on ENRICHED data) ───────────────────────────────
 

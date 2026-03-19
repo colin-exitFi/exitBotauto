@@ -13,6 +13,7 @@ from loguru import logger
 
 from src import persistence
 from src.data.trade_schema import normalize_trade_record
+from src.data.strategy_tags import is_artifact_strategy_tag, normalize_strategy_tag
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 HISTORY_FILE = DATA_DIR / "trade_history.json"
@@ -208,7 +209,9 @@ def get_analytics() -> Dict:
     # By strategy tag
     by_strategy = {}
     for t in history:
-        strategy = t.get("strategy_tag", "unknown") or "unknown"
+        strategy = normalize_strategy_tag(t.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
+        if is_artifact_strategy_tag(strategy):
+            continue
         if strategy not in by_strategy:
             by_strategy[strategy] = _metric_bucket_init()
         _update_metric_bucket(by_strategy[strategy], t)
@@ -218,7 +221,9 @@ def get_analytics() -> Dict:
     # Latency by strategy
     strategy_latency = {}
     for t in history:
-        strategy = t.get("strategy_tag", "unknown") or "unknown"
+        strategy = normalize_strategy_tag(t.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
+        if is_artifact_strategy_tag(strategy):
+            continue
         ms = t.get("signal_to_fill_ms")
         if not isinstance(ms, (int, float)):
             continue
@@ -381,8 +386,11 @@ def _metric_bucket_init() -> Dict:
     return {
         "trades": 0,
         "wins": 0,
+        "losses": 0,
         "pnl": 0.0,
         "clean_pnl": 0.0,
+        "win_pnl_sum": 0.0,
+        "loss_pnl_sum": 0.0,
         "anomaly_count": 0,
         "green_1m_hits": 0,
         "green_1m_seen": 0,
@@ -398,6 +406,7 @@ def _metric_bucket_init() -> Dict:
         "hold_count": 0,
         "slippage_sum": 0.0,
         "slippage_count": 0,
+        "ratchet_activations": 0,
     }
 
 
@@ -421,10 +430,16 @@ def _update_metric_bucket(bucket: Dict, trade: Dict):
     bucket["pnl"] += pnl
     if pnl > 0:
         bucket["wins"] += 1
+        bucket["win_pnl_sum"] += pnl
+    elif pnl < 0:
+        bucket["losses"] += 1
+        bucket["loss_pnl_sum"] += pnl
     if _trade_has_anomaly(trade):
         bucket["anomaly_count"] += 1
     else:
         bucket["clean_pnl"] += pnl
+    if _trade_reached_ratchet_activation(trade):
+        bucket["ratchet_activations"] += 1
 
     for seconds, price_field, hits_key, seen_key in (
         (60, "price_at_1m", "green_1m_hits", "green_1m_seen"),
@@ -462,13 +477,28 @@ def _update_metric_bucket(bucket: Dict, trade: Dict):
 def _finalize_metric_bucket(bucket: Dict) -> Dict:
     trades = int(bucket.get("trades", 0) or 0)
     wins = int(bucket.get("wins", 0) or 0)
+    losses = int(bucket.get("losses", 0) or 0)
+    avg_win = _avg_or_none(bucket.get("win_pnl_sum", 0.0), wins)
+    avg_loss = _avg_or_none(bucket.get("loss_pnl_sum", 0.0), losses)
+    win_rate_pct = round(wins / max(1, trades) * 100, 1)
+    win_rate_ratio = wins / max(1, trades)
+    avg_win_abs = float(avg_win or 0.0)
+    avg_loss_abs = abs(float(avg_loss or 0.0))
+    expectancy = (win_rate_ratio * avg_win_abs) - ((1.0 - win_rate_ratio) * avg_loss_abs)
     return {
         "trades": trades,
         "wins": wins,
+        "losses": losses,
         "pnl": round(float(bucket.get("pnl", 0.0) or 0.0), 2),
         "clean_pnl": round(float(bucket.get("clean_pnl", 0.0) or 0.0), 2),
-        "win_rate": round(wins / max(1, trades) * 100, 1),
+        "win_rate": win_rate_pct,
+        "win_rate_pct": win_rate_pct,
+        "avg_pnl": round(float(bucket.get("pnl", 0.0) or 0.0) / max(1, trades), 2),
+        "avg_win": round(float(avg_win or 0.0), 2) if avg_win is not None else None,
+        "avg_loss": round(float(avg_loss or 0.0), 2) if avg_loss is not None else None,
+        "expectancy": round(expectancy, 2),
         "anomaly_count": int(bucket.get("anomaly_count", 0) or 0),
+        "ratchet_activation_rate_pct": _rate_pct(bucket.get("ratchet_activations", 0), trades),
         "first_1m_green_rate_pct": _rate_pct(bucket.get("green_1m_hits", 0), bucket.get("green_1m_seen", 0)),
         "first_3m_green_rate_pct": _rate_pct(bucket.get("green_3m_hits", 0), bucket.get("green_3m_seen", 0)),
         "first_5m_green_rate_pct": _rate_pct(bucket.get("green_5m_hits", 0), bucket.get("green_5m_seen", 0)),
@@ -499,6 +529,17 @@ def _directional_trade_move_pct(trade: Dict, observed_price: float) -> float:
     if side in ("sell_short", "short", "buy_to_cover"):
         return ((entry_price - observed_price) / entry_price) * 100.0
     return ((observed_price - entry_price) / entry_price) * 100.0
+
+
+def _trade_reached_ratchet_activation(trade: Dict) -> bool:
+    if trade.get("ratchet_floor_pct") is not None:
+        return True
+    peak_pct = trade.get("ratchet_peak_pnl_pct", trade.get("mfe_pct"))
+    if not isinstance(peak_pct, (int, float)):
+        return False
+    holding_horizon = str(trade.get("holding_horizon", "intraday") or "intraday").lower()
+    activation_threshold = 3.0 if holding_horizon == "swing" else 1.5
+    return float(peak_pct) >= activation_threshold
 
 
 def _current_day_key() -> str:

@@ -27,6 +27,7 @@ from src.agents.base_agent import (
     get_api_cost_stats,
 )
 from src.data import strategy_controls
+from src.data.strategy_tags import PRIMARY_BOOKS, is_artifact_strategy_tag, normalize_strategy_tag
 
 app = FastAPI(title="Velox", version="2.0.0")
 
@@ -37,6 +38,7 @@ _LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
 _DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 _RUNNERS_FILE = _DATA_DIR / "yesterdays_runners.json"
 _WATCHLIST_FILE = _DATA_DIR / "watchlist.json"
+_SHADOW_TRADES_FILE = _DATA_DIR / "shadow_trades.json"
 _CHAT_HISTORY_LIMIT = 8
 _CHAT_ACTIVITY_LIMIT = 15
 _PANEL_STARTING_EQUITY = 27500.0
@@ -252,6 +254,89 @@ def _load_json_artifact(path: Path) -> Dict:
         return raw if isinstance(raw, dict) else {}
     except Exception:
         return {}
+
+
+def _load_shadow_trades() -> List[Dict]:
+    data = persistence.safe_load_json(_SHADOW_TRADES_FILE, default=list)
+    if isinstance(data, list):
+        return data
+    return []
+
+
+def _position_unrealized_pnl(position: Dict) -> float:
+    entry_price = float(position.get("entry_price", 0) or 0)
+    current_price = float(position.get("current_price", entry_price) or entry_price)
+    quantity = float(position.get("quantity", 0) or 0)
+    side = str(position.get("side", "long") or "long").lower()
+    if entry_price <= 0 or quantity <= 0:
+        return 0.0
+    if side == "short":
+        return round((entry_price - current_price) * quantity, 2)
+    return round((current_price - entry_price) * quantity, 2)
+
+
+def _build_book_scoreboard_rows() -> List[Dict]:
+    from src.ai import trade_history
+
+    analytics = trade_history.get_analytics()
+    strategy_stats = dict((analytics.get("by_strategy_tag", {}) or {}))
+    positions = _bot.entry_manager.get_positions() if _bot and getattr(_bot, "entry_manager", None) else []
+    books: Dict[str, Dict] = {}
+
+    def _ensure_row(strategy_tag: str) -> Dict:
+        normalized = normalize_strategy_tag(strategy_tag, fallback="unknown")
+        return books.setdefault(
+            normalized,
+            {
+                "strategy_tag": normalized,
+                "realized_pnl": 0.0,
+                "unrealized_pnl": 0.0,
+                "open_position_count": 0,
+                "trade_count": 0,
+                "win_rate_pct": 0.0,
+                "avg_win": None,
+                "avg_loss": None,
+                "expectancy": 0.0,
+                "ratchet_activation_rate_pct": None,
+            },
+        )
+
+    for strategy_tag in PRIMARY_BOOKS:
+        _ensure_row(strategy_tag)
+
+    for strategy_tag, bucket in strategy_stats.items():
+        if is_artifact_strategy_tag(strategy_tag):
+            continue
+        row = _ensure_row(strategy_tag)
+        row["realized_pnl"] = round(float(bucket.get("pnl", 0) or 0), 2)
+        row["trade_count"] = int(bucket.get("trades", 0) or 0)
+        row["win_rate_pct"] = round(float(bucket.get("win_rate_pct", bucket.get("win_rate", 0)) or 0), 1)
+        row["avg_win"] = bucket.get("avg_win")
+        row["avg_loss"] = bucket.get("avg_loss")
+        row["expectancy"] = round(float(bucket.get("expectancy", 0) or 0), 2)
+        row["ratchet_activation_rate_pct"] = bucket.get("ratchet_activation_rate_pct")
+
+    for position in positions or []:
+        strategy_tag = normalize_strategy_tag(position.get("strategy_tag", "unknown"), fallback="unknown")
+        if is_artifact_strategy_tag(strategy_tag):
+            continue
+        row = _ensure_row(strategy_tag)
+        row["open_position_count"] += 1
+        row["unrealized_pnl"] = round(
+            float(row.get("unrealized_pnl", 0) or 0) + _position_unrealized_pnl(position),
+            2,
+        )
+
+    primary_order = {tag: idx for idx, tag in enumerate(PRIMARY_BOOKS)}
+    rows = list(books.values())
+    rows.sort(
+        key=lambda row: (
+            primary_order.get(row["strategy_tag"], len(PRIMARY_BOOKS)),
+            -float(row.get("realized_pnl", 0) or 0),
+            row["strategy_tag"],
+        )
+    )
+    return rows
 
 
 def _extract_query_dates(text: str) -> List[str]:
@@ -924,6 +1009,30 @@ async def get_trade_history(limit: int = 20):
         "worst": worst,
         "trust_flags": trust,
         "broker_total_pnl": broker_total_pnl,
+    }
+
+
+@app.get("/api/shadow-trades")
+async def get_shadow_trades(limit: int = 100):
+    if _bot and hasattr(_bot, "refresh_shadow_trades"):
+        try:
+            await _bot.refresh_shadow_trades()
+        except Exception as e:
+            logger.debug(f"Shadow trade refresh unavailable: {e}")
+    rows = _load_shadow_trades()
+    rows = sorted(rows, key=lambda row: float(row.get("timestamp", 0) or 0), reverse=True)
+    bounded_limit = max(1, min(int(limit or 100), 500))
+    return {
+        "count": len(rows),
+        "trades": rows[:bounded_limit],
+    }
+
+
+@app.get("/api/book-scoreboard")
+async def get_book_scoreboard():
+    return {
+        "books": _build_book_scoreboard_rows(),
+        "generated_at": time.time(),
     }
 
 

@@ -10,6 +10,7 @@ from loguru import logger
 
 from config import settings
 from src.data import strategy_controls
+from src.data.strategy_tags import normalize_strategy_tag
 from src.exit.profit_ratchet import ProfitRatchet
 
 
@@ -252,7 +253,7 @@ class EntryManager:
 
     def _apply_strategy_controls(self, symbol: str, sentiment_data: Dict, notional: float) -> Optional[float]:
         controls = strategy_controls.load_controls()
-        strategy_tag = str(sentiment_data.get("strategy_tag", "unknown") or "unknown")
+        strategy_tag = normalize_strategy_tag(sentiment_data.get("strategy_tag", "unknown"))
         disabled = strategy_controls.get_effective_disabled(controls)
         if strategy_tag in disabled:
             logger.warning(f"⛔ Strategy '{strategy_tag}' is disabled — blocking entry for {symbol}")
@@ -593,7 +594,7 @@ class EntryManager:
                 "hard_stop": "placed" if hard_stop_order else ("deferred" if extended or swing_only else "missing"),
                 "ratchet": "inactive",
             },
-            "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "strategy_tag": normalize_strategy_tag(sentiment_data.get("strategy_tag", "unknown")),
             "signal_tier": signal_tier,
             "holding_horizon": holding_horizon,
             "market_regime": market_regime,
@@ -868,7 +869,7 @@ class EntryManager:
                 "hard_stop": "placed" if hard_stop_order else ("deferred" if extended or swing_only else "missing"),
                 "ratchet": "inactive",
             },
-            "strategy_tag": sentiment_data.get("strategy_tag", "unknown"),
+            "strategy_tag": normalize_strategy_tag(sentiment_data.get("strategy_tag", "unknown")),
             "signal_tier": signal_tier,
             "holding_horizon": holding_horizon,
             "market_regime": market_regime,
@@ -1189,6 +1190,10 @@ class EntryManager:
                         if open_exit_order
                         else "broker_still_open_after_local_removal"
                     )
+            restored_strategy_tag = normalize_strategy_tag(
+                recent_snapshot.get("strategy_tag", "unknown"),
+                fallback="unknown",
+            )
             self.positions[sym] = {
                 "symbol": sym,
                 "side": side,
@@ -1205,7 +1210,7 @@ class EntryManager:
                 "order_id": "",
                 "partial_exit": False,
                 "from_brokerage": True,
-                "strategy_tag": recent_snapshot.get("strategy_tag", "carryover"),
+                "strategy_tag": restored_strategy_tag,
                 "entry_path": recent_snapshot.get("entry_path", "broker_sync"),
                 "signal_sources": list(recent_snapshot.get("signal_sources", ["broker_sync"]) or ["broker_sync"]),
                 "decision_confidence": recent_snapshot.get("decision_confidence", 0),
