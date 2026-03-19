@@ -58,6 +58,7 @@ from src.ai.tuner import Tuner
 from src.ai.game_film import GameFilm
 from src.ai.position_manager import PositionManager
 from src.ai import trade_history
+from src.agents import risk_agent as book_risk_agent
 from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
 from src.ai.consensus import ConsensusEngine
 from src.agents.orchestrator import Orchestrator
@@ -1701,11 +1702,9 @@ class TradingBot:
     def _target_size_pct_for_candidate(
         candidate: Dict,
         verdict,
-        risk_cap_pct: float,
     ) -> float:
         signal_tier = str(candidate.get("signal_tier", "tier_2") or "tier_2").lower()
         agreement = str((getattr(verdict, "consensus_detail", {}) or {}).get("agreement", "") or "").lower()
-        confidence = float(getattr(verdict, "confidence", 0) or 0)
         target = float(getattr(verdict, "size_pct", 0) or 0)
         if signal_tier == "tier_1" and agreement == "unanimous":
             target = max(target, 6.0)
@@ -1717,9 +1716,25 @@ class TradingBot:
             target = max(target, 4.0)
         elif signal_tier == "tier_3":
             target = min(target, 1.5)
-        if confidence >= 70:
-            target *= 1.1
-        return max(0.0, min(float(risk_cap_pct or 0) or 0.0, target))
+        return round(max(0.0, target), 3)
+
+    @staticmethod
+    def _compose_effective_size_pct(
+        candidate: Dict,
+        verdict,
+        tier_size_pct: float,
+        risk_cap_pct: float,
+    ) -> float:
+        target_size_pct = TradingBot._target_size_pct_for_candidate(candidate, verdict)
+        risk_cap = max(0.0, float(risk_cap_pct or 0) or 0.0)
+        tier_size = max(0.0, float(tier_size_pct or 0) or 0.0)
+        strategy_tag = normalize_strategy_tag(candidate.get("strategy_tag", "unknown"), fallback="unknown")
+
+        if strategy_tag == "momentum_long" and tier_size > 0:
+            risk_scale = min(1.0, risk_cap / tier_size)
+            return round(max(0.0, target_size_pct * risk_scale), 3)
+
+        return round(max(0.0, min(target_size_pct, risk_cap)), 3)
 
     @staticmethod
     def _position_strategy_counts(positions: List[Dict]) -> Dict[str, int]:
@@ -3200,44 +3215,16 @@ class TradingBot:
             sentiment_data["strategy_tag"] = candidate.get("strategy_tag", "unknown")
             sentiment_data["share_notional_multiplier"] = 1.0
 
-            if not self.orchestrator:
-                continue
-
-            try:
-                verdict = await self.orchestrator.evaluate(
-                    symbol=symbol,
-                    price=signal_price,
-                    signals_data=candidate,
-                )
-            except Exception as e:
-                logger.error(f"Orchestrator error for {symbol}: {e}")
-                continue
-
-            if "cooldown" not in verdict.reasoning.lower():
-                evaluated += 1
-                if evaluated > 1:
-                    await asyncio.sleep(1.5)
-
-            self.ai_layers["last_consensus"] = verdict.to_dict()
-            consensus_detail = getattr(verdict, "consensus_detail", {}) or {}
-            votes = dict(consensus_detail.get("votes", {}) or {})
-            briefs = getattr(verdict, "briefs", {}) or {}
-            risk_brief = briefs.get("risk", {}) or {}
-            agreement = str(consensus_detail.get("agreement", "unknown") or "unknown")
-            disabled_strategy = self._extract_disabled_strategy(risk_brief)
-
-            logger.info(
-                f"🧭 JURY TRACE {symbol}: tier={candidate.get('signal_tier')} decision={verdict.decision} "
-                f"conf={verdict.confidence:.1f}% agreement={agreement} votes={votes}"
+            candidate_direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "BUY"
+            pre_risk_brief = await book_risk_agent.analyze(
+                symbol=symbol,
+                price=signal_price,
+                signals=candidate,
+                risk_manager=self.risk_manager,
+                positions=positions,
+                direction=candidate_direction,
             )
-            logger.info(
-                f"🧭 BRIEFS {symbol}: tech={self._summarize_brief_for_trace(briefs.get('technical', {}))} "
-                f"sent={self._summarize_brief_for_trace(briefs.get('sentiment', {}))} "
-                f"cat={self._summarize_brief_for_trace(briefs.get('catalyst', {}))} "
-                f"risk={self._summarize_brief_for_trace(risk_brief)} "
-                f"macro={self._summarize_brief_for_trace(briefs.get('macro', {}))}"
-            )
-
+            disabled_strategy = self._extract_disabled_strategy(pre_risk_brief)
             if disabled_strategy:
                 shadow_record = {
                     "symbol": symbol,
@@ -3263,6 +3250,43 @@ class TradingBot:
                 )
                 log_activity("shadow", f"👻 {symbol} {disabled_strategy} hypothetical @ ${signal_price:.2f}")
                 continue
+
+            if not self.orchestrator:
+                continue
+
+            try:
+                verdict = await self.orchestrator.evaluate(
+                    symbol=symbol,
+                    price=signal_price,
+                    signals_data=candidate,
+                )
+            except Exception as e:
+                logger.error(f"Orchestrator error for {symbol}: {e}")
+                continue
+
+            if "cooldown" not in verdict.reasoning.lower():
+                evaluated += 1
+                if evaluated > 1:
+                    await asyncio.sleep(1.5)
+
+            self.ai_layers["last_consensus"] = verdict.to_dict()
+            consensus_detail = getattr(verdict, "consensus_detail", {}) or {}
+            votes = dict(consensus_detail.get("votes", {}) or {})
+            briefs = getattr(verdict, "briefs", {}) or {}
+            risk_brief = briefs.get("risk", {}) or {}
+            agreement = str(consensus_detail.get("agreement", "unknown") or "unknown")
+
+            logger.info(
+                f"🧭 JURY TRACE {symbol}: tier={candidate.get('signal_tier')} decision={verdict.decision} "
+                f"conf={verdict.confidence:.1f}% agreement={agreement} votes={votes}"
+            )
+            logger.info(
+                f"🧭 BRIEFS {symbol}: tech={self._summarize_brief_for_trace(briefs.get('technical', {}))} "
+                f"sent={self._summarize_brief_for_trace(briefs.get('sentiment', {}))} "
+                f"cat={self._summarize_brief_for_trace(briefs.get('catalyst', {}))} "
+                f"risk={self._summarize_brief_for_trace(risk_brief)} "
+                f"macro={self._summarize_brief_for_trace(briefs.get('macro', {}))}"
+            )
 
             if verdict.decision not in {"BUY", "SHORT"}:
                 if "cooldown" not in verdict.reasoning.lower():
@@ -3302,7 +3326,12 @@ class TradingBot:
             tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
             tier_size = float(tier.get("size_pct", 2.0) or 2.0)
             risk_cap_pct = float(risk_brief.get("size_cap_pct", risk_brief.get("max_size_pct", tier_size)) or tier_size)
-            effective_size_pct = self._target_size_pct_for_candidate(candidate, verdict, risk_cap_pct)
+            effective_size_pct = self._compose_effective_size_pct(
+                candidate=candidate,
+                verdict=verdict,
+                tier_size_pct=tier_size,
+                risk_cap_pct=risk_cap_pct,
+            )
             size_modifier = max(0.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
 
             sentiment_data["consensus_size_modifier"] = size_modifier

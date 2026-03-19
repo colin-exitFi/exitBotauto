@@ -4,6 +4,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -13,6 +14,7 @@ from src.ai import trade_history
 from src.dashboard import dashboard as dashboard_module
 from src.entry.entry_manager import EntryManager
 from src.exit.profit_ratchet import ProfitRatchet
+from src.main import TradingBot
 from src.scanner.scanner import Scanner
 
 
@@ -45,6 +47,77 @@ class RiskAgentBookPolicyTests(unittest.TestCase):
         self.assertFalse(brief["can_trade"])
         self.assertEqual(brief["size_cap_pct"], 0.0)
         self.assertIn("strategy_disabled_uw_flow_long", brief["constraint_flags"])
+
+    def test_momentum_long_risk_cap_starts_at_tier_size_not_six_percent(self):
+        class _RiskManager:
+            def get_status(self):
+                return {"equity": 25000.0, "heat_pct": 0.0, "consecutive_losses": 0}
+
+            def get_risk_tier(self):
+                return {"size_pct": 5.0, "max_positions": 8}
+
+            def is_wash_sale(self, symbol):
+                return False
+
+            def can_trade(self):
+                return True
+
+        brief = asyncio.run(
+            risk_agent.analyze(
+                symbol="ARTL",
+                price=10.0,
+                signals={
+                    "strategy_tag": "momentum_long",
+                    "signal_tier": "tier_1",
+                    "entry_quality": "pullback",
+                },
+                risk_manager=_RiskManager(),
+                positions=[],
+                direction="BUY",
+            )
+        )
+
+        self.assertTrue(brief["can_trade"])
+        self.assertEqual(brief["tier_size_pct"], 5.0)
+        self.assertEqual(brief["size_cap_pct"], 5.0)
+
+
+class MainLoopSizingPolicyTests(unittest.TestCase):
+    def test_momentum_book_boost_uses_exact_spec_sizes(self):
+        unanimous = SimpleNamespace(size_pct=0.0, confidence=95.0, consensus_detail={"agreement": "unanimous"})
+        majority = SimpleNamespace(size_pct=0.0, confidence=95.0, consensus_detail={"agreement": "majority"})
+        tier2 = SimpleNamespace(size_pct=0.0, confidence=95.0, consensus_detail={"agreement": "majority"})
+
+        self.assertEqual(
+            TradingBot._target_size_pct_for_candidate({"signal_tier": "tier_1", "strategy_tag": "momentum_long"}, unanimous),
+            6.0,
+        )
+        self.assertEqual(
+            TradingBot._target_size_pct_for_candidate({"signal_tier": "tier_1", "strategy_tag": "momentum_long"}, majority),
+            5.0,
+        )
+        self.assertEqual(
+            TradingBot._target_size_pct_for_candidate({"signal_tier": "tier_2", "strategy_tag": "momentum_long"}, tier2),
+            4.0,
+        )
+
+    def test_momentum_effective_size_applies_risk_scaling_without_unconditional_floor(self):
+        verdict = SimpleNamespace(size_pct=0.0, confidence=95.0, consensus_detail={"agreement": "unanimous"})
+        effective = TradingBot._compose_effective_size_pct(
+            candidate={"signal_tier": "tier_1", "strategy_tag": "momentum_long"},
+            verdict=verdict,
+            tier_size_pct=5.0,
+            risk_cap_pct=5.0,
+        )
+        neutral_effective = TradingBot._compose_effective_size_pct(
+            candidate={"signal_tier": "tier_1", "strategy_tag": "momentum_long"},
+            verdict=verdict,
+            tier_size_pct=5.0,
+            risk_cap_pct=4.25,
+        )
+
+        self.assertEqual(effective, 6.0)
+        self.assertEqual(neutral_effective, 5.1)
 
 
 class TradeHistoryBookAnalyticsTests(unittest.TestCase):
@@ -100,6 +173,10 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
 
         self.assertNotIn("carryover", analytics["by_strategy_tag"])
         self.assertNotIn("broker_reconciled", analytics["by_strategy_tag"])
+        self.assertEqual(analytics["raw_total_trades"], 4)
+        self.assertEqual(analytics["raw_total_pnl"], 56.0)
+        self.assertEqual(analytics["total_trades"], 2)
+        self.assertEqual(analytics["total_pnl"], 6.0)
         momentum = analytics["by_strategy_tag"]["momentum_long"]
         self.assertEqual(momentum["trades"], 2)
         self.assertEqual(momentum["avg_win"], 10.0)

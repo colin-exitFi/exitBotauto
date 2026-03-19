@@ -145,20 +145,26 @@ def get_analytics() -> Dict:
             },
         }
 
-    wins = [t for t in history if t.get("pnl", 0) > 0]
-    losses = [t for t in history if t.get("pnl", 0) < 0]
-    breakevens = [t for t in history if t.get("pnl", 0) == 0]
-    total_pnl = sum(t.get("pnl", 0) for t in history)
-    clean_pnl = sum(t.get("pnl", 0) for t in history if not _trade_has_anomaly(t))
+    raw_wins = [t for t in history if t.get("pnl", 0) > 0]
+    raw_losses = [t for t in history if t.get("pnl", 0) < 0]
+    raw_total_pnl = sum(t.get("pnl", 0) for t in history)
+    raw_clean_pnl = sum(t.get("pnl", 0) for t in history if not _trade_has_anomaly(t))
+
+    analytics_history = [t for t in history if _is_strategy_analytic_trade(t)]
+    wins = [t for t in analytics_history if t.get("pnl", 0) > 0]
+    losses = [t for t in analytics_history if t.get("pnl", 0) < 0]
+    breakevens = [t for t in analytics_history if t.get("pnl", 0) == 0]
+    total_pnl = sum(t.get("pnl", 0) for t in analytics_history)
+    clean_pnl = sum(t.get("pnl", 0) for t in analytics_history if not _trade_has_anomaly(t))
     latency_samples = [
         float(t.get("signal_to_fill_ms"))
-        for t in history
+        for t in analytics_history
         if isinstance(t.get("signal_to_fill_ms"), (int, float))
     ]
 
     # By symbol
     by_symbol = {}
-    for t in history:
+    for t in analytics_history:
         sym = t.get("symbol", "?")
         if sym not in by_symbol:
             by_symbol[sym] = {"trades": 0, "wins": 0, "pnl": 0.0}
@@ -172,7 +178,7 @@ def get_analytics() -> Dict:
 
     # By hour of day
     by_hour = {}
-    for t in history:
+    for t in analytics_history:
         entry_time = t.get("entry_time", t.get("recorded_at", 0))
         if entry_time:
             from datetime import datetime
@@ -194,7 +200,7 @@ def get_analytics() -> Dict:
 
     # By exit reason
     by_reason = {}
-    for t in history:
+    for t in analytics_history:
         reason = t.get("reason", "unknown")
         if reason not in by_reason:
             by_reason[reason] = {"trades": 0, "wins": 0, "pnl": 0.0}
@@ -208,7 +214,7 @@ def get_analytics() -> Dict:
 
     # By strategy tag
     by_strategy = {}
-    for t in history:
+    for t in analytics_history:
         strategy = normalize_strategy_tag(t.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
         if is_artifact_strategy_tag(strategy):
             continue
@@ -220,7 +226,7 @@ def get_analytics() -> Dict:
 
     # Latency by strategy
     strategy_latency = {}
-    for t in history:
+    for t in analytics_history:
         strategy = normalize_strategy_tag(t.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
         if is_artifact_strategy_tag(strategy):
             continue
@@ -240,7 +246,7 @@ def get_analytics() -> Dict:
 
     # By signal source (participation attribution)
     by_signal_source = {}
-    for t in history:
+    for t in analytics_history:
         sources = t.get("signal_sources", []) or ["unknown"]
         if isinstance(sources, str):
             sources = [s.strip() for s in sources.split(",") if s.strip()]
@@ -259,7 +265,7 @@ def get_analytics() -> Dict:
 
     # By asset type (equity vs option)
     by_asset_type = {}
-    for t in history:
+    for t in analytics_history:
         asset_type = (t.get("asset_type", "equity") or "equity").lower()
         if asset_type not in by_asset_type:
             by_asset_type[asset_type] = {"trades": 0, "wins": 0, "pnl": 0.0}
@@ -274,7 +280,7 @@ def get_analytics() -> Dict:
     # Equity curve (realized P&L accumulation over time)
     equity_curve = []
     running_pnl = 0.0
-    for t in history:
+    for t in analytics_history:
         running_pnl += t.get("pnl", 0)
         equity_curve.append({
             "timestamp": t.get("exit_time", t.get("recorded_at", 0)),
@@ -283,7 +289,7 @@ def get_analytics() -> Dict:
 
     # By hold duration
     by_hold = {"<5m": _bucket_init(), "5-30m": _bucket_init(), "30m-2h": _bucket_init(), "2-4h": _bucket_init(), ">4h": _bucket_init()}
-    for t in history:
+    for t in analytics_history:
         secs = t.get("hold_seconds", 0)
         mins = secs / 60 if secs else 0
         if mins < 5:
@@ -305,31 +311,36 @@ def get_analytics() -> Dict:
         v["pnl"] = round(v["pnl"], 2)
 
     # Recent performance
-    recent = history[-50:]
+    recent = analytics_history[-50:]
     recent_wins = len([t for t in recent if t.get("pnl", 0) > 0])
     recent_pnl = sum(t.get("pnl", 0) for t in recent)
-    recent_20 = history[-20:]
+    recent_20 = analytics_history[-20:]
     recent_20_wins = len([t for t in recent_20 if t.get("pnl", 0) > 0])
-    sharpe_ratio = _compute_sharpe(history)
+    sharpe_ratio = _compute_sharpe(analytics_history)
     sharpe_ratio_recent_50 = _compute_sharpe(recent)
-    overall_metrics = _finalize_metric_bucket(_build_metric_bucket(history))
+    overall_metrics = _finalize_metric_bucket(_build_metric_bucket(analytics_history))
     today_key = _current_day_key()
-    today_trades = [t for t in history if _trade_day_key(t) == today_key]
+    today_trades = [t for t in analytics_history if _trade_day_key(t) == today_key]
     today_metrics = _finalize_metric_bucket(_build_metric_bucket(today_trades))
 
     return {
-        "total_trades": len(history),
+        "total_trades": len(analytics_history),
         "wins": len(wins),
         "losses": len(losses),
-        "win_rate": round(len(wins) / max(1, len(history)), 4),
+        "win_rate": round(len(wins) / max(1, len(analytics_history)), 4),
         "total_pnl": round(total_pnl, 2),
         "clean_pnl": round(clean_pnl, 2),
+        "raw_total_trades": len(history),
+        "raw_wins": len(raw_wins),
+        "raw_losses": len(raw_losses),
+        "raw_total_pnl": round(raw_total_pnl, 2),
+        "raw_clean_pnl": round(raw_clean_pnl, 2),
         "sharpe_ratio": round(sharpe_ratio, 4),
         "sharpe_ratio_recent_50": round(sharpe_ratio_recent_50, 4),
         "overall": {
             "wins": len(wins),
             "losses": len(losses),
-            "win_rate_pct": round(len(wins) / max(1, len(history)) * 100, 1),
+            "win_rate_pct": round(len(wins) / max(1, len(analytics_history)) * 100, 1),
             "total_pnl": round(total_pnl, 2),
             "clean_pnl": round(clean_pnl, 2),
             "avg_win": round(sum(t.get("pnl", 0) for t in wins) / max(1, len(wins)), 2),
@@ -529,6 +540,11 @@ def _directional_trade_move_pct(trade: Dict, observed_price: float) -> float:
     if side in ("sell_short", "short", "buy_to_cover"):
         return ((entry_price - observed_price) / entry_price) * 100.0
     return ((observed_price - entry_price) / entry_price) * 100.0
+
+
+def _is_strategy_analytic_trade(trade: Dict) -> bool:
+    strategy = normalize_strategy_tag(trade.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
+    return not is_artifact_strategy_tag(strategy)
 
 
 def _trade_reached_ratchet_activation(trade: Dict) -> bool:

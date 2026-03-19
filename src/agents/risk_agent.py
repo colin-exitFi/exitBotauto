@@ -71,8 +71,8 @@ async def analyze(
         signal_tier = str((signals or {}).get("signal_tier", "tier_2") or "tier_2").lower()
         strategy_tag = str((signals or {}).get("strategy_tag", "") or "").lower()
         entry_quality = str((signals or {}).get("entry_quality", "neutral") or "neutral").lower()
-        tier_size_pct = max(0.0, min(6.0, float(tier.get("size_pct", 1.0) or 1.0)))
-        size_cap_pct = max(tier_size_pct, 6.0) if strategy_tag == "momentum_long" else tier_size_pct
+        tier_size_pct = max(0.0, min(5.0, float(tier.get("size_pct", 1.0) or 1.0)))
+        size_cap_pct = tier_size_pct
         constraint_flags: List[str] = []
         can_trade = True
 
@@ -175,7 +175,7 @@ async def analyze(
             size_cap_pct *= eq_mult
             constraint_flags.append(f"size_reduced_entry_{entry_quality}")
 
-        size_cap_pct = max(0.0, min(6.0, round(size_cap_pct, 3)))
+        size_cap_pct = max(0.0, min(5.0, round(size_cap_pct, 3)))
         if can_trade and size_cap_pct <= 0.0:
             size_cap_pct = 0.25
             constraint_flags.append("size_floor_applied")

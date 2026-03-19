@@ -491,7 +491,10 @@ class Reconciler:
             "game_film_win_rate_pct": round(float(game_film.get("overall_win_rate_pct", 0) or 0), 2) if isinstance(game_film, dict) else 0.0,
             "symbols_in_trade_history": effective_today_symbols,
             "symbols_in_game_film": sorted((game_film.get("by_symbol", {}) or {}).keys()) if isinstance(game_film, dict) else [],
-            "analytics_total_realized_all_time": round(float(analytics.get("total_pnl", 0) or 0), 2),
+            "analytics_total_realized_all_time": round(
+                float(analytics.get("raw_total_pnl", analytics.get("total_pnl", 0)) or 0),
+                2,
+            ),
             "broker_reconstructed_realized": round(float(broker_fill_ledger.get("realized_pnl", 0) or 0), 2),
             "broker_reconstructed_trade_count": int(broker_fill_ledger.get("trade_count", 0) or 0),
             "broker_reconstructed_unresolved_symbols": list(broker_fill_ledger.get("unresolved_symbols", []) or []),
