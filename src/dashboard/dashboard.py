@@ -910,12 +910,20 @@ async def get_trade_history(limit: int = 20):
     best = max(trades, key=lambda t: t.get("pnl", 0)) if trades else None
     worst = min(trades, key=lambda t: t.get("pnl", 0)) if trades else None
     trust = (_get_reconciliation_state() or {}).get("trust", {})
+    broker_total_pnl = None
+    try:
+        snap = _get_cached_alpaca_terminal_snapshot()
+        if snap:
+            broker_total_pnl = round(float(snap.get("equity", 0) or 0) - _PANEL_STARTING_EQUITY, 2)
+    except Exception:
+        pass
     return {
         "trades": trades,
         "stats": stats,
         "best": best,
         "worst": worst,
         "trust_flags": trust,
+        "broker_total_pnl": broker_total_pnl,
     }
 
 
@@ -2106,7 +2114,7 @@ async function refresh() {
     $('tradeSummary').innerHTML = th.trades.length ? `
       <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Trades</div></div>
       <div class="summary-item"><div class="val ${(s.win_rate_pct||0)>=50?'positive':'negative'}">${(s.win_rate_pct||0).toFixed(1)}%</div><div class="lbl">Win Rate</div></div>
-      <div class="summary-item"><div class="val ${cls(s.total_pnl||0)}">${fmt(s.total_pnl||0)}</div><div class="lbl">Total P&L</div></div>
+      <div class="summary-item"><div class="val ${cls(th.broker_total_pnl ?? s.total_pnl||0)}">${fmt(th.broker_total_pnl ?? s.total_pnl||0)}</div><div class="lbl">Total P&L</div></div>
       <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">${best?best.symbol+' Best':'Best'}</div></div>
       <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">${worst?worst.symbol+' Worst':'Worst'}</div></div>
       <div class="summary-item" title="${bestStrategy?bestStrategy.name:''}"><div class="val val-sm ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name.replace('_',' '):'—'}</div><div class="lbl">Top Strategy</div></div>

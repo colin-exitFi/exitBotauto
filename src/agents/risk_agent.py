@@ -101,12 +101,16 @@ async def analyze(
             constraint_flags.append("size_reduced_recent_losses")
 
         signal_tier = str((signals or {}).get("signal_tier", "tier_2") or "tier_2").lower()
+        strategy_tag = str((signals or {}).get("strategy_tag", "") or "").lower()
         if signal_tier == "tier_3":
             size_cap_pct *= 0.5
             constraint_flags.append("size_reduced_tier3")
         elif signal_tier == "tier_2":
             size_cap_pct *= 0.85
             constraint_flags.append("size_reduced_tier2")
+        if strategy_tag == "uw_flow_long":
+            size_cap_pct *= 0.4
+            constraint_flags.append("size_reduced_uw_flow_long_derisked")
 
         spread_pct = float((signals or {}).get("spread_pct", 0) or 0)
         if spread_pct >= 1.5:

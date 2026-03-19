@@ -515,6 +515,13 @@ class AlpacaClient:
                 }
                 logger.success(f"{label}: {symbol} → order {data.get('id', '?')}")
                 return result
+            if resp.status_code == 422 and "client_order_id must be unique" in (resp.text or ""):
+                coid = order_data.get("client_order_id", "")
+                if coid:
+                    existing = self._find_open_order_by_client_id(coid)
+                    if existing:
+                        logger.debug(f"{label}: {symbol} order already exists (client_order_id={coid[:20]})")
+                        return existing
             if _retry_on_conflict and self._should_retry_exit_error(resp.text):
                 cancelled = self.cancel_related_orders_from_error(symbol, resp.text, preferred_side=preferred_side)
                 if cancelled:
@@ -703,6 +710,17 @@ class AlpacaClient:
         except Exception as e:
             logger.error(f"Get orders failed: {e}")
             return []
+
+    def _find_open_order_by_client_id(self, client_order_id: str) -> Optional[Dict]:
+        if not client_order_id:
+            return None
+        try:
+            for order in self.get_orders("open"):
+                if str(order.get("client_order_id", "") or "") == client_order_id:
+                    return order
+        except Exception:
+            pass
+        return None
 
     def get_order(self, order_id: str) -> Optional[Dict]:
         self._ensure_init()
