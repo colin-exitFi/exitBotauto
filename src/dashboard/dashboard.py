@@ -2000,6 +2000,7 @@ function renderEquityCurve(points) {
 }
 
 async function refresh() {
+  try {
   let _trustFlags = {};
   let _brokerOnlyMode = false;
   let _degradedInternal = false;
@@ -2481,6 +2482,7 @@ async function refresh() {
     <td class="${cls(h.pnl||0)}">${fmt(h.pnl||0)}</td><td class="${cls(h.pnl_pct||0)}">${fmt(h.pnl_pct||0)}%</td>
     <td>${h.reason||''}</td><td>${h.hold_time||''}</td>
   </tr>`).join('') : '<tr><td colspan="8" class="empty">No trades yet</td></tr>';
+  } catch(e) { console.error('Dashboard refresh error:', e); }
 }
 refresh();
 setInterval(refresh, 5000);
