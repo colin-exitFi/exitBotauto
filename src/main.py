@@ -4234,6 +4234,7 @@ class TradingBot:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
                 None, self.alpaca_client.get_positions
             )
+            logger.debug(f"🔄 Monitor: synced {len(alpaca_positions)} broker positions, {len(positions)} local")
             self._cache_broker_position_symbols(alpaca_positions)
             if self.entry_manager and hasattr(self.entry_manager, "sync_positions_from_brokerage"):
                 self.entry_manager.sync_positions_from_brokerage(alpaca_positions)
@@ -4241,7 +4242,7 @@ class TradingBot:
             alpaca_symbols = {p["symbol"] for p in alpaca_positions}
             alpaca_position_map = {p["symbol"]: p for p in alpaca_positions}
         except Exception as e:
-            logger.debug(f"Alpaca position sync error: {e}")
+            logger.warning(f"⚠️ Alpaca position sync error (monitor skipped): {e}")
             return
 
         open_orders = []
@@ -4452,6 +4453,17 @@ class TradingBot:
 
                 self.entry_manager.update_peak_price(symbol, current_price)
                 action = self.profit_ratchet.check_position(pos, current_price, now=time.time())
+                ratchet_status = (
+                    f"🔄 {symbol}: price=${current_price:.2f} peak=${pos.get('peak_price', '?')} "
+                    f"pnl={action.get('current_pnl_pct', 0):.2f}% peak_pnl={action.get('peak_pnl_pct', 0):.2f}% "
+                    f"ratchet={'ON' if action.get('ratchet_active') else 'off'} action={action.get('action')} "
+                    f"floor={action.get('floor_pct')} target=${action.get('target_exit_price') or 0:.2f}"
+                )
+                _last_ratchet_log = getattr(self, "_last_ratchet_log_ts", {})
+                if time.time() - _last_ratchet_log.get(symbol, 0) > 60:
+                    logger.info(ratchet_status)
+                    _last_ratchet_log[symbol] = time.time()
+                    self._last_ratchet_log_ts = _last_ratchet_log
                 await self._apply_profit_ratchet_action(pos, current_price, action, open_orders_by_symbol)
 
             except Exception as e:
