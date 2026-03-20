@@ -546,6 +546,7 @@ class TradingBot:
         # Launch AI layers as background tasks
         ai_task = asyncio.create_task(self._ai_loop())
         options_task = asyncio.create_task(self._options_monitor_loop()) if self.options_engine else None
+        monitor_task = asyncio.create_task(self._monitor_positions_loop())
 
         # Start Exit Agent monitoring loop
         await self.orchestrator.start_exit_agent()
@@ -693,11 +694,7 @@ class TradingBot:
                 except Exception as e:
                     logger.debug(f"Pending order monitor error: {e}")
 
-                # ── MONITOR positions ──────────────────────────────
-                try:
-                    await self._monitor_positions()
-                except Exception as e:
-                    logger.error(f"Monitor error: {e}")
+                # ── MONITOR positions (now runs in independent _monitor_positions_loop task) ──
 
                 # ── COPY-TRADER EXIT SIGNALS ─────────────────────
                 try:
@@ -735,6 +732,7 @@ class TradingBot:
             ai_task.cancel()
             if options_task:
                 options_task.cancel()
+            monitor_task.cancel()
             await self.shutdown()
 
     async def _overnight_session(self, et):
@@ -4223,6 +4221,17 @@ class TradingBot:
                 position["order_state"]["ratchet"] = "software_managed"
             if action.get("action") in {"hard_stop", "ratchet_exit"} and not position.get("exit_pending"):
                 await self._submit_software_managed_exit(position, current_price, str(action.get("action") or "exit"))
+
+    async def _monitor_positions_loop(self):
+        """Independent loop for position monitoring — decoupled from scan pipeline."""
+        while True:
+            try:
+                await self._monitor_positions()
+            except asyncio.CancelledError:
+                return
+            except Exception as e:
+                logger.error(f"Monitor loop error: {e}")
+            await asyncio.sleep(10)
 
     async def _monitor_positions(self):
         """Monitor open positions with deterministic hard-stop and profit-ratchet control."""
