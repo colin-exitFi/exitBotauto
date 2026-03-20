@@ -428,10 +428,41 @@ class TradingBot:
         ghost_count = 0
         restored_count = 0
         if saved_positions:
+            _merge_fields = (
+                "peak_price", "ratchet_floor_pct", "ratchet_peak_pnl_pct",
+                "ratchet_limit_order_id", "ratchet_order_type",
+                "hard_stop_order_id", "hard_stop_price",
+                "entry_time", "signal_timestamp", "entry_order_timestamp",
+                "fill_timestamp", "fill_timestamp_source", "fill_price",
+                "entry_price", "strategy_tag", "signal_tier", "holding_horizon",
+                "entry_quality", "overnight_context", "entry_reason_code",
+                "entry_model_votes", "risk_constraints_applied",
+                "dead_money_tightened", "dead_money", "order_state",
+                "mfe_pct", "mae_pct", "time_to_green_seconds", "time_to_peak_seconds",
+            )
             for sym, pos in saved_positions.items():
                 if sym in broker_symbols:
                     if sym not in self.entry_manager.positions:
                         self.entry_manager.positions[sym] = pos
+                        restored_count += 1
+                    else:
+                        existing = self.entry_manager.positions[sym]
+                        for field in _merge_fields:
+                            if field in pos and pos[field] is not None:
+                                existing.setdefault(field, pos[field])
+                                if field == "peak_price" and pos[field] is not None:
+                                    side = str(existing.get("side", "long") or "long").lower()
+                                    saved_peak = float(pos[field] or 0)
+                                    cur_peak = float(existing.get("peak_price", 0) or 0)
+                                    if saved_peak > 0:
+                                        if side == "short":
+                                            existing["peak_price"] = min(saved_peak, cur_peak) if cur_peak > 0 else saved_peak
+                                        else:
+                                            existing["peak_price"] = max(saved_peak, cur_peak)
+                                elif field == "entry_time" and pos[field]:
+                                    existing[field] = pos[field]
+                                elif field == "entry_price" and pos[field]:
+                                    existing[field] = pos[field]
                         restored_count += 1
                 else:
                     ghost_count += 1
