@@ -3914,6 +3914,8 @@ class TradingBot:
     def _order_is_hard_stop(order: dict) -> bool:
         client_order_id = str(order.get("client_order_id", "") or "").lower()
         order_type = str(order.get("type", "") or "").lower()
+        if "ratchet" in client_order_id:
+            return False
         return order_type == "stop" or "hardstop" in client_order_id or "hard-stop" in client_order_id
 
     @staticmethod
@@ -3965,13 +3967,14 @@ class TradingBot:
             await self._cancel_order_and_confirm(order_id)
 
     async def _ensure_hard_stop(self, position: dict, open_orders_by_symbol: Dict[str, List[Dict]], current_price: float):
+        symbol = position.get("symbol", "?")
         if not self.alpaca_client or self._entry_session_label() != "regular":
             position.setdefault("order_state", {})["hard_stop"] = "software_managed"
             return
 
-        symbol = position.get("symbol", "")
         qty = int(float(position.get("quantity", 0) or 0))
         if qty < 1:
+            logger.debug(f"🛡️ {symbol}: hard stop skip — qty={qty} < 1")
             return
 
         exit_side = self._position_exit_side(position)
@@ -3990,6 +3993,7 @@ class TradingBot:
             or 0
         )
         if not stop_price:
+            logger.warning(f"⚠️ {symbol}: hard stop skip — could not compute stop_price (entry={position.get('entry_price')})")
             return
         active_order = existing_orders[0] if existing_orders else None
         if active_order:
@@ -4056,15 +4060,15 @@ class TradingBot:
         if not active_order and ratchet_orders:
             active_order = ratchet_orders[0]
 
-        current_limit = 0.0
+        current_stop = 0.0
         if active_order:
             try:
-                current_limit = float(active_order.get("limit_price", 0) or 0)
+                current_stop = float(active_order.get("stop_price") or active_order.get("limit_price") or 0)
             except Exception:
-                current_limit = 0.0
-        if active_order and abs(current_limit - target_price) < 0.01:
+                current_stop = 0.0
+        if active_order and abs(current_stop - target_price) < 0.01:
             position["ratchet_limit_order_id"] = active_order.get("id", position.get("ratchet_limit_order_id"))
-            position["ratchet_order_type"] = str(active_order.get("type", "limit") or "limit")
+            position["ratchet_order_type"] = str(active_order.get("type", "stop") or "stop")
             position.setdefault("order_state", {})["ratchet"] = "placed"
             return True
 
@@ -4076,40 +4080,32 @@ class TradingBot:
 
         client_order_id = ProfitRatchet.make_client_order_id(symbol, "ratchet", target_price)
         side = position.get("side", "long")
-        if side == "short":
-            order = await asyncio.get_event_loop().run_in_executor(
-                None,
-                partial(
-                    self.alpaca_client.place_limit_cover,
-                    symbol,
-                    qty,
-                    target_price,
-                    False,
-                    client_order_id,
-                    True,
-                ),
-            )
-        else:
-            order = await asyncio.get_event_loop().run_in_executor(
-                None,
-                partial(
-                    self.alpaca_client.place_limit_sell,
-                    symbol,
-                    qty,
-                    target_price,
-                    False,
-                    client_order_id,
-                    True,
-                ),
-            )
+        exit_order_side = "buy" if side == "short" else "sell"
+        logger.info(
+            f"📈 Placing ratchet STOP {exit_order_side} for {symbol}: {qty}sh @ ${target_price:.2f} "
+            f"(side={side}, floor={position.get('ratchet_floor_pct')}%)"
+        )
+        order = await asyncio.get_event_loop().run_in_executor(
+            None,
+            partial(
+                self.alpaca_client.place_stop_order,
+                symbol,
+                qty,
+                target_price,
+                exit_order_side,
+                client_order_id,
+                True,
+            ),
+        )
         if not order:
             position.setdefault("order_state", {})["ratchet"] = "missing"
+            logger.warning(f"⚠️ Ratchet STOP order failed for {symbol} @ ${target_price:.2f}")
             return False
 
         position["ratchet_limit_order_id"] = order.get("id", "")
-        position["ratchet_order_type"] = str(order.get("type", "limit") or "limit")
+        position["ratchet_order_type"] = str(order.get("type", "stop") or "stop")
         position.setdefault("order_state", {})["ratchet"] = "placed"
-        logger.info(f"📈 Ratchet order updated for {symbol} @ ${target_price:.2f}")
+        logger.info(f"📈 Ratchet STOP placed for {symbol} @ ${target_price:.2f} (order={order.get('id', '?')[:12]})")
         return True
 
     async def _submit_software_managed_exit(self, position: dict, current_price: float, reason: str) -> bool:
@@ -4188,12 +4184,13 @@ class TradingBot:
         regular_session = session == "regular"
         extended_session = session in {"pre", "after"}
 
+        sym = position.get("symbol", "?")
         if regular_session:
             await self._ensure_hard_stop(position, open_orders_by_symbol, current_price)
             if action.get("dead_money") and not position.get("dead_money_tightened"):
                 position["dead_money_tightened"] = True
                 logger.warning(
-                    f"💀 Dead money: {position.get('symbol', '?')} tightening stop "
+                    f"💀 Dead money: {sym} tightening stop "
                     f"{ProfitRatchet.HARD_STOP_PCT:.1f}% → {float(action.get('hard_stop_pct', ProfitRatchet.DEAD_MONEY_TIGHT_STOP_PCT)):.1f}%"
                 )
             if action.get("action") == "hard_stop" and not position.get("exit_pending"):
@@ -4204,10 +4201,18 @@ class TradingBot:
                 ]
                 if not hard_stop_orders:
                     await self._submit_software_managed_exit(position, current_price, "hard_stop")
-            if action.get("ratchet_active"):
-                target_exit_price = float(action.get("target_exit_price", 0) or 0)
-                if target_exit_price > 0:
-                    await self._place_or_replace_ratchet_order(position, target_exit_price, open_orders_by_symbol)
+            ratchet_active = action.get("ratchet_active", False)
+            target_exit_price = float(action.get("target_exit_price", 0) or 0)
+            peak_pnl = float(action.get("peak_pnl_pct", 0) or 0)
+            cur_pnl = float(action.get("current_pnl_pct", 0) or 0)
+            floor_pct = action.get("floor_pct")
+            if ratchet_active and target_exit_price > 0:
+                await self._place_or_replace_ratchet_order(position, target_exit_price, open_orders_by_symbol)
+            elif not ratchet_active:
+                logger.debug(
+                    f"🔧 {sym} ratchet inactive: peak_pnl={peak_pnl:.2f}% cur_pnl={cur_pnl:.2f}% "
+                    f"activation={ProfitRatchet.RATCHET_ACTIVATION_PCT}% peak_price={position.get('peak_price')}"
+                )
             return
 
         if extended_session:

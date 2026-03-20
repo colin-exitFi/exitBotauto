@@ -982,13 +982,39 @@ class AlpacaClient:
                 except Exception:
                     break
 
-            # Not filled — cancel and use market
+            # Not filled — cancel and verify before market fallback
             self.cancel_order(order_id)
-            logger.info(f"Smart buy: limit not filled for {symbol}, falling back to market")
+            _time.sleep(0.3)
+            try:
+                final_order = self._trading_client.get_order_by_id(order_id)
+                final_status = str(final_order.status).lower()
+                if final_status in ("filled", "partially_filled"):
+                    logger.info(f"Smart buy: limit filled during cancel window for {symbol}, no market fallback needed")
+                    return self._order_to_dict(final_order)
+                if final_status not in ("cancelled", "canceled", "expired", "replaced"):
+                    _time.sleep(0.5)
+                    final_order = self._trading_client.get_order_by_id(order_id)
+                    final_status = str(final_order.status).lower()
+                    if final_status in ("filled", "partially_filled"):
+                        logger.info(f"Smart buy: limit filled after retry check for {symbol}")
+                        return self._order_to_dict(final_order)
+            except Exception as verify_err:
+                logger.warning(f"Smart buy: could not verify limit order status for {symbol}: {verify_err}")
+
+            position_check = self.get_position(symbol)
+            if position_check and float(position_check.get("quantity", 0) or 0) >= qty * 0.9:
+                logger.warning(f"Smart buy: broker already has {symbol} position after cancel — skipping market fallback to prevent double-fill")
+                return None
+
+            logger.info(f"Smart buy: limit confirmed cancelled for {symbol}, falling back to market")
             return self.place_market_buy(symbol, notional, force_notional=True)
 
         except Exception as e:
             logger.error(f"Smart buy failed ({symbol}), falling back to market: {e}")
+            position_check = self.get_position(symbol)
+            if position_check and float(position_check.get("quantity", 0) or 0) > 0:
+                logger.warning(f"Smart buy: broker already has {symbol} position after error — skipping market fallback")
+                return None
             return self.place_market_buy(symbol, notional, force_notional=True)
 
     def smart_sell(self, symbol: str, qty: float, timeout_seconds: int = 10) -> Optional[Dict]:

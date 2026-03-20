@@ -1152,11 +1152,11 @@ class EntryManager:
                 existing.setdefault("entry_model_votes", {})
                 existing.setdefault("risk_constraints_applied", [])
                 existing.setdefault("order_state", {"entry": str(existing.get("order_status", "open") or "open")})
+                existing["current_price"] = cur_price
+                existing["broker_synced_at"] = time.time()
                 if abs(old_qty - qty) > 1e-6:
                     existing["quantity"] = qty
                     existing["side"] = side
-                    existing["current_price"] = cur_price
-                    existing["broker_synced_at"] = time.time()
                     existing["actual_qty"] = qty
                     entry_price = float(existing.get("entry_price", avg_price) or avg_price)
                     existing["actual_notional"] = entry_price * qty
