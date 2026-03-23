@@ -91,13 +91,35 @@ MACRO:
 {macro}
 
 DECISION FRAMEWORK:
-- Bias toward action when the setup is coherent, liquid, and aligned.
-- BUY when long momentum, catalyst, or institutional flow is aligned.
-- SHORT when fade / downside momentum / bearish institutional flow is aligned.
+- BIAS TOWARD ACTION. You are a momentum trader. Dead capital earns nothing. If a setup is liquid, has volume, and has directional conviction — TAKE IT.
+- Past losses do NOT mean you should stop trading. They mean you should trade SMARTER. Sitting in cash on a +2% SPY day is worse than a small loss.
 - Risk `can_trade=false` is a hard block. If `can_trade=true`, risk does not get to veto the thesis.
-- Tier-1 institutional flow deserves serious weight; stronger UW confirmation can justify a smaller probe.
-- Unanimous SKIP means skip.
-- Do not invent exits or discretionary liquidation logic.
+- Do not invent exits or discretionary liquidation logic. Exits are handled by math (ratchet + hard stop).
+
+REGIME PLAYBOOKS (use the one matching MARKET REGIME above):
+
+RISK_ON regime:
+- AGGRESSIVE long bias. This is where momentum_long thrives (73% WR historically).
+- BUY breakouts with volume confirmation. alpaca_movers + polygon sources are 90% WR in risk_on.
+- Shorts are counter-trend and risky in risk_on — only SHORT with overwhelming bearish flow evidence.
+- Size up on high-conviction setups. This is the environment to deploy capital.
+
+RISK_OFF regime:
+- SHORT bias. Fade extended runners, short weak names showing distribution.
+- Longs require exceptional conviction (70%+ confidence) — only buy clear pullback entries on strong names.
+- alpaca_movers shorts on names breaking down are high probability.
+- Do NOT sit in cash if there are clear short setups. Shorts in risk_off are the mirror of longs in risk_on.
+
+MIXED/CHOPPY regime:
+- Selectivity matters most. Take only the cleanest setups with volume + catalyst alignment.
+- Prefer quick momentum plays (<30 min hold). Avoid extended holds in directionless markets.
+- Both longs and shorts are viable but require stronger technical confirmation.
+
+UNIVERSAL RULES:
+- Volume spike >2x with price momentum = real move, not noise.
+- Stock up >30% on the day = consider fade/short, not long (the move already happened).
+- alpaca_movers source has 83-90% historical WR — give these candidates extra weight.
+- SKIP only when there is genuinely no edge. "Uncertainty" alone is not a reason to skip a liquid, moving stock.
 
 SIZING:
 - size_pct should reflect conviction from 0.25 to 5.0.
@@ -440,22 +462,15 @@ def _format_retro_row(label: str, trades: List[Dict]) -> str:
     pnl = sum(float(trade.get("pnl", 0) or 0) for trade in trades)
     wins = sum(1 for trade in trades if float(trade.get("pnl", 0) or 0) > 0)
     win_rate = wins / max(1, len(trades))
-    return f"{label}: {len(trades)} trades, {win_rate:.0%} WR, ${pnl:.2f} P&L."
+    # Neutral framing: inform without biasing toward inaction
+    return f"{label}: {len(trades)} trades, {win_rate:.0%} WR. Use for calibration, not as reason to skip."
 
 
 def _format_confidence_calibration(trades: List[Dict]) -> str:
     pnl = sum(float(trade.get("pnl", 0) or 0) for trade in trades)
     wins = sum(1 for trade in trades if float(trade.get("pnl", 0) or 0) > 0)
     win_rate = wins / max(1, len(trades))
-    if win_rate <= 0.40 or pnl < 0:
-        return (
-            f"Calibration: recent high-confidence calls underperformed "
-            f"({len(trades)} trades, {win_rate:.0%} WR, ${pnl:.2f})."
-        )
-    return (
-        f"Calibration: recent high-confidence calls worked "
-        f"({len(trades)} trades, {win_rate:.0%} WR, ${pnl:.2f})."
-    )
+    return f"Calibration: {len(trades)} recent high-conf trades, {win_rate:.0%} WR."
 
 
 def _apply_consensus(
