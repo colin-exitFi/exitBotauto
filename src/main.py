@@ -4524,31 +4524,6 @@ class TradingBot:
                     self._last_ratchet_log_ts = _last_ratchet_log
                 await self._apply_profit_ratchet_action(pos, current_price, action, open_orders_by_symbol)
 
-                # EXIT_NOW enforcement: if exit agent recommends EXIT_NOW, execute it
-                exit_rec = pos.get("exit_agent_recommendation", {})
-                if (
-                    exit_rec.get("action") == "EXIT_NOW"
-                    and not pos.get("exit_pending")
-                    and not pos.get("_exit_recorded")
-                    and self.entry_manager.is_market_open()
-                ):
-                    exit_now_ts = float(exit_rec.get("timestamp", 0) or 0)
-                    last_exit_now_exec = float(pos.get("_exit_now_submitted_at", 0) or 0)
-                    if exit_now_ts > last_exit_now_exec:
-                        logger.warning(
-                            f"🚨 EXIT_NOW EXECUTING: {symbol} — {exit_rec.get('reasoning', 'exit agent recommendation')[:120]}"
-                        )
-                        submitted = await self._submit_software_managed_exit(
-                            pos, current_price, "exit_agent_exit_now"
-                        )
-                        if submitted:
-                            pos["_exit_now_submitted_at"] = time.time()
-                            try:
-                                from src.dashboard.dashboard import log_activity
-                                log_activity("trade", f"🚨 EXIT_NOW executed for {symbol}")
-                            except Exception:
-                                pass
-
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")
 
