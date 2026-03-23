@@ -680,17 +680,8 @@ def _allow_tier1_probe(
     opposing_directional_votes: List[Dict],
     signals_data: Dict,
 ) -> bool:
-    if len(agreeing_votes) != 1:
-        return False
-    if opposing_directional_votes:
-        return False
-    signal_tier = str((signals_data or {}).get("signal_tier", "") or "").lower()
-    if signal_tier != "tier_1":
-        return False
-    uw_direction = str((signals_data or {}).get("side", "") or "").strip().lower()
-    if decision == "SHORT":
-        return uw_direction == "short"
-    return uw_direction != "short"
+    # Disabled: 0% WR across all tier1_probe entries. Require 2-of-3 model agreement minimum.
+    return False
 
 
 def _average_confidence(votes: List[Dict]) -> float:

@@ -1676,5 +1676,10 @@ class Scanner:
         base_score += float(c.get("copy_trader_score_adjustment", 0.0) or 0.0)
         base_score += max(0.0, min(0.06, (float(c.get("copy_trader_weight", 1.0) or 1.0) - 1.0) * 0.15))
 
+        # alpaca_movers source bonus: 83-90% WR across 400 trades, best signal source
+        source = str(c.get("source", "") or "").lower()
+        if "alpaca_movers" in source:
+            base_score *= 1.15
+
         multiplier = self._performance_multiplier(c, performance or {})
         return base_score * multiplier

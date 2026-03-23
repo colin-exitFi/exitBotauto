@@ -1923,12 +1923,23 @@ class TradingBot:
         )
         prepared["signal_tier"] = str(prepared.get("signal_tier") or self._derive_signal_tier(prepared))
         prepared["holding_horizon"] = str(prepared.get("holding_horizon") or self._derive_holding_horizon(prepared))
-        prepared["market_regime"] = str(
+        _regime = str(
             prepared.get("market_regime")
             or getattr(self, "scan_regime", "")
             or getattr(self, "scan_regime_raw", "")
             or "mixed"
         ).lower()
+        if _regime in ("mixed", ""):
+            try:
+                _bias = self.get_overnight_bias_context(refresh=False)
+                _avg_chg = float(_bias.get("avg_change_pct", 0) or 0)
+                if _avg_chg <= -1.0:
+                    _regime = "risk_off"
+                elif _avg_chg >= 1.0:
+                    _regime = "risk_on"
+            except Exception:
+                pass
+        prepared["market_regime"] = _regime
         prepared["uw_flow_summary"] = str(prepared.get("uw_flow_summary") or self._build_uw_flow_summary(prepared))
         session_label = self._entry_session_label()
         prepared["extended_hours"] = session_label in {"pre", "after"}
@@ -3345,7 +3356,7 @@ class TradingBot:
             # Regime-aware entry restriction: in risk_off, long entries need higher conviction
             market_regime = str(candidate.get("market_regime", "mixed") or "mixed").lower()
             if direction == "BUY" and market_regime == "risk_off":
-                regime_min_conf = float(getattr(settings, "RISK_OFF_LONG_MIN_CONFIDENCE", 65) or 65)
+                regime_min_conf = float(getattr(settings, "RISK_OFF_LONG_MIN_CONFIDENCE", 70) or 70)
                 if verdict.confidence < regime_min_conf:
                     logger.warning(
                         f"🛡️ REGIME GATE {symbol}: BUY blocked in risk_off regime "
@@ -4260,6 +4271,7 @@ class TradingBot:
                     f"🔧 {sym} ratchet inactive: peak_pnl={peak_pnl:.2f}% cur_pnl={cur_pnl:.2f}% "
                     f"activation={ProfitRatchet.RATCHET_ACTIVATION_PCT}% peak_price={position.get('peak_price')}"
                 )
+
             return
 
         if extended_session:
