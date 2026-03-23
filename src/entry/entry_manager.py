@@ -1190,10 +1190,16 @@ class EntryManager:
                         if open_exit_order
                         else "broker_still_open_after_local_removal"
                     )
-            restored_strategy_tag = normalize_strategy_tag(
-                recent_snapshot.get("strategy_tag", "unknown"),
-                fallback="unknown",
-            )
+            _raw_tag = recent_snapshot.get("strategy_tag", "unknown")
+            if _raw_tag in ("unknown", "", None) and recent_snapshot:
+                try:
+                    from src.data.signal_attribution import derive_strategy_tag
+                    _raw_tag = derive_strategy_tag(recent_snapshot, direction=side)
+                except Exception:
+                    pass
+            if _raw_tag in ("unknown", "", None):
+                _raw_tag = "carryover"
+            restored_strategy_tag = normalize_strategy_tag(_raw_tag, fallback="carryover")
             self.positions[sym] = {
                 "symbol": sym,
                 "side": side,

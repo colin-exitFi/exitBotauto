@@ -3341,6 +3341,22 @@ class TradingBot:
                 continue
 
             direction = verdict.decision
+
+            # Regime-aware entry restriction: in risk_off, long entries need higher conviction
+            market_regime = str(candidate.get("market_regime", "mixed") or "mixed").lower()
+            if direction == "BUY" and market_regime == "risk_off":
+                regime_min_conf = float(getattr(settings, "RISK_OFF_LONG_MIN_CONFIDENCE", 65) or 65)
+                if verdict.confidence < regime_min_conf:
+                    logger.warning(
+                        f"🛡️ REGIME GATE {symbol}: BUY blocked in risk_off regime "
+                        f"(confidence {verdict.confidence:.0f}% < {regime_min_conf:.0f}% threshold)"
+                    )
+                    log_activity(
+                        "trade",
+                        f"🛡️ REGIME GATE: {symbol} BUY blocked — risk_off needs {regime_min_conf:.0f}%+ confidence",
+                    )
+                    continue
+
             candidate["strategy_tag"] = normalize_strategy_tag(
                 self._derive_strategy_tag(candidate, direction),
                 fallback="unknown",
@@ -3659,6 +3675,8 @@ class TradingBot:
             cooldown_seconds = int(getattr(settings, "SYMBOL_LOSS_COOLDOWN_SECONDS", 900) or 900)
             if cooldown_seconds > 0:
                 self._set_symbol_reentry_cooldown(symbol, cooldown_seconds)
+        elif symbol and pnl >= 0:
+            self._set_symbol_reentry_cooldown(symbol, 1800)
         if position:
             position["exit_recorded"] = True
             position["exit_finalized_at"] = float(trade_record.get("exit_time", time.time()) or time.time())
@@ -4505,6 +4523,31 @@ class TradingBot:
                     _last_ratchet_log[symbol] = time.time()
                     self._last_ratchet_log_ts = _last_ratchet_log
                 await self._apply_profit_ratchet_action(pos, current_price, action, open_orders_by_symbol)
+
+                # EXIT_NOW enforcement: if exit agent recommends EXIT_NOW, execute it
+                exit_rec = pos.get("exit_agent_recommendation", {})
+                if (
+                    exit_rec.get("action") == "EXIT_NOW"
+                    and not pos.get("exit_pending")
+                    and not pos.get("_exit_recorded")
+                    and self.entry_manager.is_market_open()
+                ):
+                    exit_now_ts = float(exit_rec.get("timestamp", 0) or 0)
+                    last_exit_now_exec = float(pos.get("_exit_now_submitted_at", 0) or 0)
+                    if exit_now_ts > last_exit_now_exec:
+                        logger.warning(
+                            f"🚨 EXIT_NOW EXECUTING: {symbol} — {exit_rec.get('reasoning', 'exit agent recommendation')[:120]}"
+                        )
+                        submitted = await self._submit_software_managed_exit(
+                            pos, current_price, "exit_agent_exit_now"
+                        )
+                        if submitted:
+                            pos["_exit_now_submitted_at"] = time.time()
+                            try:
+                                from src.dashboard.dashboard import log_activity
+                                log_activity("trade", f"🚨 EXIT_NOW executed for {symbol}")
+                            except Exception:
+                                pass
 
             except Exception as e:
                 logger.error(f"Monitor error for {symbol}: {e}")

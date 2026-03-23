@@ -96,18 +96,29 @@ class ExitAgent:
                 pass
         logger.info("🚪 Exit Agent stopped")
 
+    def _is_market_active(self) -> bool:
+        """Check if market is open for trading (extended hours included)."""
+        if self.entry_manager and hasattr(self.entry_manager, "is_market_open"):
+            return self.entry_manager.is_market_open()
+        return True
+
     async def _loop(self):
-        """Main monitoring loop — runs every 2 minutes."""
+        """Main monitoring loop — runs every 2 minutes during market hours, 10 min otherwise."""
         while self._running:
             try:
+                market_open = self._is_market_active()
                 positions = self.entry_manager.get_positions() if self.entry_manager else []
+
+                if not market_open:
+                    await asyncio.sleep(600)
+                    continue
+
                 for pos in positions:
                     symbol = pos.get("symbol", "")
                     if not symbol:
                         continue
                     if pos.get("halted"):
                         continue
-                    # Don't check more than once per 2 minutes per position
                     last = self._last_check.get(symbol, 0)
                     if time.time() - last < 120:
                         continue
@@ -117,7 +128,6 @@ class ExitAgent:
                     if action and action.get("action") != "HOLD":
                         await self._execute_action(symbol, pos, action)
 
-                # Clean up briefs for positions we no longer hold
                 held_symbols = {p.get("symbol") for p in positions}
                 stale = [s for s in self._last_briefs if s not in held_symbols]
                 for s in stale:
@@ -129,7 +139,7 @@ class ExitAgent:
             except Exception as e:
                 logger.error(f"Exit agent loop error: {e}")
 
-            await asyncio.sleep(120)  # 2 minutes
+            await asyncio.sleep(120)
 
     async def _evaluate_position(self, pos: Dict) -> Optional[Dict]:
         """Evaluate a single position using AI."""
