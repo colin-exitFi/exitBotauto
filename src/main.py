@@ -4096,8 +4096,10 @@ class TradingBot:
         target_price: float,
         open_orders_by_symbol: Dict[str, List[Dict]],
     ) -> bool:
-        if not self.alpaca_client or self._entry_session_label() != "regular":
+        session = self._entry_session_label()
+        if not self.alpaca_client or session not in ("regular", "pre", "after"):
             return False
+        is_extended = session in ("pre", "after")
 
         symbol = position.get("symbol", "")
         qty = int(float(position.get("quantity", 0) or 0))
@@ -4139,31 +4141,51 @@ class TradingBot:
         client_order_id = ProfitRatchet.make_client_order_id(symbol, "ratchet", target_price)
         side = position.get("side", "long")
         exit_order_side = "buy" if side == "short" else "sell"
+        order_type_label = "LIMIT" if is_extended else "STOP"
         logger.info(
-            f"📈 Placing ratchet STOP {exit_order_side} for {symbol}: {qty}sh @ ${target_price:.2f} "
-            f"(side={side}, floor={position.get('ratchet_floor_pct')}%)"
+            f"📈 Placing ratchet {order_type_label} {exit_order_side} for {symbol}: {qty}sh @ ${target_price:.2f} "
+            f"(side={side}, floor={position.get('ratchet_floor_pct')}%, extended={is_extended})"
         )
-        order = await asyncio.get_event_loop().run_in_executor(
-            None,
-            partial(
-                self.alpaca_client.place_stop_order,
-                symbol,
-                qty,
-                target_price,
-                exit_order_side,
-                client_order_id,
-                True,
-            ),
-        )
+
+        if is_extended:
+            # Extended hours: use limit orders (Alpaca doesn't support stops in extended hours)
+            if side == "short":
+                order = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    partial(
+                        self.alpaca_client.place_limit_cover,
+                        symbol, qty, target_price,
+                        True, client_order_id, True,
+                    ),
+                )
+            else:
+                order = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    partial(
+                        self.alpaca_client.place_limit_sell,
+                        symbol, qty, target_price,
+                        True, client_order_id, True,
+                    ),
+                )
+        else:
+            order = await asyncio.get_event_loop().run_in_executor(
+                None,
+                partial(
+                    self.alpaca_client.place_stop_order,
+                    symbol, qty, target_price,
+                    exit_order_side, client_order_id, True,
+                ),
+            )
+
         if not order:
             position.setdefault("order_state", {})["ratchet"] = "missing"
-            logger.warning(f"⚠️ Ratchet STOP order failed for {symbol} @ ${target_price:.2f}")
+            logger.warning(f"⚠️ Ratchet {order_type_label} order failed for {symbol} @ ${target_price:.2f}")
             return False
 
         position["ratchet_limit_order_id"] = order.get("id", "")
-        position["ratchet_order_type"] = str(order.get("type", "stop") or "stop")
+        position["ratchet_order_type"] = "limit" if is_extended else str(order.get("type", "stop") or "stop")
         position.setdefault("order_state", {})["ratchet"] = "placed"
-        logger.info(f"📈 Ratchet STOP placed for {symbol} @ ${target_price:.2f} (order={order.get('id', '?')[:12]})")
+        logger.info(f"📈 Ratchet {order_type_label} placed for {symbol} @ ${target_price:.2f} (order={order.get('id', '?')[:12]})")
         return True
 
     async def _submit_software_managed_exit(self, position: dict, current_price: float, reason: str) -> bool:
@@ -4278,8 +4300,11 @@ class TradingBot:
             position["order_state"]["hard_stop"] = "software_managed"
             if action.get("dead_money"):
                 position["dead_money_tightened"] = True
-            if action.get("ratchet_active"):
-                position["order_state"]["ratchet"] = "software_managed"
+            # Place ratchet limit orders in extended hours (Alpaca supports limit orders with extended_hours flag)
+            ratchet_active = action.get("ratchet_active", False)
+            target_exit_price = float(action.get("target_exit_price", 0) or 0)
+            if ratchet_active and target_exit_price > 0:
+                await self._place_or_replace_ratchet_order(position, target_exit_price, open_orders_by_symbol)
             if action.get("action") in {"hard_stop", "ratchet_exit"} and not position.get("exit_pending"):
                 await self._submit_software_managed_exit(position, current_price, str(action.get("action") or "exit"))
 
