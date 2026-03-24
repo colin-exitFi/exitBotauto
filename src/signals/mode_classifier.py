@@ -344,6 +344,76 @@ def build_mode_features(candidate: Dict, now_ts: Optional[float] = None) -> Mode
     )
 
 
+def mode_features_from_dict(payload: Dict) -> Optional[ModeFeatures]:
+    if not isinstance(payload, dict):
+        return None
+    symbol = str(payload.get("symbol", "") or "").upper().strip()
+    if not symbol:
+        return None
+
+    missing_fields = payload.get("missing_fields", []) or []
+    if isinstance(missing_fields, str):
+        missing_fields = [field.strip() for field in missing_fields.split(",") if field.strip()]
+    if not isinstance(missing_fields, list):
+        missing_fields = []
+
+    anomaly_flags = payload.get("anomaly_flags", []) or []
+    if isinstance(anomaly_flags, str):
+        anomaly_flags = [flag.strip() for flag in anomaly_flags.split(",") if flag.strip()]
+    if not isinstance(anomaly_flags, list):
+        anomaly_flags = []
+
+    return ModeFeatures(
+        symbol=symbol,
+        price=_to_float(payload.get("price"), 0.0),
+        daily_pct=_to_float(payload.get("daily_pct"), 0.0),
+        range_pct=_to_float(payload.get("range_pct"), 0.0),
+        spread_pct=_to_float(payload.get("spread_pct"), 0.0),
+        volume_rel=_to_float(payload.get("volume_rel"), 0.0),
+        volume_accel=_to_float(payload.get("volume_accel"), 0.0),
+        halt_count=_to_int(payload.get("halt_count"), 0),
+        sentiment_pct=_to_float(payload.get("sentiment_pct"), 0.0),
+        rsi_5m=_to_float(payload.get("rsi_5m"), 0.0) if payload.get("rsi_5m") is not None else None,
+        rsi_divergence=(
+            _to_float(payload.get("rsi_divergence"), 0.0) if payload.get("rsi_divergence") is not None else None
+        ),
+        macd_hist_slope=(
+            _to_float(payload.get("macd_hist_slope"), 0.0)
+            if payload.get("macd_hist_slope") is not None
+            else None
+        ),
+        vwap_distance_pct=(
+            _to_float(payload.get("vwap_distance_pct"), 0.0)
+            if payload.get("vwap_distance_pct") is not None
+            else None
+        ),
+        reclaiming_vwap=bool(payload.get("reclaiming_vwap", False)),
+        losing_vwap=bool(payload.get("losing_vwap", False)),
+        uw_bias=str(payload.get("uw_bias", "neutral") or "neutral"),
+        uw_premium=_to_float(payload.get("uw_premium"), 0.0),
+        catalyst_tag=str(payload.get("catalyst_tag", "") or "").lower() or None,
+        catalyst_age_hours=(
+            _to_float(payload.get("catalyst_age_hours"), 0.0)
+            if payload.get("catalyst_age_hours") is not None
+            else None
+        ),
+        session=_normalize_session(payload.get("session")),
+        entry_quality=str(payload.get("entry_quality", "neutral") or "neutral").lower(),
+        holding_horizon=str(payload.get("holding_horizon", "intraday") or "intraday").lower(),
+        sector=str(payload.get("sector", "") or "").upper() or None,
+        market_regime=str(payload.get("market_regime", "mixed") or "mixed").lower(),
+        created_at=_to_float(payload.get("created_at"), time.time()),
+        last_refreshed_at=_to_float(payload.get("last_refreshed_at"), time.time()),
+        data_age_seconds=_to_float(payload.get("data_age_seconds"), 0.0),
+        feature_quality_score=_to_float(payload.get("feature_quality_score"), 0.0),
+        feature_quality=str(payload.get("feature_quality", "") or ""),
+        missing_fields=list(missing_fields),
+        minute_notional_liquidity=_to_float(payload.get("minute_notional_liquidity"), 0.0),
+        bar_context=dict(payload.get("bar_context", {}) or {}),
+        anomaly_flags=list(anomaly_flags),
+    )
+
+
 def classify_mode(features: ModeFeatures) -> ModeClassification:
     symbol = features.symbol or "?"
     if features.feature_quality_score < 0.45:
@@ -360,33 +430,12 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
             classifier_confidence=0.88,
             reason_codes=["stale_data"],
         )
-    if features.spread_pct > 1.5:
-        return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
-            classifier_confidence=0.95,
-            reason_codes=["spread_too_wide", f"symbol_{symbol}"],
-        )
-    if features.price <= 0 or features.price < 2.0:
+    if features.price <= 0 or features.price < 1.0:
         return ModeClassification(
             mode="invalid",
             direction_constraint="none",
             classifier_confidence=0.95,
             reason_codes=["price_too_low", f"symbol_{symbol}"],
-        )
-    if features.session in {"pre", "after", "overnight"} and features.spread_pct > 0.8:
-        return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
-            classifier_confidence=0.92,
-            reason_codes=["extended_hours_spread_too_wide", f"symbol_{symbol}"],
-        )
-    if 0 < features.minute_notional_liquidity < 25000:
-        return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
-            classifier_confidence=0.9,
-            reason_codes=["notional_liquidity_thin", f"symbol_{symbol}"],
         )
     if "halted" in {str(flag).lower() for flag in features.anomaly_flags}:
         return ModeClassification(
@@ -397,11 +446,11 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         )
 
     exhaustion_flags = [
-        features.daily_pct >= 25.0,
+        features.daily_pct >= 20.0,
         features.volume_accel < 0.0,
-        features.halt_count >= 3,
-        features.sentiment_pct >= 80.0,
-        features.range_pct >= 92.0,
+        features.halt_count >= 2,
+        features.sentiment_pct >= 75.0,
+        features.range_pct >= 88.0,
         features.losing_vwap,
         (features.rsi_divergence or 0.0) < 0.0,
     ]
@@ -461,12 +510,12 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         )
 
     continuation_long_flags = [
-        features.daily_pct >= 3.0,
-        features.volume_accel >= 0.1,
-        features.spread_pct < 0.8,
+        features.daily_pct >= 1.5,
+        features.volume_accel >= 0.0,
+        features.spread_pct < 2.0,
         features.entry_quality in {"pullback", "neutral"},
         features.range_pct < 95.0,
-        features.reclaiming_vwap or (features.vwap_distance_pct or 0.0) > -0.2,
+        features.reclaiming_vwap or (features.vwap_distance_pct or 0.0) > -0.5,
     ]
     if all(continuation_long_flags[:4]) and continuation_long_flags[4]:
         reasons = ["trend_intact", "volume_reaccelerating", "spread_ok", f"entry_quality_{features.entry_quality}"]
@@ -489,12 +538,12 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         )
 
     continuation_short_flags = [
-        features.daily_pct <= -5.0,
-        features.volume_rel > 1.5,
-        features.volume_accel >= 0.1,
-        features.spread_pct < 0.8,
-        features.sentiment_pct <= 35.0,
-        features.losing_vwap or (features.vwap_distance_pct or 0.0) < 0.2,
+        features.daily_pct <= -1.5,
+        features.volume_rel > 1.0,
+        features.volume_accel >= 0.0,
+        features.spread_pct < 2.0,
+        features.sentiment_pct <= 45.0,
+        features.losing_vwap or (features.vwap_distance_pct or 0.0) < 0.5,
     ]
     if all(continuation_short_flags[:4]):
         reasons = ["downtrend_intact", "volume_confirming", "spread_ok", "volume_rel_strong"]
