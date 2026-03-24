@@ -597,11 +597,20 @@ def _format_confidence_calibration(trades: List[Dict]) -> str:
 
 def _apply_consensus(
     symbol: str,
-    votes: List[Dict],
-    briefs: Dict,
-    signals_data: Dict,
+    votes_or_price,
+    briefs_or_votes,
+    signals_data_or_briefs,
     provider_results: Optional[List[Dict]] = None,
 ) -> JuryVerdict:
+    # Backward compatibility: older callers passed (symbol, price, votes, briefs, provider_results).
+    if isinstance(votes_or_price, (int, float)):
+        votes = list(briefs_or_votes or []) if isinstance(briefs_or_votes, list) else []
+        briefs = dict(signals_data_or_briefs or {}) if isinstance(signals_data_or_briefs, dict) else {}
+        signals_data = {}
+    else:
+        votes = list(votes_or_price or []) if isinstance(votes_or_price, list) else []
+        briefs = dict(briefs_or_votes or {}) if isinstance(briefs_or_votes, dict) else {}
+        signals_data = dict(signals_data_or_briefs or {}) if isinstance(signals_data_or_briefs, dict) else {}
     provider_results = provider_results or []
     unavailable_providers = [
         str(item.get("provider", ""))

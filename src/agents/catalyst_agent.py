@@ -14,7 +14,7 @@ DEFAULT_BRIEF = {
     "magnitude": 1,
     "timing": "pre",
     "edge": "No data available — neutral catalyst fallback",
-    "error": False,
+    "error": True,
 }
 
 PROMPT_TEMPLATE = """You are a CATALYST RESEARCH specialist inside Velox, an autonomous momentum trading engine.

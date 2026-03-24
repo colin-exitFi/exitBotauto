@@ -18,7 +18,7 @@ DEFAULT_BRIEF = {
     "momentum": "neutral",
     "timeframe": "hours",
     "reasoning": "No data available — neutral technical fallback",
-    "error": False,
+    "error": True,
 }
 
 PROMPT_TEMPLATE = """You are a TECHNICAL specialist inside Velox.

@@ -26,7 +26,7 @@ from src.agents.base_agent import (
     call_perplexity_text,
     get_api_cost_stats,
 )
-from src.data import strategy_controls
+from src.data import entry_controls, strategy_controls
 from src.data.pending_setups import list_pending_setups
 from src.data.strategy_tags import PRIMARY_BOOKS, is_artifact_strategy_tag, normalize_strategy_tag
 
@@ -846,6 +846,10 @@ async def get_positions():
             "trail_pct": p.get("trail_pct", 3.0),
             "strategy_tag": p.get("strategy_tag", "unknown"),
             "signal_tier": p.get("signal_tier", "tier_2"),
+            "setup_mode": p.get("setup_mode", "invalid"),
+            "best_play": p.get("best_play", ""),
+            "timing_state": p.get("timing_state", "enter_now"),
+            "hold_style": p.get("hold_style", p.get("holding_horizon", "")),
             "ratchet_floor_pct": p.get("ratchet_floor_pct"),
             "order_status": p.get("order_status", "open"),
         })
@@ -928,6 +932,7 @@ async def get_consensus():
         "enabled": True,
         "history": _bot.orchestrator.get_history()[-10:],
         "stats": _bot.orchestrator.get_stats(),
+        "last_consensus": ai.get("last_consensus"),
         "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
         "last_short_block_reason": ai.get("last_short_block_reason"),
         "trust_flags": trust,
@@ -1043,6 +1048,17 @@ async def get_pending_setups(limit: int = 50):
     return {
         "count": len(rows),
         "setups": rows,
+        "generated_at": time.time(),
+    }
+
+
+@app.get("/api/entry-controls")
+async def get_entry_controls(limit: int = 50):
+    entry_controls.prune_expired()
+    bounded_limit = max(1, min(int(limit or 50), 200))
+    return {
+        "loss_locks": entry_controls.list_symbol_loss_locks(limit=bounded_limit),
+        "trade_states": entry_controls.list_symbol_trade_states(limit=bounded_limit),
         "generated_at": time.time(),
     }
 
@@ -1657,6 +1673,10 @@ tr:hover td{background:#161b2288}
 .tag-buy{background:#23863622;color:#3fb950;border:1px solid #23863644}
 .tag-short{background:#a371f722;color:#d2a8ff;border:1px solid #a371f744}
 .tag-skip{background:#da363322;color:#f85149;border:1px solid #da363344}
+.tag-live{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
+.tag-wait{background:#e3b34122;color:#e3b341;border:1px solid #e3b34144}
+.tag-noedge{background:#6e768122;color:#8b949e;border:1px solid #6e768144}
+.tag-lock{background:#f8514922;color:#f85149;border:1px solid #f8514944}
 .controls{display:flex;gap:8px}
 .btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
 .btn-start{background:linear-gradient(135deg,#238636,#2ea043);color:#fff}
@@ -1671,6 +1691,13 @@ tr:hover td{background:#161b2288}
 .summary-item .val{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .summary-item .val.val-sm{font-size:13px;font-weight:700}
 .summary-item .lbl{font-size:9px;color:#6e7681;text-transform:uppercase;margin-top:3px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.subcard{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px;overflow:hidden}
+.subcard h3{font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.timeline-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto}
+.timeline-item{padding:8px 10px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:12px;line-height:1.5}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+.subtle{font-size:11px;color:#8b949e}
 .ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ai-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;font-size:12px;line-height:1.5;max-height:200px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word}
 .ai-card strong{color:#58a6ff;display:block;margin-bottom:4px}
@@ -1700,6 +1727,11 @@ tr:hover td{background:#161b2288}
 .chat-role{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .chat-examples{font-size:12px;color:#8b949e;line-height:1.6;margin-bottom:12px}
 .chat-input{width:100%;min-height:96px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#c9d1d9;padding:12px;font-size:13px;resize:vertical}
+@media (max-width:1100px){
+  .container{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ai-grid,.setup-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -1757,10 +1789,42 @@ tr:hover td{background:#161b2288}
 
   <!-- Consensus Panel -->
   <div class="card full">
-    <h2><span class="icon">🗳️</span> AI Agent Jury <span style="font-size:11px;color:#6e7681;font-weight:400;margin-left:8px">6-Agent Specialized Architecture</span> <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <h2><span class="icon">🗳️</span> AI Agent Jury <span style="font-size:11px;color:#6e7681;font-weight:400;margin-left:8px">Resolver-aware play selection</span> <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="consensusSummary"></div>
-    <table><thead><tr><th>Symbol</th><th>Decision</th><th>Confidence</th><th>Size %</th><th>Trail %</th><th>Reasoning</th></tr></thead>
+    <table><thead><tr><th>Symbol</th><th>Verdict</th><th>Play</th><th>Mode</th><th>State</th><th>Confidence</th><th>Size</th><th>Trigger / Why</th></tr></thead>
     <tbody id="consensus"></tbody></table>
+  </div>
+
+  <div class="card full">
+    <h2><span class="icon">🧭</span> Setup Resolver <span id="setupOpsStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
+    <div class="summary-row" id="setupOpsSummary"></div>
+    <div class="setup-grid">
+      <div class="subcard">
+        <h3>Pending Setups</h3>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Symbol</th><th>Play</th><th>State</th><th>Trigger</th><th>Expires</th></tr></thead>
+          <tbody id="pendingSetups"></tbody></table>
+        </div>
+      </div>
+      <div class="subcard">
+        <h3>Mode Report</h3>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Mode</th><th>Setups</th><th>Entered</th><th>Expired</th><th>P&L</th><th>Expect.</th></tr></thead>
+          <tbody id="modeReport"></tbody></table>
+        </div>
+      </div>
+      <div class="subcard">
+        <h3>Entry Locks</h3>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Symbol</th><th>Status</th><th>Losses</th><th>Until</th><th>Last</th></tr></thead>
+          <tbody id="entryLocks"></tbody></table>
+        </div>
+      </div>
+      <div class="subcard">
+        <h3 id="setupReplayTitle">Setup Replay</h3>
+        <div id="setupReplayTimeline" class="timeline-list"><div class="empty">No setup replay yet</div></div>
+      </div>
+    </div>
   </div>
 
   <!-- Trade History Panel -->
@@ -1833,7 +1897,7 @@ tr:hover td{background:#161b2288}
   <!-- Positions + Candidates side by side -->
   <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
-    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Strategy</th><th>Tier</th><th>Ratchet</th><th>Protection</th><th>Hold</th></tr></thead>
+    <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Play</th><th>Mode</th><th>Ratchet</th><th>Protection</th><th>Hold</th></tr></thead>
     <tbody id="positions"></tbody></table></div>
   </div>
   <div class="card">
@@ -1925,6 +1989,45 @@ function cls(v) { return v >= 0 ? 'positive' : 'negative'; }
 function fmt(v, d=2) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—'; }
 function holdStr(secs) { if(!secs) return '—'; const m=Math.floor(secs/60); const h=Math.floor(m/60); return h>0?h+'h '+m%60+'m':m+'m'; }
 function esc(v) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function verdictTagClass(decision) {
+  const text = String(decision || '').toUpperCase();
+  return text === 'BUY' ? 'tag-buy' : text === 'SHORT' ? 'tag-short' : 'tag-skip';
+}
+function timingTagClass(state) {
+  const text = String(state || '').toLowerCase();
+  return text === 'enter_now' ? 'tag-live' : text === 'wait_for_trigger' ? 'tag-wait' : text === 'cooldown' ? 'tag-lock' : 'tag-noedge';
+}
+function humanizeKey(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return '—';
+  return text.replaceAll('_', ' ');
+}
+function truncateText(text, limit=120) {
+  const value = String(text || '');
+  return value.length > limit ? value.slice(0, limit) + '...' : value;
+}
+function fmtClock(ts) {
+  if (!(typeof ts === 'number' && isFinite(ts) && ts > 0)) return '—';
+  return new Date(ts * 1000).toLocaleTimeString();
+}
+function fmtRelativeSeconds(secs) {
+  if (!(typeof secs === 'number' && isFinite(secs) && secs > 0)) return '—';
+  const mins = Math.floor(secs / 60);
+  if (mins < 1) return `${Math.round(secs)}s`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 1) return `${mins}m`;
+  return `${hours}h ${mins % 60}m`;
+}
+function pickReplaySymbol(lastConsensus, pendingPayload, entryControls) {
+  const lastSymbol = String(lastConsensus?.symbol || '').trim().toUpperCase();
+  if (lastSymbol) return lastSymbol;
+  const pendingSymbol = String((pendingPayload?.setups || [])[0]?.symbol || '').trim().toUpperCase();
+  if (pendingSymbol) return pendingSymbol;
+  const lockSymbol = String((entryControls?.loss_locks || [])[0]?.symbol || '').trim().toUpperCase();
+  if (lockSymbol) return lockSymbol;
+  const stateSymbol = String((entryControls?.trade_states || [])[0]?.symbol || '').trim().toUpperCase();
+  return stateSymbol || '';
+}
 function renderCopilotMessages() {
   const el = $('copilotMessages');
   if (!el) return;
@@ -2214,19 +2317,33 @@ async function refresh() {
     if (con.trust_flags) { _trustFlags = con.trust_flags; _brokerOnlyMode = !!_trustFlags.broker_only_mode; _degradedInternal = !!_trustFlags.internal_analytics_degraded; }
     const st = con.stats || {};
     const ac = st.api_calls || {};
+    const history = Array.isArray(con.history) ? con.history.slice().reverse() : [];
+    const enterNowCount = history.filter(h => String(h.timing_state || '').toLowerCase() === 'enter_now').length;
+    const waitCount = history.filter(h => String(h.timing_state || '').toLowerCase() === 'wait_for_trigger').length;
+    const noEdgeCount = history.filter(h => String(h.timing_state || 'no_edge').toLowerCase() === 'no_edge').length;
+    const latestConsensus = con.last_consensus || history[0] || {};
     $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations${_brokerOnlyMode ? ' | degraded' : _degradedInternal ? ' | internal degraded' : ''}` : '❌ Disabled';
     $('consensusSummary').innerHTML = con.enabled ? `
       <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Evals</div></div>
-      <div class="summary-item"><div class="val positive">${st.buys||0}</div><div class="lbl">BUY</div></div>
-      <div class="summary-item"><div class="val" style="color:#d2a8ff">${st.shorts||0}</div><div class="lbl">SHORT</div></div>
-      <div class="summary-item"><div class="val negative">${st.skips||0}</div><div class="lbl">SKIP</div></div>
+      <div class="summary-item"><div class="val positive">${enterNowCount}</div><div class="lbl">Enter Now</div></div>
+      <div class="summary-item"><div class="val" style="color:#e3b341">${waitCount}</div><div class="lbl">Wait</div></div>
+      <div class="summary-item"><div class="val negative">${noEdgeCount}</div><div class="lbl">No Edge</div></div>
       <div class="summary-item" title="${con.last_short_block_reason||''}"><div class="val negative">${con.short_verdicts_blocked||0}</div><div class="lbl">Short Blocked</div></div>
+      <div class="summary-item"><div class="val val-sm info">${esc(humanizeKey(latestConsensus.setup_mode || '—'))}</div><div class="lbl">Latest Mode</div></div>
+      <div class="summary-item"><div class="val val-sm" style="color:#d2a8ff">${esc(humanizeKey(latestConsensus.best_play || '—'))}</div><div class="lbl">Latest Play</div></div>
       <div class="summary-item"><div class="val" style="color:#e3b341">${(st.actionable_avg_confidence ?? st.avg_confidence)?(st.actionable_avg_confidence ?? st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Action Conf</div></div>
       <div class="summary-item"><div class="val val-sm" style="color:#8b949e">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
     ` : '';
-    $('consensus').innerHTML = con.history && con.history.length ? con.history.slice().reverse().map(h => {
-      const decCls = h.decision==='BUY'?'tag-buy':h.decision==='SHORT'?'tag-short':'tag-skip';
-      const reason = (h.reasoning||'').substring(0, 120) + ((h.reasoning||'').length > 120 ? '...' : '');
+    $('consensus').innerHTML = history.length ? history.map(h => {
+      const decCls = verdictTagClass(h.decision);
+      const timingState = String(h.timing_state || (h.decision === 'SKIP' ? 'no_edge' : 'enter_now')).toLowerCase();
+      const play = h.best_play || (h.decision === 'SHORT' ? 'continuation_short' : h.decision === 'BUY' ? 'continuation_long' : 'no_trade_yet');
+      const mode = h.setup_mode || 'invalid';
+      const triggerBits = [
+        h.trigger || h.no_trade_reason || '',
+        h.invalidation ? `invalidates on ${h.invalidation}` : '',
+      ].filter(Boolean);
+      const reason = truncateText(triggerBits.join(' · ') || h.reasoning || '—', 120);
       const votes = h.consensus_detail && h.consensus_detail.votes ? Object.entries(h.consensus_detail.votes).map(([k, v]) => `${k}:${v}`).join(' · ') : '';
       const cd = h.consensus_detail || {};
       const unavailable = Array.isArray(cd.unavailable_providers) ? cd.unavailable_providers : [];
@@ -2235,13 +2352,129 @@ async function refresh() {
         rateLimited.length ? `rate-limited: ${rateLimited.join(', ')}` : '',
         unavailable.filter(p => !rateLimited.includes(p)).length ? `missing: ${unavailable.filter(p => !rateLimited.includes(p)).join(', ')}` : '',
       ].filter(Boolean).join(' · ');
-      return `<tr><td><strong>${h.symbol}</strong></td>
+      return `<tr><td><strong>${h.symbol}</strong><div class="subtle mono">${esc(h.provider_used || '')}</div></td>
         <td><span class="tag ${decCls}">${h.decision}</span></td>
+        <td><div>${esc(humanizeKey(play))}</div><div class="subtle">${esc(h.hold_style || '')}</div></td>
+        <td><div>${esc(humanizeKey(mode))}</div><div class="subtle">${esc(h.direction_constraint || 'none')}</div></td>
+        <td><span class="tag ${timingTagClass(timingState)}">${esc(humanizeKey(timingState))}</span></td>
         <td>${(h.confidence||0).toFixed(0)}%</td>
-        <td>${(h.size_pct||0).toFixed(1)}%</td>
-        <td>${(h.trail_pct||0).toFixed(1)}%</td>
-        <td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reason}${votes ? `<div style="color:#8b949e;margin-top:4px">${votes}</div>` : ''}${providerIssues ? `<div style="color:#f0883e;margin-top:4px">${providerIssues}</div>` : ''}</td></tr>`;
-    }).join('') : '<tr><td colspan="6" class="empty">No agent decisions yet</td></tr>';
+        <td>${(h.size_pct||0).toFixed(1)}%<div class="subtle">${esc(h.size_posture || 'normal')}</div></td>
+        <td style="font-size:11px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc((h.reasoning||'') + ' | ' + (h.trigger||'') + ' | ' + (h.invalidation||''))}">${esc(reason)}${votes ? `<div style="color:#8b949e;margin-top:4px">${esc(votes)}</div>` : ''}${providerIssues ? `<div style="color:#f0883e;margin-top:4px">${esc(providerIssues)}</div>` : ''}</td></tr>`;
+    }).join('') : '<tr><td colspan="8" class="empty">No agent decisions yet</td></tr>';
+  }
+  // Setup resolver
+  const pendingPayload = await api('/api/pending-setups?limit=12');
+  const entryControls = await api('/api/entry-controls?limit=12');
+  const modeReport = await api('/api/mode-report');
+  const replaySymbol = pickReplaySymbol(con?.last_consensus, pendingPayload, entryControls);
+  const replay = replaySymbol ? await api(`/api/setup-replay?symbol=${encodeURIComponent(replaySymbol)}&limit=80`) : null;
+  if ($('setupOpsStats')) {
+    const pendingCount = pendingPayload?.count || 0;
+    const lockCount = (entryControls?.loss_locks || []).length;
+    $('setupOpsStats').textContent = `${pendingCount} pending · ${lockCount} locks`;
+  }
+  if ($('setupOpsSummary')) {
+    const mr = modeReport || {};
+    $('setupOpsSummary').innerHTML = `
+      <div class="summary-item"><div class="val info">${mr.setup_count||0}</div><div class="lbl">Setups</div></div>
+      <div class="summary-item"><div class="val" style="color:#e3b341">${mr.pending_setups_created||0}</div><div class="lbl">Pending</div></div>
+      <div class="summary-item"><div class="val positive">${mr.pending_setups_triggered||0}</div><div class="lbl">Triggered</div></div>
+      <div class="summary-item"><div class="val negative">${mr.pending_setups_expired||0}</div><div class="lbl">Expired</div></div>
+      <div class="summary-item"><div class="val info">${mr.entries_with_pending_setup||0}</div><div class="lbl">Entered</div></div>
+      <div class="summary-item"><div class="val negative">${mr.entries_without_pending_setup||0}</div><div class="lbl">Bypassed</div></div>
+      <div class="summary-item"><div class="val" style="color:#d2a8ff">${mr.mode_flip_count||0}</div><div class="lbl">Mode Flips</div></div>
+      <div class="summary-item"><div class="val ${cls((replay?.summary?.net_pnl)||0)}">${fmt((replay?.summary?.net_pnl)||0)}</div><div class="lbl">Replay P&L</div></div>
+    `;
+  }
+  if ($('pendingSetups')) {
+    const setups = pendingPayload?.setups || [];
+    $('pendingSetups').innerHTML = setups.length ? setups.map(row => `
+      <tr>
+        <td><strong>${esc(row.symbol || '?')}</strong><div class="subtle mono">${esc(row.setup_id || '')}</div></td>
+        <td><div>${esc(humanizeKey(row.best_play || row.mode || '—'))}</div><div class="subtle">${esc(humanizeKey(row.mode || ''))}</div></td>
+        <td><span class="tag ${timingTagClass(row.timing_state || 'wait_for_trigger')}">${esc(humanizeKey(row.timing_state || 'wait_for_trigger'))}</span></td>
+        <td style="font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.trigger || '')}">${esc(truncateText(row.trigger || '—', 80))}</td>
+        <td>${fmtClock(row.expires_at)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="5" class="empty">No waiting setups</td></tr>';
+  }
+  if ($('modeReport')) {
+    const rollup = Object.entries(modeReport?.mode_rollup || {}).sort((a, b) => (b[1]?.setups||0) - (a[1]?.setups||0));
+    const expectancy = modeReport?.executed_trades_by_mode || {};
+    $('modeReport').innerHTML = rollup.length ? rollup.map(([mode, row]) => `
+      <tr>
+        <td><strong>${esc(humanizeKey(mode))}</strong></td>
+        <td>${row.setups||0}<div class="subtle">pending ${row.pending||0}</div></td>
+        <td>${row.entered||0}</td>
+        <td>${row.expired||0}<div class="subtle">miss ${row.trigger_misses||0}</div></td>
+        <td class="${cls(row.trade_pnl||0)}">${fmt(row.trade_pnl||0)}</td>
+        <td class="${cls(expectancy?.[mode]?.expectancy || 0)}">${expectancy?.[mode]?.expectancy != null ? fmt(expectancy[mode].expectancy) : '—'}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="6" class="empty">No mode data yet</td></tr>';
+  }
+  if ($('entryLocks')) {
+    const locks = entryControls?.loss_locks || [];
+    const states = entryControls?.trade_states || [];
+    if (locks.length) {
+      $('entryLocks').innerHTML = locks.map(row => `
+        <tr>
+          <td><strong>${esc(row.symbol || '?')}</strong></td>
+          <td><span class="tag tag-lock">LOCKED</span></td>
+          <td>${row.consecutive_losses||0}</td>
+          <td>${fmtRelativeSeconds(row.seconds_remaining)}</td>
+          <td style="font-size:11px;color:#8b949e">${esc(humanizeKey(row.last_trade_reason || row.reason || '—'))}</td>
+        </tr>
+      `).join('');
+    } else {
+      $('entryLocks').innerHTML = states.length ? states.slice(0, 8).map(row => `
+        <tr>
+          <td><strong>${esc(row.symbol || '?')}</strong></td>
+          <td><span class="tag ${row.active_lock ? 'tag-lock' : 'tag-live'}">${row.active_lock ? 'LOCKED' : 'OPEN'}</span></td>
+          <td>${row.consecutive_losses||0}<div class="subtle">${row.consecutive_wins||0}W</div></td>
+          <td>${row.active_lock ? fmtClock(row.active_lock.expires_at) : fmtClock(row.last_exit_time)}</td>
+          <td style="font-size:11px;color:#8b949e">${esc(humanizeKey(row.last_reason || row.last_outcome || '—'))}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="5" class="empty">No symbol locks or streaks yet</td></tr>';
+    }
+  }
+  if ($('setupReplayTitle') && $('setupReplayTimeline')) {
+    const summaryBits = replay?.summary ? [
+      `${replay.summary.setup_count||0} setups`,
+      `${replay.summary.trade_count||0} trades`,
+      `${replay.summary.mode_flip_count||0} flips`,
+    ] : [];
+    $('setupReplayTitle').textContent = replaySymbol ? `Setup Replay · ${replaySymbol}` : 'Setup Replay';
+    const timeline = Array.isArray(replay?.timeline) ? replay.timeline.slice(-8).reverse() : [];
+    const trades = Array.isArray(replay?.trades) ? replay.trades.slice(-3).reverse() : [];
+    const transitions = Array.isArray(replay?.mode_transitions) ? replay.mode_transitions.slice(-3).reverse() : [];
+    const events = [
+      ...timeline.map(row => ({ts: row.recorded_at, kind: 'snapshot', row})),
+      ...trades.map(row => ({ts: row.exit_time || row.entry_time, kind: 'trade', row})),
+      ...transitions.map(row => ({ts: row.recorded_at, kind: 'transition', row})),
+    ].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    $('setupReplayTimeline').innerHTML = events.length ? events.map(event => {
+      if (event.kind === 'trade') {
+        const row = event.row;
+        return `<div class="timeline-item">
+          <div><strong>${esc(row.symbol || '?')}</strong> closed <span class="${cls(row.pnl||0)}">${fmt(row.pnl||0)}</span> <span class="subtle">(${fmt(row.pnl_pct||0)}%)</span></div>
+          <div class="subtle">${esc(humanizeKey(row.setup_mode || 'invalid'))} · ${esc(row.reason || '—')} · hold ${holdStr(row.hold_seconds)}</div>
+        </div>`;
+      }
+      if (event.kind === 'transition') {
+        const row = event.row;
+        return `<div class="timeline-item">
+          <div><strong>${esc(row.symbol || '?')}</strong> mode flip</div>
+          <div class="subtle">${esc(humanizeKey(row.from_mode || 'invalid'))} → ${esc(humanizeKey(row.to_mode || 'invalid'))} at ${fmtClock(row.recorded_at)}</div>
+        </div>`;
+      }
+      const row = event.row;
+      return `<div class="timeline-item">
+        <div><strong>${esc(row.symbol || '?')}</strong> <span class="tag ${timingTagClass(row.timing_state || 'no_edge')}">${esc(humanizeKey(row.timing_state || 'no_edge'))}</span> <span class="subtle">${fmtClock(row.recorded_at)}</span></div>
+        <div class="subtle">${esc(humanizeKey(row.setup_mode || 'invalid'))} · ${esc(humanizeKey(row.best_play || '—'))}</div>
+        <div>${esc(truncateText(row.trigger || row.no_trade_reason || '—', 110))}</div>
+        <div class="subtle">trigger ${row.trigger_live === true ? 'live' : row.trigger_live === false ? 'not live' : 'unknown'} · clf ${Number(row.classifier_confidence||0).toFixed(2)} · res ${Number(row.resolver_confidence||0).toFixed(2)}</div>
+      </div>`;
+    }).join('') + (summaryBits.length ? `<div class="timeline-item"><div class="subtle">${esc(summaryBits.join(' · '))}</div></div>` : '') : '<div class="empty">No setup replay yet</div>';
   }
   // Trade History
   const th = await api('/api/trade-history?limit=20');
@@ -2380,7 +2613,7 @@ async function refresh() {
     const statusBadge = isPending ? '<span class="tag" style="background:#e3b34122;color:#e3b341;border:1px solid #e3b34144;margin-left:4px">PENDING</span>' : '';
     return `<tr style="${isPending ? 'opacity:0.7' : ''}">
     <td><strong>${p.symbol}</strong>${statusBadge}</td><td>${(p.side||'long').toUpperCase()}</td><td>${p.quantity}</td><td>$${p.entry_price}</td>
-    <td>${isPending ? '<span style="color:#e3b341">awaiting fill</span>' : '$'+p.current_price}</td><td class="${cls(p.pnl)}">${isPending ? '—' : fmt(p.pnl)+' ('+fmt(p.pnl_pct)+'%)'}</td><td>${p.strategy_tag||'—'}</td><td>${p.signal_tier||'—'}</td><td>${typeof p.ratchet_floor_pct === 'number' ? fmt(p.ratchet_floor_pct,1)+'%' : '—'}</td><td>${isPending ? 'limit order' : (p.protection||'?')}</td><td>${isPending ? '—' : p.hold_time}</td>
+    <td>${isPending ? '<span style="color:#e3b341">awaiting fill</span>' : '$'+p.current_price}</td><td class="${cls(p.pnl)}">${isPending ? '—' : fmt(p.pnl)+' ('+fmt(p.pnl_pct)+'%)'}</td><td><div>${esc(humanizeKey(p.best_play || p.strategy_tag || '—'))}</div><div class="subtle">${esc(p.strategy_tag||'—')} · ${esc(p.signal_tier||'—')}</div></td><td><div>${esc(humanizeKey(p.setup_mode || 'invalid'))}</div><div class="subtle"><span class="tag ${timingTagClass(p.timing_state || 'enter_now')}">${esc(humanizeKey(p.timing_state || 'enter_now'))}</span>${p.hold_style ? ' · ' + esc(p.hold_style) : ''}</div></td><td>${typeof p.ratchet_floor_pct === 'number' ? fmt(p.ratchet_floor_pct,1)+'%' : '—'}</td><td>${isPending ? 'limit order' : (p.protection||'?')}</td><td>${isPending ? '—' : p.hold_time}</td>
   </tr>`;
   }).join('') : '<tr><td colspan="11" class="empty">No open positions</td></tr>';
   // Candidates

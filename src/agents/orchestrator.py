@@ -178,6 +178,23 @@ class Orchestrator:
             "macro": macro_brief,
         }
 
+        if all(isinstance(brief, dict) and brief.get("error") for brief in briefs.values()):
+            verdict = JuryVerdict(
+                symbol=symbol,
+                decision="SKIP",
+                size_pct=0.0,
+                trail_pct=3.0,
+                reasoning="All specialist agents unavailable — fail closed",
+                briefs=briefs,
+                provider_used="none",
+                consensus_detail={"agreement": "all_agents_unavailable"},
+            )
+            self._cache[cache_key] = (verdict, time.time())
+            self._skip_cache[cache_key] = time.time()
+            self._append_history(verdict)
+            logger.warning(f"Orchestrator fail-closed for {symbol}: all specialized agents unavailable")
+            return verdict
+
         verdict = await deliberate(symbol, price, briefs, signals_data=signals_data)
 
         # Update exit agent with latest briefs for this symbol

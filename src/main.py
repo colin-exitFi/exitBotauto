@@ -1719,15 +1719,18 @@ class TradingBot:
         return " | ".join(parts)
 
     def get_overnight_bias_context(self, refresh: bool = False) -> Dict:
-        if not self.overnight_context:
+        overnight_context = getattr(self, "overnight_context", None)
+        if not overnight_context:
             return {}
         try:
-            bias = self.overnight_context.get_bias(refresh=refresh) or {}
+            bias = overnight_context.get_bias(refresh=refresh) or {}
         except Exception as e:
             logger.debug(f"Overnight bias fetch failed: {e}")
             return {}
-        self.ai_layers["overnight_bias"] = bias
-        self.ai_layers["overnight_bias_summary"] = OvernightContext.format_summary(bias)
+        ai_layers = getattr(self, "ai_layers", None)
+        if isinstance(ai_layers, dict):
+            ai_layers["overnight_bias"] = bias
+            ai_layers["overnight_bias_summary"] = OvernightContext.format_summary(bias)
         return bias
 
     @staticmethod
@@ -2029,6 +2032,7 @@ class TradingBot:
                     "setup_mode": row.get("mode", candidate.get("setup_mode")),
                     "direction_constraint": row.get("direction_constraint", candidate.get("direction_constraint")),
                     "timing_state": row.get("timing_state", candidate.get("timing_state")),
+                    "best_play": row.get("best_play", candidate.get("best_play")),
                     "trigger": row.get("trigger", candidate.get("trigger")),
                     "trigger_spec": dict(row.get("trigger_spec", candidate.get("trigger_spec", {})) or {}),
                     "invalidation": row.get("invalidation", candidate.get("invalidation")),
@@ -2313,6 +2317,7 @@ class TradingBot:
             "mode": candidate.get("setup_mode"),
             "direction_constraint": candidate.get("direction_constraint"),
             "timing_state": candidate.get("timing_state"),
+            "best_play": candidate.get("best_play"),
             "trigger": candidate.get("trigger"),
             "trigger_spec": dict(candidate.get("trigger_spec", {}) or {}),
             "invalidation": candidate.get("invalidation"),

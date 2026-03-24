@@ -32,12 +32,14 @@ ENTRY_QUALITY_SIZE_MULT = {
 
 
 DEFAULT_BRIEF = {
-    "can_trade": True,
-    "size_cap_pct": 1.0,
-    "reasoning": "Risk agent neutral fallback — reduced size only",
-    "portfolio_heat": "medium",
+    "approved": False,
+    "can_trade": False,
+    "max_size_pct": 0.0,
+    "size_cap_pct": 0.0,
+    "reasoning": "Risk agent unavailable — fail closed",
+    "portfolio_heat": "unknown",
     "constraint_flags": ["risk_agent_fallback"],
-    "error": False,
+    "error": True,
 }
 
 

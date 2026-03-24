@@ -83,6 +83,24 @@ def get_symbol_trade_state(symbol: str) -> Dict:
     return state
 
 
+def list_symbol_trade_states(limit: Optional[int] = None) -> list:
+    data = _load()
+    rows = []
+    for symbol, state in (data.get("symbol_trade_state", {}) or {}).items():
+        if not isinstance(state, dict):
+            continue
+        row = dict(state)
+        row["symbol"] = _normalize(symbol)
+        lock = dict((data.get("symbol_loss_locks", {}) or {}).get(row["symbol"], {}) or {})
+        if lock and float(lock.get("expires_at", 0) or 0) > time.time():
+            row["active_lock"] = lock
+        rows.append(row)
+    rows.sort(key=lambda row: float(row.get("last_exit_time", 0) or 0), reverse=True)
+    if isinstance(limit, int) and limit > 0:
+        return rows[:limit]
+    return rows
+
+
 # ── Blacklist ────────────────────────────────────────────────────
 
 def blacklist_symbol(symbol: str, duration_seconds: float = _DEFAULT_BLACKLIST_SECONDS,
@@ -153,6 +171,26 @@ def get_symbol_loss_lock(symbol: str) -> Dict:
 
 def is_symbol_loss_locked(symbol: str) -> bool:
     return bool(get_symbol_loss_lock(symbol))
+
+
+def list_symbol_loss_locks(limit: Optional[int] = None) -> list:
+    now_ts = time.time()
+    data = _load()
+    rows = []
+    for symbol, entry in (data.get("symbol_loss_locks", {}) or {}).items():
+        if not isinstance(entry, dict):
+            continue
+        expires_at = float(entry.get("expires_at", 0) or 0)
+        if expires_at <= now_ts:
+            continue
+        row = dict(entry)
+        row["symbol"] = _normalize(symbol)
+        row["seconds_remaining"] = max(0, int(expires_at - now_ts))
+        rows.append(row)
+    rows.sort(key=lambda row: float(row.get("expires_at", 0) or 0), reverse=True)
+    if isinstance(limit, int) and limit > 0:
+        return rows[:limit]
+    return rows
 
 
 def clear_symbol_loss_lock(symbol: str):

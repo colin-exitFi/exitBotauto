@@ -15,7 +15,7 @@ DEFAULT_BRIEF = {
     "bias": "neutral",
     "headwinds": [],
     "reasoning": "No data available — neutral macro fallback",
-    "error": False,
+    "error": True,
 }
 
 PROMPT_TEMPLATE = """You are a MACRO/MARKET REGIME specialist inside Velox, an autonomous momentum trading engine.
