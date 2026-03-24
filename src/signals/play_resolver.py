@@ -169,18 +169,19 @@ def resolve_play(
                 no_trade_reason="too_extended" if features.range_pct >= 98.0 else "volume_not_confirming",
             )
 
-        if (features.vwap_distance_pct or 0.0) >= 0.0 and features.volume_accel >= 0.15 and features.entry_quality in {"pullback", "neutral"}:
+        # Volume acceleration is the primary entry signal. VWAP is a booster, not a gate.
+        if features.volume_accel >= 0.0 and features.entry_quality in {"pullback", "neutral"}:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
                 direction_constraint=direction_constraint,
                 timing_state="enter_now",
                 best_play="continuation_long",
-                trigger="already above VWAP with volume re-acceleration",
+                trigger="volume confirming with acceptable entry quality",
                 invalidation=invalidation,
                 hold_style="intraday",
                 classifier_confidence=classification.classifier_confidence,
-                resolver_confidence=0.82,
+                resolver_confidence=0.78,
                 reason_codes=base_reasons + ["timing_live"],
                 expires_at=expires_at,
                 size_posture="normal",
@@ -188,27 +189,26 @@ def resolve_play(
                 trigger_spec=TriggerSpec("already_live", {}, "entry conditions are already live"),
             )
 
-        trigger_spec = TriggerSpec(
-            "vwap_reclaim_hold",
-            {"bars": 2, "min_vwap_distance_pct": 0.0, "min_volume_accel": 0.15},
-            "reclaim VWAP and hold with re-accelerating volume",
-        )
         return PlayResolution(
             symbol=features.symbol,
             mode=mode,
             direction_constraint=direction_constraint,
             timing_state="wait_for_trigger",
             best_play="continuation_long",
-            trigger="reclaim VWAP and hold with re-accelerating volume",
+            trigger="volume re-acceleration needed",
             invalidation=invalidation,
             hold_style="intraday",
             classifier_confidence=classification.classifier_confidence,
-            resolver_confidence=0.67,
-            reason_codes=base_reasons + ["waiting_for_reclaim"],
+            resolver_confidence=0.55,
+            reason_codes=base_reasons + ["waiting_for_volume"],
             expires_at=expires_at,
             size_posture="normal",
             entry_now=False,
-            trigger_spec=trigger_spec,
+            trigger_spec=TriggerSpec(
+                "vwap_reclaim_hold",
+                {"bars": 2, "min_vwap_distance_pct": -999.0, "min_volume_accel": 0.0},
+                "volume re-acceleration",
+            ),
         )
 
     if mode == "continuation_short":
@@ -232,18 +232,18 @@ def resolve_play(
                 no_trade_reason="too_extended_to_downside" if features.range_pct <= 2.0 else "volume_not_confirming",
             )
 
-        if (features.vwap_distance_pct or 0.0) <= -0.05 and features.volume_accel >= 0.1:
+        if features.volume_accel >= 0.0:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
                 direction_constraint=direction_constraint,
                 timing_state="enter_now",
                 best_play="continuation_short",
-                trigger="already below VWAP with downside confirmation",
+                trigger="volume confirming downside",
                 invalidation=invalidation,
                 hold_style="intraday",
                 classifier_confidence=classification.classifier_confidence,
-                resolver_confidence=0.8,
+                resolver_confidence=0.78,
                 reason_codes=base_reasons + ["timing_live"],
                 expires_at=expires_at,
                 size_posture="normal",
@@ -251,27 +251,26 @@ def resolve_play(
                 trigger_spec=TriggerSpec("already_live", {}, "entry conditions are already live"),
             )
 
-        trigger_spec = TriggerSpec(
-            "vwap_reject_breakdown",
-            {"bars": 2, "max_vwap_distance_pct": -0.05, "min_volume_accel": 0.1},
-            "lose VWAP and confirm downside continuation",
-        )
         return PlayResolution(
             symbol=features.symbol,
             mode=mode,
             direction_constraint=direction_constraint,
             timing_state="wait_for_trigger",
             best_play="continuation_short",
-            trigger="lose VWAP and confirm downside continuation",
+            trigger="volume re-acceleration needed on downside",
             invalidation=invalidation,
             hold_style="intraday",
             classifier_confidence=classification.classifier_confidence,
-            resolver_confidence=0.65,
-            reason_codes=base_reasons + ["waiting_for_breakdown"],
+            resolver_confidence=0.55,
+            reason_codes=base_reasons + ["waiting_for_volume"],
             expires_at=expires_at,
             size_posture="normal",
             entry_now=False,
-            trigger_spec=trigger_spec,
+            trigger_spec=TriggerSpec(
+                "vwap_reject_breakdown",
+                {"bars": 2, "max_vwap_distance_pct": 999.0, "min_volume_accel": 0.0},
+                "volume re-acceleration on downside",
+            ),
         )
 
     if mode == "exhaustion_fade_short":
@@ -295,18 +294,19 @@ def resolve_play(
                 no_trade_reason="fade_not_confirmed",
             )
 
-        if features.losing_vwap and features.volume_accel <= 0.0:
+        # Exhaustion fade: if volume is decelerating, the move is dying. Enter now.
+        if features.volume_accel <= 0.0:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
                 direction_constraint=direction_constraint,
                 timing_state="enter_now",
                 best_play="exhaustion_fade_short",
-                trigger="VWAP lost and bounce failure confirmed on declining volume",
+                trigger="volume decelerating on extended move",
                 invalidation=invalidation,
                 hold_style="intraday",
                 classifier_confidence=classification.classifier_confidence,
-                resolver_confidence=0.85,
+                resolver_confidence=0.82,
                 reason_codes=base_reasons + ["timing_live"],
                 expires_at=expires_at,
                 size_posture="reduced",
@@ -314,27 +314,26 @@ def resolve_play(
                 trigger_spec=TriggerSpec("already_live", {}, "entry conditions are already live"),
             )
 
-        trigger_spec = TriggerSpec(
-            "fade_failure_reject",
-            {"min_daily_pct": 20.0, "max_volume_accel": 0.0},
-            "lose VWAP and fail the first bounce on declining volume",
-        )
         return PlayResolution(
             symbol=features.symbol,
             mode=mode,
             direction_constraint=direction_constraint,
             timing_state="wait_for_trigger",
             best_play="exhaustion_fade_short",
-            trigger="lose VWAP and fail the first bounce on declining volume",
+            trigger="volume needs to stop accelerating",
             invalidation=invalidation,
             hold_style="intraday",
             classifier_confidence=classification.classifier_confidence,
-            resolver_confidence=0.74,
-            reason_codes=base_reasons + ["waiting_for_failure"],
+            resolver_confidence=0.65,
+            reason_codes=base_reasons + ["waiting_for_deceleration"],
             expires_at=expires_at,
             size_posture="reduced",
             entry_now=False,
-            trigger_spec=trigger_spec,
+            trigger_spec=TriggerSpec(
+                "fade_failure_reject",
+                {"min_daily_pct": 15.0, "max_volume_accel": 0.1},
+                "volume deceleration confirms exhaustion",
+            ),
         )
 
     if mode == "swing_catalyst_long":
