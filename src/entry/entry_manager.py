@@ -797,6 +797,10 @@ class EntryManager:
             else:
                 logger.error(f"Short sell failed: {resp.status_code} {resp.text[:200]}")
                 self.last_order_error = f"alpaca_short_rejected_{resp.status_code}"
+                if "cannot be sold short" in str(resp.text or "").lower():
+                    if self.broker and hasattr(self.broker, "mark_unshortable"):
+                        self.broker.mark_unshortable(symbol)
+                        logger.warning(f"🩳 Marked {symbol} as unshortable for the session")
                 return None
         except Exception as e:
             logger.error(f"Short sell error for {symbol}: {e}")

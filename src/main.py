@@ -3935,6 +3935,12 @@ class TradingBot:
                     candidate_direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "BUY"
             else:
                 candidate_direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "BUY"
+
+            # Shortability pre-check: don't waste jury evals on unshortable stocks
+            if candidate_direction == "SHORT" and self.alpaca_client and hasattr(self.alpaca_client, "is_shortable"):
+                if not self.alpaca_client.is_shortable(symbol):
+                    self._record_short_verdict_block(symbol, "not_shortable", "pre_check")
+                    continue
             pre_risk_brief = await book_risk_agent.analyze(
                 symbol=symbol,
                 price=signal_price,
@@ -4012,16 +4018,48 @@ class TradingBot:
             )
 
             if verdict.decision not in {"BUY", "SHORT"}:
-                if str(candidate.get("timing_state", "") or "").lower() == "wait_for_trigger":
-                    self._persist_waiting_setup(candidate, verdict=verdict, shadow_mode=not self._mode_classifier_enforced())
-                if "cooldown" not in verdict.reasoning.lower():
-                    self._record_jury_veto(symbol)
-                    from src.data.entry_controls import record_jury_veto as _persist_veto
+                # Auto-enter path: classifier + resolver override jury SKIP for clean continuation_long pullbacks
+                auto_enter = False
+                if (
+                    self._mode_classifier_enforced()
+                    and bool(getattr(settings, "MODE_CLASSIFIER_AUTO_ENTER", True))
+                    and str(candidate.get("setup_mode", "") or "").lower() == "continuation_long"
+                    and str(candidate.get("timing_state", "") or "").lower() == "enter_now"
+                    and str(candidate.get("entry_quality", "") or "").lower() in {"pullback", "neutral"}
+                    and float(candidate.get("classifier_confidence", 0) or 0) >= 0.65
+                    and self.entry_manager.is_market_open()
+                    and not self.entry_manager.is_extended_hours()
+                ):
+                    logger.warning(
+                        f"🔥 AUTO-ENTER OVERRIDE {symbol}: classifier continuation_long + enter_now "
+                        f"(conf={candidate.get('classifier_confidence')}, quality={candidate.get('entry_quality')}) "
+                        f"— jury skipped but math says go at 50% size"
+                    )
+                    log_activity("trade", f"🔥 AUTO-ENTER: {symbol} continuation_long (jury overridden by classifier)")
+                    verdict = JuryVerdict(
+                        symbol=symbol,
+                        decision="BUY",
+                        size_pct=max(0.5, float(verdict.size_pct or 1.0) * 0.5),
+                        trail_pct=float(verdict.trail_pct or 2.0),
+                        reasoning=f"Classifier auto-enter: continuation_long pullback, conf={candidate.get('classifier_confidence')}",
+                        confidence=float(candidate.get("classifier_confidence", 0.7) or 0.7) * 100,
+                        provider_used="classifier_auto",
+                        briefs=briefs,
+                        consensus_detail={"agreement": "classifier_auto_enter", "votes": votes},
+                    )
+                    auto_enter = True
 
-                    _persist_veto(symbol)
-                    logger.info(f"Jury SKIP for {symbol}: {verdict.reasoning}")
-                    log_activity("ai", f"{symbol}: SKIP — {verdict.reasoning}")
-                continue
+                if not auto_enter:
+                    if str(candidate.get("timing_state", "") or "").lower() == "wait_for_trigger":
+                        self._persist_waiting_setup(candidate, verdict=verdict, shadow_mode=not self._mode_classifier_enforced())
+                    if "cooldown" not in verdict.reasoning.lower():
+                        self._record_jury_veto(symbol)
+                        from src.data.entry_controls import record_jury_veto as _persist_veto
+
+                        _persist_veto(symbol)
+                        logger.info(f"Jury SKIP for {symbol}: {verdict.reasoning}")
+                        log_activity("ai", f"{symbol}: SKIP — {verdict.reasoning}")
+                    continue
 
             min_conf = float(getattr(settings, "MIN_JURY_CONFIDENCE", 40) or 40)
             if verdict.confidence < min_conf:

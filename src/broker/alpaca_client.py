@@ -87,6 +87,41 @@ class AlpacaClient:
         except Exception as e:
             logger.debug(f"Payload capture failed ({label}): {e}")
 
+    # ── Asset shortability cache ────────────────────────────────────
+
+    _unshortable_cache: Dict = {}
+
+    def is_shortable(self, symbol: str) -> bool:
+        sym = str(symbol or "").upper().strip()
+        if not sym:
+            return False
+        cached = self._unshortable_cache.get(sym)
+        if cached is not None:
+            ts, result = cached
+            if time.time() - ts < 86400:
+                return result
+        self._ensure_init()
+        try:
+            import requests as _req
+            resp = _req.get(
+                f"{self._base_url}/v2/assets/{sym}",
+                headers=self._rest_headers(),
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                shortable = bool(data.get("shortable", False)) and bool(data.get("easy_to_borrow", False))
+                self._unshortable_cache[sym] = (time.time(), shortable)
+                return shortable
+        except Exception:
+            pass
+        return True
+
+    def mark_unshortable(self, symbol: str):
+        sym = str(symbol or "").upper().strip()
+        if sym:
+            self._unshortable_cache[sym] = (time.time(), False)
+
     # ── Account ────────────────────────────────────────────────────
 
     def get_account(self) -> Dict:
