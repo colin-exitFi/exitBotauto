@@ -31,6 +31,37 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t.setdefault("giveback_pct", None)
     t.setdefault("loss_category", None)
     t.setdefault("post_exit_1h_price", None)
+    t.setdefault("setup_id", "")
+    t.setdefault("setup_mode", "invalid")
+    t.setdefault("direction_constraint", "none")
+    t.setdefault("timing_state", "no_edge")
+    t.setdefault("best_play", "")
+    t.setdefault("trigger", "")
+    t.setdefault("trigger_spec", {})
+    t.setdefault("invalidation", "")
+    t.setdefault("hold_style", t.get("holding_horizon", "intraday"))
+    t.setdefault("size_posture", "normal")
+    t.setdefault("no_trade_reason", None)
+    t.setdefault("classifier_confidence", 0.0)
+    t.setdefault("resolver_confidence", 0.0)
+    t.setdefault("execution_confidence", 0.0)
+    t.setdefault("feature_snapshot_id", "")
+    t.setdefault("feature_quality_score", 0.0)
+    t.setdefault("feature_quality", "")
+    t.setdefault("missing_fields", [])
+    t.setdefault("material_change_signature", "")
+    t.setdefault("symbol_state", "idle")
+    t.setdefault("jury_entry_now", False)
+    t.setdefault("jury_trigger", "")
+    t.setdefault("jury_invalidation", "")
+    t.setdefault("jury_hold_style", "")
+    t.setdefault("jury_size_posture", "")
+    t.setdefault("jury_no_trade_reason", None)
+    t.setdefault("triggered", True)
+    t.setdefault("entered", True)
+    t.setdefault("profitable", None)
+    t.setdefault("ratchet_activated", False)
+    t.setdefault("hard_stopped", False)
 
     sources = t.get("signal_sources", [])
     if isinstance(sources, str):
@@ -45,6 +76,13 @@ def normalize_trade_record(trade: Dict) -> Dict:
     if not isinstance(anomaly_flags, list):
         anomaly_flags = []
     t["anomaly_flags"] = anomaly_flags
+
+    missing_fields = t.get("missing_fields", [])
+    if isinstance(missing_fields, str):
+        missing_fields = [f.strip() for f in missing_fields.split(",") if f.strip()]
+    if not isinstance(missing_fields, list):
+        missing_fields = []
+    t["missing_fields"] = missing_fields
 
     t.setdefault("decision_confidence", 0)
     t.setdefault("provider_used", "")

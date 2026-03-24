@@ -246,10 +246,9 @@ class ProfitRatchet:
     @staticmethod
     def make_client_order_id(symbol: str, order_kind: str, anchor: object) -> str:
         sym = "".join(ch for ch in str(symbol or "").upper() if ch.isalnum())[:8] or "UNK"
-        kind = "".join(ch for ch in str(order_kind or "").lower() if ch.isalnum())[:12] or "order"
-        anchor_str = str(anchor or "0").replace(".", "p").replace("-", "m")
-        anchor_str = "".join(ch for ch in anchor_str if ch.isalnum())[:18] or "0"
-        return f"veloxv2-{sym}-{kind}-{anchor_str}"[:48]
+        kind = "".join(ch for ch in str(order_kind or "").lower() if ch.isalnum())[:16] or "order"
+        ts_ms = int(time.time() * 1000)
+        return f"{sym}_{kind}_{ts_ms}"[:48]
 
     @classmethod
     def _compute_peak_price(cls, position: Dict, current_price: float, side: str) -> float:

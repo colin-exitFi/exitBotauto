@@ -10,7 +10,8 @@ from loguru import logger
 
 from config import settings
 from src.data import strategy_controls
-from src.data.strategy_tags import normalize_strategy_tag
+from src.data.setup_identity import normalize_symbol_state
+from src.data.strategy_tags import is_artifact_strategy_tag, normalize_strategy_tag
 from src.exit.profit_ratchet import ProfitRatchet
 
 
@@ -222,6 +223,7 @@ class EntryManager:
                     f"Cancelled {cancelled} conflicting protection orders for {symbol} before retry {attempt}/3"
                 )
             await asyncio.sleep(1)
+            client_order_id = ProfitRatchet.make_client_order_id(symbol, "hardstop", stop_price)
             order = await asyncio.get_event_loop().run_in_executor(
                 None,
                 self.broker.place_stop_loss_order,
@@ -250,6 +252,48 @@ class EntryManager:
         except Exception:
             multiplier = 1.0
         return max(0.75, min(1.25, multiplier))
+
+    @staticmethod
+    def _extract_setup_metadata(sentiment_data: Dict) -> Dict:
+        data = dict(sentiment_data or {})
+        missing_fields = data.get("missing_fields", []) or []
+        if isinstance(missing_fields, str):
+            missing_fields = [field.strip() for field in missing_fields.split(",") if field.strip()]
+        if not isinstance(missing_fields, list):
+            missing_fields = []
+        return {
+            "setup_id": data.get("setup_id"),
+            "setup_mode": str(data.get("setup_mode", "invalid") or "invalid"),
+            "direction_constraint": str(data.get("direction_constraint", "none") or "none"),
+            "timing_state": str(data.get("timing_state", "enter_now") or "enter_now"),
+            "best_play": data.get("best_play"),
+            "trigger": data.get("trigger"),
+            "trigger_spec": dict(data.get("trigger_spec", {}) or {}),
+            "invalidation": data.get("invalidation"),
+            "hold_style": data.get("hold_style"),
+            "size_posture": data.get("size_posture", "normal"),
+            "no_trade_reason": data.get("no_trade_reason"),
+            "classifier_confidence": float(data.get("classifier_confidence", 0.0) or 0.0),
+            "resolver_confidence": float(data.get("resolver_confidence", 0.0) or 0.0),
+            "execution_confidence": float(data.get("execution_confidence", 0.0) or 0.0),
+            "feature_snapshot_id": data.get("feature_snapshot_id"),
+            "feature_quality_score": float(data.get("feature_quality_score", 0.0) or 0.0),
+            "feature_quality": str(data.get("feature_quality", "") or ""),
+            "missing_fields": list(missing_fields),
+            "material_change_signature": data.get("material_change_signature"),
+            "symbol_state": normalize_symbol_state(data.get("symbol_state", "live_position")),
+            "mode_features": dict(data.get("mode_features", {}) or {}),
+            "bar_context": dict(data.get("bar_context", {}) or {}),
+            "setup_created_at": data.get("created_at"),
+            "setup_last_refreshed_at": data.get("last_refreshed_at"),
+            "data_age_seconds": float(data.get("data_age_seconds", 0.0) or 0.0),
+            "jury_entry_now": bool(data.get("jury_entry_now", False)),
+            "jury_trigger": data.get("jury_trigger"),
+            "jury_invalidation": data.get("jury_invalidation"),
+            "jury_hold_style": data.get("jury_hold_style"),
+            "jury_size_posture": data.get("jury_size_posture"),
+            "jury_no_trade_reason": data.get("jury_no_trade_reason"),
+        }
 
     def _apply_strategy_controls(self, symbol: str, sentiment_data: Dict, notional: float) -> Optional[float]:
         controls = strategy_controls.load_controls()
@@ -625,6 +669,8 @@ class EntryManager:
             "swing_only": swing_only,
             "_exit_recorded": False,
         }
+        position.update(self._extract_setup_metadata(sentiment_data))
+        position["symbol_state"] = "live_position"
         self.positions[symbol] = position
         if extended:
             logger.success(
@@ -900,6 +946,8 @@ class EntryManager:
             "swing_only": swing_only,
             "_exit_recorded": False,
         }
+        position.update(self._extract_setup_metadata(sentiment_data))
+        position["symbol_state"] = "live_position"
         self.positions[symbol] = position
         stop_info = (
             f" 🛡️ stop=${hard_stop_price:.2f}"
@@ -1199,7 +1247,9 @@ class EntryManager:
                     pass
             if _raw_tag in ("unknown", "", None):
                 _raw_tag = "carryover"
-            restored_strategy_tag = normalize_strategy_tag(_raw_tag, fallback="carryover")
+            restored_strategy_tag = normalize_strategy_tag(_raw_tag, fallback="unknown", allow_artifacts=True)
+            if is_artifact_strategy_tag(restored_strategy_tag):
+                restored_strategy_tag = "unknown"
             self.positions[sym] = {
                 "symbol": sym,
                 "side": side,

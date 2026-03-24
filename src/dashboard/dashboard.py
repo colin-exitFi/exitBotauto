@@ -27,6 +27,7 @@ from src.agents.base_agent import (
     get_api_cost_stats,
 )
 from src.data import strategy_controls
+from src.data.pending_setups import list_pending_setups
 from src.data.strategy_tags import PRIMARY_BOOKS, is_artifact_strategy_tag, normalize_strategy_tag
 
 app = FastAPI(title="Velox", version="2.0.0")
@@ -1032,6 +1033,16 @@ async def get_shadow_trades(limit: int = 100):
 async def get_book_scoreboard():
     return {
         "books": _build_book_scoreboard_rows(),
+        "generated_at": time.time(),
+    }
+
+
+@app.get("/api/pending-setups")
+async def get_pending_setups(limit: int = 50):
+    rows = list_pending_setups(limit=max(1, min(int(limit or 50), 200)))
+    return {
+        "count": len(rows),
+        "setups": rows,
         "generated_at": time.time(),
     }
 

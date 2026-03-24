@@ -32,7 +32,13 @@ def _load() -> Dict:
                     return data
     except Exception as e:
         logger.warning(f"Failed to load entry controls: {e}")
-    return {"blacklist": {}, "cooldowns": {}, "jury_vetoes": {}, "tombstones": {}}
+    return {
+        "blacklist": {},
+        "cooldowns": {},
+        "jury_vetoes": {},
+        "tombstones": {},
+        "pending_setups": {},
+    }
 
 
 def _save(data: Dict):
@@ -47,6 +53,18 @@ def _prune_expired(store: Dict, now: float) -> Dict:
 
 def load_controls() -> Dict:
     return _load()
+
+
+def load_pending_setups_store() -> Dict:
+    data = _load()
+    store = data.get("pending_setups", {})
+    return store if isinstance(store, dict) else {}
+
+
+def save_pending_setups_store(store: Dict):
+    data = _load()
+    data["pending_setups"] = store if isinstance(store, dict) else {}
+    _save(data)
 
 
 # ── Blacklist ────────────────────────────────────────────────────
@@ -179,4 +197,5 @@ def prune_expired():
     data["blacklist"] = _prune_expired(data.get("blacklist", {}), now)
     data["cooldowns"] = _prune_expired(data.get("cooldowns", {}), now)
     data["jury_vetoes"] = _prune_expired(data.get("jury_vetoes", {}), now)
+    data["pending_setups"] = _prune_expired(data.get("pending_setups", {}), now)
     _save(data)

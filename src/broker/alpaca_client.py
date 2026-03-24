@@ -103,6 +103,11 @@ class AlpacaClient:
                 "pattern_day_trader": acct.pattern_day_trader,
                 "daytrade_count": acct.daytrade_count,
                 "trading_blocked": acct.trading_blocked,
+                "shorting_enabled": getattr(acct, "shorting_enabled", None),
+                "account_blocked": getattr(acct, "account_blocked", None),
+                "trade_suspended_by_user": getattr(acct, "trade_suspended_by_user", None),
+                "multiplier": str(getattr(acct, "multiplier", "") or ""),
+                "status": str(getattr(acct, "status", "") or ""),
                 "long_market_value": float(acct.long_market_value),
                 "short_market_value": float(getattr(acct, "short_market_value", 0) or 0),
             }
@@ -117,6 +122,11 @@ class AlpacaClient:
                 "pattern_day_trader": False,
                 "daytrade_count": 0,
                 "trading_blocked": False,
+                "shorting_enabled": None,
+                "account_blocked": None,
+                "trade_suspended_by_user": None,
+                "multiplier": "",
+                "status": "",
                 "long_market_value": 0.0,
                 "short_market_value": 0.0,
             }

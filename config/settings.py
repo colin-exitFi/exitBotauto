@@ -187,6 +187,15 @@ REENTRY_COOLDOWN_SECONDS = _env_int("REENTRY_COOLDOWN_SECONDS", 300)
 SYMBOL_LOSS_COOLDOWN_SECONDS = _env_int("SYMBOL_LOSS_COOLDOWN_SECONDS", 900)
 BLACKLIST_DURATION_SECONDS = _env_int("BLACKLIST_DURATION_SECONDS", 86400)
 POSITION_MANAGER_MIN_HOLD_MINUTES = _env_float("POSITION_MANAGER_MIN_HOLD_MINUTES", 3.0)
+MODE_CLASSIFIER_ENABLED = _env("MODE_CLASSIFIER_ENABLED", "true").lower() in ("true", "1", "yes")
+MODE_CLASSIFIER_ENFORCE = _env("MODE_CLASSIFIER_ENFORCE", "false").lower() in ("true", "1", "yes")
+MODE_CLASSIFIER_ALLOW_PROVIDER_FALLBACK = _env("MODE_CLASSIFIER_ALLOW_PROVIDER_FALLBACK", "false").lower() in ("true", "1", "yes")
+MODE_CLASSIFIER_PENDING_REFRESH_LIMIT = _env_int("MODE_CLASSIFIER_PENDING_REFRESH_LIMIT", 8)
+DISABLED_SETUP_MODES = tuple(
+    part.strip().lower()
+    for part in _env("DISABLED_SETUP_MODES", "").split(",")
+    if part.strip()
+)
 
 # ── Payload Capture (paper trading diagnostics) ───────────────────
 CAPTURE_ALPACA_PAYLOADS = _env("CAPTURE_ALPACA_PAYLOADS", "false").lower() in ("true", "1", "yes")

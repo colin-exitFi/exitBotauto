@@ -244,6 +244,16 @@ def get_analytics() -> Dict:
             else None
         )
 
+    # By setup mode
+    by_setup_mode = {}
+    for t in analytics_history:
+        mode = str(t.get("setup_mode", "invalid") or "invalid").strip().lower() or "invalid"
+        if mode not in by_setup_mode:
+            by_setup_mode[mode] = _metric_bucket_init()
+        _update_metric_bucket(by_setup_mode[mode], t)
+    for mode, bucket in list(by_setup_mode.items()):
+        by_setup_mode[mode] = _finalize_metric_bucket(bucket)
+
     # By signal source (participation attribution)
     by_signal_source = {}
     for t in analytics_history:
@@ -364,6 +374,7 @@ def get_analytics() -> Dict:
         "by_hour": by_hour,
         "by_exit_reason": by_reason,
         "by_strategy_tag": dict(sorted(by_strategy.items(), key=lambda x: x[1]["pnl"], reverse=True)),
+        "by_setup_mode": dict(sorted(by_setup_mode.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_signal_source": dict(sorted(by_signal_source.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_asset_type": dict(sorted(by_asset_type.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_hold_duration": by_hold,

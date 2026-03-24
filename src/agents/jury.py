@@ -28,6 +28,16 @@ class JuryVerdict:
     provider_used: str = ""
     briefs: Dict = field(default_factory=dict)
     consensus_detail: Dict = field(default_factory=dict)
+    setup_mode: str = "invalid"
+    direction_constraint: str = "none"
+    timing_state: str = "no_edge"
+    best_play: str = ""
+    entry_now: bool = False
+    trigger: str = ""
+    invalidation: str = ""
+    hold_style: str = ""
+    size_posture: str = "normal"
+    no_trade_reason: str = ""
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> Dict:
@@ -40,6 +50,16 @@ class JuryVerdict:
             "confidence": self.confidence,
             "provider_used": self.provider_used,
             "consensus_detail": self.consensus_detail,
+            "setup_mode": self.setup_mode,
+            "direction_constraint": self.direction_constraint,
+            "timing_state": self.timing_state,
+            "best_play": self.best_play,
+            "entry_now": self.entry_now,
+            "trigger": self.trigger,
+            "invalidation": self.invalidation,
+            "hold_style": self.hold_style,
+            "size_posture": self.size_posture,
+            "no_trade_reason": self.no_trade_reason,
             "timestamp": self.timestamp,
         }
 
@@ -63,6 +83,13 @@ HOLDING HORIZON: {holding_horizon}
 ENTRY TIMING: {entry_quality} — stock is at {range_pct:.1f}% of day range
 MARKET REGIME: {market_regime}
 SIDE BIAS: {side_bias}
+MODE CONSTRAINT ACTIVE: {mode_constraint_active}
+SETUP MODE: {setup_mode}
+DIRECTION CONSTRAINT: {direction_constraint}
+TIMING STATE: {timing_state}
+BEST PLAY: {best_play}
+PLAY TRIGGER: {play_trigger}
+PLAY INVALIDATION: {play_invalidation}
 FADE CONTEXT: {fade_context}
 ECONOMIC CALENDAR: {economic_calendar}
 OVERNIGHT INDEX CONTEXT: {overnight_context}
@@ -121,12 +148,57 @@ UNIVERSAL RULES:
 - alpaca_movers source has 83-90% historical WR — give these candidates extra weight.
 - SKIP only when there is genuinely no edge. "Uncertainty" alone is not a reason to skip a liquid, moving stock.
 
+SETUP-SPECIFIC PLAYBOOK:
+{mode_guidance}
+
 SIZING:
 - size_pct should reflect conviction from 0.25 to 5.0.
 - trail_pct is a legacy compatibility field only; default it near 2.0.
 
 Respond with ONLY valid JSON:
-{{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis", "confidence": 0-100}}"""
+{{"decision": "BUY" or "SHORT" or "SKIP", "size_pct": number, "trail_pct": number, "reasoning": "brief synthesis", "confidence": 0-100, "entry_now": true/false, "trigger": "text", "invalidation": "text", "hold_style": "intraday/swing/multiday", "size_posture": "zero/reduced/normal/capped", "no_trade_reason": "text"}}"""
+
+
+def _mode_guidance(signals_data: Dict) -> str:
+    sd = signals_data or {}
+    if not bool(sd.get("mode_constraint_active")):
+        return (
+            "Mode classifier is running in shadow mode. Do not treat SETUP MODE as a hard gate yet. "
+            "Use it as context only and keep the standard v2 jury behavior."
+        )
+
+    mode = str(sd.get("setup_mode", "invalid") or "invalid").strip().lower()
+    trigger = str(sd.get("trigger", "") or "").strip() or "not provided"
+    invalidation = str(sd.get("invalidation", "") or "").strip() or "not provided"
+
+    guidance = {
+        "continuation_long": (
+            "This symbol was mechanically classified as continuation_long. "
+            "Only validate LONG timing. Prefer reclaim / pullback / re-acceleration behavior. "
+            f"If entry is not live, describe the exact trigger to wait for. Current trigger context: {trigger}. "
+            f"Invalidation context: {invalidation}."
+        ),
+        "continuation_short": (
+            "This symbol was mechanically classified as continuation_short. "
+            "Only validate SHORT timing. Prefer downside continuation below VWAP or failed bounce behavior. "
+            f"If entry is not live, describe the exact trigger to wait for. Current trigger context: {trigger}. "
+            f"Invalidation context: {invalidation}."
+        ),
+        "exhaustion_fade_short": (
+            "This symbol was mechanically classified as exhaustion_fade_short. "
+            "Do NOT chase it long. Only evaluate the short-fade thesis and whether the failure is confirmed now. "
+            f"Trigger context: {trigger}. Invalidation context: {invalidation}."
+        ),
+        "swing_catalyst_long": (
+            "This symbol was mechanically classified as swing_catalyst_long. "
+            "Only evaluate the long swing thesis, entry timing, pullback needs, and invalidation. "
+            f"Trigger context: {trigger}. Invalidation context: {invalidation}."
+        ),
+    }
+    return guidance.get(
+        mode,
+        "No deterministic mode is active. Only act if the setup is clean, liquid, and executable.",
+    )
 
 
 async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict = None) -> JuryVerdict:
@@ -191,6 +263,13 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             range_pct=float(sd.get("range_pct", 50) or 50),
             market_regime=sd.get("market_regime", "mixed"),
             side_bias=side_bias,
+            mode_constraint_active="YES" if bool(sd.get("mode_constraint_active")) else "NO",
+            setup_mode=sd.get("setup_mode", "invalid"),
+            direction_constraint=sd.get("direction_constraint", "none"),
+            timing_state=sd.get("timing_state", "no_edge"),
+            best_play=sd.get("best_play", "none"),
+            play_trigger=sd.get("trigger", "not set"),
+            play_invalidation=sd.get("invalidation", "not set"),
             fade_context=fade_context,
             economic_calendar=sd.get("economic_calendar", "None"),
             overnight_context=sd.get("overnight_context", "Unavailable"),
@@ -200,6 +279,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             option_chain_confirmation=sd.get("uw_chain_summary", "None"),
             uw_flow_summary=sd.get("uw_flow_summary", "None"),
             retro_feedback=retro_feedback,
+            mode_guidance=_mode_guidance(sd),
             technical=fmt(briefs.get("technical", {})),
             sentiment=fmt(briefs.get("sentiment", {})),
             catalyst=fmt(briefs.get("catalyst", {})),
@@ -244,6 +324,23 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
                 votes.append(normalized)
 
         verdict = _apply_consensus(symbol, votes, briefs, sd, provider_results)
+        verdict.setup_mode = str(sd.get("setup_mode", verdict.setup_mode) or verdict.setup_mode or "invalid")
+        verdict.direction_constraint = str(
+            sd.get("direction_constraint", verdict.direction_constraint) or verdict.direction_constraint or "none"
+        )
+        verdict.timing_state = str(sd.get("timing_state", verdict.timing_state) or verdict.timing_state or "no_edge")
+        verdict.best_play = str(sd.get("best_play", verdict.best_play) or verdict.best_play or "")
+        verdict.trigger = str(sd.get("trigger", verdict.trigger) or verdict.trigger or "")
+        verdict.invalidation = str(sd.get("invalidation", verdict.invalidation) or verdict.invalidation or "")
+        verdict.hold_style = str(
+            sd.get("hold_style", verdict.hold_style or sd.get("holding_horizon", "intraday"))
+            or verdict.hold_style
+            or "intraday"
+        )
+        verdict.size_posture = str(sd.get("size_posture", verdict.size_posture) or verdict.size_posture or "normal")
+        verdict.no_trade_reason = str(sd.get("no_trade_reason", verdict.no_trade_reason) or verdict.no_trade_reason or "")
+        if verdict.decision in {"BUY", "SHORT"} and verdict.entry_now is False:
+            verdict.entry_now = verdict.timing_state == "enter_now"
 
         risk_brief = briefs.get("risk", {}) or {}
         risk_blocked = risk_brief.get("can_trade") is False or (
@@ -261,6 +358,16 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
                 provider_used=verdict.provider_used,
                 briefs=briefs,
                 consensus_detail={**verdict.consensus_detail, "risk_override": True},
+                setup_mode=verdict.setup_mode,
+                direction_constraint=verdict.direction_constraint,
+                timing_state=verdict.timing_state,
+                best_play=verdict.best_play,
+                entry_now=False,
+                trigger=verdict.trigger,
+                invalidation=verdict.invalidation,
+                hold_style=verdict.hold_style,
+                size_posture="zero",
+                no_trade_reason="risk_override",
             )
 
         risk_cap = risk_brief.get("size_cap_pct", risk_brief.get("max_size_pct"))
@@ -387,6 +494,15 @@ def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
         confidence = max(0.0, min(100.0, float(result.get("confidence", 0) or 0)))
     except Exception:
         confidence = 0.0
+    hold_style = str(result.get("hold_style", "") or "").strip().lower()
+    if hold_style not in {"intraday", "swing", "multiday"}:
+        hold_style = ""
+    size_posture = str(result.get("size_posture", "") or "").strip().lower()
+    if size_posture not in {"zero", "reduced", "normal", "capped", "aggressive"}:
+        size_posture = ""
+    entry_now = result.get("entry_now")
+    if not isinstance(entry_now, bool):
+        entry_now = decision in {"BUY", "SHORT"}
     return {
         "provider": provider_name,
         "decision": decision,
@@ -394,6 +510,12 @@ def _normalize_vote(provider_name: str, result: Dict) -> Optional[Dict]:
         "trail_pct": trail_pct,
         "confidence": confidence,
         "reasoning": str(result.get("reasoning", "") or "")[:220],
+        "entry_now": entry_now,
+        "trigger": str(result.get("trigger", "") or "")[:220],
+        "invalidation": str(result.get("invalidation", "") or "")[:220],
+        "hold_style": hold_style,
+        "size_posture": size_posture,
+        "no_trade_reason": str(result.get("no_trade_reason", "") or "")[:120],
     }
 
 
@@ -705,6 +827,21 @@ def _average_confidence(votes: List[Dict]) -> float:
     return sum(float(vote.get("confidence", 0) or 0) for vote in votes) / max(1, len(votes))
 
 
+def _pick_vote_text(votes: List[Dict], field: str, default: str = "") -> str:
+    for vote in votes or []:
+        value = str(vote.get(field, "") or "").strip()
+        if value:
+            return value
+    return default
+
+
+def _pick_vote_bool(votes: List[Dict], field: str, default: bool = False) -> bool:
+    values = [vote.get(field) for vote in votes or [] if isinstance(vote.get(field), bool)]
+    if not values:
+        return default
+    return values.count(True) >= values.count(False)
+
+
 def _decision_verdict(
     symbol: str,
     decision: str,
@@ -744,6 +881,10 @@ def _decision_verdict(
     issue_suffix = _provider_issue_suffix(unavailable_providers, rate_limited_providers)
     if issue_suffix:
         summary = f"{summary}{issue_suffix}"
+    trigger = _pick_vote_text(agreeing_votes, "trigger")
+    invalidation = _pick_vote_text(agreeing_votes, "invalidation")
+    hold_style = _pick_vote_text(agreeing_votes, "hold_style", "intraday")
+    size_posture = _pick_vote_text(agreeing_votes, "size_posture", "normal")
 
     return JuryVerdict(
         symbol=symbol,
@@ -754,6 +895,11 @@ def _decision_verdict(
         confidence=round(consensus_conf, 2),
         provider_used=",".join(providers_used) if providers_used else "none",
         briefs=briefs,
+        entry_now=_pick_vote_bool(agreeing_votes, "entry_now", True),
+        trigger=trigger,
+        invalidation=invalidation,
+        hold_style=hold_style,
+        size_posture=size_posture,
         consensus_detail={
             "votes": vote_map,
             "total_models": len(providers_used),
@@ -811,6 +957,12 @@ def _skip_verdict(
         confidence=round(consensus_conf, 2),
         provider_used=",".join(providers_used) if providers_used else "none",
         briefs=briefs,
+        entry_now=False,
+        trigger=_pick_vote_text([], "trigger"),
+        invalidation="",
+        hold_style="",
+        size_posture="zero",
+        no_trade_reason=reasoning,
         consensus_detail={
             "votes": vote_map,
             "total_models": len(providers_used),

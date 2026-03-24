@@ -58,12 +58,16 @@ from src.ai.tuner import Tuner
 from src.ai.game_film import GameFilm
 from src.ai.position_manager import PositionManager
 from src.ai import trade_history
+from src.agents.jury import JuryVerdict
 from src.agents import risk_agent as book_risk_agent
 from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
 from src.ai.consensus import ConsensusEngine
 from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
 from src.data.trade_schema import normalize_trade_record
+from src.data.pending_setups import get_pending_setup, list_pending_setups, remove_pending_setup, upsert_pending_setup
+from src.data.setup_identity import build_material_change_signature, build_setup_id, normalize_symbol_state
+from src.data.setup_snapshots import record_setup_snapshot
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
 from src.data.strategy_tags import normalize_strategy_tag
 from src.data.strategy_playbook import (
@@ -74,6 +78,8 @@ from src.data.strategy_playbook import (
     score_directional_biases,
 )
 from src.data.technicals import compute_technicals, get_cached_rsi
+from src.signals.mode_classifier import build_mode_features, classify_mode, normalize_direction_constraint, normalize_mode
+from src.signals.play_resolver import TriggerSpec, evaluate_trigger, resolve_play
 from src.options.options_monitor import OptionsMonitor
 from src.reconciliation.reconciler import Reconciler
 
@@ -549,6 +555,21 @@ class TradingBot:
                 logger.error("Broker health check returned empty account — entries BLOCKED")
         except Exception as _be:
             logger.error(f"Broker health check failed: {_be} — entries BLOCKED until next cycle")
+        try:
+            shorting_status = self._refresh_shorting_readiness()
+            if shorting_status.get("ready"):
+                logger.info(
+                    f"🩳 Shorting readiness: ready "
+                    f"(paper={shorting_status.get('paper')}, PDT={shorting_status.get('daytrade_count')}, "
+                    f"equity=${float(shorting_status.get('equity', 0) or 0):,.2f})"
+                )
+            else:
+                logger.warning(
+                    "🩳 Shorting readiness: not ready "
+                    f"reasons={','.join(shorting_status.get('reasons', []) or ['unknown'])}"
+                )
+        except Exception as e:
+            logger.warning(f"Shorting readiness check failed: {e}")
 
         # Force a fresh reconciliation baseline at startup so we do not carry
         # stale critical state across restarts.
@@ -610,6 +631,7 @@ class TradingBot:
                             acct.get("equity", self.risk_manager.equity),
                             daytrade_count=acct.get("daytrade_count"),
                         )
+                        self._refresh_shorting_readiness()
                         # Update open risk
                         positions = self.entry_manager.get_positions() if self.entry_manager else []
                         self.risk_manager.update_open_risk(positions)
@@ -1913,6 +1935,557 @@ class TradingBot:
     async def refresh_shadow_trades(self):
         await self._refresh_shadow_records()
 
+    @staticmethod
+    def _mode_classifier_enabled() -> bool:
+        return bool(getattr(settings, "MODE_CLASSIFIER_ENABLED", True))
+
+    @staticmethod
+    def _mode_classifier_enforced() -> bool:
+        return bool(getattr(settings, "MODE_CLASSIFIER_ENABLED", True)) and bool(
+            getattr(settings, "MODE_CLASSIFIER_ENFORCE", False)
+        )
+
+    @staticmethod
+    def _disabled_setup_modes() -> set:
+        return {str(mode or "").strip().lower() for mode in getattr(settings, "DISABLED_SETUP_MODES", ()) if str(mode or "").strip()}
+
+    def _refresh_shorting_readiness(self) -> Dict:
+        account = self.alpaca_client.get_account() if self.alpaca_client else {}
+        shorting_enabled = account.get("shorting_enabled")
+        ready = bool(self.alpaca_client)
+        reasons = []
+        if shorting_enabled is False:
+            ready = False
+            reasons.append("shorting_disabled")
+        elif shorting_enabled is None:
+            ready = False
+            reasons.append("shorting_status_unknown")
+        if bool(account.get("trading_blocked")):
+            ready = False
+            reasons.append("trading_blocked")
+        if bool(account.get("account_blocked")):
+            ready = False
+            reasons.append("account_blocked")
+        if bool(account.get("trade_suspended_by_user")):
+            ready = False
+            reasons.append("trade_suspended_by_user")
+        if self.risk_manager and getattr(self.risk_manager, "is_swing_mode", None) and self.risk_manager.is_swing_mode():
+            ready = False
+            reasons.append("pdt_swing_mode")
+        status = {
+            "ready": ready,
+            "paper": bool(getattr(settings, "ALPACA_PAPER", True)),
+            "shorting_enabled": shorting_enabled,
+            "pattern_day_trader": bool(account.get("pattern_day_trader")),
+            "daytrade_count": int(account.get("daytrade_count", 0) or 0),
+            "equity": float(account.get("equity", 0) or 0),
+            "multiplier": str(account.get("multiplier", "") or ""),
+            "status": str(account.get("status", "") or ""),
+            "reasons": reasons,
+        }
+        self.ai_layers["shorting_readiness"] = status
+        return status
+
+    def _shorting_ready(self) -> bool:
+        status = dict(self.ai_layers.get("shorting_readiness", {}) or {})
+        return bool(status.get("ready"))
+
+    def _build_pending_setup_candidates(self, scan_candidates: List[Dict]) -> List[Dict]:
+        if not self._mode_classifier_enabled():
+            return []
+        live_by_symbol = {
+            str(row.get("symbol", "") or "").upper(): dict(row)
+            for row in (scan_candidates or [])
+            if str(row.get("symbol", "") or "").strip()
+        }
+        pending_rows = list_pending_setups(
+            limit=max(1, int(getattr(settings, "MODE_CLASSIFIER_PENDING_REFRESH_LIMIT", 8) or 8))
+        )
+        self.ai_layers["pending_setup_count"] = len(pending_rows)
+        pending_candidates = []
+        for row in pending_rows:
+            symbol = str(row.get("symbol", "") or "").upper()
+            if not symbol:
+                continue
+            candidate = dict(row.get("candidate_snapshot", {}) or {})
+            live = live_by_symbol.get(symbol)
+            if live:
+                candidate.update(live)
+            candidate.update(
+                {
+                    "symbol": symbol,
+                    "_pending_setup": True,
+                    "_pending_setup_mode": row.get("mode"),
+                    "_pending_setup_id": row.get("setup_id"),
+                    "_pending_setup_shadow_mode": bool(row.get("shadow_mode")),
+                    "setup_id": row.get("setup_id", candidate.get("setup_id")),
+                    "setup_mode": row.get("mode", candidate.get("setup_mode")),
+                    "direction_constraint": row.get("direction_constraint", candidate.get("direction_constraint")),
+                    "timing_state": row.get("timing_state", candidate.get("timing_state")),
+                    "trigger": row.get("trigger", candidate.get("trigger")),
+                    "trigger_spec": dict(row.get("trigger_spec", candidate.get("trigger_spec", {})) or {}),
+                    "invalidation": row.get("invalidation", candidate.get("invalidation")),
+                    "hold_style": row.get("hold_style", candidate.get("hold_style")),
+                    "size_posture": row.get("size_posture", candidate.get("size_posture", "normal")),
+                    "expires_at": row.get("expires_at", candidate.get("expires_at")),
+                    "created_at": row.get("created_at", candidate.get("created_at")),
+                    "last_refreshed_at": row.get("last_refreshed_at", candidate.get("last_refreshed_at")),
+                    "feature_snapshot_id": row.get("feature_snapshot_id", candidate.get("feature_snapshot_id")),
+                    "material_change_signature": row.get(
+                        "material_change_signature", candidate.get("material_change_signature")
+                    ),
+                    "feature_quality_score": row.get(
+                        "feature_quality_score", candidate.get("feature_quality_score", 0.0)
+                    ),
+                    "feature_quality": row.get("feature_quality", candidate.get("feature_quality", "")),
+                    "mode_features": dict(row.get("mode_features", candidate.get("mode_features", {})) or {}),
+                    "bar_context": dict(row.get("bar_context", candidate.get("bar_context", {})) or {}),
+                }
+            )
+            pending_candidates.append(candidate)
+        return pending_candidates
+
+    @staticmethod
+    def _apply_setup_fields_to_sentiment_data(
+        sentiment_data: Dict,
+        candidate: Dict,
+        verdict=None,
+        execution_gate: Optional[Dict] = None,
+    ) -> Dict:
+        sentiment_data = dict(sentiment_data or {})
+        candidate = dict(candidate or {})
+        sentiment_data["mode_constraint_active"] = bool(candidate.get("mode_constraint_active"))
+        sentiment_data["setup_id"] = candidate.get("setup_id")
+        sentiment_data["setup_mode"] = candidate.get("setup_mode", "invalid")
+        sentiment_data["direction_constraint"] = candidate.get("direction_constraint", "none")
+        sentiment_data["timing_state"] = candidate.get("timing_state", "no_edge")
+        sentiment_data["best_play"] = candidate.get("best_play", "")
+        sentiment_data["trigger"] = candidate.get("trigger", "")
+        sentiment_data["trigger_spec"] = dict(candidate.get("trigger_spec", {}) or {})
+        sentiment_data["invalidation"] = candidate.get("invalidation", "")
+        sentiment_data["hold_style"] = candidate.get("hold_style", candidate.get("holding_horizon", "intraday"))
+        sentiment_data["size_posture"] = candidate.get("size_posture", "normal")
+        sentiment_data["no_trade_reason"] = candidate.get("no_trade_reason")
+        sentiment_data["classifier_confidence"] = float(candidate.get("classifier_confidence", 0.0) or 0.0)
+        sentiment_data["resolver_confidence"] = float(candidate.get("resolver_confidence", 0.0) or 0.0)
+        sentiment_data["feature_snapshot_id"] = candidate.get("feature_snapshot_id")
+        sentiment_data["feature_quality_score"] = float(candidate.get("feature_quality_score", 0.0) or 0.0)
+        sentiment_data["feature_quality"] = candidate.get("feature_quality", "")
+        sentiment_data["missing_fields"] = list(candidate.get("missing_fields", []) or [])
+        sentiment_data["material_change_signature"] = candidate.get("material_change_signature")
+        sentiment_data["symbol_state"] = candidate.get("symbol_state", "classified")
+        sentiment_data["mode_features"] = dict(candidate.get("mode_features", {}) or {})
+        sentiment_data["bar_context"] = dict(candidate.get("bar_context", {}) or {})
+        sentiment_data["created_at"] = candidate.get("created_at")
+        sentiment_data["last_refreshed_at"] = candidate.get("last_refreshed_at")
+        sentiment_data["data_age_seconds"] = float(candidate.get("data_age_seconds", 0.0) or 0.0)
+        if execution_gate:
+            sentiment_data["execution_confidence"] = float(execution_gate.get("execution_confidence", 0.0) or 0.0)
+        if verdict is not None:
+            sentiment_data["jury_entry_now"] = bool(getattr(verdict, "entry_now", False))
+            sentiment_data["jury_trigger"] = getattr(verdict, "trigger", "") or ""
+            sentiment_data["jury_invalidation"] = getattr(verdict, "invalidation", "") or ""
+            sentiment_data["jury_hold_style"] = getattr(verdict, "hold_style", "") or ""
+            sentiment_data["jury_size_posture"] = getattr(verdict, "size_posture", "") or ""
+            sentiment_data["jury_no_trade_reason"] = getattr(verdict, "no_trade_reason", "") or ""
+        return sentiment_data
+
+    def _build_provider_fallback_verdict(self, candidate: Dict, failed_verdict) -> Optional[JuryVerdict]:
+        if not bool(getattr(settings, "MODE_CLASSIFIER_ALLOW_PROVIDER_FALLBACK", False)):
+            return None
+        if not self._mode_classifier_enforced():
+            return None
+        agreement = str((getattr(failed_verdict, "consensus_detail", {}) or {}).get("agreement", "") or "").lower()
+        if agreement not in {"no_votes", "degraded_insufficient", "single_model_insufficient", "degraded_split"}:
+            return None
+        mode = str(candidate.get("setup_mode", "") or "").strip().lower()
+        if mode not in {"continuation_long", "continuation_short"}:
+            return None
+        if str(candidate.get("timing_state", "") or "").strip().lower() != "enter_now":
+            return None
+        if float(candidate.get("feature_quality_score", 0.0) or 0.0) < 0.9:
+            return None
+        if float(candidate.get("classifier_confidence", 0.0) or 0.0) < 0.75:
+            return None
+        if float(candidate.get("resolver_confidence", 0.0) or 0.0) < 0.7:
+            return None
+        if float(candidate.get("spread_pct", 0.0) or 0.0) > 0.5:
+            return None
+        decision = "SHORT" if str(candidate.get("direction_constraint", "none") or "").lower() == "short_only" else "BUY"
+        if decision == "SHORT" and not self._shorting_ready():
+            return None
+        confidence = min(
+            70.0,
+            max(
+                45.0,
+                (float(candidate.get("classifier_confidence", 0.0) or 0.0) * 100.0 + float(candidate.get("resolver_confidence", 0.0) or 0.0) * 100.0) / 2.0,
+            ),
+        )
+        return JuryVerdict(
+            symbol=str(candidate.get("symbol", "") or ""),
+            decision=decision,
+            size_pct=0.5,
+            trail_pct=round(float(getattr(settings, "PROFIT_RATCHET_TRAIL_PCT", 2.0) or 2.0), 3),
+            reasoning="Deterministic fallback: provider panel degraded but setup remained high-quality and live.",
+            confidence=round(confidence, 2),
+            provider_used="deterministic_fallback",
+            consensus_detail={
+                "agreement": "deterministic_fallback",
+                "votes": {},
+                "total_models": 0,
+                "degraded": True,
+                "fallback_mode": mode,
+            },
+            setup_mode=mode,
+            direction_constraint=str(candidate.get("direction_constraint", "none") or "none"),
+            timing_state=str(candidate.get("timing_state", "enter_now") or "enter_now"),
+            best_play=str(candidate.get("best_play", "") or ""),
+            entry_now=True,
+            trigger=str(candidate.get("trigger", "") or ""),
+            invalidation=str(candidate.get("invalidation", "") or ""),
+            hold_style=str(candidate.get("hold_style", "intraday") or "intraday"),
+            size_posture="reduced",
+        )
+
+    async def _capture_bar_context(self, symbol: str) -> Dict:
+        if not symbol or not self.polygon_client:
+            return {}
+        loop = asyncio.get_event_loop()
+        try:
+            one_minute = await loop.run_in_executor(
+                None,
+                partial(self.polygon_client.get_bars, symbol, timespan="minute", multiplier=1, limit=5),
+            )
+        except Exception:
+            one_minute = []
+        try:
+            five_minute = await loop.run_in_executor(
+                None,
+                partial(self.polygon_client.get_bars, symbol, timespan="minute", multiplier=5, limit=3),
+            )
+        except Exception:
+            five_minute = []
+        return {
+            "bars_1m": one_minute or [],
+            "bars_5m": five_minute or [],
+        }
+
+    def _record_setup_snapshot(
+        self,
+        candidate: Dict,
+        symbol_state: str,
+        verdict=None,
+        extra: Optional[Dict] = None,
+    ) -> Optional[str]:
+        if not self._mode_classifier_enabled():
+            return None
+        payload = {
+            "setup_id": candidate.get("setup_id"),
+            "material_change_signature": candidate.get("material_change_signature"),
+            "symbol": candidate.get("symbol"),
+            "source": candidate.get("source"),
+            "strategy_tag": candidate.get("strategy_tag"),
+            "signal_tier": candidate.get("signal_tier"),
+            "created_at": candidate.get("created_at", candidate.get("signal_timestamp")),
+            "last_refreshed_at": candidate.get("last_refreshed_at", time.time()),
+            "data_age_seconds": candidate.get("data_age_seconds"),
+            "symbol_state": normalize_symbol_state(symbol_state),
+            "setup_mode": candidate.get("setup_mode"),
+            "direction_constraint": candidate.get("direction_constraint"),
+            "classifier_confidence": candidate.get("classifier_confidence"),
+            "classifier_reason_codes": list(candidate.get("classifier_reason_codes", []) or []),
+            "resolver_confidence": candidate.get("resolver_confidence"),
+            "timing_state": candidate.get("timing_state"),
+            "best_play": candidate.get("best_play"),
+            "trigger": candidate.get("trigger"),
+            "trigger_spec": dict(candidate.get("trigger_spec", {}) or {}),
+            "invalidation": candidate.get("invalidation"),
+            "hold_style": candidate.get("hold_style"),
+            "size_posture": candidate.get("size_posture"),
+            "no_trade_reason": candidate.get("no_trade_reason"),
+            "feature_quality_score": candidate.get("feature_quality_score"),
+            "feature_quality": candidate.get("feature_quality"),
+            "missing_fields": list(candidate.get("missing_fields", []) or []),
+            "mode_features": dict(candidate.get("mode_features", {}) or {}),
+            "bar_context": dict(candidate.get("bar_context", {}) or {}),
+            "market_regime": candidate.get("market_regime"),
+            "entry_quality": candidate.get("entry_quality"),
+            "holding_horizon": candidate.get("holding_horizon"),
+            "jury_response": None,
+        }
+        if verdict is not None:
+            payload["jury_response"] = {
+                "decision": getattr(verdict, "decision", None),
+                "confidence": getattr(verdict, "confidence", None),
+                "provider_used": getattr(verdict, "provider_used", None),
+                "reasoning": getattr(verdict, "reasoning", None),
+                "agreement": (getattr(verdict, "consensus_detail", {}) or {}).get("agreement"),
+            }
+        if extra:
+            payload.update(dict(extra))
+        snapshot_id = record_setup_snapshot(payload)
+        return snapshot_id
+
+    def _pending_setup_candidate_snapshot(self, candidate: Dict) -> Dict:
+        keep_fields = {
+            "symbol",
+            "price",
+            "change_pct",
+            "volume",
+            "volume_spike",
+            "vol_accel",
+            "spread_pct",
+            "range_pct",
+            "rolling_vwap_pct",
+            "rsi_14",
+            "source",
+            "side",
+            "score",
+            "signal_timestamp",
+            "strategy_tag",
+            "signal_tier",
+            "holding_horizon",
+            "entry_quality",
+            "market_regime",
+            "uw_flow_summary",
+            "uw_total_premium",
+            "uw_net_premium_bias",
+            "uw_chain_bias",
+            "uw_news_bias",
+            "st_bullish",
+            "st_bearish",
+            "sentiment_score",
+            "minute_vol",
+            "session_type",
+            "extended_hours",
+            "bar_context",
+            "overnight_context",
+            "human_intel",
+            "copy_trader_context",
+            "watchlist_reason",
+            "congress_trades",
+            "insider_activity",
+            "pharma_signal",
+            "pharma_catalyst_type",
+            "earnings",
+            "earnings_date",
+            "catalyst_date",
+            "anomaly_flags",
+        }
+        return {
+            key: value
+            for key, value in dict(candidate or {}).items()
+            if key in keep_fields
+        }
+
+    def _persist_waiting_setup(self, candidate: Dict, verdict=None, shadow_mode: bool = False) -> None:
+        if not self._mode_classifier_enabled():
+            return
+        setup_record = {
+            "setup_id": candidate.get("setup_id"),
+            "symbol": candidate.get("symbol"),
+            "mode": candidate.get("setup_mode"),
+            "direction_constraint": candidate.get("direction_constraint"),
+            "timing_state": candidate.get("timing_state"),
+            "trigger": candidate.get("trigger"),
+            "trigger_spec": dict(candidate.get("trigger_spec", {}) or {}),
+            "invalidation": candidate.get("invalidation"),
+            "hold_style": candidate.get("hold_style"),
+            "size_posture": candidate.get("size_posture"),
+            "expires_at": candidate.get("expires_at"),
+            "created_at": candidate.get("created_at", candidate.get("signal_timestamp", time.time())),
+            "last_refreshed_at": candidate.get("last_refreshed_at", time.time()),
+            "data_age_seconds": candidate.get("data_age_seconds"),
+            "feature_quality_score": candidate.get("feature_quality_score"),
+            "feature_quality": candidate.get("feature_quality"),
+            "classifier_confidence": candidate.get("classifier_confidence"),
+            "resolver_confidence": candidate.get("resolver_confidence"),
+            "classifier_reason_codes": list(candidate.get("classifier_reason_codes", []) or []),
+            "no_trade_reason": candidate.get("no_trade_reason"),
+            "feature_snapshot_id": candidate.get("feature_snapshot_id"),
+            "material_change_signature": candidate.get("material_change_signature"),
+            "symbol_state": "pending_trigger",
+            "shadow_mode": bool(shadow_mode),
+            "jury_confidence": getattr(verdict, "confidence", None) if verdict is not None else None,
+            "candidate_snapshot": self._pending_setup_candidate_snapshot(candidate),
+            "mode_features": dict(candidate.get("mode_features", {}) or {}),
+            "bar_context": dict(candidate.get("bar_context", {}) or {}),
+        }
+        upsert_pending_setup(setup_record)
+        snapshot_id = self._record_setup_snapshot(candidate, "pending_trigger", verdict=verdict, extra={"shadow_mode": bool(shadow_mode)})
+        if snapshot_id and not candidate.get("feature_snapshot_id"):
+            candidate["feature_snapshot_id"] = snapshot_id
+        self.ai_layers["pending_setup_count"] = len(list_pending_setups())
+
+    def _remove_waiting_setup(self, symbol: str, mode: Optional[str] = None) -> None:
+        remove_pending_setup(symbol, mode=mode)
+        self.ai_layers["pending_setup_count"] = len(list_pending_setups())
+
+    async def _enrich_candidate_setup_context(self, candidate: Dict) -> Dict:
+        if not self._mode_classifier_enabled():
+            return dict(candidate or {})
+
+        enriched = dict(candidate or {})
+        symbol = str(enriched.get("symbol", "") or "").upper()
+        now_ts = time.time()
+        snapshot = None
+        if symbol and self.scanner and hasattr(self.scanner, "_get_alpaca_snapshot"):
+            try:
+                snapshot = await asyncio.get_event_loop().run_in_executor(None, self.scanner._get_alpaca_snapshot, symbol)
+            except Exception:
+                snapshot = None
+        if isinstance(snapshot, dict):
+            for key, value in snapshot.items():
+                if value in (None, "", [], {}):
+                    continue
+                if key not in enriched or enriched.get(key) in (None, "", 0, 0.0):
+                    enriched[key] = value
+
+        price = float(enriched.get("price", 0) or 0)
+        tech_missing = any(enriched.get(key) is None for key in ("range_pct", "rolling_vwap_pct", "rsi_14", "vol_accel"))
+        if symbol and price > 0 and tech_missing and self.polygon_client:
+            try:
+                technicals = await compute_technicals(symbol, price, self.polygon_client, snapshot=snapshot) or {}
+            except Exception:
+                technicals = {}
+            if technicals:
+                enriched.update(technicals)
+
+        if symbol and not enriched.get("bar_context"):
+            enriched["bar_context"] = await self._capture_bar_context(symbol)
+
+        features = build_mode_features(enriched, now_ts=now_ts)
+        classification = classify_mode(features)
+        if classification.mode in self._disabled_setup_modes():
+            disabled_mode = classification.mode
+            classification.mode = "invalid"
+            classification.direction_constraint = "none"
+            classification.reason_codes = ["mode_disabled", f"mode_{disabled_mode}"]
+            classification.classifier_confidence = 0.0
+        resolution = resolve_play(features, classification, now_ts=now_ts)
+
+        existing_setup = get_pending_setup(features.symbol, classification.mode)
+        material_signature = build_material_change_signature(
+            mode=classification.mode,
+            timing_state=resolution.timing_state,
+            direction_constraint=classification.direction_constraint,
+            sentiment_pct=features.sentiment_pct,
+            halt_count=features.halt_count,
+            reclaiming_vwap=features.reclaiming_vwap,
+            losing_vwap=features.losing_vwap,
+            volume_accel=features.volume_accel,
+        )
+        created_at = float(
+            existing_setup.get("created_at", features.created_at)
+            if existing_setup and existing_setup.get("material_change_signature") == material_signature
+            else features.created_at
+        )
+        if existing_setup and existing_setup.get("material_change_signature") == material_signature:
+            setup_id = str(existing_setup.get("setup_id", "") or "")
+        else:
+            setup_id = build_setup_id(features.symbol, classification.mode, created_at, material_signature)
+
+        enriched["created_at"] = created_at
+        enriched["last_refreshed_at"] = features.last_refreshed_at
+        enriched["data_age_seconds"] = features.data_age_seconds
+        enriched["feature_quality_score"] = features.feature_quality_score
+        enriched["feature_quality"] = features.feature_quality
+        enriched["missing_fields"] = list(features.missing_fields or [])
+        enriched["mode_features"] = features.to_dict()
+        enriched["setup_mode"] = normalize_mode(classification.mode)
+        enriched["direction_constraint"] = normalize_direction_constraint(classification.direction_constraint)
+        enriched["classifier_confidence"] = classification.classifier_confidence
+        enriched["classifier_reason_codes"] = list(classification.reason_codes or [])
+        enriched["timing_state"] = resolution.timing_state
+        enriched["best_play"] = resolution.best_play
+        enriched["trigger"] = resolution.trigger
+        enriched["trigger_spec"] = resolution.trigger_spec.to_dict() if resolution.trigger_spec else {}
+        enriched["invalidation"] = resolution.invalidation
+        enriched["hold_style"] = resolution.hold_style
+        enriched["resolver_confidence"] = resolution.resolver_confidence
+        enriched["size_posture"] = resolution.size_posture
+        enriched["no_trade_reason"] = resolution.no_trade_reason
+        enriched["expires_at"] = resolution.expires_at
+        enriched["setup_id"] = setup_id
+        enriched["material_change_signature"] = material_signature
+        enriched["materially_new_setup"] = not bool(
+            existing_setup and existing_setup.get("material_change_signature") == material_signature
+        )
+        enriched["symbol_state"] = "pending_trigger" if resolution.timing_state == "wait_for_trigger" else "classified"
+
+        snapshot_id = self._record_setup_snapshot(enriched, enriched["symbol_state"])
+        if snapshot_id:
+            enriched["feature_snapshot_id"] = snapshot_id
+
+        self.ai_layers["last_mode_classification"] = {
+            "symbol": symbol,
+            "setup_id": setup_id,
+            "mode": enriched.get("setup_mode"),
+            "timing_state": enriched.get("timing_state"),
+            "best_play": enriched.get("best_play"),
+            "trigger": enriched.get("trigger"),
+            "classifier_confidence": enriched.get("classifier_confidence"),
+            "resolver_confidence": enriched.get("resolver_confidence"),
+        }
+        return enriched
+
+    def _setup_execution_gate(self, candidate: Dict, direction: str) -> Dict:
+        setup_mode = str(candidate.get("setup_mode", "") or "").strip().lower()
+        timing_state = str(candidate.get("timing_state", "") or "").strip().lower()
+        direction_constraint = str(candidate.get("direction_constraint", "none") or "none").strip().lower()
+        feature_quality_score = float(candidate.get("feature_quality_score", 0.0) or 0.0)
+        data_age_seconds = float(candidate.get("data_age_seconds", 0.0) or 0.0)
+        spread_pct = float(candidate.get("spread_pct", 0.0) or 0.0)
+        hold_style = str(candidate.get("hold_style", candidate.get("holding_horizon", "intraday")) or "intraday").lower()
+        desired_direction = str(direction or "BUY").upper()
+
+        penalties = 0.0
+        reasons = []
+        if feature_quality_score < 0.8:
+            penalties += (0.8 - feature_quality_score) * 0.5
+            reasons.append("feature_quality_haircut")
+        if hold_style == "intraday" and data_age_seconds > 60:
+            penalties += min(0.4, (data_age_seconds - 60.0) / 300.0)
+            reasons.append("stale_signal")
+        if spread_pct > 0.6:
+            penalties += min(0.3, max(0.0, spread_pct - 0.6) / 2.0)
+            reasons.append("wide_spread")
+        execution_confidence = max(0.0, min(1.0, 1.0 - penalties))
+
+        if not self._mode_classifier_enforced():
+            return {
+                "allowed": True,
+                "reason": "shadow_mode",
+                "execution_confidence": round(execution_confidence, 2),
+            }
+
+        if setup_mode == "invalid":
+            return {"allowed": False, "reason": "invalid_mode", "execution_confidence": round(execution_confidence, 2)}
+        if timing_state != "enter_now":
+            return {"allowed": False, "reason": timing_state or "trigger_not_live", "execution_confidence": round(execution_confidence, 2)}
+        if direction_constraint == "short_only" and desired_direction != "SHORT":
+            return {"allowed": False, "reason": "direction_constraint_short_only", "execution_confidence": round(execution_confidence, 2)}
+        if direction_constraint == "long_only" and desired_direction != "BUY":
+            return {"allowed": False, "reason": "direction_constraint_long_only", "execution_confidence": round(execution_confidence, 2)}
+        trigger_spec = candidate.get("trigger_spec", {}) or {}
+        if trigger_spec:
+            trigger = TriggerSpec(
+                trigger_type=str(trigger_spec.get("trigger_type", "") or ""),
+                params=dict(trigger_spec.get("params", {}) or {}),
+                description=str(trigger_spec.get("description", "") or ""),
+            )
+            if not evaluate_trigger(build_mode_features(candidate), trigger):
+                return {"allowed": False, "reason": "trigger_not_live", "execution_confidence": round(execution_confidence, 2)}
+        if hold_style == "intraday" and data_age_seconds > 120:
+            return {"allowed": False, "reason": "stale_signal", "execution_confidence": round(execution_confidence, 2)}
+        if spread_pct > 1.0:
+            return {"allowed": False, "reason": "spread_too_wide", "execution_confidence": round(execution_confidence, 2)}
+        if not self.alpaca_client:
+            return {"allowed": False, "reason": "broker_unavailable", "execution_confidence": round(execution_confidence, 2)}
+        if desired_direction == "SHORT" and not self._shorting_ready():
+            return {"allowed": False, "reason": "shorting_not_ready", "execution_confidence": round(execution_confidence, 2)}
+        return {"allowed": True, "reason": "ok", "execution_confidence": round(execution_confidence, 2)}
+
     def _prepare_candidate_metadata(self, candidate: Dict) -> Dict:
         prepared = dict(candidate or {})
         direction = "SHORT" if str(prepared.get("side", "")).lower() == "short" else "BUY"
@@ -2800,6 +3373,32 @@ class TradingBot:
             "entry_reason_code": position.get("entry_reason_code", "unknown"),
             "entry_model_votes": dict(position.get("entry_model_votes", {}) or {}),
             "risk_constraints_applied": list(position.get("risk_constraints_applied", []) or []),
+            "setup_id": position.get("setup_id", ""),
+            "setup_mode": position.get("setup_mode", "invalid"),
+            "direction_constraint": position.get("direction_constraint", "none"),
+            "timing_state": position.get("timing_state", "enter_now"),
+            "best_play": position.get("best_play", ""),
+            "trigger": position.get("trigger", ""),
+            "trigger_spec": dict(position.get("trigger_spec", {}) or {}),
+            "invalidation": position.get("invalidation", ""),
+            "hold_style": position.get("hold_style", position.get("holding_horizon", "intraday")),
+            "size_posture": position.get("size_posture", "normal"),
+            "no_trade_reason": position.get("no_trade_reason"),
+            "classifier_confidence": position.get("classifier_confidence", 0.0),
+            "resolver_confidence": position.get("resolver_confidence", 0.0),
+            "execution_confidence": position.get("execution_confidence", 0.0),
+            "feature_snapshot_id": position.get("feature_snapshot_id", ""),
+            "feature_quality_score": position.get("feature_quality_score", 0.0),
+            "feature_quality": position.get("feature_quality", ""),
+            "missing_fields": list(position.get("missing_fields", []) or []),
+            "material_change_signature": position.get("material_change_signature", ""),
+            "symbol_state": position.get("symbol_state", "live_position"),
+            "jury_entry_now": bool(position.get("jury_entry_now", False)),
+            "jury_trigger": position.get("jury_trigger", ""),
+            "jury_invalidation": position.get("jury_invalidation", ""),
+            "jury_hold_style": position.get("jury_hold_style", ""),
+            "jury_size_posture": position.get("jury_size_posture", ""),
+            "jury_no_trade_reason": position.get("jury_no_trade_reason"),
             "ratchet_peak_pnl_pct": position.get("ratchet_peak_pnl_pct", 0.0),
             "ratchet_floor_pct": position.get("ratchet_floor_pct"),
             "ratchet_limit_order_id": position.get("ratchet_limit_order_id"),
@@ -2814,6 +3413,11 @@ class TradingBot:
             "fill_timestamp": confirmed_exit_time,
             "fill_timestamp_source": fill_source,
             "exit_order_id": position.get("exit_order_id"),
+            "triggered": True,
+            "entered": True,
+            "profitable": pnl > 0,
+            "ratchet_activated": bool(position.get("ratchet_floor_pct") is not None),
+            "hard_stopped": str(reason or "").lower().startswith("hard_stop"),
             "slippage_bps": self._compute_entry_slippage_bps(
                 entry_price, position.get("signal_price", entry_price), side
             ),
@@ -3141,9 +3745,12 @@ class TradingBot:
         def _tier_rank(candidate_row: Dict) -> int:
             return {"tier_1": 0, "tier_2": 1, "tier_3": 2}.get(str(candidate_row.get("signal_tier", "tier_2")), 1)
 
-        prepared_candidates = [self._prepare_candidate_metadata(candidate) for candidate in list(candidates or [])[:20]]
+        pending_candidates = self._build_pending_setup_candidates(list(candidates or []))
+        combined_candidates = pending_candidates + list(candidates or [])[:20]
+        prepared_candidates = [self._prepare_candidate_metadata(candidate) for candidate in combined_candidates]
         prepared_candidates.sort(
             key=lambda row: (
+                0 if bool(row.get("_pending_setup")) else 1,
                 _tier_rank(row),
                 -float(row.get("priority", 0) or 0),
                 -float(row.get("uw_total_premium", 0) or 0),
@@ -3230,6 +3837,34 @@ class TradingBot:
                         candidate["insider_activity"] = insider_activity.get("summary", "")
                         candidate["insider_signal"] = insider_activity.get("signal", "watch")
 
+            candidate = await self._enrich_candidate_setup_context(candidate)
+            pending_mode = str(candidate.get("_pending_setup_mode", "") or "").strip().lower() or None
+            current_mode = str(candidate.get("setup_mode", "invalid") or "invalid").strip().lower()
+            timing_state = str(candidate.get("timing_state", "no_edge") or "no_edge").strip().lower()
+            candidate["mode_constraint_active"] = self._mode_classifier_enforced()
+
+            if pending_mode and pending_mode != current_mode:
+                self._remove_waiting_setup(symbol, mode=pending_mode)
+
+            if timing_state == "wait_for_trigger":
+                self._persist_waiting_setup(candidate, shadow_mode=not self._mode_classifier_enforced())
+                logger.info(
+                    f"⏳ SETUP WAIT {symbol}: mode={current_mode} trigger={candidate.get('trigger', 'n/a')} "
+                    f"expires_at={candidate.get('expires_at')}"
+                )
+                if self._mode_classifier_enforced():
+                    continue
+            elif current_mode == "invalid" or timing_state == "no_edge":
+                self._remove_waiting_setup(symbol, mode=pending_mode or current_mode)
+                if self._mode_classifier_enforced():
+                    logger.info(
+                        f"🚫 SETUP NO-EDGE {symbol}: mode={current_mode} "
+                        f"reason={candidate.get('no_trade_reason') or ','.join(candidate.get('classifier_reason_codes', [])[:2]) or 'no_clear_setup'}"
+                    )
+                    continue
+            elif current_mode != "invalid":
+                self._remove_waiting_setup(symbol, mode=pending_mode or current_mode)
+
             if self.position_manager and not self.position_manager.can_enter(symbol, positions, self.risk_manager):
                 logger.info(
                     f"🧭 ENTRY TRACE {symbol}: blocked before jury by position_manager "
@@ -3255,7 +3890,16 @@ class TradingBot:
             sentiment_data["strategy_tag"] = candidate.get("strategy_tag", "unknown")
             sentiment_data["share_notional_multiplier"] = 1.0
 
-            candidate_direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "BUY"
+            if self._mode_classifier_enforced():
+                constraint = str(candidate.get("direction_constraint", "none") or "none").lower()
+                if constraint == "short_only":
+                    candidate_direction = "SHORT"
+                elif constraint == "long_only":
+                    candidate_direction = "BUY"
+                else:
+                    candidate_direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "BUY"
+            else:
+                candidate_direction = "SHORT" if str(candidate.get("side", "")).lower() == "short" else "BUY"
             pre_risk_brief = await book_risk_agent.analyze(
                 symbol=symbol,
                 price=signal_price,
@@ -3304,6 +3948,10 @@ class TradingBot:
                 logger.error(f"Orchestrator error for {symbol}: {e}")
                 continue
 
+            fallback_verdict = self._build_provider_fallback_verdict(candidate, verdict)
+            if fallback_verdict is not None:
+                verdict = fallback_verdict
+
             if "cooldown" not in verdict.reasoning.lower():
                 evaluated += 1
                 if evaluated > 1:
@@ -3329,6 +3977,8 @@ class TradingBot:
             )
 
             if verdict.decision not in {"BUY", "SHORT"}:
+                if str(candidate.get("timing_state", "") or "").lower() == "wait_for_trigger":
+                    self._persist_waiting_setup(candidate, verdict=verdict, shadow_mode=not self._mode_classifier_enforced())
                 if "cooldown" not in verdict.reasoning.lower():
                     self._record_jury_veto(symbol)
                     from src.data.entry_controls import record_jury_veto as _persist_veto
@@ -3407,6 +4057,7 @@ class TradingBot:
             sentiment_data["extended_hours"] = bool(candidate.get("extended_hours"))
             sentiment_data["entry_quality"] = candidate.get("entry_quality", "neutral")
             sentiment_data["overnight_context"] = candidate.get("overnight_context", "")
+            sentiment_data = self._apply_setup_fields_to_sentiment_data(sentiment_data, candidate, verdict=verdict)
 
             log_activity(
                 "trade",
@@ -3436,6 +4087,24 @@ class TradingBot:
                 log_activity("trade", f"⛔ PLAYBOOK GATE: {symbol} {direction} blocked ({reason})")
                 if direction == "SHORT":
                     self._record_short_verdict_block(symbol, reason, "playbook")
+                continue
+
+            execution_gate = self._setup_execution_gate(candidate, direction)
+            sentiment_data = self._apply_setup_fields_to_sentiment_data(
+                sentiment_data,
+                candidate,
+                verdict=verdict,
+                execution_gate=execution_gate,
+            )
+            if not execution_gate.get("allowed", False):
+                reason = execution_gate.get("reason", "setup_gate_block")
+                logger.info(
+                    f"⛔ SETUP GATE {symbol}: {reason} mode={candidate.get('setup_mode')} "
+                    f"timing={candidate.get('timing_state')} direction={direction}"
+                )
+                log_activity("trade", f"⛔ SETUP GATE: {symbol} {direction} blocked ({reason})")
+                if direction == "SHORT":
+                    self._record_short_verdict_block(symbol, reason, "setup_gate")
                 continue
 
             if candidate.get("copy_trader_context"):
@@ -3537,6 +4206,57 @@ class TradingBot:
                 order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
                 self._record_short_verdict_block(symbol, order_reason, "execution")
             if pos:
+                pos["setup_id"] = candidate.get("setup_id", pos.get("setup_id"))
+                pos["setup_mode"] = candidate.get("setup_mode", pos.get("setup_mode", "invalid"))
+                pos["direction_constraint"] = candidate.get("direction_constraint", pos.get("direction_constraint", "none"))
+                pos["timing_state"] = candidate.get("timing_state", pos.get("timing_state", "enter_now"))
+                pos["best_play"] = candidate.get("best_play", pos.get("best_play", ""))
+                pos["trigger"] = getattr(verdict, "trigger", "") or candidate.get("trigger", pos.get("trigger", ""))
+                pos["trigger_spec"] = dict(candidate.get("trigger_spec", pos.get("trigger_spec", {})) or {})
+                pos["invalidation"] = getattr(verdict, "invalidation", "") or candidate.get(
+                    "invalidation", pos.get("invalidation", "")
+                )
+                pos["hold_style"] = getattr(verdict, "hold_style", "") or candidate.get(
+                    "hold_style", pos.get("hold_style", "")
+                )
+                pos["size_posture"] = getattr(verdict, "size_posture", "") or candidate.get(
+                    "size_posture", pos.get("size_posture", "normal")
+                )
+                pos["no_trade_reason"] = getattr(verdict, "no_trade_reason", "") or pos.get("no_trade_reason")
+                pos["classifier_confidence"] = float(candidate.get("classifier_confidence", 0.0) or 0.0)
+                pos["resolver_confidence"] = float(candidate.get("resolver_confidence", 0.0) or 0.0)
+                pos["execution_confidence"] = float(
+                    sentiment_data.get("execution_confidence", pos.get("execution_confidence", 0.0)) or 0.0
+                )
+                pos["feature_snapshot_id"] = candidate.get("feature_snapshot_id", pos.get("feature_snapshot_id"))
+                pos["feature_quality_score"] = float(candidate.get("feature_quality_score", 0.0) or 0.0)
+                pos["feature_quality"] = candidate.get("feature_quality", pos.get("feature_quality", ""))
+                pos["missing_fields"] = list(candidate.get("missing_fields", pos.get("missing_fields", [])) or [])
+                pos["material_change_signature"] = candidate.get(
+                    "material_change_signature", pos.get("material_change_signature")
+                )
+                pos["symbol_state"] = "live_position"
+                pos["jury_entry_now"] = bool(getattr(verdict, "entry_now", False))
+                pos["jury_trigger"] = getattr(verdict, "trigger", "") or ""
+                pos["jury_invalidation"] = getattr(verdict, "invalidation", "") or ""
+                pos["jury_hold_style"] = getattr(verdict, "hold_style", "") or ""
+                pos["jury_size_posture"] = getattr(verdict, "size_posture", "") or ""
+                pos["jury_no_trade_reason"] = getattr(verdict, "no_trade_reason", "") or ""
+                self._remove_waiting_setup(symbol, mode=pending_mode or current_mode)
+                self._record_setup_snapshot(
+                    {**candidate, "symbol_state": "live_position"},
+                    "live_position",
+                    verdict=verdict,
+                    extra={
+                        "execution_confidence": sentiment_data.get("execution_confidence"),
+                        "order_state": dict(pos.get("order_state", {}) or {}),
+                    },
+                )
+                log_activity(
+                    "trade",
+                    f"🎯 ENTERED {symbol}: mode={pos.get('setup_mode')} play={pos.get('best_play')} "
+                    f"trigger={pos.get('trigger') or 'live'}",
+                )
                 positions = self.entry_manager.get_positions()
 
     async def _monitor_pending_orders(self):
@@ -3725,6 +4445,32 @@ class TradingBot:
                     "entry_reason_code",
                     "entry_model_votes",
                     "risk_constraints_applied",
+                    "setup_id",
+                    "setup_mode",
+                    "direction_constraint",
+                    "timing_state",
+                    "best_play",
+                    "trigger",
+                    "trigger_spec",
+                    "invalidation",
+                    "hold_style",
+                    "size_posture",
+                    "no_trade_reason",
+                    "classifier_confidence",
+                    "resolver_confidence",
+                    "execution_confidence",
+                    "feature_snapshot_id",
+                    "feature_quality_score",
+                    "feature_quality",
+                    "missing_fields",
+                    "material_change_signature",
+                    "symbol_state",
+                    "jury_entry_now",
+                    "jury_trigger",
+                    "jury_invalidation",
+                    "jury_hold_style",
+                    "jury_size_posture",
+                    "jury_no_trade_reason",
                     "ratchet_peak_pnl_pct",
                     "ratchet_floor_pct",
                     "ratchet_limit_order_id",
@@ -3785,6 +4531,12 @@ class TradingBot:
                         trade_record["loss_category"] = "partial_favorable"
                     else:
                         trade_record["loss_category"] = "wrong_signal"
+                trade_record["profitable"] = realized_pct > 0
+                trade_record["ratchet_activated"] = bool(
+                    position.get("ratchet_floor_pct") is not None or trade_record.get("ratchet_floor_pct") is not None
+                )
+                trade_record["hard_stopped"] = str(trade_record.get("reason", "") or "").lower().startswith("hard_stop")
+                trade_record["symbol_state"] = "cooldown"
 
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)

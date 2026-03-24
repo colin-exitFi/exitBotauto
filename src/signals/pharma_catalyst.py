@@ -46,6 +46,7 @@ class PharmaCatalystScanner:
         self._pplx_key = getattr(settings, 'PERPLEXITY_API_KEY', None)
         self._catalysts: List[Dict] = []
         self._last_pplx_refresh = 0
+        self._pplx_disabled_until = 0
         self._last_fda_check = 0
         self._known_approvals: set = set()  # Track already-seen approvals
         self._load_cache()
@@ -60,6 +61,7 @@ class PharmaCatalystScanner:
                     self._catalysts = data.get("catalysts", [])
                     self._known_approvals = set(data.get("known_approvals", []))
                     self._last_pplx_refresh = data.get("last_pplx_refresh", 0)
+                    self._pplx_disabled_until = data.get("pplx_disabled_until", 0)
         except Exception as e:
             logger.debug(f"Cache load failed: {e}")
 
@@ -72,6 +74,7 @@ class PharmaCatalystScanner:
                     "catalysts": self._catalysts,
                     "known_approvals": list(self._known_approvals),
                     "last_pplx_refresh": self._last_pplx_refresh,
+                    "pplx_disabled_until": self._pplx_disabled_until,
                     "updated_at": datetime.now().isoformat(),
                 }, f, indent=2)
         except Exception as e:
@@ -90,7 +93,7 @@ class PharmaCatalystScanner:
         signals = []
 
         # 1. Refresh PDUFA calendar via Perplexity (every 6 hours)
-        if now - self._last_pplx_refresh > 6 * 3600:
+        if now >= float(self._pplx_disabled_until or 0) and now - self._last_pplx_refresh > 6 * 3600:
             await self._refresh_pdufa_calendar()
 
         # 2. Check FDA for NEW approvals (every 5 minutes)
@@ -183,6 +186,9 @@ class PharmaCatalystScanner:
         if not self._pplx_key:
             logger.debug("No Perplexity key — skipping PDUFA refresh")
             return
+        if time.time() < float(self._pplx_disabled_until or 0):
+            logger.debug("Perplexity auth backoff active — skipping PDUFA refresh")
+            return
 
         logger.info("💊 Refreshing PDUFA calendar via Perplexity...")
         try:
@@ -206,6 +212,13 @@ class PharmaCatalystScanner:
                             f"One per line. Only confirmed/scheduled dates. No commentary."}],
                     },
                 )
+                if resp.status_code == 401:
+                    self._pplx_disabled_until = time.time() + (12 * 3600)
+                    self._save_cache()
+                    logger.warning(
+                        "Perplexity returned 401 for PDUFA refresh — disabling retry loop for 12h until key is fixed"
+                    )
+                    return
                 resp.raise_for_status()
                 text = resp.json()["choices"][0]["message"]["content"]
                 
@@ -227,6 +240,7 @@ class PharmaCatalystScanner:
                 if catalysts:
                     self._catalysts = catalysts
                     self._last_pplx_refresh = time.time()
+                    self._pplx_disabled_until = 0
                     self._save_cache()
                     logger.success(f"💊 Loaded {len(catalysts)} upcoming pharma catalysts")
                 else:

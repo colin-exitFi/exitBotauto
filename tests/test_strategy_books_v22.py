@@ -3,6 +3,7 @@ import json
 import tempfile
 import time
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -132,6 +133,7 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
                     "pnl": 10.0,
                     "pnl_pct": 10.0,
                     "strategy_tag": "momentum_long",
+                    "setup_mode": "continuation_long",
                     "holding_horizon": "intraday",
                     "ratchet_peak_pnl_pct": 2.4,
                     "exit_time": 1_700_000_000,
@@ -143,6 +145,7 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
                     "pnl": -4.0,
                     "pnl_pct": -4.0,
                     "strategy_tag": "momentum_long",
+                    "setup_mode": "continuation_long",
                     "holding_horizon": "intraday",
                     "ratchet_peak_pnl_pct": 0.3,
                     "exit_time": 1_700_000_600,
@@ -183,6 +186,8 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
         self.assertEqual(momentum["avg_loss"], -4.0)
         self.assertEqual(momentum["expectancy"], 3.0)
         self.assertEqual(momentum["ratchet_activation_rate_pct"], 50.0)
+        self.assertIn("continuation_long", analytics["by_setup_mode"])
+        self.assertEqual(analytics["by_setup_mode"]["continuation_long"]["trades"], 2)
 
 
 class DashboardBookEndpointsTests(unittest.TestCase):
@@ -318,8 +323,10 @@ class ProfitRatchetStrategyBookTests(unittest.TestCase):
 
 class ScannerCongressFreshnessTests(unittest.TestCase):
     def test_recent_calendar_signal_helper(self):
-        self.assertTrue(Scanner._is_recent_calendar_signal("2026-03-15", max_days=7))
-        self.assertFalse(Scanner._is_recent_calendar_signal("2026-03-01", max_days=7))
+        recent = (datetime.utcnow() - timedelta(days=3)).strftime("%Y-%m-%d")
+        stale = (datetime.utcnow() - timedelta(days=21)).strftime("%Y-%m-%d")
+        self.assertTrue(Scanner._is_recent_calendar_signal(recent, max_days=7))
+        self.assertFalse(Scanner._is_recent_calendar_signal(stale, max_days=7))
 
 
 if __name__ == "__main__":
