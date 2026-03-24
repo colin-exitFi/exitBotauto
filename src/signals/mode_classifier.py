@@ -282,7 +282,15 @@ def build_mode_features(candidate: Dict, now_ts: Optional[float] = None) -> Mode
     entry_quality = str(candidate.get("entry_quality", "neutral") or "neutral").lower()
     holding_horizon = str(candidate.get("holding_horizon", "intraday") or "intraday").lower()
     market_regime = str(candidate.get("market_regime", "mixed") or "mixed").lower()
-    created_at = _to_float(candidate.get("signal_timestamp", candidate.get("created_at")), now_ts)
+    # Use the most recent timestamp available -- last_refreshed (from scanner) > signal_timestamp > created_at
+    created_at = _to_float(
+        candidate.get("last_refreshed")
+        or candidate.get("last_refreshed_at")
+        or candidate.get("enriched_at")
+        or candidate.get("signal_timestamp")
+        or candidate.get("created_at"),
+        now_ts,
+    )
     data_age_seconds = max(0.0, now_ts - created_at)
     session = _normalize_session(candidate.get("session_type") or candidate.get("session"))
     if candidate.get("extended_hours"):
@@ -423,13 +431,8 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
             classifier_confidence=0.9,
             reason_codes=["low_feature_quality", *[f"missing_{name}" for name in features.missing_fields[:4]]],
         )
-    if features.data_age_seconds > 900 and features.holding_horizon == "intraday":
-        return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
-            classifier_confidence=0.88,
-            reason_codes=["stale_data"],
-        )
+    # Staleness is handled by feature_quality scoring (confidence haircut),
+    # not as a hard block. Scanner actively refreshes candidates each cycle.
     if features.price <= 0 or features.price < 1.0:
         return ModeClassification(
             mode="invalid",
