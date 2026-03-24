@@ -1047,6 +1047,26 @@ async def get_pending_setups(limit: int = 50):
     }
 
 
+@app.get("/api/setup-replay")
+async def get_setup_replay(symbol: Optional[str] = None, setup_id: Optional[str] = None, day: Optional[str] = None, limit: int = 250):
+    from src.ai.setup_replay import build_setup_replay
+
+    payload = build_setup_replay(
+        symbol=symbol,
+        setup_id=setup_id,
+        day=day,
+        limit=max(1, min(int(limit or 250), 1000)),
+    )
+    return payload
+
+
+@app.get("/api/mode-report")
+async def get_mode_report(day: Optional[str] = None):
+    from src.ai import trade_history
+
+    return trade_history.get_mode_confusion_report(day=day)
+
+
 @app.get("/api/strategy-controls")
 async def get_strategy_controls():
     """Get persisted strategy control state and effective disable list."""

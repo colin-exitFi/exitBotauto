@@ -64,6 +64,7 @@ from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
 from src.ai.consensus import ConsensusEngine
 from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
+from src.data import entry_controls
 from src.data.trade_schema import normalize_trade_record
 from src.data.pending_setups import get_pending_setup, list_pending_setups, remove_pending_setup, upsert_pending_setup
 from src.data.setup_identity import build_material_change_signature, build_setup_id, normalize_symbol_state
@@ -78,7 +79,13 @@ from src.data.strategy_playbook import (
     score_directional_biases,
 )
 from src.data.technicals import compute_technicals, get_cached_rsi
-from src.signals.mode_classifier import build_mode_features, classify_mode, normalize_direction_constraint, normalize_mode
+from src.signals.mode_classifier import (
+    build_mode_features,
+    classify_mode,
+    mode_features_from_dict,
+    normalize_direction_constraint,
+    normalize_mode,
+)
 from src.signals.play_resolver import TriggerSpec, evaluate_trigger, resolve_play
 from src.options.options_monitor import OptionsMonitor
 from src.reconciliation.reconciler import Reconciler
@@ -2179,6 +2186,24 @@ class TradingBot:
     ) -> Optional[str]:
         if not self._mode_classifier_enabled():
             return None
+        trigger_live = None
+        trigger_spec_payload = dict(candidate.get("trigger_spec", {}) or {})
+        try:
+            feature_payload = dict(candidate.get("mode_features", {}) or {})
+            snapshot_features = mode_features_from_dict(feature_payload)
+            if snapshot_features is None and candidate.get("symbol"):
+                snapshot_features = build_mode_features(candidate)
+            if snapshot_features is not None and trigger_spec_payload:
+                trigger_live = evaluate_trigger(
+                    snapshot_features,
+                    TriggerSpec(
+                        trigger_type=str(trigger_spec_payload.get("trigger_type", "") or ""),
+                        params=dict(trigger_spec_payload.get("params", {}) or {}),
+                        description=str(trigger_spec_payload.get("description", "") or ""),
+                    ),
+                )
+        except Exception:
+            trigger_live = None
         payload = {
             "setup_id": candidate.get("setup_id"),
             "material_change_signature": candidate.get("material_change_signature"),
@@ -2198,7 +2223,8 @@ class TradingBot:
             "timing_state": candidate.get("timing_state"),
             "best_play": candidate.get("best_play"),
             "trigger": candidate.get("trigger"),
-            "trigger_spec": dict(candidate.get("trigger_spec", {}) or {}),
+            "trigger_spec": trigger_spec_payload,
+            "trigger_live": trigger_live,
             "invalidation": candidate.get("invalidation"),
             "hold_style": candidate.get("hold_style"),
             "size_posture": candidate.get("size_posture"),
@@ -3783,6 +3809,10 @@ class TradingBot:
             if cooldown_remaining > 0:
                 logger.info(f"🧊 ENTRY COOLDOWN {symbol}: {int(cooldown_remaining)}s after recent exit")
                 continue
+            blocked, block_reason = entry_controls.is_entry_blocked(symbol)
+            if blocked:
+                logger.info(f"⛔ PERSISTENT BLOCK {symbol}: {block_reason}")
+                continue
 
             strategy_tag = normalize_strategy_tag(candidate.get("strategy_tag", "unknown"), fallback="unknown")
             candidate["strategy_tag"] = strategy_tag
@@ -4540,6 +4570,20 @@ class TradingBot:
 
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
+        self._record_setup_snapshot(
+            trade_record,
+            "cooldown",
+            extra={
+                "pnl": trade_record.get("pnl"),
+                "pnl_pct": trade_record.get("pnl_pct"),
+                "reason": trade_record.get("reason"),
+                "triggered": trade_record.get("triggered", True),
+                "entered": trade_record.get("entered", True),
+                "profitable": trade_record.get("profitable"),
+                "hard_stopped": trade_record.get("hard_stopped"),
+                "ratchet_activated": trade_record.get("ratchet_activated"),
+            },
+        )
         if self.entry_manager and symbol and asset_type != "option":
             # For partial exits (TP1), preserve the position with remaining quantity
             is_partial = (position or {}).get("exit_scope") == "partial" or \
@@ -4557,11 +4601,22 @@ class TradingBot:
 
         if symbol and asset_type != "option":
             try:
-                from src.data import entry_controls
                 exit_time = float(trade_record.get("exit_time", time.time()) or time.time())
                 entry_controls.set_cooldown(symbol, exit_confirmed_at=exit_time)
                 anomaly_flags = trade_record.get("anomaly_flags", []) or []
                 reason_str = str(trade_record.get("reason", "") or "").lower()
+                if not self._is_partial_exit_trade(trade_record):
+                    entry_controls.record_symbol_trade_result(
+                        symbol,
+                        pnl,
+                        exit_confirmed_at=exit_time,
+                        reason=reason_str,
+                        setup_id=str(trade_record.get("setup_id", "") or ""),
+                        loss_limit=int(getattr(settings, "SYMBOL_CONSECUTIVE_LOSS_LIMIT", 2) or 2),
+                        lock_seconds=float(
+                            getattr(settings, "SYMBOL_CONSECUTIVE_LOSS_LOCK_SECONDS", 86400) or 86400
+                        ),
+                    )
                 if "statistical_poison" in str(anomaly_flags).lower() or "blacklist" in reason_str:
                     entry_controls.blacklist_symbol(symbol, reason=reason_str, source="exit_recording")
             except Exception as ec_err:

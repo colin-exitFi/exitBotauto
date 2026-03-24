@@ -17,6 +17,8 @@ CONTROLS_FILE = DATA_DIR / "entry_controls.json"
 _DEFAULT_COOLDOWN_SECONDS = 300
 _DEFAULT_BLACKLIST_SECONDS = 86400
 _DEFAULT_VETO_SECONDS = 3600
+_DEFAULT_SYMBOL_LOSS_LOCK_SECONDS = 86400
+_DEFAULT_SYMBOL_CONSECUTIVE_LOSS_LIMIT = 2
 
 
 def _normalize(symbol: str) -> str:
@@ -38,6 +40,8 @@ def _load() -> Dict:
         "jury_vetoes": {},
         "tombstones": {},
         "pending_setups": {},
+        "symbol_trade_state": {},
+        "symbol_loss_locks": {},
     }
 
 
@@ -65,6 +69,18 @@ def save_pending_setups_store(store: Dict):
     data = _load()
     data["pending_setups"] = store if isinstance(store, dict) else {}
     _save(data)
+
+
+def get_symbol_trade_state(symbol: str) -> Dict:
+    sym = _normalize(symbol)
+    if not sym:
+        return {}
+    data = _load()
+    state = dict((data.get("symbol_trade_state", {}) or {}).get(sym, {}) or {})
+    lock = dict((data.get("symbol_loss_locks", {}) or {}).get(sym, {}) or {})
+    if lock and float(lock.get("expires_at", 0) or 0) > time.time():
+        state["active_lock"] = lock
+    return state
 
 
 # ── Blacklist ────────────────────────────────────────────────────
@@ -120,6 +136,122 @@ def is_in_cooldown(symbol: str) -> bool:
     if not entry:
         return False
     return float(entry.get("cooldown_until", 0) or 0) > time.time()
+
+
+# ── Same-Symbol Loss Locks ───────────────────────────────────────
+
+def get_symbol_loss_lock(symbol: str) -> Dict:
+    sym = _normalize(symbol)
+    if not sym:
+        return {}
+    data = _load()
+    entry = dict((data.get("symbol_loss_locks", {}) or {}).get(sym, {}) or {})
+    if float(entry.get("expires_at", 0) or 0) <= time.time():
+        return {}
+    return entry
+
+
+def is_symbol_loss_locked(symbol: str) -> bool:
+    return bool(get_symbol_loss_lock(symbol))
+
+
+def clear_symbol_loss_lock(symbol: str):
+    sym = _normalize(symbol)
+    if not sym:
+        return
+    data = _load()
+    data.get("symbol_loss_locks", {}).pop(sym, None)
+    _save(data)
+
+
+def record_symbol_trade_result(
+    symbol: str,
+    pnl: float,
+    *,
+    exit_confirmed_at: Optional[float] = None,
+    reason: str = "",
+    setup_id: str = "",
+    loss_limit: int = _DEFAULT_SYMBOL_CONSECUTIVE_LOSS_LIMIT,
+    lock_seconds: float = _DEFAULT_SYMBOL_LOSS_LOCK_SECONDS,
+) -> Dict:
+    sym = _normalize(symbol)
+    if not sym:
+        return {}
+
+    now_ts = float(exit_confirmed_at or time.time())
+    loss_limit = max(1, int(loss_limit or _DEFAULT_SYMBOL_CONSECUTIVE_LOSS_LIMIT))
+    lock_seconds = max(0.0, float(lock_seconds or 0.0))
+
+    data = _load()
+    state_store = data.setdefault("symbol_trade_state", {})
+    lock_store = data.setdefault("symbol_loss_locks", {})
+    state = dict(state_store.get(sym, {}) or {})
+    recent_results = list(state.get("recent_results", []) or [])
+    pnl_value = float(pnl or 0.0)
+
+    if pnl_value < 0:
+        outcome = "loss"
+        consecutive_losses = int(state.get("consecutive_losses", 0) or 0) + 1
+        consecutive_wins = 0
+        attempts_since_win = int(state.get("attempts_since_win", 0) or 0) + 1
+    elif pnl_value > 0:
+        outcome = "win"
+        consecutive_losses = 0
+        consecutive_wins = int(state.get("consecutive_wins", 0) or 0) + 1
+        attempts_since_win = 0
+        lock_store.pop(sym, None)
+    else:
+        outcome = "flat"
+        consecutive_losses = 0
+        consecutive_wins = 0
+        attempts_since_win = 0
+        lock_store.pop(sym, None)
+
+    recent_results.append(
+        {
+            "timestamp": now_ts,
+            "pnl": round(pnl_value, 4),
+            "outcome": outcome,
+            "reason": str(reason or ""),
+            "setup_id": str(setup_id or ""),
+        }
+    )
+    recent_results = recent_results[-6:]
+
+    state.update(
+        {
+            "symbol": sym,
+            "last_exit_time": now_ts,
+            "last_pnl": round(pnl_value, 4),
+            "last_outcome": outcome,
+            "last_reason": str(reason or ""),
+            "last_setup_id": str(setup_id or ""),
+            "consecutive_losses": consecutive_losses,
+            "consecutive_wins": consecutive_wins,
+            "attempts_since_win": attempts_since_win,
+            "recent_results": recent_results,
+            "updated_at": time.time(),
+        }
+    )
+    state_store[sym] = state
+
+    if outcome == "loss" and consecutive_losses >= loss_limit and lock_seconds > 0:
+        lock_store[sym] = {
+            "symbol": sym,
+            "locked_at": now_ts,
+            "expires_at": now_ts + lock_seconds,
+            "reason": f"consecutive_losses_{consecutive_losses}",
+            "last_trade_reason": str(reason or ""),
+            "last_setup_id": str(setup_id or ""),
+            "consecutive_losses": consecutive_losses,
+            "attempts_since_win": attempts_since_win,
+        }
+        logger.warning(
+            f"LOCK: {sym} for {lock_seconds/3600:.1f}h after {consecutive_losses} consecutive losses"
+        )
+
+    _save(data)
+    return get_symbol_trade_state(sym)
 
 
 # ── Jury Veto ────────────────────────────────────────────────────
@@ -181,6 +313,8 @@ def is_entry_blocked(symbol: str) -> tuple:
     sym = _normalize(symbol)
     if is_blacklisted(sym):
         return True, "blacklisted"
+    if is_symbol_loss_locked(sym):
+        return True, "symbol_loss_lock"
     if is_in_cooldown(sym):
         return True, "cooldown"
     if is_jury_vetoed(sym):
@@ -198,4 +332,5 @@ def prune_expired():
     data["cooldowns"] = _prune_expired(data.get("cooldowns", {}), now)
     data["jury_vetoes"] = _prune_expired(data.get("jury_vetoes", {}), now)
     data["pending_setups"] = _prune_expired(data.get("pending_setups", {}), now)
+    data["symbol_loss_locks"] = _prune_expired(data.get("symbol_loss_locks", {}), now)
     _save(data)

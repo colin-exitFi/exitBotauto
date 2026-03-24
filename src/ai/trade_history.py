@@ -12,8 +12,11 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from src import persistence
+from src.data.setup_snapshots import load_setup_snapshots
 from src.data.trade_schema import normalize_trade_record
 from src.data.strategy_tags import is_artifact_strategy_tag, normalize_strategy_tag
+from src.signals.mode_classifier import mode_features_from_dict
+from src.signals.play_resolver import TriggerSpec, evaluate_trigger
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 HISTORY_FILE = DATA_DIR / "trade_history.json"
@@ -400,6 +403,217 @@ def get_analytics() -> Dict:
     }
 
 
+def get_mode_confusion_report(day: Optional[str] = None, now_ts: Optional[float] = None) -> Dict:
+    now_ts = float(now_ts or time.time())
+    target_day = str(day or _current_day_key())
+
+    snapshot_rows = []
+    for row in load_setup_snapshots():
+        recorded_at = float(row.get("recorded_at", 0) or 0)
+        if recorded_at <= 0 or _snapshot_day_key(row) != target_day:
+            continue
+        snapshot_rows.append(dict(row))
+    snapshot_rows.sort(key=lambda row: float(row.get("recorded_at", 0) or 0))
+
+    day_trades = [
+        trade
+        for trade in load_all()
+        if _trade_day_key(trade) == target_day and _is_strategy_analytic_trade(trade)
+    ]
+
+    setup_groups: Dict[str, Dict] = {}
+    symbol_modes: Dict[str, set] = {}
+    for row in snapshot_rows:
+        setup_id = str(row.get("setup_id", "") or "").strip()
+        if not setup_id:
+            symbol = str(row.get("symbol", "") or "").upper() or "UNKNOWN"
+            setup_id = f"{symbol}:{int(float(row.get('recorded_at', 0) or 0) // 300)}"
+        mode = str(row.get("setup_mode", "invalid") or "invalid").strip().lower() or "invalid"
+        symbol = str(row.get("symbol", "") or "").upper().strip() or "UNKNOWN"
+        symbol_modes.setdefault(symbol, set()).add(mode)
+        group = setup_groups.setdefault(
+            setup_id,
+            {
+                "setup_id": setup_id,
+                "symbol": symbol,
+                "mode": mode,
+                "first_seen_at": float(row.get("recorded_at", 0) or 0),
+                "last_seen_at": float(row.get("recorded_at", 0) or 0),
+                "states_seen": [],
+                "trigger_live_any": False,
+                "latest_classifier_confidence": 0.0,
+                "latest_resolver_confidence": 0.0,
+                "latest_no_trade_reason": None,
+                "latest_trigger": "",
+                "latest_invalidation": "",
+                "expires_at": None,
+                "entered": False,
+                "expired": False,
+            },
+        )
+        group["mode"] = mode or group.get("mode", "invalid")
+        group["last_seen_at"] = float(row.get("recorded_at", 0) or 0)
+        state = str(row.get("symbol_state", "idle") or "idle")
+        if state not in group["states_seen"]:
+            group["states_seen"].append(state)
+        group["latest_classifier_confidence"] = float(row.get("classifier_confidence", 0.0) or 0.0)
+        group["latest_resolver_confidence"] = float(row.get("resolver_confidence", 0.0) or 0.0)
+        group["latest_no_trade_reason"] = row.get("no_trade_reason")
+        group["latest_trigger"] = str(row.get("trigger", "") or "")
+        group["latest_invalidation"] = str(row.get("invalidation", "") or "")
+        expires_at = row.get("expires_at")
+        if isinstance(expires_at, (int, float)) and float(expires_at) > 0:
+            group["expires_at"] = float(expires_at)
+        trigger_live = _snapshot_trigger_live(row)
+        group["trigger_live_any"] = bool(group["trigger_live_any"] or trigger_live is True)
+        group["entered"] = bool(group["entered"] or state == "live_position")
+
+    trades_by_setup: Dict[str, List[Dict]] = {}
+    trades_without_pending = 0
+    for trade in day_trades:
+        setup_id = str(trade.get("setup_id", "") or "").strip()
+        if not setup_id:
+            continue
+        trades_by_setup.setdefault(setup_id, []).append(trade)
+
+    for setup_id, group in setup_groups.items():
+        trade_rows = trades_by_setup.get(setup_id, [])
+        if trade_rows:
+            group["entered"] = True
+            group["trade_count"] = len(trade_rows)
+            group["trade_pnl"] = round(sum(float(t.get("pnl", 0) or 0) for t in trade_rows), 2)
+            group["profitable"] = group["trade_pnl"] > 0
+            if "pending_trigger" not in group.get("states_seen", []):
+                trades_without_pending += len(trade_rows)
+        else:
+            group["trade_count"] = 0
+            group["trade_pnl"] = 0.0
+            group["profitable"] = None
+
+        expires_at = group.get("expires_at")
+        if (
+            not group.get("entered")
+            and "pending_trigger" in group.get("states_seen", [])
+            and isinstance(expires_at, (int, float))
+            and float(expires_at) <= now_ts
+        ):
+            group["expired"] = True
+
+    mode_counts: Dict[str, int] = {}
+    mode_rollup: Dict[str, Dict] = {}
+    for group in setup_groups.values():
+        mode = str(group.get("mode", "invalid") or "invalid")
+        mode_counts[mode] = int(mode_counts.get(mode, 0) or 0) + 1
+        bucket = mode_rollup.setdefault(
+            mode,
+            {
+                "setups": 0,
+                "pending": 0,
+                "entered": 0,
+                "expired": 0,
+                "trigger_misses": 0,
+                "trade_count": 0,
+                "trade_pnl": 0.0,
+            },
+        )
+        bucket["setups"] += 1
+        if "pending_trigger" in group.get("states_seen", []):
+            bucket["pending"] += 1
+        if group.get("entered"):
+            bucket["entered"] += 1
+        if group.get("expired"):
+            bucket["expired"] += 1
+        if group.get("trigger_live_any") and not group.get("entered"):
+            bucket["trigger_misses"] += 1
+        bucket["trade_count"] += int(group.get("trade_count", 0) or 0)
+        bucket["trade_pnl"] += float(group.get("trade_pnl", 0.0) or 0.0)
+
+    trade_buckets_by_mode: Dict[str, Dict] = {}
+    for trade in day_trades:
+        mode = str(trade.get("setup_mode", "invalid") or "invalid").strip().lower() or "invalid"
+        bucket = trade_buckets_by_mode.setdefault(mode, _metric_bucket_init())
+        _update_metric_bucket(bucket, trade)
+
+    expectancy_by_mode = {
+        mode: _finalize_metric_bucket(bucket)
+        for mode, bucket in sorted(trade_buckets_by_mode.items(), key=lambda item: item[0])
+    }
+
+    top_trigger_misses = sorted(
+        (
+            {
+                "setup_id": group.get("setup_id"),
+                "symbol": group.get("symbol"),
+                "mode": group.get("mode"),
+                "trigger": group.get("latest_trigger"),
+                "invalidation": group.get("latest_invalidation"),
+                "classifier_confidence": group.get("latest_classifier_confidence"),
+                "resolver_confidence": group.get("latest_resolver_confidence"),
+                "no_trade_reason": group.get("latest_no_trade_reason"),
+                "expired": bool(group.get("expired")),
+            }
+            for group in setup_groups.values()
+            if group.get("trigger_live_any") and not group.get("entered")
+        ),
+        key=lambda row: (
+            float(row.get("classifier_confidence", 0.0) or 0.0)
+            + float(row.get("resolver_confidence", 0.0) or 0.0)
+        ),
+        reverse=True,
+    )[:5]
+
+    top_false_positives = sorted(
+        (
+            {
+                "symbol": str(trade.get("symbol", "") or "").upper(),
+                "setup_id": str(trade.get("setup_id", "") or ""),
+                "mode": str(trade.get("setup_mode", "invalid") or "invalid"),
+                "pnl": round(float(trade.get("pnl", 0.0) or 0.0), 2),
+                "pnl_pct": round(float(trade.get("pnl_pct", 0.0) or 0.0), 2),
+                "reason": str(trade.get("reason", "") or ""),
+                "hold_seconds": float(trade.get("hold_seconds", 0.0) or 0.0),
+            }
+            for trade in day_trades
+            if float(trade.get("pnl", 0.0) or 0.0) < 0
+        ),
+        key=lambda row: float(row.get("pnl", 0.0) or 0.0),
+    )[:5]
+
+    return {
+        "day": target_day,
+        "generated_at": now_ts,
+        "classification_counts": dict(sorted(mode_counts.items(), key=lambda item: item[0])),
+        "mode_rollup": {
+            mode: {
+                **bucket,
+                "trade_pnl": round(float(bucket.get("trade_pnl", 0.0) or 0.0), 2),
+            }
+            for mode, bucket in sorted(mode_rollup.items(), key=lambda item: item[0])
+        },
+        "pending_setups_created": sum(1 for group in setup_groups.values() if "pending_trigger" in group.get("states_seen", [])),
+        "pending_setups_triggered": sum(
+            1
+            for group in setup_groups.values()
+            if "pending_trigger" in group.get("states_seen", []) and group.get("entered")
+        ),
+        "pending_setups_expired": sum(1 for group in setup_groups.values() if group.get("expired")),
+        "entries_without_pending_setup": trades_without_pending,
+        "entries_with_pending_setup": sum(
+            int(group.get("trade_count", 0) or 0)
+            for group in setup_groups.values()
+            if group.get("entered") and "pending_trigger" in group.get("states_seen", [])
+        ),
+        "mode_flip_symbols": sorted(symbol for symbol, modes in symbol_modes.items() if len(modes - {"invalid"}) > 1),
+        "mode_flip_count": sum(1 for modes in symbol_modes.values() if len(modes - {"invalid"}) > 1),
+        "executed_trades_by_mode": expectancy_by_mode,
+        "top_trigger_misses": top_trigger_misses,
+        "top_false_positives": top_false_positives,
+        "snapshot_count": len(snapshot_rows),
+        "setup_count": len(setup_groups),
+        "trade_count": len(day_trades),
+    }
+
+
 def _bucket_init():
     return {"trades": 0, "wins": 0, "pnl": 0.0}
 
@@ -429,6 +643,8 @@ def _metric_bucket_init() -> Dict:
         "slippage_sum": 0.0,
         "slippage_count": 0,
         "ratchet_activations": 0,
+        "latency_sum": 0.0,
+        "latency_count": 0,
     }
 
 
@@ -495,6 +711,11 @@ def _update_metric_bucket(bucket: Dict, trade: Dict):
         bucket["slippage_sum"] += float(slippage)
         bucket["slippage_count"] += 1
 
+    latency = trade.get("signal_to_fill_ms")
+    if isinstance(latency, (int, float)):
+        bucket["latency_sum"] += float(latency)
+        bucket["latency_count"] += 1
+
 
 def _finalize_metric_bucket(bucket: Dict) -> Dict:
     trades = int(bucket.get("trades", 0) or 0)
@@ -528,6 +749,7 @@ def _finalize_metric_bucket(bucket: Dict) -> Dict:
         "avg_mae_pct": _avg_or_none(bucket.get("mae_sum", 0.0), bucket.get("mae_count", 0)),
         "avg_hold_seconds": _avg_or_none(bucket.get("hold_sum", 0.0), bucket.get("hold_count", 0)),
         "avg_slippage_bps": _avg_or_none(bucket.get("slippage_sum", 0.0), bucket.get("slippage_count", 0)),
+        "avg_signal_to_fill_ms": _avg_or_none(bucket.get("latency_sum", 0.0), bucket.get("latency_count", 0)),
     }
 
 
@@ -588,6 +810,39 @@ def _trade_day_key(trade: Dict) -> str:
         return datetime.fromtimestamp(ts, zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
     except Exception:
         return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+
+
+def _snapshot_day_key(snapshot: Dict) -> str:
+    ts = float(snapshot.get("recorded_at", 0) or 0)
+    if ts <= 0:
+        return ""
+    try:
+        import zoneinfo
+
+        return datetime.fromtimestamp(ts, zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+    except Exception:
+        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+
+
+def _snapshot_trigger_live(snapshot: Dict) -> Optional[bool]:
+    stored = snapshot.get("trigger_live")
+    if isinstance(stored, bool):
+        return stored
+    trigger_spec_payload = dict(snapshot.get("trigger_spec", {}) or {})
+    if not trigger_spec_payload:
+        return None
+    features = mode_features_from_dict(dict(snapshot.get("mode_features", {}) or {}))
+    if features is None:
+        return None
+    trigger = TriggerSpec(
+        trigger_type=str(trigger_spec_payload.get("trigger_type", "") or ""),
+        params=dict(trigger_spec_payload.get("params", {}) or {}),
+        description=str(trigger_spec_payload.get("description", "") or ""),
+    )
+    try:
+        return bool(evaluate_trigger(features, trigger))
+    except Exception:
+        return None
 
 
 def _trade_return(trade: Dict) -> Optional[float]:
