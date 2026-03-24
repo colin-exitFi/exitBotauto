@@ -416,14 +416,14 @@ def mode_features_from_dict(payload: Dict) -> Optional[ModeFeatures]:
 
 def classify_mode(features: ModeFeatures) -> ModeClassification:
     symbol = features.symbol or "?"
-    if features.feature_quality_score < 0.45:
+    if features.feature_quality_score < 0.25:
         return ModeClassification(
             mode="invalid",
             direction_constraint="none",
             classifier_confidence=0.9,
             reason_codes=["low_feature_quality", *[f"missing_{name}" for name in features.missing_fields[:4]]],
         )
-    if features.data_age_seconds > 300 and features.holding_horizon == "intraday":
+    if features.data_age_seconds > 900 and features.holding_horizon == "intraday":
         return ModeClassification(
             mode="invalid",
             direction_constraint="none",
