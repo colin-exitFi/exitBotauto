@@ -5193,10 +5193,16 @@ class TradingBot:
                 qty = float(pos.get("quantity", 0) or 0)
                 price = float(pos.get("current_price", 0) or pos.get("entry_price", 0) or 0)
                 notional = qty * price
-                if 0 < notional < 5.0 and not pos.get("exit_pending") and not pos.get("_exit_recorded"):
-                    logger.warning(f"🧹 DUST CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing dead capital")
+                if 0 < notional < 5.0 and not pos.get("exit_pending") and not pos.get("_dust_close_attempted"):
+                    pos["_dust_close_attempted"] = True
+                    logger.warning(f"🧹 DUST CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing via Alpaca close_position")
                     try:
-                        await self._submit_software_managed_exit(pos, price, "dust_cleanup")
+                        result = await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            lambda: self.alpaca_client._trading_client.close_position(sym),
+                        )
+                        logger.info(f"🧹 DUST CLOSED {sym}: {result}")
+                        self.entry_manager.remove_position(sym)
                     except Exception as e:
                         logger.debug(f"Dust cleanup failed for {sym}: {e}")
 
