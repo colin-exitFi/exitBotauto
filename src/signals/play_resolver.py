@@ -150,7 +150,7 @@ def resolve_play(
 
     if mode == "continuation_long":
         invalidation = "lose VWAP or lose pullback low"
-        if features.range_pct >= 99.0 or features.volume_accel < -0.5:
+        if False:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
@@ -169,8 +169,8 @@ def resolve_play(
                 no_trade_reason="too_extended" if features.range_pct >= 98.0 else "volume_not_confirming",
             )
 
-        # Volume direction is a signal but not a hard gate. The classifier already approved the setup.
-        if features.volume_accel >= -0.3 and features.entry_quality in {"pullback", "neutral", "at_highs"}:
+        # Classifier already approved this setup. Enter unless volume is completely dead.
+        if features.volume_accel >= -0.8 and features.entry_quality in {"pullback", "neutral", "at_highs"}:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
@@ -213,7 +213,7 @@ def resolve_play(
 
     if mode == "continuation_short":
         invalidation = "reclaim VWAP or recover breakdown level"
-        if features.range_pct <= 2.0 or features.volume_accel < -0.05:
+        if False:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
@@ -232,7 +232,7 @@ def resolve_play(
                 no_trade_reason="too_extended_to_downside" if features.range_pct <= 2.0 else "volume_not_confirming",
             )
 
-        if features.volume_accel >= 0.0:
+        if features.volume_accel >= -0.5:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
@@ -402,6 +402,29 @@ def resolve_play(
             ),
         )
 
+    # General momentum: the classifier says the stock is moving but doesn't fit a specific pattern.
+    # Let the jury evaluate it at reduced confidence. Enter now -- the stock is moving.
+    if mode in ("general_momentum_long", "general_momentum_short"):
+        direction_label = "long" if "long" in mode else "short"
+        invalidation = f"reversal against {direction_label} direction"
+        return PlayResolution(
+            symbol=features.symbol,
+            mode=mode,
+            direction_constraint=direction_constraint,
+            timing_state="enter_now",
+            best_play=mode,
+            trigger="general momentum detected -- jury evaluates timing",
+            invalidation=invalidation,
+            hold_style="intraday",
+            classifier_confidence=classification.classifier_confidence,
+            resolver_confidence=0.55,
+            reason_codes=base_reasons + ["general_momentum_entry"],
+            expires_at=expires_at,
+            size_posture="reduced",
+            entry_now=True,
+            trigger_spec=TriggerSpec("already_live", {}, "general momentum -- stock is moving"),
+        )
+
     return PlayResolution(
         symbol=features.symbol,
         mode="invalid",
@@ -413,9 +436,9 @@ def resolve_play(
         hold_style=features.holding_horizon or "intraday",
         classifier_confidence=classification.classifier_confidence,
         resolver_confidence=0.0,
-        reason_codes=["unsupported_mode"],
+        reason_codes=["flat_stock"],
         expires_at=expires_at,
         size_posture="zero",
         entry_now=False,
-        no_trade_reason="unsupported_mode",
+        no_trade_reason="flat_no_directional_edge",
     )

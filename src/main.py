@@ -4023,9 +4023,9 @@ class TradingBot:
                 if (
                     self._mode_classifier_enforced()
                     and bool(getattr(settings, "MODE_CLASSIFIER_AUTO_ENTER", True))
-                    and str(candidate.get("setup_mode", "") or "").lower() == "continuation_long"
+                    and str(candidate.get("setup_mode", "") or "").lower() in {"continuation_long", "general_momentum_long"}
                     and str(candidate.get("timing_state", "") or "").lower() == "enter_now"
-                    and str(candidate.get("entry_quality", "") or "").lower() in {"pullback", "neutral"}
+                    and str(candidate.get("entry_quality", "") or "").lower() in {"pullback", "neutral", "at_highs"}
                     and float(candidate.get("classifier_confidence", 0) or 0) >= 0.65
                     and self.entry_manager.is_market_open()
                     and not self.entry_manager.is_extended_hours()

@@ -18,6 +18,8 @@ _VALID_MODES = {
     "continuation_short",
     "exhaustion_fade_short",
     "swing_catalyst_long",
+    "general_momentum_long",
+    "general_momentum_short",
     "invalid",
 }
 
@@ -573,12 +575,61 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
             reason_codes=reasons,
         )
 
-    return ModeClassification(
-        mode="invalid",
-        direction_constraint="none",
-        classifier_confidence=0.0,
-        reason_codes=["no_clear_setup"],
-    )
+    # No specific pattern matched -- classify as general momentum based on direction.
+    # Every stock the scanner surfaces has a play. "Invalid" is not acceptable.
+    if features.daily_pct >= 0.5:
+        reasons = ["general_momentum", "positive_daily_move"]
+        if features.volume_accel > 0:
+            reasons.append("volume_supporting")
+        if features.entry_quality == "pullback":
+            reasons.append("pullback_entry")
+        confidence, regime_code = _apply_regime_overlay(
+            _reason_confidence(0.45, [
+                features.daily_pct >= 1.0,
+                features.volume_accel > -0.5,
+                features.entry_quality in {"pullback", "neutral"},
+                features.range_pct < 90.0,
+            ]),
+            "general_momentum_long",
+            features.market_regime,
+        )
+        if regime_code:
+            reasons.append(regime_code)
+        return ModeClassification(
+            mode="general_momentum_long",
+            direction_constraint="long_only",
+            classifier_confidence=confidence,
+            reason_codes=reasons,
+        )
+    elif features.daily_pct <= -0.5:
+        reasons = ["general_momentum", "negative_daily_move"]
+        if features.volume_accel > 0:
+            reasons.append("volume_supporting")
+        confidence, regime_code = _apply_regime_overlay(
+            _reason_confidence(0.45, [
+                features.daily_pct <= -1.0,
+                features.volume_accel > -0.5,
+                features.sentiment_pct <= 50.0,
+            ]),
+            "general_momentum_short",
+            features.market_regime,
+        )
+        if regime_code:
+            reasons.append(regime_code)
+        return ModeClassification(
+            mode="general_momentum_short",
+            direction_constraint="short_only",
+            classifier_confidence=confidence,
+            reason_codes=reasons,
+        )
+    else:
+        # Stock is flat (<0.5% move). Genuinely no directional edge.
+        return ModeClassification(
+            mode="invalid",
+            direction_constraint="none",
+            classifier_confidence=0.0,
+            reason_codes=["flat_no_directional_edge"],
+        )
 
 
 def normalize_mode(mode: object) -> str:

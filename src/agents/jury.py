@@ -194,10 +194,22 @@ def _mode_guidance(signals_data: Dict) -> str:
             "Only evaluate the long swing thesis, entry timing, pullback needs, and invalidation. "
             f"Trigger context: {trigger}. Invalidation context: {invalidation}."
         ),
+        "general_momentum_long": (
+            "This symbol is showing positive momentum but doesn't fit a specific pattern. "
+            "Evaluate as a LONG opportunity. Is the stock trending up with any supporting signal? "
+            "Bias toward action — this stock is moving. Size conservatively if unsure but DO NOT skip just "
+            "because the setup isn't textbook. Every moving stock has a play."
+        ),
+        "general_momentum_short": (
+            "This symbol is showing negative momentum but doesn't fit a specific pattern. "
+            "Evaluate as a SHORT opportunity. Is the stock trending down with any confirming signal? "
+            "Bias toward action — this stock is moving. Size conservatively if unsure but DO NOT skip just "
+            "because the setup isn't textbook."
+        ),
     }
     return guidance.get(
         mode,
-        "No deterministic mode is active. Only act if the setup is clean, liquid, and executable.",
+        "This stock is moving. Find the play. What is the highest-probability direction and timing right now?",
     )
 
 
