@@ -457,7 +457,10 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         features.losing_vwap,
         (features.rsi_divergence or 0.0) < 0.0,
     ]
-    if exhaustion_flags[0] and exhaustion_flags[1] and (exhaustion_flags[2] or exhaustion_flags[4] or exhaustion_flags[5]) and exhaustion_flags[3]:
+    # Extreme extension override: >30% daily move is exhaustion_fade regardless of volume
+    extreme_extension = features.daily_pct >= 30.0
+    standard_exhaustion = exhaustion_flags[0] and exhaustion_flags[1] and (exhaustion_flags[2] or exhaustion_flags[4] or exhaustion_flags[5]) and exhaustion_flags[3]
+    if extreme_extension or standard_exhaustion:
         reasons = ["daily_extension_extreme", "volume_decelerating", "sentiment_extreme"]
         if features.halt_count >= 3:
             reasons.append("halts_elevated")
