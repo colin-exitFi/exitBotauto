@@ -4171,14 +4171,20 @@ class TradingBot:
             )
             if not execution_gate.get("allowed", False):
                 reason = execution_gate.get("reason", "setup_gate_block")
-                logger.info(
-                    f"⛔ SETUP GATE {symbol}: {reason} mode={candidate.get('setup_mode')} "
-                    f"timing={candidate.get('timing_state')} direction={direction}"
-                )
-                log_activity("trade", f"⛔ SETUP GATE: {symbol} {direction} blocked ({reason})")
-                if direction == "SHORT":
-                    self._record_short_verdict_block(symbol, reason, "setup_gate")
-                continue
+                # Classifier auto-enter bypasses the setup gate -- math already approved
+                if is_classifier_auto:
+                    logger.info(
+                        f"🔥 SETUP GATE BYPASS {symbol}: {reason} overridden by classifier_auto"
+                    )
+                else:
+                    logger.info(
+                        f"⛔ SETUP GATE {symbol}: {reason} mode={candidate.get('setup_mode')} "
+                        f"timing={candidate.get('timing_state')} direction={direction}"
+                    )
+                    log_activity("trade", f"⛔ SETUP GATE: {symbol} {direction} blocked ({reason})")
+                    if direction == "SHORT":
+                        self._record_short_verdict_block(symbol, reason, "setup_gate")
+                    continue
 
             if candidate.get("copy_trader_context"):
                 sentiment_data["copy_trader_context"] = candidate.get("copy_trader_context", "")
@@ -4192,6 +4198,11 @@ class TradingBot:
 
             raw_sentiment_score = float(sentiment_score or 0)
             effective_sentiment_score = raw_sentiment_score
+            # Classifier auto-enter bypasses sentiment gate -- the math already approved this entry
+            is_classifier_auto = str(getattr(verdict, "provider_used", "") or "").startswith("classifier_auto")
+            if is_classifier_auto:
+                effective_sentiment_score = max(effective_sentiment_score, 1.0)
+                raw_sentiment_score = max(raw_sentiment_score, 1.0)
             if direction == "SHORT":
                 effective_sentiment_score = -abs(raw_sentiment_score) if raw_sentiment_score != 0 else -0.1
                 sentiment_data["raw_sentiment_score"] = raw_sentiment_score
@@ -4199,7 +4210,7 @@ class TradingBot:
             else:
                 sentiment_data["score"] = raw_sentiment_score
 
-            logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}")
+            logger.info(f"🔑 {symbol} pre-entry: direction={direction}, sentiment={sentiment_score:.2f}{' [classifier_auto]' if is_classifier_auto else ''}")
             check_sentiment = -effective_sentiment_score if direction == "SHORT" else effective_sentiment_score
             can = await self.entry_manager.can_enter(symbol, check_sentiment, positions)
             gate_reason = (getattr(self.entry_manager, "last_gate", {}) or {}).get("reason", "unknown")
@@ -5174,6 +5185,20 @@ class TradingBot:
         positions = self.entry_manager.get_positions()
         if not positions:
             return
+
+        # Dust cleanup: close fractional/micro positions that are dead capital
+        if self.entry_manager.is_market_open():
+            for pos in list(positions):
+                sym = pos.get("symbol", "")
+                qty = float(pos.get("quantity", 0) or 0)
+                price = float(pos.get("current_price", 0) or pos.get("entry_price", 0) or 0)
+                notional = qty * price
+                if 0 < notional < 5.0 and not pos.get("exit_pending") and not pos.get("_exit_recorded"):
+                    logger.warning(f"🧹 DUST CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing dead capital")
+                    try:
+                        await self._submit_software_managed_exit(pos, price, "dust_cleanup")
+                    except Exception as e:
+                        logger.debug(f"Dust cleanup failed for {sym}: {e}")
 
         try:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
