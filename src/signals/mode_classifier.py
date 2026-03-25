@@ -516,14 +516,14 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         )
 
     continuation_long_flags = [
-        features.daily_pct >= 1.5,
-        features.volume_accel >= 0.0,
-        features.spread_pct < 2.0,
-        features.entry_quality in {"pullback", "neutral"},
-        features.range_pct < 95.0,
-        features.reclaiming_vwap or (features.vwap_distance_pct or 0.0) > -0.5,
+        features.daily_pct >= 1.0,
+        features.volume_accel >= -0.3,
+        features.spread_pct < 3.0,
+        features.entry_quality in {"pullback", "neutral", "at_highs"},
+        features.range_pct < 98.0,
+        features.reclaiming_vwap or (features.vwap_distance_pct or 0.0) > -1.0,
     ]
-    if all(continuation_long_flags[:4]) and continuation_long_flags[4]:
+    if continuation_long_flags[0] and (continuation_long_flags[1] or continuation_long_flags[5]) and continuation_long_flags[3]:
         reasons = ["trend_intact", "volume_reaccelerating", "spread_ok", f"entry_quality_{features.entry_quality}"]
         if continuation_long_flags[5]:
             reasons.append("vwap_supported")
@@ -544,12 +544,12 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         )
 
     continuation_short_flags = [
-        features.daily_pct <= -1.5,
-        features.volume_rel > 1.0,
-        features.volume_accel >= 0.0,
-        features.spread_pct < 2.0,
-        features.sentiment_pct <= 45.0,
-        features.losing_vwap or (features.vwap_distance_pct or 0.0) < 0.5,
+        features.daily_pct <= -1.0,
+        features.volume_rel > 0.5,
+        features.volume_accel >= -0.3,
+        features.spread_pct < 3.0,
+        features.sentiment_pct <= 55.0,
+        features.losing_vwap or (features.vwap_distance_pct or 0.0) < 1.0,
     ]
     if all(continuation_short_flags[:4]):
         reasons = ["downtrend_intact", "volume_confirming", "spread_ok", "volume_rel_strong"]
