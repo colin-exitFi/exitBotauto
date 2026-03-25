@@ -150,7 +150,7 @@ def resolve_play(
 
     if mode == "continuation_long":
         invalidation = "lose VWAP or lose pullback low"
-        if features.range_pct >= 98.0 or features.volume_accel < -0.1:
+        if features.range_pct >= 99.0 or features.volume_accel < -0.5:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
@@ -169,8 +169,8 @@ def resolve_play(
                 no_trade_reason="too_extended" if features.range_pct >= 98.0 else "volume_not_confirming",
             )
 
-        # Volume acceleration is the primary entry signal. VWAP is a booster, not a gate.
-        if features.volume_accel >= 0.0 and features.entry_quality in {"pullback", "neutral"}:
+        # Volume direction is a signal but not a hard gate. The classifier already approved the setup.
+        if features.volume_accel >= -0.3 and features.entry_quality in {"pullback", "neutral", "at_highs"}:
             return PlayResolution(
                 symbol=features.symbol,
                 mode=mode,
