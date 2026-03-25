@@ -2475,8 +2475,8 @@ class TradingBot:
         if feature_quality_score < 0.8:
             penalties += (0.8 - feature_quality_score) * 0.5
             reasons.append("feature_quality_haircut")
-        if hold_style == "intraday" and data_age_seconds > 60:
-            penalties += min(0.4, (data_age_seconds - 60.0) / 300.0)
+        if hold_style == "intraday" and data_age_seconds > 600:
+            penalties += min(0.2, (data_age_seconds - 600.0) / 600.0)
             reasons.append("stale_signal")
         if spread_pct > 0.6:
             penalties += min(0.3, max(0.0, spread_pct - 0.6) / 2.0)
@@ -2507,7 +2507,7 @@ class TradingBot:
             )
             if not evaluate_trigger(build_mode_features(candidate), trigger):
                 return {"allowed": False, "reason": "trigger_not_live", "execution_confidence": round(execution_confidence, 2)}
-        if hold_style == "intraday" and data_age_seconds > 120:
+        if hold_style == "intraday" and data_age_seconds > 900:
             return {"allowed": False, "reason": "stale_signal", "execution_confidence": round(execution_confidence, 2)}
         if spread_pct > 1.0:
             return {"allowed": False, "reason": "spread_too_wide", "execution_confidence": round(execution_confidence, 2)}
