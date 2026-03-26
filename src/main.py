@@ -2079,7 +2079,7 @@ class TradingBot:
         sentiment_data["setup_id"] = candidate.get("setup_id")
         sentiment_data["setup_mode"] = candidate.get("setup_mode", "invalid")
         sentiment_data["direction_constraint"] = candidate.get("direction_constraint", "none")
-        sentiment_data["timing_state"] = candidate.get("timing_state", "no_edge")
+        sentiment_data["timing_state"] = candidate.get("timing_state", "mode_conflict")
         sentiment_data["best_play"] = candidate.get("best_play", "")
         sentiment_data["trigger"] = candidate.get("trigger", "")
         sentiment_data["trigger_spec"] = dict(candidate.get("trigger_spec", {}) or {})
@@ -3972,7 +3972,7 @@ class TradingBot:
             candidate = await self._enrich_candidate_setup_context(candidate)
             pending_mode = str(candidate.get("_pending_setup_mode", "") or "").strip().lower() or None
             current_mode = str(candidate.get("setup_mode", "invalid") or "invalid").strip().lower()
-            timing_state = str(candidate.get("timing_state", "no_edge") or "no_edge").strip().lower()
+            timing_state = str(candidate.get("timing_state", "mode_conflict") or "mode_conflict").strip().lower()
             candidate["mode_constraint_active"] = self._mode_classifier_enforced()
 
             if pending_mode and pending_mode != current_mode:
@@ -5338,18 +5338,26 @@ class TradingBot:
                 qty = float(pos.get("quantity", 0) or 0)
                 price = float(pos.get("current_price", 0) or pos.get("entry_price", 0) or 0)
                 notional = qty * price
-                if 0 < notional < 5.0 and not pos.get("exit_pending") and not pos.get("_dust_close_attempted"):
+                is_dust = 0 < notional < 5.0
+                is_fractional_carryover = (
+                    qty < 1.0
+                    and pos.get("from_brokerage")
+                    and str(pos.get("entry_path", "") or "").startswith("broker_sync")
+                )
+                if (is_dust or is_fractional_carryover) and not pos.get("exit_pending") and not pos.get("_dust_close_attempted"):
                     pos["_dust_close_attempted"] = True
-                    logger.warning(f"🧹 DUST CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing via Alpaca close_position")
+                    label = "DUST" if is_dust else "FRACTIONAL CARRYOVER"
+                    logger.warning(f"🧹 {label} CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing via Alpaca close_position")
                     try:
+                        _sym_to_close = sym
                         result = await asyncio.get_event_loop().run_in_executor(
                             None,
-                            lambda: self.alpaca_client._trading_client.close_position(sym),
+                            lambda: self.alpaca_client._trading_client.close_position(_sym_to_close),
                         )
-                        logger.info(f"🧹 DUST CLOSED {sym}: {result}")
+                        logger.info(f"🧹 CLOSED {sym}: {result}")
                         self.entry_manager.remove_position(sym)
                     except Exception as e:
-                        logger.debug(f"Dust cleanup failed for {sym}: {e}")
+                        logger.debug(f"Cleanup failed for {sym}: {e}")
 
         try:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
