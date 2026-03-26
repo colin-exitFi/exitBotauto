@@ -12,6 +12,8 @@ from loguru import logger
 from src.agents import technical_agent, sentiment_agent, catalyst_agent, risk_agent, macro_agent
 from src.agents.jury import JuryVerdict, deliberate
 from src.agents.exit_agent import ExitAgent
+from src.agents import advocate as advocate_agent
+from src.agents import adversary as adversary_agent
 from src.signals.finnhub import FinnhubClient
 from src.signals.fred import FredClient
 
@@ -206,6 +208,153 @@ class Orchestrator:
             self._skip_cache[cache_key] = time.time()
 
         self._append_history(verdict)
+
+        return verdict
+
+    async def evaluate_council(self, symbol: str, price: float, signals_data: Dict) -> JuryVerdict:
+        """
+        V3 Council evaluation: Advocate (GPT) -> Adversary (Claude) -> Math sizes.
+        Sequential, not parallel. Structural tension produces better decisions.
+        """
+        direction = self._derive_direction(signals_data)
+        cache_key = f"{symbol}:council:{direction}"
+
+        cached = self._cache.get(cache_key)
+        if cached:
+            verdict, ts = cached
+            ttl = 120 if verdict.decision == "SKIP" else 180
+            if (time.time() - ts) < ttl:
+                return verdict
+
+        await self._enrich_macro_data(signals_data)
+        positions = self.entry_manager.get_positions() if self.entry_manager else []
+
+        logger.info(f"🏛️ Council: evaluating {symbol} @ ${price:.2f} (Advocate -> Adversary)")
+
+        # Run specialist agents in parallel for briefs (same as jury path)
+        tech_task = technical_agent.analyze(symbol, price, signals_data)
+        risk_task = risk_agent.analyze(
+            symbol, price, signals_data,
+            risk_manager=self.risk_manager, positions=positions, direction=direction,
+        )
+        macro_task = macro_agent.analyze(symbol, price, signals_data, direction=direction)
+
+        tech_brief, risk_brief, macro_brief = await asyncio.gather(
+            tech_task, risk_task, macro_task, return_exceptions=True,
+        )
+        if isinstance(tech_brief, Exception):
+            tech_brief = technical_agent.DEFAULT_BRIEF
+        if isinstance(risk_brief, Exception):
+            risk_brief = risk_agent.DEFAULT_BRIEF
+        if isinstance(macro_brief, Exception):
+            macro_brief = macro_agent.DEFAULT_BRIEF
+
+        briefs = {
+            "technical": tech_brief,
+            "risk": risk_brief,
+            "macro": macro_brief,
+            "sentiment": {},
+            "catalyst": {},
+        }
+
+        # Hard risk block
+        if isinstance(risk_brief, dict) and not risk_brief.get("can_trade", True):
+            verdict = JuryVerdict(
+                symbol=symbol, decision="SKIP", size_pct=0.0, trail_pct=3.0,
+                reasoning=f"Risk hard block: {risk_brief.get('reasoning', 'risk denied')}",
+                briefs=briefs, provider_used="council",
+                consensus_detail={"agreement": "risk_block"},
+            )
+            self._cache[cache_key] = (verdict, time.time())
+            self._append_history(verdict)
+            return verdict
+
+        # Step 1: Advocate finds the play (GPT)
+        adv = await advocate_agent.evaluate(symbol, price, signals_data, briefs)
+        logger.info(
+            f"🗣️ Advocate {symbol}: {adv.direction} conviction={adv.conviction:.0f}% "
+            f"— {adv.reasoning[:120]}"
+        )
+
+        # Step 2: Adversary reviews (Claude)
+        adv_dict = adv.to_dict()
+        adversary = await adversary_agent.evaluate(symbol, price, signals_data, briefs, adv_dict)
+        veto_label = "VETO" if adversary.veto else "ALLOW"
+        logger.info(
+            f"🛡️ Adversary {symbol}: {veto_label} risk={adversary.risk_score:.0f} "
+            f"— {adversary.reasoning[:120]}"
+        )
+
+        # Step 3: Math decides
+        if adversary.veto:
+            verdict = JuryVerdict(
+                symbol=symbol, decision="SKIP", size_pct=0.0, trail_pct=3.0,
+                reasoning=f"Adversary VETO: {adversary.kill_reason}",
+                confidence=adversary.risk_score,
+                briefs=briefs, provider_used="council",
+                consensus_detail={
+                    "agreement": "adversary_veto",
+                    "advocate": adv_dict,
+                    "adversary": adversary.to_dict(),
+                },
+            )
+            self._cache[cache_key] = (verdict, time.time())
+            self._skip_cache[f"{symbol}:{direction}"] = time.time()
+            self._append_history(verdict)
+            return verdict
+
+        if adv.conviction < 30:
+            verdict = JuryVerdict(
+                symbol=symbol, decision="SKIP", size_pct=0.0, trail_pct=3.0,
+                reasoning=f"Advocate conviction too low ({adv.conviction:.0f}%)",
+                confidence=adv.conviction,
+                briefs=briefs, provider_used="council",
+                consensus_detail={
+                    "agreement": "low_conviction",
+                    "advocate": adv_dict,
+                    "adversary": adversary.to_dict(),
+                },
+            )
+            self._cache[cache_key] = (verdict, time.time())
+            self._append_history(verdict)
+            return verdict
+
+        # Conviction-based sizing: advocate conviction minus adversary risk haircut
+        tier = self.risk_manager.get_risk_tier() if self.risk_manager else {}
+        tier_max_size = float(tier.get("size_pct", 2.5) or 2.5)
+        raw_size = (adv.conviction / 100.0) * tier_max_size
+        risk_haircut = adversary.risk_score / 100.0
+        final_size = raw_size * (1.0 - risk_haircut * 0.5)
+        final_size = max(final_size, tier_max_size * 0.25)
+        final_size = min(final_size, tier_max_size)
+
+        verdict = JuryVerdict(
+            symbol=symbol,
+            decision=adv.direction,
+            size_pct=round(final_size, 2),
+            trail_pct=2.0,
+            reasoning=f"Council: Advocate {adv.direction} {adv.conviction:.0f}%, Adversary ALLOW risk={adversary.risk_score:.0f}. {adv.reasoning[:150]}",
+            confidence=adv.conviction,
+            provider_used="council",
+            briefs=briefs,
+            entry_now=True,
+            trigger=adv.entry_trigger,
+            hold_style=adv.hold_style,
+            size_posture=adv.size_posture,
+            consensus_detail={
+                "agreement": "council_approved",
+                "advocate": adv_dict,
+                "adversary": adversary.to_dict(),
+                "votes": {
+                    "advocate_gpt": adv.direction,
+                    "adversary_claude": "ALLOW",
+                },
+            },
+        )
+
+        self._cache[cache_key] = (verdict, time.time())
+        self._append_history(verdict)
+        self.exit_agent.update_briefs(symbol, briefs)
 
         return verdict
 

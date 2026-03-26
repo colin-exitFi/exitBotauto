@@ -3980,11 +3980,18 @@ class TradingBot:
                 continue
 
             try:
-                verdict = await self.orchestrator.evaluate(
-                    symbol=symbol,
-                    price=signal_price,
-                    signals_data=candidate,
-                )
+                if bool(getattr(settings, "COUNCIL_MODE_ENABLED", True)):
+                    verdict = await self.orchestrator.evaluate_council(
+                        symbol=symbol,
+                        price=signal_price,
+                        signals_data=candidate,
+                    )
+                else:
+                    verdict = await self.orchestrator.evaluate(
+                        symbol=symbol,
+                        price=signal_price,
+                        signals_data=candidate,
+                    )
             except Exception as e:
                 logger.error(f"Orchestrator error for {symbol}: {e}")
                 continue
