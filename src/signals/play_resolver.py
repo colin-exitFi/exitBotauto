@@ -28,6 +28,21 @@ def _ttl_seconds_for_mode(mode: str) -> int:
     return 15 * 60
 
 
+def _invalid_resolution_state(classification: ModeClassification) -> tuple[str, str, str]:
+    reasons = list(classification.reason_codes or [])
+    primary = str(reasons[0] if reasons else "unresolved_setup")
+    missing_data = primary == "low_feature_quality" or any(str(code).startswith("missing_") for code in reasons)
+    if "mode_disabled" in reasons:
+        return "shadow_only", "shadow_disabled_mode", primary
+    if missing_data or "active_halt" in reasons:
+        return "data_insufficient", "data_refresh_required", primary
+    if primary in {"flat_no_directional_edge", "no_clear_setup"}:
+        return "mode_conflict", "unresolved_setup", primary
+    if primary == "price_too_low":
+        return "shadow_only", "price_out_of_bounds", primary
+    return "mode_conflict", "unresolved_setup", primary
+
+
 @dataclass
 class TriggerSpec:
     trigger_type: str
@@ -129,12 +144,13 @@ def resolve_play(
     expires_at = now_ts + ttl
 
     if mode == "invalid":
+        timing_state, best_play, no_trade_reason = _invalid_resolution_state(classification)
         return PlayResolution(
             symbol=features.symbol,
             mode=mode,
             direction_constraint="none",
-            timing_state="no_edge",
-            best_play="no_valid_setup",
+            timing_state=timing_state,
+            best_play=best_play,
             trigger=None,
             invalidation=None,
             hold_style=features.holding_horizon or "intraday",
@@ -144,7 +160,7 @@ def resolve_play(
             expires_at=expires_at,
             size_posture="zero",
             entry_now=False,
-            no_trade_reason=(base_reasons[0] if base_reasons else "no_clear_setup"),
+            no_trade_reason=no_trade_reason,
             trigger_spec=None,
         )
 
@@ -280,18 +296,23 @@ def resolve_play(
                 symbol=features.symbol,
                 mode=mode,
                 direction_constraint=direction_constraint,
-                timing_state="no_edge",
+                timing_state="wait_for_trigger",
                 best_play="exhaustion_fade_short",
-                trigger=None,
+                trigger="wait for the squeeze to fail and lose VWAP",
                 invalidation=invalidation,
                 hold_style="intraday",
                 classifier_confidence=classification.classifier_confidence,
-                resolver_confidence=0.28,
-                reason_codes=base_reasons + ["squeeze_not_failed"],
+                resolver_confidence=0.42,
+                reason_codes=base_reasons + ["squeeze_not_failed_yet"],
                 expires_at=expires_at,
-                size_posture="zero",
+                size_posture="reduced",
                 entry_now=False,
-                no_trade_reason="fade_not_confirmed",
+                no_trade_reason="fade_not_confirmed_yet",
+                trigger_spec=TriggerSpec(
+                    "fade_failure_reject",
+                    {"min_daily_pct": 15.0, "max_volume_accel": 0.1},
+                    "squeeze failure confirms the fade",
+                ),
             )
 
         # Exhaustion fade: if volume is decelerating, the move is dying. Enter now.
@@ -429,8 +450,8 @@ def resolve_play(
         symbol=features.symbol,
         mode="invalid",
         direction_constraint="none",
-        timing_state="no_edge",
-        best_play="no_valid_setup",
+        timing_state="mode_conflict",
+        best_play="unresolved_setup",
         trigger=None,
         invalidation=None,
         hold_style=features.holding_horizon or "intraday",

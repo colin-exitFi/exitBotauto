@@ -94,21 +94,48 @@ class FastPathTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertTrue(ok, reason)
 
+    async def test_deterministic_screen_accepts_downside_breakouts_by_absolute_move(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot._fast_path_pending = set()
+        bot._jury_vetoed_symbols = {}
+        bot.entry_manager = _EntryNoNetwork()
+        bot.risk_manager = _RiskOK()
+        bot._latest_broker_position_symbols = set()
+        with patch.object(main_module.settings, "FAST_PATH_ENABLED", True), \
+             patch.object(main_module.settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0), \
+             patch.object(main_module.settings, "FAST_PATH_MIN_VOLUME_SPIKE", 2.0), \
+             patch.object(main_module, "get_cached_rsi", return_value=55.0):
+            ok, reason = bot._passes_fast_path_deterministic_screen(
+                symbol="AAPL",
+                price=100.0,
+                pct_change=-6.0,
+                volume_spike=2.5,
+            )
+        self.assertTrue(ok, reason)
+
+    async def test_on_breakout_detected_routes_downside_breakouts(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        called = {}
+
+        def _capture(**kwargs):
+            called.update(kwargs)
+
+        bot._handle_fast_path_breakout = _capture
+
+        with patch.object(main_module.settings, "FAST_PATH_ENABLED", True), \
+             patch.object(main_module, "log_activity"):
+            bot._on_breakout_detected("AAPL", 100.0, 3.2, -5.5)
+
+        self.assertEqual(called["symbol"], "AAPL")
+        self.assertEqual(called["pct_change"], -5.5)
+
     async def test_idempotency_guard_prevents_duplicate_fast_path_tasks(self):
         bot = main_module.TradingBot.__new__(main_module.TradingBot)
         bot._fast_path_pending = set()
         bot.entry_manager = _EntryNoNetwork()
         bot.risk_manager = _RiskOK()
+        bot._breakout_queue = asyncio.Queue()
         bot._fast_path_eval_queue = asyncio.Queue()
-
-        calls = []
-        gate = asyncio.Event()
-
-        async def _stub(candidate):
-            calls.append(candidate["symbol"])
-            await gate.wait()
-
-        bot._execute_fast_path_scout_entry = _stub
 
         with patch.object(main_module.settings, "FAST_PATH_ENABLED", True), \
              patch.object(main_module.settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0), \
@@ -118,9 +145,9 @@ class FastPathTests(unittest.IsolatedAsyncioTestCase):
             bot._handle_fast_path_breakout("AAPL", 100.0, 6.5, 3.2)
             await asyncio.sleep(0.01)
 
-        self.assertEqual(calls, ["AAPL"])
-        gate.set()
-        await asyncio.sleep(0)
+        self.assertEqual(bot._breakout_queue.qsize(), 1)
+        queued = bot._breakout_queue.get_nowait()
+        self.assertEqual(queued["symbol"], "AAPL")
 
     async def test_scout_queue_escalates_to_full_once(self):
         bot = main_module.TradingBot.__new__(main_module.TradingBot)

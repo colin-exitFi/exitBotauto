@@ -130,7 +130,9 @@ class TradingBot:
         self._fast_path_pending = set()
         self._jury_vetoed_symbols: Dict[str, float] = {}
         self._fast_path_eval_queue = asyncio.Queue(maxsize=50)
+        self._pending_live_refresh_queue = asyncio.Queue(maxsize=50)
         self._recent_uw_signal_keys: Dict[str, float] = {}
+        self._pending_live_refresh_at: Dict[str, float] = {}
         self._last_daily_reset_date = None
         self._processed_copy_trader_exit_ids = set()
         self._recorded_realized_keys = set()
@@ -529,6 +531,7 @@ class TradingBot:
         # ── WebSocket streams ─────────────────────────────────────
         # Market data stream: real-time prices + breakout detection
         self.market_stream.set_breakout_callback(self._on_breakout_detected)
+        self.market_stream.set_trade_callback(self._on_market_trade)
         self.market_stream.set_halt_callback(self._on_halt_status)
         self.market_stream.set_luld_callback(self._on_luld_status)
         await self.market_stream.start()
@@ -709,13 +712,15 @@ class TradingBot:
                         candidates = await self.scanner.scan()
                         # Subscribe to real-time data for top candidates
                         if candidates and self.market_stream:
-                            top_symbols = [c["symbol"] for c in candidates[:10]]
+                            stream_limit = max(1, int(getattr(settings, "STREAM_SUBSCRIBE_SYMBOL_LIMIT", 25) or 25))
+                            top_symbols = [c["symbol"] for c in candidates[:stream_limit]]
                             # Also keep streaming positions
                             pos_symbols = [p["symbol"] for p in self.entry_manager.get_positions()]
+                            pending_symbols = [row.get("symbol") for row in list_pending_setups(limit=stream_limit)]
                             # Feed prev_close data for accurate daily % in breakout alerts
                             prev_closes = {c["symbol"]: c.get("prev_close", 0) for c in candidates if c.get("prev_close", 0) > 0}
                             self.market_stream.set_prev_closes(prev_closes)
-                            await self.market_stream.subscribe(top_symbols + pos_symbols)
+                            await self.market_stream.subscribe(top_symbols + pos_symbols + pending_symbols)
                         await self._process_candidates(candidates)
 
                         raw_regime = self.scanner.get_last_market_regime() if self.scanner else "mixed"
@@ -747,6 +752,11 @@ class TradingBot:
                     await self._process_breakout_queue()
                 except Exception as e:
                     logger.error(f"Breakout queue error: {e}")
+
+                try:
+                    await self._process_pending_live_refresh_queue()
+                except Exception as e:
+                    logger.error(f"Pending live refresh queue error: {e}")
 
                 # ── MONITOR pending orders (adjust stale limits) ──
                 try:
@@ -2256,6 +2266,31 @@ class TradingBot:
         snapshot_id = record_setup_snapshot(payload)
         return snapshot_id
 
+    def _record_candidate_block(
+        self,
+        candidate: Dict,
+        symbol_state: str,
+        reason: str,
+        verdict=None,
+        extra: Optional[Dict] = None,
+    ) -> Optional[str]:
+        if not self._mode_classifier_enabled():
+            return None
+        payload = dict(candidate or {})
+        symbol = str(payload.get("symbol", "") or "").upper().strip()
+        if not symbol:
+            return None
+        payload["symbol"] = symbol
+        payload.setdefault("holding_horizon", payload.get("hold_style", "intraday"))
+        payload.setdefault("last_refreshed_at", time.time())
+        payload.setdefault("setup_mode", payload.get("setup_mode", "invalid"))
+        payload.setdefault("direction_constraint", payload.get("direction_constraint", "none"))
+        payload.setdefault("timing_state", str(symbol_state or "classified"))
+        payload["no_trade_reason"] = str(reason or "").strip() or payload.get("no_trade_reason")
+        if symbol_state in {"broker_blocked", "capital_blocked", "data_insufficient", "mode_conflict", "shadow_only"}:
+            payload["timing_state"] = symbol_state
+        return self._record_setup_snapshot(payload, symbol_state, verdict=verdict, extra=extra)
+
     def _pending_setup_candidate_snapshot(self, candidate: Dict) -> Dict:
         keep_fields = {
             "symbol",
@@ -2387,11 +2422,10 @@ class TradingBot:
 
         features = build_mode_features(enriched, now_ts=now_ts)
         classification = classify_mode(features)
+        disabled_mode = None
         if classification.mode in self._disabled_setup_modes():
             disabled_mode = classification.mode
-            classification.mode = "invalid"
-            classification.direction_constraint = "none"
-            classification.reason_codes = ["mode_disabled", f"mode_{disabled_mode}"]
+            classification.reason_codes = ["mode_disabled", f"mode_{disabled_mode}", *list(classification.reason_codes or [])]
             classification.classifier_confidence = 0.0
         resolution = resolve_play(features, classification, now_ts=now_ts)
 
@@ -2442,7 +2476,17 @@ class TradingBot:
         enriched["materially_new_setup"] = not bool(
             existing_setup and existing_setup.get("material_change_signature") == material_signature
         )
-        enriched["symbol_state"] = "pending_trigger" if resolution.timing_state == "wait_for_trigger" else "classified"
+        if disabled_mode:
+            enriched["timing_state"] = "shadow_only"
+            enriched["size_posture"] = "zero"
+            enriched["no_trade_reason"] = f"mode_disabled:{disabled_mode}"
+            enriched["symbol_state"] = "shadow_only"
+        elif resolution.timing_state == "wait_for_trigger":
+            enriched["symbol_state"] = "pending_trigger"
+        elif resolution.timing_state in {"data_insufficient", "mode_conflict"}:
+            enriched["symbol_state"] = resolution.timing_state
+        else:
+            enriched["symbol_state"] = "classified"
 
         snapshot_id = self._record_setup_snapshot(enriched, enriched["symbol_state"])
         if snapshot_id:
@@ -2490,8 +2534,12 @@ class TradingBot:
                 "execution_confidence": round(execution_confidence, 2),
             }
 
-        if setup_mode == "invalid":
-            return {"allowed": False, "reason": "invalid_mode", "execution_confidence": round(execution_confidence, 2)}
+        if timing_state == "shadow_only":
+            return {"allowed": False, "reason": "shadow_only", "execution_confidence": round(execution_confidence, 2)}
+        if timing_state in {"data_insufficient", "mode_conflict"}:
+            return {"allowed": False, "reason": timing_state, "execution_confidence": round(execution_confidence, 2)}
+        if setup_mode == "invalid" and timing_state not in {"enter_now", "wait_for_trigger"}:
+            return {"allowed": False, "reason": "data_insufficient", "execution_confidence": round(execution_confidence, 2)}
         if timing_state != "enter_now":
             return {"allowed": False, "reason": timing_state or "trigger_not_live", "execution_confidence": round(execution_confidence, 2)}
         if direction_constraint == "short_only" and desired_direction != "SHORT":
@@ -2953,6 +3001,50 @@ class TradingBot:
                 self._fast_path_pending.discard(symbol)
             processed += 1
 
+    def _queue_pending_live_refresh(self, symbol: str, price: float = 0.0):
+        symbol_key = str(symbol or "").upper().strip()
+        if not symbol_key:
+            return
+        if not get_pending_setup(symbol_key):
+            return
+        now = time.time()
+        last_refresh = float(self._pending_live_refresh_at.get(symbol_key, 0.0) or 0.0)
+        cooldown = max(1.0, float(getattr(settings, "PENDING_LIVE_REFRESH_COOLDOWN_SECONDS", 5.0) or 5.0))
+        if (now - last_refresh) < cooldown:
+            return
+        self._pending_live_refresh_at[symbol_key] = now
+        payload = {
+            "symbol": symbol_key,
+            "price": float(price or 0.0),
+            "source": "market_stream_live_refresh",
+            "signal_timestamp": now,
+            "score": 0.0,
+        }
+        try:
+            self._pending_live_refresh_queue.put_nowait(payload)
+        except asyncio.QueueFull:
+            logger.debug(f"Pending live refresh queue full for {symbol_key}")
+
+    async def _process_pending_live_refresh_queue(self):
+        if not hasattr(self, "_pending_live_refresh_queue") or self._pending_live_refresh_queue.empty():
+            return
+        if not getattr(self, "_broker_ready", False):
+            return
+        processed = 0
+        seen_symbols = set()
+        while not self._pending_live_refresh_queue.empty() and processed < 3:
+            try:
+                candidate = self._pending_live_refresh_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            symbol = str(candidate.get("symbol", "") or "").upper().strip()
+            if not symbol or symbol in seen_symbols:
+                continue
+            seen_symbols.add(symbol)
+            logger.debug(f"⚡ LIVE REFRESH pending setup: {symbol}")
+            await self._process_candidates([candidate])
+            processed += 1
+
     def _prune_uw_signal_dedupe(self):
         cutoff = time.time() - max(
             60,
@@ -3268,7 +3360,7 @@ class TradingBot:
         if price <= 0 or price < 5 or price > 500:
             return False, "price_out_of_range"
         min_change = float(getattr(settings, "FAST_PATH_MIN_CHANGE_PCT", 5.0))
-        if pct_change < min_change:
+        if abs(float(pct_change or 0.0)) < min_change:
             return False, "insufficient_change"
         min_vol_spike = float(getattr(settings, "FAST_PATH_MIN_VOLUME_SPIKE", 2.0))
         if volume_spike < min_vol_spike:
@@ -3474,6 +3566,7 @@ class TradingBot:
             "change_pct": pct_change,
             "volume_spike": volume_spike,
             "source": "breakout_stream",
+            "side": "short" if float(pct_change or 0.0) < 0 else "long",
             "score": abs(pct_change) / 100 + volume_spike / 10,
             "signal_timestamp": signal_timestamp,
             "strategy_tag": "breakout_fast_path",
@@ -3777,7 +3870,8 @@ class TradingBot:
             return {"tier_1": 0, "tier_2": 1, "tier_3": 2}.get(str(candidate_row.get("signal_tier", "tier_2")), 1)
 
         pending_candidates = self._build_pending_setup_candidates(list(candidates or []))
-        combined_candidates = pending_candidates + list(candidates or [])[:20]
+        candidate_pool_limit = max(8, int(getattr(settings, "ENTRY_CANDIDATE_POOL_LIMIT", 40) or 40))
+        combined_candidates = pending_candidates + list(candidates or [])[:candidate_pool_limit]
         prepared_candidates = [self._prepare_candidate_metadata(candidate) for candidate in combined_candidates]
         prepared_candidates.sort(
             key=lambda row: (
@@ -3799,7 +3893,8 @@ class TradingBot:
         evaluated_symbols = set()
 
         for candidate in prepared_candidates:
-            if evaluated >= 8:
+            eval_limit = max(4, int(getattr(settings, "ENTRY_EVAL_LIMIT", 16) or 16))
+            if evaluated >= eval_limit:
                 break
 
             symbol = str(candidate.get("symbol", "") or "").upper()
@@ -3826,6 +3921,7 @@ class TradingBot:
             current_count = int(positions_by_strategy.get(strategy_tag, 0) or 0)
             if current_count >= max_for_strategy:
                 logger.info(f"📊 BOOK CAP {symbol}: {strategy_tag} at {current_count}/{max_for_strategy}")
+                self._record_candidate_block(candidate, "capital_blocked", f"book_cap:{strategy_tag}")
                 continue
             if strategy_tag == "momentum_long":
                 candidate_sector = self._sector_bucket(candidate)
@@ -3840,6 +3936,7 @@ class TradingBot:
                         f"📊 SECTOR CAP {symbol}: {candidate_sector} already has "
                         f"{sector_count} momentum_long positions"
                     )
+                    self._record_candidate_block(candidate, "capital_blocked", f"sector_cap:{candidate_sector}")
                     continue
 
             candidate["wyckoff_bias"] = self._infer_wyckoff_bias(candidate)
@@ -3889,11 +3986,25 @@ class TradingBot:
                 )
                 if self._mode_classifier_enforced():
                     continue
-            elif current_mode == "invalid" or timing_state == "no_edge":
+            elif timing_state == "shadow_only":
+                self._remove_waiting_setup(symbol, mode=pending_mode or current_mode)
+                self._record_candidate_block(candidate, "shadow_only", candidate.get("no_trade_reason", "mode_disabled"))
+                logger.info(
+                    f"👻 SETUP SHADOW {symbol}: mode={current_mode} "
+                    f"reason={candidate.get('no_trade_reason') or 'mode_disabled'}"
+                )
+                continue
+            elif timing_state in {"data_insufficient", "mode_conflict"} or current_mode == "invalid":
                 self._remove_waiting_setup(symbol, mode=pending_mode or current_mode)
                 if self._mode_classifier_enforced():
+                    block_state = timing_state if timing_state in {"data_insufficient", "mode_conflict"} else "data_insufficient"
+                    self._record_candidate_block(
+                        candidate,
+                        block_state,
+                        candidate.get("no_trade_reason") or ",".join(candidate.get("classifier_reason_codes", [])[:2]) or "no_clear_setup",
+                    )
                     logger.info(
-                        f"🚫 SETUP NO-EDGE {symbol}: mode={current_mode} "
+                        f"🚫 SETUP BLOCK {symbol}: mode={current_mode} timing={timing_state} "
                         f"reason={candidate.get('no_trade_reason') or ','.join(candidate.get('classifier_reason_codes', [])[:2]) or 'no_clear_setup'}"
                     )
                     continue
@@ -3905,6 +4016,7 @@ class TradingBot:
                     f"🧭 ENTRY TRACE {symbol}: blocked before jury by position_manager "
                     f"strategy={candidate.get('strategy_tag', 'unknown')} side={candidate.get('side', 'long')}"
                 )
+                self._record_candidate_block(candidate, "capital_blocked", "position_manager_block")
                 continue
 
             sentiment_score = float(candidate.get("sentiment_score", 0) or 0)
@@ -3939,6 +4051,9 @@ class TradingBot:
             # Shortability pre-check: don't waste jury evals on unshortable stocks
             if candidate_direction == "SHORT" and self.alpaca_client and hasattr(self.alpaca_client, "is_shortable"):
                 if not self.alpaca_client.is_shortable(symbol):
+                    candidate["timing_state"] = "broker_blocked"
+                    candidate["no_trade_reason"] = "not_shortable"
+                    self._record_candidate_block(candidate, "broker_blocked", "not_shortable")
                     self._record_short_verdict_block(symbol, "not_shortable", "pre_check")
                     continue
             pre_risk_brief = await book_risk_agent.analyze(
@@ -3968,6 +4083,7 @@ class TradingBot:
                     "mae": None,
                 }
                 self._persist_shadow_record(shadow_record)
+                self._record_candidate_block(candidate, "shadow_only", f"strategy_disabled:{disabled_strategy}")
                 logger.info(
                     f"👻 SHADOW {symbol}: {disabled_strategy} disabled — hypothetical entry @ ${signal_price:.2f} "
                     f"entry_quality={candidate.get('entry_quality')} spread={candidate.get('spread_pct')} "
@@ -4003,7 +4119,7 @@ class TradingBot:
             if "cooldown" not in verdict.reasoning.lower():
                 evaluated += 1
                 if evaluated > 1:
-                    await asyncio.sleep(1.5)
+                    await asyncio.sleep(max(0.0, float(getattr(settings, "ENTRY_EVAL_SLEEP_SECONDS", 0.35) or 0.35)))
 
             self.ai_layers["last_consensus"] = verdict.to_dict()
             consensus_detail = getattr(verdict, "consensus_detail", {}) or {}
@@ -4027,28 +4143,37 @@ class TradingBot:
             if verdict.decision not in {"BUY", "SHORT"}:
                 # Auto-enter path: classifier + resolver override jury SKIP for clean continuation_long pullbacks
                 auto_enter = False
+                auto_decision = "SHORT" if str(candidate.get("direction_constraint", "none") or "").lower() == "short_only" else "BUY"
                 if (
                     self._mode_classifier_enforced()
                     and bool(getattr(settings, "MODE_CLASSIFIER_AUTO_ENTER", True))
-                    and str(candidate.get("setup_mode", "") or "").lower() in {"continuation_long", "general_momentum_long"}
+                    and str(candidate.get("setup_mode", "") or "").lower() in {
+                        "continuation_long",
+                        "continuation_short",
+                        "general_momentum_long",
+                        "general_momentum_short",
+                    }
                     and str(candidate.get("timing_state", "") or "").lower() == "enter_now"
                     and str(candidate.get("entry_quality", "") or "").lower() in {"pullback", "neutral", "at_highs"}
                     and float(candidate.get("classifier_confidence", 0) or 0) >= 0.65
+                    and float(candidate.get("resolver_confidence", 0) or 0) >= 0.55
+                    and float(candidate.get("spread_pct", 0) or 0) <= 0.6
                     and self.entry_manager.is_market_open()
                     and not self.entry_manager.is_extended_hours()
+                    and (auto_decision != "SHORT" or self._shorting_ready())
                 ):
                     logger.warning(
-                        f"🔥 AUTO-ENTER OVERRIDE {symbol}: classifier continuation_long + enter_now "
-                        f"(conf={candidate.get('classifier_confidence')}, quality={candidate.get('entry_quality')}) "
+                        f"🔥 AUTO-ENTER OVERRIDE {symbol}: classifier {candidate.get('setup_mode')} + enter_now "
+                        f"(conf={candidate.get('classifier_confidence')}, quality={candidate.get('entry_quality')}, direction={auto_decision}) "
                         f"— jury skipped but math says go at 50% size"
                     )
-                    log_activity("trade", f"🔥 AUTO-ENTER: {symbol} continuation_long (jury overridden by classifier)")
+                    log_activity("trade", f"🔥 AUTO-ENTER: {symbol} {candidate.get('setup_mode')} (jury overridden by classifier)")
                     verdict = JuryVerdict(
                         symbol=symbol,
-                        decision="BUY",
+                        decision=auto_decision,
                         size_pct=max(0.5, float(verdict.size_pct or 1.0) * 0.5),
                         trail_pct=float(verdict.trail_pct or 2.0),
-                        reasoning=f"Classifier auto-enter: continuation_long pullback, conf={candidate.get('classifier_confidence')}",
+                        reasoning=f"Classifier auto-enter: {candidate.get('setup_mode')} {candidate.get('entry_quality')} conf={candidate.get('classifier_confidence')}",
                         confidence=float(candidate.get("classifier_confidence", 0.7) or 0.7) * 100,
                         provider_used="classifier_auto",
                         briefs=briefs,
@@ -4064,6 +4189,7 @@ class TradingBot:
                         from src.data.entry_controls import record_jury_veto as _persist_veto
 
                         _persist_veto(symbol)
+                        self._record_candidate_block(candidate, "mode_conflict", verdict.reasoning, verdict=verdict)
                         logger.info(f"Jury SKIP for {symbol}: {verdict.reasoning}")
                         log_activity("ai", f"{symbol}: SKIP — {verdict.reasoning}")
                     continue
@@ -4079,6 +4205,7 @@ class TradingBot:
                     f"{symbol}: {verdict.decision} blocked — confidence {verdict.confidence:.0f}% < {min_conf:.0f}%",
                 )
                 self._record_jury_veto(symbol)
+                self._record_candidate_block(candidate, "mode_conflict", f"jury_confidence_below_floor:{verdict.confidence:.0f}", verdict=verdict)
                 continue
 
             direction = verdict.decision
@@ -4138,6 +4265,7 @@ class TradingBot:
             sentiment_data["entry_quality"] = candidate.get("entry_quality", "neutral")
             sentiment_data["overnight_context"] = candidate.get("overnight_context", "")
             sentiment_data = self._apply_setup_fields_to_sentiment_data(sentiment_data, candidate, verdict=verdict)
+            is_classifier_auto = str(getattr(verdict, "provider_used", "") or "").startswith("classifier_auto")
 
             log_activity(
                 "trade",
@@ -4165,6 +4293,7 @@ class TradingBot:
                     f"strategy={sentiment_data['strategy_tag']} direction={direction}"
                 )
                 log_activity("trade", f"⛔ PLAYBOOK GATE: {symbol} {direction} blocked ({reason})")
+                self._record_candidate_block(candidate, "capital_blocked", f"playbook_gate:{reason}", verdict=verdict)
                 if direction == "SHORT":
                     self._record_short_verdict_block(symbol, reason, "playbook")
                 continue
@@ -4189,6 +4318,15 @@ class TradingBot:
                         f"timing={candidate.get('timing_state')} direction={direction}"
                     )
                     log_activity("trade", f"⛔ SETUP GATE: {symbol} {direction} blocked ({reason})")
+                    if reason == "trigger_not_live":
+                        candidate["timing_state"] = "wait_for_trigger"
+                        candidate["no_trade_reason"] = "trigger_not_live"
+                        self._persist_waiting_setup(candidate, verdict=verdict, shadow_mode=not self._mode_classifier_enforced())
+                    else:
+                        block_state = "broker_blocked" if reason in {"shorting_not_ready", "broker_unavailable"} else (
+                            "data_insufficient" if reason in {"data_insufficient", "stale_signal", "spread_too_wide", "shadow_only"} else "capital_blocked"
+                        )
+                        self._record_candidate_block(candidate, block_state, reason, verdict=verdict)
                     if direction == "SHORT":
                         self._record_short_verdict_block(symbol, reason, "setup_gate")
                     continue
@@ -4206,7 +4344,6 @@ class TradingBot:
             raw_sentiment_score = float(sentiment_score or 0)
             effective_sentiment_score = raw_sentiment_score
             # Classifier auto-enter bypasses sentiment gate -- the math already approved this entry
-            is_classifier_auto = str(getattr(verdict, "provider_used", "") or "").startswith("classifier_auto")
             if is_classifier_auto:
                 effective_sentiment_score = max(effective_sentiment_score, 1.0)
                 raw_sentiment_score = max(raw_sentiment_score, 1.0)
@@ -4239,6 +4376,7 @@ class TradingBot:
             if direction == "SHORT" and not can:
                 self._record_short_verdict_block(symbol, gate_reason, "gate")
             if not can:
+                self._record_candidate_block(candidate, "capital_blocked", f"entry_gate:{gate_reason}", verdict=verdict)
                 continue
 
             logger.info(
@@ -5458,10 +5596,7 @@ class TradingBot:
         logger.info(f"{direction} BREAKOUT: {symbol} {pct_change:+.1f}% @ ${price:.2f} (vol {volume_spike:.1f}x)")
         log_activity("scan", f"{direction} Breakout: {symbol} {pct_change:+.1f}% vol={volume_spike:.1f}x")
 
-        # v1 fast-path is long-only deterministic scout entry.
         if not bool(getattr(settings, "FAST_PATH_ENABLED", False)):
-            return
-        if pct_change <= 0:
             return
         self._handle_fast_path_breakout(
             symbol=symbol,
@@ -5469,6 +5604,9 @@ class TradingBot:
             pct_change=pct_change,
             volume_spike=volume_spike,
         )
+
+    def _on_market_trade(self, symbol: str, price: float, size: float, timestamp: str):
+        self._queue_pending_live_refresh(symbol=symbol, price=price)
 
     def _on_halt_status(self, symbol: str, status_code: str, reason: str, halted: bool):
         """Pause active monitoring on halted positions until trading resumes."""

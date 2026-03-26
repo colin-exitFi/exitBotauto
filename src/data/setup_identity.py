@@ -17,6 +17,10 @@ SYMBOL_STATES = {
     "live_position",
     "cooldown",
     "shadow_only",
+    "broker_blocked",
+    "capital_blocked",
+    "data_insufficient",
+    "mode_conflict",
     "expired",
 }
 
