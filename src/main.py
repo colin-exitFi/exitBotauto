@@ -4343,8 +4343,9 @@ class TradingBot:
 
             raw_sentiment_score = float(sentiment_score or 0)
             effective_sentiment_score = raw_sentiment_score
-            # Classifier auto-enter bypasses sentiment gate -- the math already approved this entry
-            if is_classifier_auto:
+            # Council and classifier auto-enter bypass sentiment gate -- the council/math already approved this entry
+            is_council = str(getattr(verdict, "provider_used", "") or "").startswith("council")
+            if is_classifier_auto or is_council:
                 effective_sentiment_score = max(effective_sentiment_score, 1.0)
                 raw_sentiment_score = max(raw_sentiment_score, 1.0)
             if direction == "SHORT":
