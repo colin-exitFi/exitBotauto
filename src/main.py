@@ -4737,7 +4737,7 @@ class TradingBot:
                 positions=self.entry_manager.get_positions() if self.entry_manager else positions,
             )
             candidate["allocator_plan"] = dict(allocator_plan or {})
-            if not allocator_plan.get("allowed", True) and False:  # DISABLED: allocator is advisory-only until books have clean data
+            if False:  # ALLOCATOR FULLY BYPASSED: council decides, .env sizes
                 reason = str(allocator_plan.get("reason", "allocator_block") or "allocator_block")
                 logger.info(
                     f"📊 ALLOCATOR BLOCK {symbol}: {reason} book={candidate.get('strategy_tag')} "
@@ -4748,7 +4748,7 @@ class TradingBot:
                 log_activity("trade", f"📊 ALLOCATOR BLOCK: {symbol} {reason} ({candidate.get('strategy_tag')})")
                 self._record_candidate_block(candidate, "capital_blocked", f"allocator:{reason}", verdict=verdict)
                 continue
-            effective_size_pct = float(allocator_plan.get("size_pct", effective_size_pct) or effective_size_pct)
+            effective_size_pct = effective_size_pct  # ALLOCATOR SIZING BYPASSED: use council/tier size directly
             size_modifier = max(0.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
 
             sentiment_data["consensus_size_modifier"] = size_modifier
