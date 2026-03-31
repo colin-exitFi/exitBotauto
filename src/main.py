@@ -6377,12 +6377,8 @@ class TradingBot:
                 price = float(pos.get("current_price", 0) or pos.get("entry_price", 0) or 0)
                 notional = qty * price
                 is_dust = 0 < notional < 5.0
-                is_fractional_carryover = (
-                    qty < 1.0
-                    and pos.get("from_brokerage")
-                    and str(pos.get("entry_path", "") or "").startswith("broker_sync")
-                )
-                if (is_dust or is_fractional_carryover) and not pos.get("exit_pending") and not pos.get("_dust_close_attempted"):
+                is_fractional_carryover = False  # DISABLED: was killing legitimate fractional positions on restart
+                if is_dust and not pos.get("exit_pending") and not pos.get("_dust_close_attempted"):
                     label = "DUST" if is_dust else "FRACTIONAL CARRYOVER"
                     logger.warning(f"🧹 {label} CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing via Alpaca close_position")
                     await self._submit_dust_cleanup_exit(pos, label.lower().replace(" ", "_"))

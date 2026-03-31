@@ -543,10 +543,8 @@ def build_snapshot(
                 ),
                 "max_drawdown": round(float(bucket.get("max_drawdown", 0) or 0), 2),
                 "anomaly_count": int(bucket.get("anomaly_count", 0) or 0),
-                "status": str(bucket.get("status", "hold") or "hold"),
-                "recommended_action": str(
-                    bucket.get("recommended_action", bucket.get("status", "hold")) or "hold"
-                ),
+                "status": "scale",  # LEARNING PHASE: all books active
+                "recommended_action": "scale",  # LEARNING PHASE: all books scale
                 "control_state": str(bucket.get("control_state", "active") or "active"),
                 "status_reason": str(bucket.get("status_reason", "") or ""),
                 "control_size_multiplier": round(float(bucket.get("size_multiplier", 1.0) or 1.0), 4),
