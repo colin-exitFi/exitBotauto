@@ -199,9 +199,22 @@ class ProfitRatchet:
         peak = float(peak_pnl_pct or 0.0)
         activation = float(activation_pct if activation_pct is not None else cls.RATCHET_ACTIVATION_PCT)
         floor_base = float(initial_floor_pct if initial_floor_pct is not None else cls.INITIAL_FLOOR_PCT)
-        trail = float(trail_pct if trail_pct is not None else cls.RATCHET_TRAIL_PCT)
+        base_trail = float(trail_pct if trail_pct is not None else cls.RATCHET_TRAIL_PCT)
         if peak < activation:
             return None
+        # Progressive ratchet: trail tightens as the trade proves itself
+        # Peak 1-3%: full trail (4%)
+        # Peak 3-6%: tighter trail (2.5%) -- the trade is working, protect more
+        # Peak 6-10%: tight trail (2.0%) -- big winner, lock it in
+        # Peak 10%+: very tight (1.5%) -- monster winner, don't give back
+        if peak >= 10.0:
+            trail = min(base_trail, 1.5)
+        elif peak >= 6.0:
+            trail = min(base_trail, 2.0)
+        elif peak >= 3.0:
+            trail = min(base_trail, 2.5)
+        else:
+            trail = base_trail
         floor = max(floor_base, peak - trail)
         return round(floor, 4)
 
