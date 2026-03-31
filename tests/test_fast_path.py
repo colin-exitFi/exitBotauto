@@ -1,7 +1,8 @@
 import asyncio
+import json
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import src.main as main_module
 
@@ -267,6 +268,178 @@ class FastPathTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(ok)
         self.assertEqual(reason, "swing_mode_disabled")
+
+    async def test_crossed_short_ratchet_submits_software_exit(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.alpaca_client = object()
+        bot._entry_session_label = lambda: "regular"
+
+        async def _fake_ensure_hard_stop(position, open_orders_by_symbol, current_price):
+            return None
+
+        canceled = []
+
+        async def _fake_cancel(order_id):
+            canceled.append(order_id)
+            return True
+
+        submitted = []
+
+        async def _fake_submit(position, current_price, reason):
+            submitted.append((position["symbol"], current_price, reason))
+            position["exit_pending"] = True
+            return True
+
+        bot._ensure_hard_stop = _fake_ensure_hard_stop
+        bot._cancel_order_and_confirm = _fake_cancel
+        bot._submit_software_managed_exit = _fake_submit
+
+        position = {
+            "symbol": "NDLS",
+            "side": "short",
+            "quantity": 104,
+            "ratchet_limit_order_id": "ratchet-1",
+            "order_state": {},
+        }
+        action = {
+            "ratchet_active": True,
+            "target_exit_price": 9.48,
+            "action": "ratchet_exit",
+            "peak_pnl_pct": 3.05,
+            "current_pnl_pct": -0.21,
+            "floor_pct": 0.25,
+        }
+        open_orders = {
+            "NDLS": [
+                {
+                    "id": "ratchet-1",
+                    "symbol": "NDLS",
+                    "side": "buy",
+                    "type": "stop",
+                    "client_order_id": "NDLS_ratchet_123",
+                }
+            ]
+        }
+
+        await bot._apply_profit_ratchet_action(position, 9.70, action, open_orders)
+
+        self.assertEqual(canceled, ["ratchet-1"])
+        self.assertEqual(submitted, [("NDLS", 9.70, "ratchet_exit")])
+
+    async def test_short_ratchet_broker_rejection_submits_software_exit(self):
+        class _RejectingAlpaca:
+            def place_stop_order(self, symbol, qty, target_price, side, client_order_id, whole_only):
+                return None
+
+            def pop_order_error(self, client_order_id):
+                return {
+                    "status_code": 422,
+                    "body": json.dumps(
+                        {
+                            "code": 42210000,
+                            "market_price": "9.51",
+                            "message": "stop price must be greater than current price",
+                            "stop_price": "9.48",
+                        }
+                    ),
+                }
+
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.alpaca_client = _RejectingAlpaca()
+        bot._entry_session_label = lambda: "regular"
+
+        async def _fake_ensure_hard_stop(position, open_orders_by_symbol, current_price):
+            return None
+
+        submitted = []
+
+        async def _fake_submit(position, current_price, reason):
+            submitted.append((position["symbol"], current_price, reason))
+            position["exit_pending"] = True
+            return True
+
+        bot._ensure_hard_stop = _fake_ensure_hard_stop
+        bot._cancel_order_and_confirm = AsyncMock(return_value=True)
+        bot._submit_software_managed_exit = _fake_submit
+
+        position = {
+            "symbol": "NDLS",
+            "side": "short",
+            "quantity": 104,
+            "order_state": {},
+        }
+        action = {
+            "ratchet_active": True,
+            "target_exit_price": 9.48,
+            "action": "tighten",
+            "peak_pnl_pct": 3.05,
+            "current_pnl_pct": 0.65,
+            "floor_pct": 0.25,
+        }
+
+        await bot._apply_profit_ratchet_action(position, 9.47, action, {})
+
+        self.assertEqual(submitted, [("NDLS", 9.51, "ratchet_exit")])
+        self.assertEqual(position.get("ratchet_order_type"), "software_exit")
+
+    async def test_same_target_ratchet_respects_replace_cooldown(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.alpaca_client = object()
+        bot._entry_session_label = lambda: "regular"
+
+        async def _unexpected_cancel(order_id):
+            raise AssertionError("Cooldown path should not cancel ratchet orders")
+
+        bot._cancel_order_and_confirm = _unexpected_cancel
+
+        position = {
+            "symbol": "CCL",
+            "side": "short",
+            "quantity": 6,
+            "ratchet_limit_order_id": "ratchet-1",
+            "ratchet_last_target_price": 24.57,
+            "ratchet_last_place_attempt_at": time.time(),
+            "order_state": {},
+        }
+
+        with patch.object(main_module.settings, "PROFIT_RATCHET_REPLACE_COOLDOWN_SECONDS", 20.0):
+            ok = await bot._place_or_replace_ratchet_order(position, 24.57, {})
+
+        self.assertTrue(ok)
+        self.assertEqual(position["order_state"]["ratchet"], "cooldown_skip")
+
+    async def test_uw_signal_queue_schedules_immediate_drain(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot._uw_signal_queue = asyncio.Queue(maxsize=50)
+        bot._uw_signal_drain_task = None
+        bot._recent_uw_signal_keys = {}
+        bot.ai_layers = {}
+
+        drained = []
+
+        async def _fake_process_queue():
+            drained.append("drain")
+            while not bot._uw_signal_queue.empty():
+                await bot._uw_signal_queue.get()
+
+        bot._process_unusual_whales_signal_queue = _fake_process_queue
+
+        with patch.object(main_module, "log_activity"), \
+             patch.object(main_module.settings, "UW_STREAM_MIN_DARK_POOL_PREMIUM", 1.0):
+            await bot._on_unusual_whales_signal(
+                {
+                    "event_type": "dark_pool",
+                    "ticker": "TSLA",
+                    "premium": 500000.0,
+                    "sentiment": "bullish",
+                    "price": 100.0,
+                    "size": 1000.0,
+                }
+            )
+            await asyncio.sleep(0.05)
+
+        self.assertEqual(drained, ["drain"])
+        self.assertTrue(bot._uw_signal_queue.empty())
 
     async def test_hold_decision_requeues_with_tightened_trail(self):
         bot = main_module.TradingBot.__new__(main_module.TradingBot)

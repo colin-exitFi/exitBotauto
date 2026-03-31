@@ -27,17 +27,25 @@ from src.ai.mission import MISSION
 
 # Hard bounds — tuner CANNOT exceed these
 TUNABLE_PARAMS = {
-    "STOP_LOSS_PCT":            {"min": 0.5, "max": 3.0,  "type": float},
-    "TAKE_PROFIT_1_PCT":        {"min": 0.5, "max": 5.0,  "type": float},
-    "TAKE_PROFIT_2_PCT":        {"min": 1.0, "max": 10.0, "type": float},
-    "TRAILING_STOP_PCT":        {"min": 0.2, "max": 2.0,  "type": float},
-    "POSITION_SIZE_PCT":        {"min": 1.0, "max": 10.0, "type": float},
-    "MAX_CONCURRENT_POSITIONS": {"min": 3,   "max": 15,   "type": int},
-    "SCAN_INTERVAL_SECONDS":    {"min": 60,  "max": 600,  "type": int},
-    # Keep entry sentiment from drifting into "almost never trade" territory.
-    "MIN_ENTRY_SENTIMENT":      {"min": -0.5,"max": 0.45, "type": float},
-    "MAX_HOLD_HOURS":           {"min": 1,   "max": 24,   "type": float},
+    "STOP_LOSS_PCT":            {"min": 1.0, "max": 2.0,  "type": float},
+    "TAKE_PROFIT_1_PCT":        {"min": 1.0, "max": 3.0,  "type": float},
+    "TAKE_PROFIT_2_PCT":        {"min": 2.0, "max": 6.0,  "type": float},
+    "TRAILING_STOP_PCT":        {"min": 0.5, "max": 1.5,  "type": float},
+    "POSITION_SIZE_PCT":        {"min": 2.0, "max": 5.0,  "type": float},
+    "MAX_CONCURRENT_POSITIONS": {"min": 5,   "max": 10,   "type": int},
+    "SCAN_INTERVAL_SECONDS":    {"min": 60,  "max": 300,  "type": int},
+    "MIN_ENTRY_SENTIMENT":      {"min": -0.5,"max": 0.3,  "type": float},
+    "MAX_HOLD_HOURS":           {"min": 2,   "max": 8,    "type": float},
 }
+
+# Per-parameter cooldown: once changed, cannot change again for this many seconds
+PARAM_COOLDOWN_SECONDS = 7200  # 2 hours
+
+# Max total changes per trading day
+MAX_DAILY_CHANGES = 6
+
+# Max step: parameter can move at most 25% of its range per change
+MAX_STEP_FRACTION = 0.25
 
 SYSTEM_PROMPT = f"""{MISSION}
 
@@ -55,12 +63,14 @@ TUNABLE PARAMETERS (with hard bounds you CANNOT exceed):
 - MAX_HOLD_HOURS (1-24): Maximum hold time
 
 RULES:
-1. Maximum 3 changes per run
-2. Every change must cite specific performance data
-3. If win rate >60% and P&L positive, be conservative with changes
-4. If losing money, be more aggressive
-5. Track what previous changes did — don't oscillate
-6. Capital velocity is king: prefer changes that INCREASE trading activity
+1. Maximum 2 changes per run, maximum 6 changes per day
+2. Every change must cite specific performance data from at least 10 trades
+3. If win rate >60% and P&L positive, make ZERO changes — the system is working
+4. Each parameter has a 2-hour cooldown after being changed — you cannot change the same parameter twice in 2 hours
+5. Changes are clamped to 25% of the parameter's range per step — no dramatic swings
+6. DO NOT OSCILLATE. If you changed a parameter in one direction last time, do NOT change it back unless you have 20+ trades of evidence that the change hurt
+7. Capital velocity matters but STABILITY matters more. A bot that thrashes between settings every 30 minutes will never learn what works
+8. When in doubt, make ZERO changes. The default settings are designed to work.
 
 Output JSON:
 {{
@@ -87,6 +97,9 @@ class Tuner:
         self._last_output: Optional[Dict] = None
         self._change_history: list = []
         self._impact_history: list = []
+        self._param_last_changed: Dict[str, float] = {}
+        self._daily_change_count: int = 0
+        self._daily_change_date: str = ""
         DATA_DIR.mkdir(exist_ok=True)
         # Tuner is opt-in during live trading; do not let stale mutations silently
         # override runtime defaults unless explicitly enabled.
@@ -188,15 +201,38 @@ What parameters should change?"""
                 self._last_output = result
                 return result
 
-            # Validate and apply changes (max 3)
+            # Reset daily counter if new day
+            from datetime import datetime
+            try:
+                import zoneinfo
+                today_str = datetime.now(zoneinfo.ZoneInfo("US/Eastern")).strftime("%Y-%m-%d")
+            except Exception:
+                today_str = datetime.now().strftime("%Y-%m-%d")
+            if self._daily_change_date != today_str:
+                self._daily_change_count = 0
+                self._daily_change_date = today_str
+
+            # Validate and apply changes (max 2 per run, max 6 per day)
             applied = []
-            for c in changes[:3]:
+            for c in changes[:2]:
                 param = c.get("param", "")
                 value = c.get("value")
                 reason = c.get("reason", "")
 
                 if param not in TUNABLE_PARAMS:
                     logger.warning(f"Tuner: unknown param {param}")
+                    continue
+
+                # Daily cap
+                if self._daily_change_count >= MAX_DAILY_CHANGES:
+                    logger.info(f"🔧 Tuner: DAILY CAP reached ({MAX_DAILY_CHANGES} changes today) — no more changes")
+                    break
+
+                # Per-param cooldown
+                last_changed = self._param_last_changed.get(param, 0)
+                if time.time() - last_changed < PARAM_COOLDOWN_SECONDS:
+                    remaining = int(PARAM_COOLDOWN_SECONDS - (time.time() - last_changed))
+                    logger.info(f"🔧 Tuner: {param} on cooldown ({remaining}s remaining) — skipping")
                     continue
 
                 bounds = TUNABLE_PARAMS[param]
@@ -206,13 +242,27 @@ What parameters should change?"""
                 old_value = getattr(settings, param, None)
                 if old_value is None:
                     continue
+
+                # Max step size: can't move more than 25% of the range in one change
+                param_range = bounds["max"] - bounds["min"]
+                max_step = param_range * MAX_STEP_FRACTION
+                if abs(typed_value - old_value) > max_step:
+                    direction = 1 if typed_value > old_value else -1
+                    typed_value = bounds["type"](old_value + direction * max_step)
+                    typed_value = max(bounds["min"], min(bounds["max"], typed_value))
+                    logger.info(f"🔧 Tuner: {param} step clamped to {typed_value} (max step {max_step:.2f})")
+
+                if typed_value == old_value:
+                    continue
+
                 if self._was_hurtful_change(param, typed_value):
                     logger.info(f"🔧 Tuner: skipping {param} → {typed_value}; same change recently hurt")
                     continue
 
-                # Apply to settings module
                 snapshot = self._snapshot_performance()
                 setattr(settings, param, typed_value)
+                self._param_last_changed[param] = time.time()
+                self._daily_change_count += 1
                 change = ParameterChange(
                     param=param,
                     old_value=old_value,

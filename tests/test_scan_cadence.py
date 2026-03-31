@@ -68,3 +68,9 @@ class AdaptiveScanCadenceTests(unittest.TestCase):
         with patch("src.main.settings.SCAN_REGIME_HYSTERESIS_WINDOW", 3), \
              patch("src.main.settings.SCAN_REGIME_MIN_CONFIRMATIONS", 2):
             self.assertEqual(bot._smooth_scan_regime("mixed"), "risk_on")
+
+    def test_sanitize_scan_regime_label_accepts_known_labels(self):
+        self.assertEqual(TradingBot._sanitize_scan_regime_label("RISK_OFF"), "risk_off")
+        self.assertEqual(TradingBot._sanitize_scan_regime_label("risk_on"), "risk_on")
+        self.assertEqual(TradingBot._sanitize_scan_regime_label("choppy"), "choppy")
+        self.assertEqual(TradingBot._sanitize_scan_regime_label("bad_label"), "mixed")

@@ -1,3 +1,4 @@
+import asyncio
 import time
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -108,6 +109,45 @@ class OptionsEngineUnitTests(unittest.TestCase):
     def test_calculate_contract_qty_caps_at_five(self):
         qty = self.engine.calculate_contract_qty(budget=5000, premium_per_contract=100)
         self.assertEqual(qty, 5)
+
+    def test_execute_option_trade_records_no_suitable_contract_reason(self):
+        self.engine.find_contract = lambda *args, **kwargs: None
+
+        result = asyncio.run(
+            self.engine.execute_option_trade(
+                symbol="QQQ",
+                price=500.0,
+                direction="BUY",
+                budget=1000.0,
+                sentiment_data={"strategy_tag": "momentum_long"},
+            )
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual(self.engine.last_trade_skip_reason, "no_suitable_contract")
+
+    def test_execute_option_trade_records_budget_too_small_reason(self):
+        self.engine.find_contract = lambda *args, **kwargs: {
+            "symbol": "QQQOPT",
+            "_bid": 14.0,
+            "_ask": 15.0,
+            "_mid": 14.5,
+            "strike_price": "500",
+            "expiration_date": self._future_date(10),
+        }
+
+        result = asyncio.run(
+            self.engine.execute_option_trade(
+                symbol="QQQ",
+                price=500.0,
+                direction="BUY",
+                budget=200.0,
+                sentiment_data={"strategy_tag": "momentum_long"},
+            )
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual(self.engine.last_trade_skip_reason, "budget_too_small")
 
     def test_exit_rule_time_decay(self):
         contract = "AAPL_CALL"

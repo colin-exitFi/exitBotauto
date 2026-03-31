@@ -189,6 +189,80 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
         self.assertIn("continuation_long", analytics["by_setup_mode"])
         self.assertEqual(analytics["by_setup_mode"]["continuation_long"]["trades"], 2)
 
+    def test_book_report_breaks_out_regimes_sessions_and_status(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            history_file = Path(tmp_dir) / "trade_history.json"
+            rows = [
+                {
+                    "symbol": "QQQ",
+                    "entry_price": 100.0,
+                    "quantity": 1,
+                    "pnl": 12.0,
+                    "pnl_pct": 12.0,
+                    "strategy_tag": "momentum_short",
+                    "setup_mode": "continuation_short",
+                    "market_regime": "risk_off",
+                    "session_type": "regular",
+                    "entry_time": 1_700_000_000,
+                    "exit_time": 1_700_000_600,
+                },
+                {
+                    "symbol": "SPY",
+                    "entry_price": 100.0,
+                    "quantity": 1,
+                    "pnl": -4.0,
+                    "pnl_pct": -4.0,
+                    "strategy_tag": "momentum_short",
+                    "setup_mode": "continuation_short",
+                    "market_regime": "risk_off",
+                    "session_type": "after",
+                    "entry_time": 1_700_001_000,
+                    "exit_time": 1_700_001_600,
+                },
+                {
+                    "symbol": "IWM",
+                    "entry_price": 100.0,
+                    "quantity": 1,
+                    "pnl": 5.0,
+                    "pnl_pct": 5.0,
+                    "strategy_tag": "momentum_short",
+                    "setup_mode": "continuation_short",
+                    "market_regime": "mixed",
+                    "session_type": "regular",
+                    "entry_time": 1_700_002_000,
+                    "exit_time": 1_700_002_600,
+                },
+            ]
+            history_file.write_text(json.dumps(rows))
+
+            with patch.object(trade_history, "HISTORY_FILE", history_file), \
+                 patch("src.ai.trade_history.strategy_controls.load_controls", return_value={}):
+                analytics = trade_history.get_analytics()
+
+        report = analytics["book_report"]
+        self.assertEqual(report["summary"]["books"], 1)
+        momentum_short = next(row for row in report["books"] if row["strategy_tag"] == "momentum_short")
+        self.assertEqual(momentum_short["trades"], 3)
+        self.assertEqual(momentum_short["profit_factor"], 4.25)
+        self.assertEqual(momentum_short["max_drawdown"], 4.0)
+        self.assertEqual(momentum_short["regimes"]["risk_off"]["trades"], 2)
+        self.assertEqual(momentum_short["sessions"]["after"]["trades"], 1)
+        self.assertEqual(momentum_short["best_regime"]["name"], "risk_off")
+        self.assertEqual(momentum_short["status"], "hold")
+        self.assertEqual(momentum_short["recommended_action"], "observe")
+
+        play_report = analytics["play_report"]
+        self.assertEqual(play_report["summary"]["plays"], 3)
+        exact_play = next(
+            row
+            for row in play_report["plays"]
+            if row["play_key"] == "momentum_short|continuation_short|risk_off|regular"
+        )
+        self.assertEqual(exact_play["trades"], 1)
+        self.assertEqual(exact_play["market_regime"], "risk_off")
+        self.assertEqual(exact_play["session_type"], "regular")
+        self.assertEqual(exact_play["recommended_action"], "observe")
+
     def test_unusual_whales_analytics_break_out_flow_stream_and_congress(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             history_file = Path(tmp_dir) / "trade_history.json"
@@ -241,6 +315,88 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
         self.assertEqual(uw["rest_assisted"]["trades"], 1)
         self.assertEqual(uw["congress_follow"]["trades"], 1)
         self.assertEqual(uw["congress_follow"]["pnl"], -3.0)
+
+    def test_anomaly_heavy_book_and_play_are_downgraded_to_observe(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            history_file = Path(tmp_dir) / "trade_history.json"
+            rows = []
+            for idx in range(12):
+                rows.append(
+                    {
+                        "symbol": f"SYM{idx}",
+                        "entry_price": 100.0,
+                        "quantity": 1,
+                        "pnl": 6.0,
+                        "pnl_pct": 6.0,
+                        "strategy_tag": "momentum_short",
+                        "setup_mode": "continuation_short",
+                        "market_regime": "mixed",
+                        "session_type": "regular",
+                        "anomaly_flags": ["broker_reconstructed"],
+                        "exit_time": 1_700_010_000 + idx,
+                    }
+                )
+            history_file.write_text(json.dumps(rows))
+
+            with patch.object(trade_history, "HISTORY_FILE", history_file), \
+                 patch("src.ai.trade_history.strategy_controls.load_controls", return_value={}):
+                analytics = trade_history.get_analytics()
+
+        book_row = next(row for row in analytics["book_report"]["books"] if row["strategy_tag"] == "momentum_short")
+        play_row = next(row for row in analytics["play_report"]["plays"] if row["play_key"] == "momentum_short|continuation_short|mixed|regular")
+        self.assertEqual(book_row["recommended_action"], "observe")
+        self.assertEqual(play_row["recommended_action"], "observe")
+        self.assertIn("degraded by anomalies", book_row["status_reason"])
+        self.assertIn("degraded by anomalies", play_row["status_reason"])
+
+    def test_recent_clean_recovery_can_repromote_book_and_play(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            history_file = Path(tmp_dir) / "trade_history.json"
+            rows = []
+            for idx in range(8):
+                rows.append(
+                    {
+                        "symbol": f"OLD{idx}",
+                        "entry_price": 100.0,
+                        "quantity": 1,
+                        "pnl": -4.0,
+                        "pnl_pct": -4.0,
+                        "strategy_tag": "momentum_short",
+                        "setup_mode": "continuation_short",
+                        "market_regime": "risk_off",
+                        "session_type": "regular",
+                        "anomaly_flags": ["broker_reconstructed"],
+                        "exit_time": 1_700_010_000 + idx,
+                    }
+                )
+            for idx in range(6):
+                rows.append(
+                    {
+                        "symbol": f"NEW{idx}",
+                        "entry_price": 100.0,
+                        "quantity": 1,
+                        "pnl": 7.0,
+                        "pnl_pct": 7.0,
+                        "strategy_tag": "momentum_short",
+                        "setup_mode": "continuation_short",
+                        "market_regime": "risk_off",
+                        "session_type": "regular",
+                        "anomaly_flags": [],
+                        "exit_time": 1_700_020_000 + idx,
+                    }
+                )
+            history_file.write_text(json.dumps(rows))
+
+            with patch.object(trade_history, "HISTORY_FILE", history_file), \
+                 patch("src.ai.trade_history.strategy_controls.load_controls", return_value={}):
+                analytics = trade_history.get_analytics()
+
+        book_row = next(row for row in analytics["book_report"]["books"] if row["strategy_tag"] == "momentum_short")
+        play_row = next(row for row in analytics["play_report"]["plays"] if row["play_key"] == "momentum_short|continuation_short|risk_off|regular")
+        self.assertEqual(book_row["recommended_action"], "hold")
+        self.assertIn("Recent clean book recovery", book_row["status_reason"])
+        self.assertEqual(play_row["recommended_action"], "scale")
+        self.assertIn("Recent clean play recovery", play_row["status_reason"])
 
 
 class DashboardBookEndpointsTests(unittest.TestCase):
@@ -303,7 +459,43 @@ class DashboardBookEndpointsTests(unittest.TestCase):
                                  "expectancy": 25.5,
                                  "ratchet_activation_rate_pct": 66.7,
                              }
-                         }
+                         },
+                         "book_report": {
+                             "summary": {
+                                 "books": 1,
+                                 "scale": 1,
+                                 "hold": 0,
+                                 "probation": 0,
+                                 "disable": 0,
+                                 "observe": 0,
+                             },
+                             "books": [
+                                 {
+                                     "strategy_tag": "momentum_long",
+                                     "pnl": 125.5,
+                                     "net_pnl": 125.5,
+                                     "trades": 3,
+                                     "trade_count": 3,
+                                     "win_rate_pct": 66.7,
+                                     "avg_win": 48.0,
+                                     "avg_loss": -19.5,
+                                     "expectancy": 25.5,
+                                     "profit_factor": 2.46,
+                                     "max_drawdown": 19.5,
+                                     "sharpe_ratio": 1.8,
+                                     "status": "scale",
+                                     "recommended_action": "scale",
+                                     "control_state": "active",
+                                     "status_reason": "Positive expectancy",
+                                     "regimes": {
+                                         "risk_on": {"trades": 3, "pnl": 125.5},
+                                     },
+                                     "sessions": {
+                                         "regular": {"trades": 3, "pnl": 125.5},
+                                     },
+                                 }
+                             ],
+                         },
                      }):
                     client = TestClient(dashboard_module.app)
 
@@ -321,12 +513,21 @@ class DashboardBookEndpointsTests(unittest.TestCase):
                     self.assertEqual(momentum["unrealized_pnl"], 6.0)
                     self.assertEqual(momentum["realized_pnl"], 125.5)
                     self.assertEqual(momentum["expectancy"], 25.5)
+
+                    report_resp = client.get("/api/book-report?token=secret-token")
+                    self.assertEqual(report_resp.status_code, 200)
+                    report_payload = report_resp.json()
+                    self.assertEqual(report_payload["summary"]["scale"], 1)
+                    momentum_report = next(row for row in report_payload["books"] if row["strategy_tag"] == "momentum_long")
+                    self.assertEqual(momentum_report["status"], "scale")
+                    self.assertEqual(momentum_report["open_position_count"], 1)
+                    self.assertEqual(momentum_report["unrealized_pnl"], 6.0)
             finally:
                 dashboard_module.set_bot(None)
 
 
 class EntryManagerStrategyTagSyncTests(unittest.TestCase):
-    def test_broker_sync_sanitizes_carryover_strategy_tag(self):
+    def test_broker_sync_restores_inferred_strategy_tag_from_carryover_snapshot(self):
         class _Broker:
             def get_orders(self, status="open"):
                 return []
@@ -355,7 +556,8 @@ class EntryManagerStrategyTagSyncTests(unittest.TestCase):
         )
 
         self.assertEqual(updates, 1)
-        self.assertEqual(manager.positions["RLMD"]["strategy_tag"], "unknown")
+        self.assertEqual(manager.positions["RLMD"]["strategy_tag"], "momentum_long")
+        self.assertEqual(manager.positions["RLMD"]["entry_path"], "broker_sync")
 
 
 class ProfitRatchetStrategyBookTests(unittest.TestCase):

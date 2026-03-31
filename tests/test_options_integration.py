@@ -38,6 +38,9 @@ class FakeOrchestrator:
     async def evaluate(self, symbol: str, price: float, signals_data: dict):
         return self.verdict
 
+    async def evaluate_council(self, symbol: str, price: float, signals_data: dict):
+        return self.verdict
+
 
 class FakeSentimentAnalyzer:
     def get_cached(self, symbol: str):
@@ -63,6 +66,12 @@ class FakeRiskManager:
 
     def can_open_options(self, premium_cost: float):
         return True
+
+    def get_status(self):
+        return {"equity": self.equity, "heat_pct": 0.0, "consecutive_losses": 0}
+
+    def is_wash_sale(self, symbol: str):
+        return False
 
     def update_options_exposure(self, options_positions):
         self.options_exposure_updates += 1
@@ -314,6 +323,12 @@ def _candidate(symbol="AAPL"):
         "uw_flow_sentiment": "bullish",
         "uw_chain_bias": "bullish",
         "score": 0.9,
+        "setup_mode": "continuation_long",
+        "timing_state": "enter_now",
+        "direction_constraint": "long_only",
+        "best_play": "continuation_long",
+        "trigger": "already_live",
+        "hold_style": "intraday",
     }
 
 
@@ -343,15 +358,62 @@ class OptionsIntegrationTests(unittest.IsolatedAsyncioTestCase):
         bot.orchestrator = FakeOrchestrator(FakeVerdict("AAPL", decision="BUY", confidence=92))
         bot.ai_layers = {}
         bot._broker_ready = True
+        bot.alpaca_client = object()
+        bot.scanner = None
+        bot._mode_classifier_enabled = lambda: False
+        bot._entry_session_label = lambda: "regular"
         bot.options_engine = FakeOptionsEngine()
 
         with patch.object(main_module, "log_activity"), \
-             patch.object(main_module.persistence, "save_options_positions"):
+             patch.object(main_module.OptionsMonitor, "is_regular_market_hours", return_value=True), \
+             patch.object(main_module.persistence, "save_options_positions"), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ENABLED", True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_SYMBOLS", {"AAPL"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_STRATEGY_TAGS", {"MOMENTUM_LONG"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_MIN_CONFIDENCE", 90.0), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ALLOCATION_PCT", 35.0), \
+             patch.object(main_module.book_risk_agent, "DISABLED_STRATEGIES", set()):
             await bot._process_candidates([_candidate("AAPL")])
 
         self.assertEqual(len(bot.options_engine.execute_calls), 1)
         self.assertIn("AAPL", bot.entry_manager.positions)
         self.assertIsNotNone(bot.entry_manager.last_sentiment_data)
+        self.assertLess(bot.entry_manager.last_sentiment_data.get("share_notional_multiplier", 1.0), 1.0)
+
+    async def test_options_pilot_places_paired_entry_for_high_confidence_momentum(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.risk_manager = FakeRiskManager()
+        bot.entry_manager = FakeEntryManager()
+        bot.sentiment_analyzer = FakeSentimentAnalyzer()
+        bot.position_manager = FakePositionManager()
+        bot.orchestrator = FakeOrchestrator(FakeVerdict("QQQ", decision="BUY", confidence=93))
+        bot.ai_layers = {}
+        bot._broker_ready = True
+        bot.alpaca_client = object()
+        bot.scanner = None
+        bot._mode_classifier_enabled = lambda: False
+        bot._entry_session_label = lambda: "regular"
+        bot.options_engine = FakeOptionsEngine()
+
+        candidate = _candidate("QQQ")
+        candidate.update({
+            "source": "polygon",
+            "strategy_tag": "momentum_long",
+            "price": 510.0,
+        })
+
+        with patch.object(main_module, "log_activity"), \
+             patch.object(main_module.persistence, "save_options_positions"), \
+             patch.object(main_module.OptionsMonitor, "is_regular_market_hours", return_value=True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ENABLED", True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_SYMBOLS", {"QQQ"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_STRATEGY_TAGS", {"MOMENTUM_LONG"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_MIN_CONFIDENCE", 90.0), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ALLOCATION_PCT", 35.0):
+            await bot._process_candidates([candidate])
+
+        self.assertEqual(len(bot.options_engine.execute_calls), 1)
+        self.assertIn("QQQ", bot.entry_manager.positions)
         self.assertLess(bot.entry_manager.last_sentiment_data.get("share_notional_multiplier", 1.0), 1.0)
 
     async def test_paired_exit_underlying_stop_closes_linked_options(self):

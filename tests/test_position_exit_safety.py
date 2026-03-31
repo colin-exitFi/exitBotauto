@@ -30,6 +30,35 @@ class _FakeResponse:
 
 
 class AlpacaExitSafetyTests(unittest.TestCase):
+    def test_get_positions_skips_option_contracts(self):
+        class _Position:
+            def __init__(self, symbol, qty, asset_class="us_equity"):
+                self.symbol = symbol
+                self.qty = qty
+                self.side = "long"
+                self.avg_entry_price = "10"
+                self.current_price = "10.5"
+                self.market_value = "105"
+                self.unrealized_pl = "5"
+                self.unrealized_plpc = "0.05"
+                self.asset_class = asset_class
+
+        class _TradingClient:
+            def get_all_positions(self):
+                return [
+                    _Position("AAPL", "10", "us_equity"),
+                    _Position("AAPL260417C00180000", "1", "us_option"),
+                ]
+
+        client = AlpacaClient()
+        client._initialized = True
+        client._trading_client = _TradingClient()
+
+        positions = client.get_positions()
+
+        self.assertEqual(len(positions), 1)
+        self.assertEqual(positions[0]["symbol"], "AAPL")
+
     def test_market_buy_float_short_cover_uses_share_qty_not_notional(self):
         client = AlpacaClient()
         client._initialized = True
@@ -104,6 +133,32 @@ class AlpacaExitSafetyTests(unittest.TestCase):
 
 
 class EntryManagerSyncTests(unittest.TestCase):
+    def test_reconciler_sync_ignores_option_like_symbols(self):
+        from src.reconciliation.reconciler import Reconciler
+
+        class _EntryManager:
+            def __init__(self):
+                self.calls = []
+
+            def sync_positions_from_brokerage(self, rows):
+                self.calls.append(list(rows))
+                return len(rows)
+
+        manager = _EntryManager()
+        reconciler = Reconciler(alpaca_client=None, entry_manager=manager)
+
+        reconciler._sync_internal_positions_with_broker(
+            {
+                "broker_positions": {
+                    "AAPL": {"qty": 10, "side": "long", "avg_entry_price": 180},
+                    "AAPL260417C00180000": {"qty": 1, "side": "long", "avg_entry_price": 2.5},
+                }
+            }
+        )
+
+        self.assertEqual(len(manager.calls), 1)
+        self.assertEqual(manager.calls[0], [{"symbol": "AAPL", "quantity": 10.0, "side": "long", "average_price": 180.0, "current_price": 180.0}])
+
     def test_sync_positions_from_brokerage_updates_qty_and_marks_fractional_remainder(self):
         manager = EntryManager.__new__(EntryManager)
         manager.positions = {
@@ -185,6 +240,12 @@ class EntryManagerSyncTests(unittest.TestCase):
                 "exit_order_id": "exit-1",
                 "quantity": 1.0,
                 "side": "short",
+                "position": {
+                    "strategy_tag": "uw_flow_short",
+                    "entry_path": "jury",
+                    "entry_reason_code": "uw_flow",
+                    "signal_sources": ["unusual_whales_stream"],
+                },
             }
         }
 
@@ -205,6 +266,60 @@ class EntryManagerSyncTests(unittest.TestCase):
         self.assertEqual(manager.positions["CRCL"]["reload_reason"], "broker_still_open_after_local_removal_pending_exit")
         self.assertTrue(manager.positions["CRCL"]["reloaded_from_broker"])
         self.assertTrue(manager.positions["CRCL"]["exit_pending"])
+        self.assertNotIn("carryover_sync", manager.positions["CRCL"]["anomaly_flags"])
+        self.assertNotIn("broker_reloaded_after_local_removal", manager.positions["CRCL"]["anomaly_flags"])
+
+    def test_sync_positions_from_brokerage_marks_unknown_restore_as_carryover(self):
+        manager = EntryManager.__new__(EntryManager)
+        manager.positions = {}
+        manager.broker = None
+        manager._recently_removed_positions = {}
+
+        updates = manager.sync_positions_from_brokerage(
+            [
+                {
+                    "symbol": "RLMD",
+                    "quantity": 3.0,
+                    "side": "long",
+                    "average_price": 6.07,
+                    "current_price": 6.13,
+                }
+            ]
+        )
+
+        self.assertEqual(updates, 1)
+        self.assertIn("carryover_sync", manager.positions["RLMD"]["anomaly_flags"])
+
+    def test_sync_positions_from_brokerage_recent_reload_is_not_labeled_carryover(self):
+        manager = EntryManager.__new__(EntryManager)
+        manager.positions = {}
+        manager.broker = None
+        manager._recently_removed_positions = {
+            "MUD": {
+                "removed_at": time.time(),
+                "last_exit_reason": "hard_stop",
+                "exit_order_id": "exit-77",
+                "quantity": 2.0,
+                "side": "long",
+                "position": {},
+            }
+        }
+
+        updates = manager.sync_positions_from_brokerage(
+            [
+                {
+                    "symbol": "MUD",
+                    "quantity": 2.0,
+                    "side": "long",
+                    "average_price": 4.25,
+                    "current_price": 4.11,
+                }
+            ]
+        )
+
+        self.assertEqual(updates, 1)
+        self.assertNotIn("carryover_sync", manager.positions["MUD"]["anomaly_flags"])
+        self.assertIn("broker_reloaded_after_local_removal", manager.positions["MUD"]["anomaly_flags"])
 
     def test_sync_positions_from_brokerage_infers_meaningful_play_context_for_restored_short(self):
         manager = EntryManager.__new__(EntryManager)
@@ -427,6 +542,98 @@ class ProtectionOrderIdentityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(position["ratchet_limit_order_id"], "ratchet-1")
         self.assertEqual(position["order_state"]["ratchet"], "placed")
 
+
+class ExtendedExitRepriceTests(unittest.IsolatedAsyncioTestCase):
+    def test_syncs_pending_exit_from_open_limit_order(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot._position_exit_side = main_module.TradingBot._position_exit_side
+        bot._order_is_hard_stop = main_module.TradingBot._order_is_hard_stop
+        bot._order_is_ratchet = main_module.TradingBot._order_is_ratchet
+        bot._parse_iso_ts = main_module.TradingBot._parse_iso_ts
+
+        position = {
+            "symbol": "DGX",
+            "side": "short",
+            "quantity": 2.0,
+            "exit_pending": False,
+        }
+        open_orders_by_symbol = {
+            "DGX": [
+                {
+                    "id": "limit-exit-1",
+                    "symbol": "DGX",
+                    "side": "buy",
+                    "type": "limit",
+                    "qty": "2",
+                    "submitted_at": "2026-03-27T21:33:40.231168+00:00",
+                    "limit_price": "195.87",
+                    "client_order_id": "manual-exit",
+                }
+            ]
+        }
+
+        synced = bot._sync_pending_exit_from_open_orders(position, open_orders_by_symbol)
+
+        self.assertTrue(synced)
+        self.assertTrue(position["exit_pending"])
+        self.assertEqual(position["exit_order_id"], "limit-exit-1")
+        self.assertEqual(position["pending_exit_qty"], 2.0)
+        self.assertEqual(position["order_state"]["exit"], "open")
+
+    async def test_reprices_stale_extended_short_exit(self):
+        class _Broker:
+            def __init__(self):
+                self.cancelled = []
+                self.limit_covers = []
+
+            def cancel_order(self, order_id):
+                self.cancelled.append(order_id)
+                return True
+
+            def place_limit_cover(self, symbol, qty, price, extended_hours, client_order_id=None, whole_only=False):
+                self.limit_covers.append((symbol, qty, price, extended_hours, whole_only))
+                return {"id": "repriced-cover-1"}
+
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.alpaca_client = _Broker()
+        bot.entry_manager = object()
+        bot._entry_session_label = lambda: "after"
+
+        position = {
+            "symbol": "F",
+            "side": "short",
+            "quantity": 53.0,
+            "pending_exit_qty": 53.0,
+            "exit_pending": True,
+            "exit_order_id": "old-cover",
+            "exit_submitted_at": time.time() - 45,
+        }
+        open_orders_by_symbol = {
+            "F": [{"id": "old-cover", "side": "buy", "type": "limit", "limit_price": "11.35"}]
+        }
+
+        with patch.object(main_module.settings, "EXTENDED_HOURS_EXIT_REPRICE_AFTER_SECONDS", 20.0), \
+             patch.object(main_module.settings, "EXTENDED_HOURS_EXIT_REPRICE_STEP_BPS", 30.0), \
+             patch.object(main_module.settings, "EXTENDED_HOURS_EXIT_REPRICE_MAX_ATTEMPTS", 3):
+            repriced = await bot._reprice_stale_extended_exit_pending(
+                position,
+                current_price=11.35,
+                open_orders_by_symbol=open_orders_by_symbol,
+                now_ts=time.time(),
+            )
+
+        self.assertTrue(repriced)
+        self.assertEqual(bot.alpaca_client.cancelled, ["old-cover"])
+        self.assertEqual(position["exit_order_id"], "repriced-cover-1")
+        self.assertEqual(position["extended_exit_reprice_count"], 1)
+        self.assertEqual(len(bot.alpaca_client.limit_covers), 1)
+        symbol, qty, price, extended_hours, whole_only = bot.alpaca_client.limit_covers[0]
+        self.assertEqual(symbol, "F")
+        self.assertEqual(qty, 53.0)
+        self.assertGreater(price, 11.35)
+        self.assertTrue(extended_hours)
+        self.assertFalse(whole_only)
+
     async def test_ensure_hard_stop_does_not_cancel_ratchet_when_client_order_id_is_missing(self):
         class _Broker:
             def place_stop_loss_order(self, symbol, qty, stop_price, side, client_order_id):
@@ -528,6 +735,51 @@ class ProtectionOrderIdentityTests(unittest.IsolatedAsyncioTestCase):
         bot._cancel_order_and_confirm.assert_awaited_once_with("hard-1")
         bot._place_or_replace_ratchet_order.assert_awaited_once()
         self.assertEqual(position["order_state"]["hard_stop"], "superseded_by_ratchet")
+
+
+class DustCleanupTests(unittest.IsolatedAsyncioTestCase):
+    async def test_submit_dust_cleanup_exit_keeps_position_until_broker_confirms(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+
+        class _Broker:
+            def __init__(self):
+                self.calls = []
+
+            def close_position(self, symbol, qty=None):
+                self.calls.append((symbol, qty))
+                return {"id": "close-123", "status": "accepted"}
+
+        class _EntryManager:
+            def __init__(self, position):
+                self.positions = {position["symbol"]: position}
+                self.removed = []
+
+            def remove_position(self, symbol):
+                self.removed.append(symbol)
+                self.positions.pop(symbol, None)
+
+        position = {
+            "symbol": "XENE",
+            "quantity": 0.11,
+            "side": "long",
+            "current_price": 62.05,
+            "entry_price": 59.85,
+            "from_brokerage": True,
+            "entry_path": "broker_sync_missing_local",
+        }
+        broker = _Broker()
+        entry_manager = _EntryManager(position)
+        bot.alpaca_client = broker
+        bot.entry_manager = entry_manager
+
+        submitted = await bot._submit_dust_cleanup_exit(position, "fractional_carryover")
+
+        self.assertTrue(submitted)
+        self.assertEqual(broker.calls, [("XENE", 0.11)])
+        self.assertTrue(position["exit_pending"])
+        self.assertEqual(position["exit_order_id"], "close-123")
+        self.assertEqual(position["last_exit_reason"], "fractional_carryover")
+        self.assertEqual(entry_manager.removed, [])
 
 
 if __name__ == "__main__":

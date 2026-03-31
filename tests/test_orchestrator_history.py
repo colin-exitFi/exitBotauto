@@ -64,6 +64,41 @@ class OrchestratorHistoryTests(unittest.TestCase):
         self.assertEqual(stats["total"], 1)
         self.assertEqual(stats["skips"], 1)
 
+    def test_hydrate_verdict_context_carries_setup_fields_for_actionable_council_results(self):
+        verdict = JuryVerdict(
+            symbol="QNTM",
+            decision="BUY",
+            size_pct=1.9,
+            trail_pct=2.0,
+            reasoning="Council approved",
+            confidence=58.0,
+            provider_used="council",
+            entry_now=True,
+        )
+
+        hydrated = Orchestrator._hydrate_verdict_context(
+            verdict,
+            {
+                "setup_mode": "general_momentum_long",
+                "direction_constraint": "long_only",
+                "timing_state": "enter_now",
+                "best_play": "buy_breakout",
+                "trigger": "Break 6.05 on volume",
+                "invalidation": "Lose VWAP",
+                "hold_style": "intraday",
+                "size_posture": "reduced",
+            },
+        )
+
+        self.assertEqual(hydrated.setup_mode, "general_momentum_long")
+        self.assertEqual(hydrated.direction_constraint, "long_only")
+        self.assertEqual(hydrated.timing_state, "enter_now")
+        self.assertEqual(hydrated.best_play, "buy_breakout")
+        self.assertEqual(hydrated.trigger, "Break 6.05 on volume")
+        self.assertEqual(hydrated.invalidation, "Lose VWAP")
+        self.assertEqual(hydrated.hold_style, "intraday")
+        self.assertEqual(hydrated.size_posture, "reduced")
+
 
 if __name__ == "__main__":
     unittest.main()

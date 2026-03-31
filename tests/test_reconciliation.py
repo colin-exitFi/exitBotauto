@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 import src.main as main_module
+from src.ai import trade_history
 from src.reconciliation.reconciler import Reconciler
 
 
@@ -34,6 +35,16 @@ class _FakeEntryManager:
         self.positions.pop(symbol, None)
 
 
+class _FakeEntryManagerWithRecentRemoved:
+    def __init__(self, *, positions=None, recently_removed=None):
+        self.positions = positions or {}
+        self._recently_removed_positions = recently_removed or {}
+
+    def get_recently_removed_position(self, symbol):
+        payload = self._recently_removed_positions.get(symbol, {}) or {}
+        return dict(payload.get("position", {}) or {})
+
+
 class _FakeRiskManager:
     def __init__(self):
         self.recorded = []
@@ -46,6 +57,53 @@ class _FakeRiskManager:
 
 
 class ReconcilerTests(unittest.TestCase):
+    def test_snapshot_defaults_to_trading_session_day_not_balance_asof(self):
+        alpaca = _FakeAlpaca(
+            account={
+                "equity": 10040.0,
+                "last_equity": 10000.0,
+                "cash": 10040.0,
+                "balance_asof": "2026-03-31",
+            },
+            positions=[],
+            activities=[
+                {
+                    "symbol": "TENX",
+                    "side": "buy",
+                    "qty": "10",
+                    "price": "10.00",
+                    "transaction_time": "2026-03-30T14:00:00Z",
+                    "order_id": "open-1",
+                },
+                {
+                    "symbol": "TENX",
+                    "side": "sell",
+                    "qty": "10",
+                    "price": "14.00",
+                    "transaction_time": "2026-03-30T15:00:00Z",
+                    "order_id": "close-1",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 10040.0],
+                "profit_loss": [0.0, 40.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.trading_session_day", return_value="2026-03-30"), \
+             patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": 0.0}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": 0.0, "total_trades": 0, "overall": {}, "by_symbol": {}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot()
+
+        self.assertEqual(snap["date"], "2026-03-30")
+        self.assertEqual(snap["broker"]["date"], "2026-03-30")
+        self.assertEqual(snap["broker"]["broker_balance_asof"], "2026-03-31")
+        self.assertEqual(snap["internal"]["trade_history_trade_count"], 1)
+        self.assertEqual(snap["reconciliation"]["status"], "healthy")
+
     def test_classifies_critical_mismatch(self):
         alpaca = _FakeAlpaca(
             account={"equity": 24910.30, "last_equity": 25342.33, "cash": 23990.06},
@@ -131,6 +189,88 @@ class ReconcilerTests(unittest.TestCase):
         self.assertNotIn("broker_symbols_missing_from_internal", snap["reconciliation"]["reasons"])
         self.assertEqual(snap["reconciliation"]["status"], "healthy")
 
+    def test_broker_fill_ledger_preserves_local_exit_reason_when_order_matches_recently_removed(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 10020.0, "last_equity": 10000.0, "cash": 10020.0},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "CRCL",
+                    "side": "buy",
+                    "qty": "10",
+                    "price": "100.00",
+                    "transaction_time": "2026-03-10T14:00:00Z",
+                    "order_id": "open-1",
+                },
+                {
+                    "symbol": "CRCL",
+                    "side": "sell",
+                    "qty": "10",
+                    "price": "102.00",
+                    "transaction_time": "2026-03-10T15:00:00Z",
+                    "order_id": "exit-123",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 10020.0],
+                "profit_loss": [0.0, 20.0],
+            },
+        )
+        entry_manager = _FakeEntryManagerWithRecentRemoved(
+            recently_removed={
+                "CRCL": {
+                    "removed_at": time.time(),
+                    "last_exit_reason": "advisor_strategic_exit",
+                    "exit_order_id": "exit-123",
+                    "position": {
+                        "entry_path": "jury",
+                        "strategy_tag": "uw_flow_long",
+                        "signal_sources": ["unusual_whales_stream"],
+                        "anomaly_flags": ["carryover_sync", "broker_reloaded_after_local_removal"],
+                    },
+                }
+            }
+        )
+        reconciler = Reconciler(alpaca, entry_manager=entry_manager)
+
+        broker = reconciler.get_broker_truth("2026-03-10")
+        trades = broker.get("broker_fill_ledger", {}).get("trades", [])
+
+        self.assertEqual(len(trades), 1)
+        self.assertEqual(trades[0]["reason"], "advisor_strategic_exit")
+        self.assertEqual(trades[0]["exit_order_id"], "exit-123")
+        self.assertNotIn("broker_reconstructed", trades[0]["anomaly_flags"])
+        self.assertNotIn("carryover_sync", trades[0]["anomaly_flags"])
+
+    def test_find_recent_history_trade_matches_exit_order_id_outside_time_window(self):
+        reconciler = Reconciler(_FakeAlpaca())
+        existing = [
+            {
+                "symbol": "CRCL",
+                "asset_type": "equity",
+                "exit_time": 1773154800.0,
+                "quantity": 10.0,
+                "pnl": 20.0,
+                "reason": "advisor_strategic_exit",
+                "exit_order_id": "exit-123",
+            }
+        ]
+        trade = {
+            "symbol": "CRCL",
+            "asset_type": "equity",
+            "exit_time": 1773155400.0,
+            "quantity": 10.0,
+            "pnl": 20.0,
+            "reason": "broker_fill_reconstructed",
+            "exit_order_id": "exit-123",
+        }
+
+        matched = reconciler._find_recent_history_trade(existing, trade, window_seconds=30.0)
+
+        self.assertIsNotNone(matched)
+        self.assertEqual(matched["reason"], "advisor_strategic_exit")
+
     def test_broker_fill_ledger_marks_unresolved_carryover_symbol(self):
         alpaca = _FakeAlpaca(
             account={"equity": 9950.0, "last_equity": 10000.0, "cash": 9950.0},
@@ -160,6 +300,433 @@ class ReconcilerTests(unittest.TestCase):
 
         self.assertIn("broker_fill_ledger_unresolved", snap["reconciliation"]["reasons"])
         self.assertIn("CRCL", snap["internal"]["broker_reconstructed_unresolved_symbols"])
+
+    def test_broker_fill_ledger_resolves_carryover_close_from_recent_snapshot_basis(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9950.0, "last_equity": 10000.0, "cash": 9950.0},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "CRCL",
+                    "side": "sell",
+                    "qty": "5",
+                    "price": "110.00",
+                    "transaction_time": "2026-03-10T14:00:00Z",
+                    "order_id": "close-carry-1",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 9950.0],
+                "profit_loss": [0.0, -50.0],
+            },
+        )
+        entry_manager = _FakeEntryManagerWithRecentRemoved(
+            recently_removed={
+                "CRCL": {
+                    "removed_at": time.time(),
+                    "last_exit_reason": "hard_stop",
+                    "exit_order_id": "close-carry-1",
+                    "position": {
+                        "symbol": "CRCL",
+                        "side": "long",
+                        "quantity": 5.0,
+                        "entry_price": 120.0,
+                        "entry_time": 1773064800.0,
+                        "strategy_tag": "uw_flow_long",
+                        "signal_sources": ["unusual_whales_stream"],
+                    },
+                }
+            }
+        )
+        reconciler = Reconciler(alpaca, entry_manager=entry_manager)
+
+        broker = reconciler.get_broker_truth("2026-03-10")
+        ledger = broker.get("broker_fill_ledger", {})
+
+        self.assertEqual(ledger["trade_count"], 1)
+        self.assertEqual(ledger["unresolved_symbols"], [])
+        self.assertEqual(ledger["trades"][0]["symbol"], "CRCL")
+        self.assertEqual(ledger["trades"][0]["reason"], "hard_stop")
+        self.assertAlmostEqual(ledger["trades"][0]["entry_price"], 120.0, places=6)
+        self.assertAlmostEqual(ledger["trades"][0]["exit_price"], 110.0, places=6)
+        self.assertAlmostEqual(ledger["trades"][0]["pnl"], -50.0, places=6)
+
+    def test_broker_fill_ledger_resolves_carryover_close_from_trusted_history_match(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9989.5, "last_equity": 10000.0, "cash": 9989.5},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "MUD",
+                    "side": "sell",
+                    "qty": "3",
+                    "price": "45.59",
+                    "transaction_time": "2026-03-30T19:09:54Z",
+                    "order_id": "801037f7-5904-419f-aa76-7d465e157acb",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 10002.82],
+                "profit_loss": [0.0, 2.82],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        history_rows = [
+            {
+                "symbol": "MUD",
+                "side": "sell",
+                "entry_price": 44.65,
+                "exit_price": 45.59,
+                "quantity": 3.0,
+                "pnl": 2.82,
+                "reason": "ratchet_exit",
+                "entry_time": 1774887516.9538057,
+                "exit_time": 1774900994.788279,
+                "exit_order_id": "801037f7-5904-419f-aa76-7d465e157acb",
+                "trade_date": "2026-03-30",
+            },
+        ]
+
+        with patch.object(trade_history, "load_all", return_value=history_rows):
+            broker = reconciler.get_broker_truth("2026-03-30")
+
+        ledger = broker.get("broker_fill_ledger", {})
+        self.assertEqual(ledger["trade_count"], 1)
+        self.assertEqual(ledger["unresolved_symbols"], [])
+        self.assertEqual(ledger["trades"][0]["reason"], "ratchet_exit")
+        self.assertAlmostEqual(ledger["trades"][0]["pnl"], 2.82, places=6)
+
+    def test_broker_fill_ledger_resolves_carryover_with_same_day_adds_when_close_order_matches_history(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9997.15, "last_equity": 10000.0, "cash": 9997.15},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "CODI",
+                    "side": "buy",
+                    "qty": "1.899002493",
+                    "price": "8.02",
+                    "transaction_time": "2026-03-30T16:19:13.43056Z",
+                    "order_id": "open-codi-add",
+                },
+                {
+                    "symbol": "CODI",
+                    "side": "sell",
+                    "qty": "7",
+                    "price": "7.92",
+                    "transaction_time": "2026-03-30T16:24:25.928969Z",
+                    "order_id": "close-codi",
+                },
+                {
+                    "symbol": "CODI",
+                    "side": "sell",
+                    "qty": "8",
+                    "price": "7.92",
+                    "transaction_time": "2026-03-30T16:24:26.31516Z",
+                    "order_id": "close-codi",
+                },
+                {
+                    "symbol": "CODI",
+                    "side": "sell",
+                    "qty": "10.899002493",
+                    "price": "7.92",
+                    "transaction_time": "2026-03-30T16:24:26.748417Z",
+                    "order_id": "close-codi",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 9997.15],
+                "profit_loss": [0.0, -2.85],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        history_rows = [
+            {
+                "symbol": "CODI",
+                "side": "sell",
+                "entry_price": 8.03,
+                "exit_price": 7.92,
+                "quantity": 25.899002493,
+                "pnl": -2.85,
+                "reason": "broker_exit_fill",
+                "entry_time": 1774887552.2830014,
+                "exit_time": 1774887866.745626,
+                "exit_order_id": "close-codi",
+                "trade_date": "2026-03-30",
+            },
+        ]
+
+        with patch.object(trade_history, "load_all", return_value=history_rows):
+            broker = reconciler.get_broker_truth("2026-03-30")
+
+        ledger = broker.get("broker_fill_ledger", {})
+        self.assertEqual(ledger["trade_count"], 1)
+        self.assertEqual(ledger["unresolved_symbols"], [])
+        self.assertEqual(ledger["trades"][0]["reason"], "broker_exit_fill")
+        self.assertAlmostEqual(ledger["trades"][0]["quantity"], 25.899002493, places=6)
+
+    def test_partial_broker_fill_ledger_does_not_override_broker_day_truth(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9990.0, "last_equity": 10000.0, "cash": 9990.0},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "TENX",
+                    "side": "buy",
+                    "qty": "10",
+                    "price": "10.00",
+                    "transaction_time": "2026-03-10T14:00:00Z",
+                    "order_id": "open-tenx",
+                },
+                {
+                    "symbol": "TENX",
+                    "side": "sell",
+                    "qty": "10",
+                    "price": "14.00",
+                    "transaction_time": "2026-03-10T15:00:00Z",
+                    "order_id": "close-tenx",
+                },
+                {
+                    "symbol": "CRCL",
+                    "side": "sell",
+                    "qty": "5",
+                    "price": "110.00",
+                    "transaction_time": "2026-03-10T15:15:00Z",
+                    "order_id": "close-crcl-carry",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 9990.0],
+                "profit_loss": [0.0, -10.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": -10.0}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": -10.0, "total_trades": 2, "overall": {}, "by_symbol": {"TENX": {"pnl": 40.0}, "CRCL": {"pnl": -50.0}}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[
+                 {
+                     "symbol": "TENX",
+                     "exit_time": 1773154800.0,
+                     "quantity": 10.0,
+                     "pnl": 40.0,
+                     "reason": "broker_fill_reconstructed",
+                     "trade_date": "2026-03-10",
+                 },
+                 {
+                     "symbol": "CRCL",
+                     "exit_time": 1773155700.0,
+                     "quantity": 5.0,
+                     "pnl": -50.0,
+                     "reason": "hard_stop",
+                     "trade_date": "2026-03-10",
+                 },
+             ]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-10")
+
+        self.assertEqual(snap["reconciliation"]["canonical_realized_pnl"], -10.0)
+        self.assertEqual(snap["reconciliation"]["canonical_realized_source"], "broker_day_estimate_partial_fill_ledger")
+        self.assertEqual(snap["reconciliation"]["broker_vs_trade_history_diff"], 0.0)
+        self.assertEqual(snap["reconciliation"]["status"], "healthy")
+
+    def test_partial_broker_fill_ledger_reanchors_pnl_state_to_broker_day_estimate(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9990.0, "last_equity": 10000.0, "cash": 9990.0},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "TENX",
+                    "side": "buy",
+                    "qty": "10",
+                    "price": "10.00",
+                    "transaction_time": "2026-03-10T14:00:00Z",
+                    "order_id": "open-tenx",
+                },
+                {
+                    "symbol": "TENX",
+                    "side": "sell",
+                    "qty": "10",
+                    "price": "14.00",
+                    "transaction_time": "2026-03-10T15:00:00Z",
+                    "order_id": "close-tenx",
+                },
+                {
+                    "symbol": "CRCL",
+                    "side": "sell",
+                    "qty": "5",
+                    "price": "110.00",
+                    "transaction_time": "2026-03-10T15:15:00Z",
+                    "order_id": "close-crcl-carry",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 9990.0],
+                "profit_loss": [0.0, -10.0],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", side_effect=[
+            {"today_realized_pnl": 40.0, "total_realized_pnl": 140.0},
+            {"today_realized_pnl": 40.0, "total_realized_pnl": 140.0},
+            {"today_realized_pnl": -10.0, "total_realized_pnl": 90.0},
+        ]), \
+             patch("src.reconciliation.reconciler.persistence.save_pnl_state") as save_pnl_state_mock, \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": 40.0, "total_trades": 1, "overall": {}, "by_symbol": {"TENX": {"pnl": 40.0}}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=[
+                 {
+                     "symbol": "TENX",
+                     "exit_time": 1773154800.0,
+                     "quantity": 10.0,
+                     "pnl": 40.0,
+                     "reason": "broker_fill_reconstructed",
+                     "trade_date": "2026-03-10",
+                 },
+             ]), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-10")
+
+        self.assertEqual(save_pnl_state_mock.call_count, 1)
+        saved_pnl_state = save_pnl_state_mock.call_args.args[0]
+        self.assertEqual(saved_pnl_state["today_realized_pnl"], -10.0)
+        self.assertEqual(saved_pnl_state["total_realized_pnl"], 90.0)
+        self.assertEqual(snap["internal"]["pnl_state_today_realized"], -10.0)
+        self.assertEqual(snap["reconciliation"]["canonical_realized_source"], "broker_day_estimate_partial_fill_ledger")
+        self.assertEqual(snap["reconciliation"]["broker_vs_pnl_state_diff"], 0.0)
+        self.assertEqual(snap["reconciliation"]["broker_vs_trade_history_diff"], -50.0)
+        self.assertEqual(snap["reconciliation"]["status"], "minor_mismatch")
+
+    def test_complete_broker_fill_ledger_mismatch_does_not_override_broker_day_estimate(self):
+        reconciler = Reconciler(_FakeAlpaca())
+        broker = {
+            "day_pnl": -270.2,
+            "overnight_gap_pnl": -1.22,
+            "current_open_unrealized": 0.0,
+            "broker_positions": {},
+        }
+        internal = {
+            "pnl_state_today_realized": -268.98,
+            "trade_history_realized": -248.04,
+            "broker_reconstructed_realized": -90.68,
+            "broker_reconstructed_trade_count": 26,
+            "broker_reconstructed_unresolved_symbols": [],
+            "broker_supplemental_trade_count": 0,
+            "symbols_in_trade_history": [],
+            "internal_live_positions": {},
+        }
+
+        rec = reconciler.classify_mismatch(broker, internal)
+
+        self.assertEqual(rec["canonical_realized_source"], "broker_day_estimate_fill_ledger_mismatch")
+        self.assertAlmostEqual(rec["canonical_realized_pnl"], -268.98, places=2)
+        self.assertIn("broker_fill_ledger_mismatch", rec["reasons"])
+
+    def test_internal_analytics_does_not_repair_pnl_state_from_mismatched_complete_fill_ledger(self):
+        reconciler = Reconciler(_FakeAlpaca())
+        broker = {
+            "broker_history_available": True,
+            "day_pnl": -270.2,
+            "overnight_gap_pnl": -1.22,
+            "current_open_unrealized": 0.0,
+            "broker_fill_ledger": {
+                "realized_pnl": -601.12,
+                "trade_count": 156,
+                "unresolved_symbols": [],
+                "trades": [
+                    {
+                        "symbol": "GLND",
+                        "exit_time": 1774871732.180801,
+                        "quantity": 100.0,
+                        "entry_price": 10.0,
+                        "exit_price": 9.0,
+                        "pnl": -100.0,
+                        "reason": "broker_fill_reconstructed",
+                    }
+                ],
+            },
+        }
+        history = [
+            {
+                "symbol": "SOXL",
+                "exit_time": 1774871732.180801,
+                "quantity": 7.0,
+                "pnl": -10.5,
+                "reason": "hard_stop",
+                "trade_date": "2026-03-30",
+            }
+        ]
+
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": -268.98, "total_realized_pnl": -500.0}), \
+             patch("src.reconciliation.reconciler.persistence.save_pnl_state") as save_pnl_state_mock, \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": -10.5, "total_trades": 1, "overall": {}, "by_symbol": {"SOXL": {"pnl": -10.5}}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=history), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            internal = reconciler.get_internal_analytics("2026-03-30", broker=broker)
+
+        self.assertFalse(internal["pnl_state_repaired"])
+        self.assertEqual(save_pnl_state_mock.call_count, 0)
+        self.assertAlmostEqual(internal["pnl_state_today_realized"], -268.98, places=2)
+        self.assertAlmostEqual(internal["trade_history_realized"], -10.5, places=2)
+        self.assertEqual(internal["trade_history_trade_count"], 1)
+        self.assertEqual(internal["broker_supplemental_trade_count"], 0)
+
+    def test_supplemental_broker_trades_do_not_double_count_existing_exit(self):
+        alpaca = _FakeAlpaca(
+            account={"equity": 9989.5, "last_equity": 10000.0, "cash": 9989.5},
+            positions=[],
+            activities=[
+                {
+                    "symbol": "SOXL",
+                    "side": "buy",
+                    "qty": "7",
+                    "price": "46.20",
+                    "transaction_time": "2026-03-30T13:28:48Z",
+                    "order_id": "open-soxl",
+                },
+                {
+                    "symbol": "SOXL",
+                    "side": "sell",
+                    "qty": "7",
+                    "price": "44.70",
+                    "transaction_time": "2026-03-30T13:28:52Z",
+                    "order_id": "close-soxl",
+                },
+            ],
+            portfolio_history={
+                "timestamp": [1, 2],
+                "equity": [10000.0, 9989.5],
+                "profit_loss": [0.0, -10.5],
+            },
+        )
+        reconciler = Reconciler(alpaca)
+        existing_history = [
+            {
+                "symbol": "SOXL",
+                "exit_time": 1774877332.0,
+                "entry_time": 1774877328.0,
+                "quantity": 7.0,
+                "entry_price": 46.2,
+                "exit_price": 44.7,
+                "pnl": -10.5,
+                "reason": "hard_stop",
+                "trade_date": "2026-03-30",
+            },
+        ]
+        with patch("src.reconciliation.reconciler.persistence.load_pnl_state", return_value={"today_realized_pnl": -10.5}), \
+             patch("src.reconciliation.reconciler.trade_history.get_analytics", return_value={"total_pnl": -10.5, "total_trades": 1, "overall": {}, "by_symbol": {"SOXL": {"pnl": -10.5}}}), \
+             patch("src.reconciliation.reconciler.trade_history.load_all", return_value=existing_history), \
+             patch.object(Reconciler, "_load_json", return_value={}):
+            snap = reconciler.snapshot("2026-03-30")
+
+        self.assertEqual(snap["internal"]["trade_history_trade_count"], 1)
+        self.assertAlmostEqual(snap["internal"]["trade_history_realized"], -10.5, places=6)
+        self.assertEqual(snap["internal"]["broker_supplemental_trade_count"], 0)
+        self.assertEqual(snap["reconciliation"]["broker_vs_trade_history_diff"], 0.0)
+        self.assertEqual(snap["reconciliation"]["status"], "healthy")
 
     def test_carryover_gap_alone_is_warning_not_critical(self):
         alpaca = _FakeAlpaca(

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from src.ai.advisor import Advisor
+from src.ai.advisor import Advisor, _parse_json
 from src.agents.exit_agent import ExitAgent
 
 
@@ -66,6 +66,32 @@ class AdvisorActionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(applied, [])
         execute_mock.assert_not_called()
+
+    async def test_runtime_ready_requires_completed_scan_and_observer_output_during_warmup(self):
+        bot = type(
+            "Bot",
+            (),
+            {
+                "start_time": 100.0,
+                "scanner": type(
+                    "Scanner",
+                    (),
+                    {"_last_scan_stats": {"status": "running", "last_completed_at": None}},
+                )(),
+            },
+        )()
+
+        self.assertFalse(Advisor._runtime_ready(bot, 160.0, observer_output=None))
+        self.assertTrue(Advisor._runtime_ready(bot, 281.0, observer_output={"market_assessment": "stable"}))
+
+    async def test_parse_json_unwraps_list_payload_into_last_dict(self):
+        parsed = _parse_json(
+            '[{"strategy":"stale","position_advice":[]},{"strategy":"fresh","position_advice":[{"symbol":"NVDA","action":"exit"}]}]'
+        )
+
+        self.assertIsInstance(parsed, dict)
+        self.assertEqual(parsed["strategy"], "fresh")
+        self.assertEqual(parsed["position_advice"][0]["symbol"], "NVDA")
 
 
 if __name__ == "__main__":

@@ -72,6 +72,113 @@ class EntryControlsSameSymbolLockTests(unittest.TestCase):
         self.assertEqual(state["attempts_since_win"], 2)
         self.assertEqual(state["active_lock"]["reason"], "consecutive_losses_2")
 
+    def test_flat_trade_does_not_reset_loss_streak(self):
+        now_ts = datetime.now().timestamp()
+        entry_controls.record_symbol_trade_result(
+            "PTLE",
+            -44.0,
+            exit_confirmed_at=now_ts,
+            reason="hard_stop",
+            setup_id="ptle-1",
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+        entry_controls.record_symbol_trade_result(
+            "PTLE",
+            0.0,
+            exit_confirmed_at=now_ts + 60,
+            reason="ratchet_exit",
+            setup_id="ptle-2",
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+        entry_controls.record_symbol_trade_result(
+            "PTLE",
+            -18.0,
+            exit_confirmed_at=now_ts + 120,
+            reason="hard_stop",
+            setup_id="ptle-3",
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+
+        blocked, reason = entry_controls.is_entry_blocked("PTLE")
+        self.assertTrue(blocked)
+        self.assertEqual(reason, "symbol_loss_lock")
+
+        state = entry_controls.get_symbol_trade_state("PTLE")
+        self.assertEqual(state["consecutive_losses"], 2)
+        self.assertEqual(state["recent_results"][-2]["outcome"], "flat")
+
+    def test_carryover_anomaly_does_not_clear_loss_streak(self):
+        now_ts = datetime.now().timestamp()
+        entry_controls.record_symbol_trade_result(
+            "GLND",
+            -18.0,
+            exit_confirmed_at=now_ts,
+            reason="hard_stop",
+            setup_id="glnd-1",
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+        entry_controls.record_symbol_trade_result(
+            "GLND",
+            -37.0,
+            exit_confirmed_at=now_ts + 60,
+            reason="hard_stop",
+            setup_id="glnd-2",
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+        entry_controls.record_symbol_trade_result(
+            "GLND",
+            5.0,
+            exit_confirmed_at=now_ts + 120,
+            reason="broker_exit_fill",
+            setup_id="",
+            anomaly_flags=["carryover_sync", "broker_reloaded_after_local_removal"],
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+
+        blocked, reason = entry_controls.is_entry_blocked("GLND")
+        self.assertTrue(blocked)
+        self.assertEqual(reason, "symbol_loss_lock")
+
+        state = entry_controls.get_symbol_trade_state("GLND")
+        self.assertEqual(state["consecutive_losses"], 2)
+        self.assertEqual(len(state["recent_results"]), 2)
+
+    def test_flagged_hard_stop_still_counts_toward_loss_lock(self):
+        now_ts = datetime.now().timestamp()
+        entry_controls.record_symbol_trade_result(
+            "MKDW",
+            -12.0,
+            exit_confirmed_at=now_ts,
+            reason="hard_stop",
+            setup_id="mkdw-1",
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+        entry_controls.record_symbol_trade_result(
+            "MKDW",
+            -24.0,
+            exit_confirmed_at=now_ts + 60,
+            reason="hard_stop",
+            setup_id="mkdw-2",
+            anomaly_flags=["carryover_sync", "broker_reloaded_after_local_removal"],
+            loss_limit=2,
+            lock_seconds=3600,
+        )
+
+        blocked, reason = entry_controls.is_entry_blocked("MKDW")
+        self.assertTrue(blocked)
+        self.assertEqual(reason, "symbol_loss_lock")
+
+        state = entry_controls.get_symbol_trade_state("MKDW")
+        self.assertEqual(state["consecutive_losses"], 2)
+        self.assertEqual(state["active_lock"]["last_trade_reason"], "hard_stop")
+
 
 class SetupReplayAndModeReportTests(unittest.TestCase):
     def setUp(self):

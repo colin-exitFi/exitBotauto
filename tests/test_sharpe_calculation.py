@@ -86,11 +86,16 @@ class SharpeCalculationTests(unittest.TestCase):
 
         fade = analytics["by_strategy_tag"]["fade_runner"]
         self.assertEqual(analytics["clean_pnl"], 5.0)
+        self.assertEqual(analytics["clean_total_trades"], 1)
         self.assertEqual(fade["clean_pnl"], 5.0)
+        self.assertEqual(fade["clean_trades"], 1)
+        self.assertEqual(fade["clean_win_rate_pct"], 100.0)
         self.assertEqual(fade["anomaly_count"], 1)
         self.assertEqual(fade["first_1m_green_rate_pct"], 50.0)
         self.assertEqual(fade["first_5m_green_rate_pct"], 50.0)
         self.assertAlmostEqual(fade["avg_slippage_bps"], 10.0, places=4)
+        self.assertEqual(analytics["quarantine"]["trades"], 1)
+        self.assertEqual(analytics["recent_20"]["clean_pnl"], 5.0)
 
 
 if __name__ == "__main__":

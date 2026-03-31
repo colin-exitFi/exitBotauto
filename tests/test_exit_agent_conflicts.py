@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+import src.agents.exit_agent as exit_agent_module
 from src.agents.exit_agent import ExitAgent
 
 
@@ -57,8 +59,23 @@ class ExitAgentConflictTests(unittest.IsolatedAsyncioTestCase):
             "side": "long",
             "trailing_stop_order_id": "sell-stop",
         }
+        action = {
+            "action": "EXIT_NOW",
+            "reasoning": "risk breach",
+            "hold_seconds": 600,
+            "pnl_pct": -0.2,
+            "current_price": 189.5,
+        }
 
-        await agent._execute_action("AAPL", pos, {"action": "EXIT_NOW", "reasoning": "risk breach"})
+        with patch.object(exit_agent_module.settings, "EXIT_AGENT_EXECUTE_EXIT_NOW_ENABLED", True), \
+             patch.object(exit_agent_module.settings, "EXIT_AGENT_EXIT_NOW_CONFIRMATIONS", 2), \
+             patch.object(exit_agent_module.settings, "EXIT_AGENT_EXIT_NOW_MIN_HOLD_MINUTES", 3.0), \
+             patch.object(exit_agent_module.settings, "EXIT_AGENT_EXIT_NOW_MAX_PNL_PCT", 0.5), \
+             patch.object(exit_agent_module.settings, "EXIT_AGENT_EXIT_NOW_CONFIRM_WINDOW_SECONDS", 900.0):
+            await agent._execute_action("AAPL", pos, dict(action))
+            self.assertEqual(broker.cancelled, [])
+            self.assertEqual(broker.market_sells, [])
+            await agent._execute_action("AAPL", pos, dict(action))
 
         self.assertEqual(broker.cancelled, ["sell-stop"])
         self.assertEqual(broker.market_sells, [("AAPL", 4)])

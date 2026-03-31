@@ -337,6 +337,21 @@ class ExitAccountingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bot.risk_manager.reset_calls, 1)
         self.assertEqual(save_pnl_mock.call_count, 1)
 
+    def test_roll_daily_state_backward_session_adjust_does_not_zero_pnl(self):
+        bot = main_module.TradingBot.__new__(main_module.TradingBot)
+        bot.risk_manager = FakeRiskManager()
+        bot.pnl_state = {"today_realized_pnl": -270.2, "today_date": "2026-03-31"}
+        bot._last_daily_reset_date = "2026-03-31"
+
+        with patch.object(main_module.TradingBot, "_current_trading_day", return_value="2026-03-30"), \
+             patch.object(main_module.persistence, "save_pnl_state") as save_pnl_mock:
+            bot._roll_daily_state_if_needed()
+
+        self.assertEqual(bot.pnl_state.get("today_realized_pnl"), -270.2)
+        self.assertEqual(bot.pnl_state.get("today_date"), "2026-03-30")
+        self.assertEqual(bot.risk_manager.reset_calls, 0)
+        self.assertEqual(save_pnl_mock.call_count, 1)
+
 
 class ShortRestartSyncTests(unittest.TestCase):
     def test_alpaca_client_normalizes_short_quantity_and_side(self):

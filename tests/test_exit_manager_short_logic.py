@@ -19,6 +19,8 @@ class FakeRisk:
 class FakeEntry:
     def __init__(self):
         self.positions = {}
+        self._market_open = True
+        self._extended = False
 
     def update_peak_price(self, symbol, current_price):
         if symbol in self.positions and current_price > self.positions[symbol].get("peak_price", 0):
@@ -27,6 +29,12 @@ class FakeEntry:
     def remove_position(self, symbol):
         self.positions.pop(symbol, None)
 
+    def is_market_open(self):
+        return self._market_open
+
+    def is_extended_hours(self):
+        return self._extended
+
 
 class FakeBroker:
     def __init__(self, open_orders=None):
@@ -34,6 +42,8 @@ class FakeBroker:
         self.cancelled = []
         self.market_sells = []
         self.market_buys = []
+        self.limit_sells = []
+        self.limit_covers = []
 
     def get_orders(self, status="open"):
         if status == "open":
@@ -51,6 +61,14 @@ class FakeBroker:
     def place_market_buy(self, symbol, qty):
         self.market_buys.append((symbol, qty))
         return {"id": "mkt-buy"}
+
+    def place_limit_sell(self, symbol, qty, price, extended_hours=False, client_order_id=None, whole_only=False):
+        self.limit_sells.append((symbol, qty, price, extended_hours, whole_only))
+        return {"id": "limit-sell", "limit_price": str(price)}
+
+    def place_limit_cover(self, symbol, qty, price, extended_hours=False, client_order_id=None, whole_only=False):
+        self.limit_covers.append((symbol, qty, price, extended_hours, whole_only))
+        return {"id": "limit-cover", "limit_price": str(price)}
 
 
 class ExitManagerShortLogicTests(unittest.IsolatedAsyncioTestCase):
@@ -136,3 +154,23 @@ class ExitManagerShortLogicTests(unittest.IsolatedAsyncioTestCase):
         trade = await em._execute_exit(position, quantity=2, price=99.0, reason="stop_loss", pnl_pct=-1.0)
         self.assertIsNone(trade)
         self.assertEqual(broker.market_sells, [])
+
+    async def test_execute_exit_uses_limit_cover_during_extended_hours_for_shorts(self):
+        entry = FakeEntry()
+        entry._extended = True
+        broker = FakeBroker()
+        em = ExitManager(alpaca_client=broker, polygon_client=None, risk_manager=FakeRisk(), entry_manager=entry)
+        position = {
+            "symbol": "F",
+            "entry_price": 11.33,
+            "quantity": 53.0,
+            "side": "short",
+            "entry_time": time.time() - 60,
+        }
+
+        trade = await em._execute_exit(position, quantity=53.0, price=11.35, reason="pm_strategic_exit", pnl_pct=-0.15)
+
+        self.assertIsNotNone(trade)
+        self.assertEqual(broker.market_buys, [])
+        self.assertEqual(len(broker.limit_covers), 1)
+        self.assertTrue(broker.limit_covers[0][3])

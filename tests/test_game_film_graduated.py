@@ -29,6 +29,42 @@ class GameFilmGraduatedTests(unittest.TestCase):
         self.assertIn("disable_strategies", recs)
         self.assertEqual(len(recs["size_reductions"]), 2)
 
+    def test_run_uses_learning_history_not_quarantined_rows(self):
+        film = GameFilm()
+        clean_history = [
+            {"symbol": f"WIN{i}", "strategy_tag": "momentum_long", "pnl": 5.0, "exit_time": 1_700_000_000 + i}
+            for i in range(5)
+        ]
+        quarantined_history = [
+            {
+                "symbol": f"LOSS{i}",
+                "strategy_tag": "momentum_long",
+                "pnl": -20.0,
+                "exit_time": 1_700_000_100 + i,
+                "anomaly_flags": ["broker_reconstructed"],
+            }
+            for i in range(10)
+        ]
+        raw_history = clean_history + quarantined_history
+
+        with patch("src.ai.game_film.load_all", return_value=raw_history), \
+             patch("src.ai.game_film.get_analytic_history", return_value=raw_history), \
+             patch("src.ai.game_film.get_learning_history", return_value=clean_history), \
+             patch("src.ai.game_film.get_quarantined_history", return_value=quarantined_history), \
+             patch("src.ai.game_film.get_analytics", return_value={"quarantine": {"by_flag": {"broker_reconstructed": 10}, "by_reason": {}}}), \
+             patch("src.ai.game_film.strategy_controls.load_controls", return_value=strategy_controls.load_controls()), \
+             patch("src.ai.game_film.strategy_controls.apply_recommendations", side_effect=lambda recs, controls: controls), \
+             patch("src.ai.game_film.strategy_controls.save_controls"), \
+             patch.object(GameFilm, "_save"):
+            import asyncio
+            insights = asyncio.run(film.run())
+
+        self.assertEqual(insights["total_trades"], 5)
+        self.assertEqual(insights["raw_total_trades"], 15)
+        self.assertEqual(insights["quarantined_trades"], 10)
+        self.assertEqual(insights["by_strategy_tag"]["momentum_long"]["pnl"], 25.0)
+        self.assertNotIn("disable_strategies", insights.get("recommendations", {}))
+
     def test_strategy_controls_multiplier_and_disable_gate(self):
         controls = strategy_controls.apply_recommendations(
             {

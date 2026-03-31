@@ -237,12 +237,98 @@ class DashboardSecurityTests(unittest.TestCase):
         dashboard_module.set_bot(_Bot())
         try:
             with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
-                 patch.object(dashboard_module.settings, "OPTIONS_ENABLED", True):
+                 patch.object(dashboard_module.settings, "OPTIONS_ENABLED", True), \
+                 patch.object(dashboard_module.settings, "OPTIONS_PILOT_ENABLED", False):
                 client = TestClient(dashboard_module.app)
                 resp = client.get("/api/status?token=secret-token")
                 self.assertEqual(resp.status_code, 200)
                 payload = resp.json()
                 self.assertTrue(payload["options_enabled"])
                 self.assertTrue(payload["options_execution_enabled"])
+                self.assertFalse(payload["options_entry_enabled"])
+                self.assertFalse(payload["options_pilot_enabled"])
+        finally:
+            dashboard_module.set_bot(None)
+
+    def test_status_and_metrics_recover_restart_safe_day_stats(self):
+        class _Risk:
+            def get_status(self):
+                return {
+                    "daily_pnl": 0.0,
+                    "daily_pnl_pct": 0.0,
+                    "total_trades": 0,
+                    "winning_trades": 0,
+                    "losing_trades": 0,
+                    "win_rate": 0.0,
+                    "equity": 26800.0,
+                }
+
+        class _Entry:
+            def get_positions(self):
+                return []
+
+            def is_market_open(self):
+                return True
+
+        class _Bot:
+            running = True
+            paused = False
+            start_time = 0
+            risk_manager = _Risk()
+            entry_manager = _Entry()
+            options_engine = None
+            ai_layers = {}
+            reconciler = object()
+            alpaca_client = None
+
+        dashboard_module.set_bot(_Bot())
+        try:
+            reconciliation_state = {
+                "broker": {
+                    "equity": 26827.98,
+                    "last_equity": 27093.43,
+                    "day_pnl": -265.45,
+                    "day_pnl_pct": -0.98,
+                },
+                "internal": {
+                    "trade_history_realized": -265.45,
+                    "trade_history_trade_count": 41,
+                    "trade_history_win_rate_pct": 22.5,
+                },
+                "trust": {"internal_analytics_degraded": True},
+                "reconciliation": {"status": "minor_mismatch"},
+            }
+            with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"), \
+                 patch.object(dashboard_module, "_get_reconciliation_state", return_value=reconciliation_state), \
+                 patch.object(dashboard_module, "_get_cached_alpaca_terminal_snapshot", return_value={
+                     "equity": 26827.98,
+                     "last_equity": 27093.43,
+                     "day_pnl": -265.45,
+                     "day_pnl_pct": -0.98,
+                 }), \
+                 patch("src.ai.trade_history.get_analytics", return_value={
+                     "total_trades": 181,
+                     "wins": 83,
+                     "losses": 96,
+                 }):
+                client = TestClient(dashboard_module.app)
+                status_resp = client.get("/api/status?token=secret-token")
+                metrics_resp = client.get("/api/metrics?token=secret-token")
+
+                self.assertEqual(status_resp.status_code, 200)
+                self.assertEqual(metrics_resp.status_code, 200)
+
+                status_payload = status_resp.json()
+                metrics_payload = metrics_resp.json()
+
+                self.assertEqual(status_payload["daily_pnl"], -265.45)
+                self.assertEqual(status_payload["total_trades"], 181)
+                self.assertEqual(status_payload["today_trade_count"], 41)
+                self.assertAlmostEqual(status_payload["today_win_rate_pct"], 22.5)
+                self.assertAlmostEqual(status_payload["win_rate"], 45.86, places=2)
+
+                self.assertEqual(metrics_payload["daily_pnl"], -265.45)
+                self.assertEqual(metrics_payload["total_trades"], 181)
+                self.assertAlmostEqual(metrics_payload["win_rate"], 45.86, places=2)
         finally:
             dashboard_module.set_bot(None)

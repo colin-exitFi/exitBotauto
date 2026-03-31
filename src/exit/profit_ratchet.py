@@ -12,6 +12,24 @@ from config import settings
 
 class ProfitRatchet:
     HARD_STOP_PCT = float(getattr(settings, "PROFIT_RATCHET_HARD_STOP_PCT", -3.0) or -3.0)
+    AT_HIGHS_HARD_STOP_PCT = float(getattr(settings, "PROFIT_RATCHET_AT_HIGHS_HARD_STOP_PCT", -2.0) or -2.0)
+    EXTENDED_HOURS_HARD_STOP_PCT = float(
+        getattr(settings, "PROFIT_RATCHET_EXTENDED_HOURS_HARD_STOP_PCT", -2.25) or -2.25
+    )
+    OBSERVE_HARD_STOP_PCT = float(getattr(settings, "PROFIT_RATCHET_OBSERVE_HARD_STOP_PCT", -2.25) or -2.25)
+    PROBATION_HARD_STOP_PCT = float(
+        getattr(settings, "PROFIT_RATCHET_PROBATION_HARD_STOP_PCT", -2.0) or -2.0
+    )
+    STALLED_LOSER_HOURS = float(getattr(settings, "PROFIT_RATCHET_STALLED_LOSER_HOURS", 1.5) or 1.5)
+    STALLED_LOSER_MAX_PEAK_PNL_PCT = float(
+        getattr(settings, "PROFIT_RATCHET_STALLED_LOSER_MAX_PEAK_PNL_PCT", 0.5) or 0.5
+    )
+    STALLED_LOSER_MIN_PNL_PCT = float(
+        getattr(settings, "PROFIT_RATCHET_STALLED_LOSER_MIN_PNL_PCT", -0.75) or -0.75
+    )
+    STALLED_LOSER_HARD_STOP_PCT = float(
+        getattr(settings, "PROFIT_RATCHET_STALLED_LOSER_HARD_STOP_PCT", -1.75) or -1.75
+    )
     RATCHET_ACTIVATION_PCT = float(getattr(settings, "PROFIT_RATCHET_ACTIVATION_PCT", 1.5) or 1.5)
     INITIAL_FLOOR_PCT = float(getattr(settings, "PROFIT_RATCHET_INITIAL_FLOOR_PCT", 0.25) or 0.25)
     RATCHET_TRAIL_PCT = float(getattr(settings, "PROFIT_RATCHET_TRAIL_PCT", 4.0) or 4.0)
@@ -60,18 +78,27 @@ class ProfitRatchet:
                 "dead_money": False,
                 "holding_horizon": horizon_profile["holding_horizon"],
                 "giveback_pct": None,
+                "hard_stop_flags": [],
             }
 
         current_pnl_pct = cls.calc_pnl_pct(entry_price, current_price, side)
         peak_price = cls._compute_peak_price(position, current_price, side)
         peak_pnl_pct = cls.calc_pnl_pct(entry_price, peak_price, side)
         hold_seconds = max(0.0, now_ts - float(position.get("entry_time", now_ts) or now_ts))
-        dead_money = cls.is_dead_money(position, current_price, now=now_ts)
-        hard_stop_pct = cls.DEAD_MONEY_TIGHT_STOP_PCT if dead_money else cls.HARD_STOP_PCT
+        base_hard_stop_pct, hard_stop_flags = cls._effective_hard_stop_pct(
+            position,
+            current_pnl_pct=current_pnl_pct,
+            peak_pnl_pct=peak_pnl_pct,
+            hold_seconds=hold_seconds,
+        )
         min_hold_active = (
             hold_seconds < horizon_profile["min_hold_seconds"]
-            and current_pnl_pct > hard_stop_pct
+            and current_pnl_pct > base_hard_stop_pct
         )
+        dead_money = cls.is_dead_money(position, current_price, now=now_ts)
+        hard_stop_pct = max(base_hard_stop_pct, cls.DEAD_MONEY_TIGHT_STOP_PCT) if dead_money else base_hard_stop_pct
+        if dead_money and "dead_money" not in hard_stop_flags:
+            hard_stop_flags.append("dead_money")
         hard_stop_price = cls.price_for_pnl(entry_price, hard_stop_pct, side)
         floor_pct = cls.compute_floor_pct(
             peak_pnl_pct,
@@ -79,10 +106,10 @@ class ProfitRatchet:
             initial_floor_pct=horizon_profile["initial_floor_pct"],
             trail_pct=horizon_profile["trail_pct"],
         )
-        if min_hold_active:
-            floor_pct = None
-        ratchet_active = floor_pct is not None
-        target_exit_price = cls.price_for_pnl(entry_price, floor_pct, side) if floor_pct is not None else None
+        floor_is_live = floor_pct is not None and not min_hold_active
+        ratchet_active = floor_is_live
+        live_floor_pct = floor_pct if floor_is_live else None
+        target_exit_price = cls.price_for_pnl(entry_price, live_floor_pct, side) if live_floor_pct is not None else None
         prior_floor = cls._safe_float(position.get("ratchet_floor_pct"), None)
         giveback_pct = cls.compute_giveback_pct(peak_pnl_pct, current_pnl_pct)
 
@@ -92,7 +119,7 @@ class ProfitRatchet:
                 "reason": "dead_money_tight_stop_breached" if dead_money else "hard_stop_breached",
                 "current_pnl_pct": round(current_pnl_pct, 4),
                 "peak_pnl_pct": round(peak_pnl_pct, 4),
-                "floor_pct": floor_pct,
+                "floor_pct": live_floor_pct,
                 "target_exit_price": target_exit_price,
                 "hard_stop_price": hard_stop_price,
                 "hard_stop_pct": round(hard_stop_pct, 4),
@@ -102,15 +129,16 @@ class ProfitRatchet:
                 "dead_money": dead_money,
                 "holding_horizon": horizon_profile["holding_horizon"],
                 "giveback_pct": giveback_pct,
+                "hard_stop_flags": hard_stop_flags,
             }
 
-        if floor_pct is not None and current_pnl_pct <= floor_pct:
+        if live_floor_pct is not None and current_pnl_pct <= live_floor_pct:
             return {
                 "action": "ratchet_exit",
                 "reason": "ratchet_floor_breached",
                 "current_pnl_pct": round(current_pnl_pct, 4),
                 "peak_pnl_pct": round(peak_pnl_pct, 4),
-                "floor_pct": round(floor_pct, 4),
+                "floor_pct": round(live_floor_pct, 4),
                 "target_exit_price": target_exit_price,
                 "hard_stop_price": hard_stop_price,
                 "hard_stop_pct": round(hard_stop_pct, 4),
@@ -120,15 +148,16 @@ class ProfitRatchet:
                 "dead_money": dead_money,
                 "holding_horizon": horizon_profile["holding_horizon"],
                 "giveback_pct": giveback_pct,
+                "hard_stop_flags": hard_stop_flags,
             }
 
-        if floor_pct is not None and (prior_floor is None or floor_pct > prior_floor + 1e-9):
+        if live_floor_pct is not None and (prior_floor is None or live_floor_pct > prior_floor + 1e-9):
             return {
                 "action": "update_limit",
                 "reason": "ratchet_floor_raised",
                 "current_pnl_pct": round(current_pnl_pct, 4),
                 "peak_pnl_pct": round(peak_pnl_pct, 4),
-                "floor_pct": round(floor_pct, 4),
+                "floor_pct": round(live_floor_pct, 4),
                 "target_exit_price": target_exit_price,
                 "hard_stop_price": hard_stop_price,
                 "hard_stop_pct": round(hard_stop_pct, 4),
@@ -138,6 +167,7 @@ class ProfitRatchet:
                 "dead_money": dead_money,
                 "holding_horizon": horizon_profile["holding_horizon"],
                 "giveback_pct": giveback_pct,
+                "hard_stop_flags": hard_stop_flags,
             }
 
         return {
@@ -145,7 +175,7 @@ class ProfitRatchet:
             "reason": "hold_zone" if min_hold_active else ("ratchet_active" if ratchet_active else "pre_activation"),
             "current_pnl_pct": round(current_pnl_pct, 4),
             "peak_pnl_pct": round(peak_pnl_pct, 4),
-            "floor_pct": round(floor_pct, 4) if floor_pct is not None else None,
+            "floor_pct": round(live_floor_pct, 4) if live_floor_pct is not None else None,
             "target_exit_price": target_exit_price,
             "hard_stop_price": hard_stop_price,
             "hard_stop_pct": round(hard_stop_pct, 4),
@@ -155,6 +185,7 @@ class ProfitRatchet:
             "dead_money": dead_money,
             "holding_horizon": horizon_profile["holding_horizon"],
             "giveback_pct": giveback_pct,
+            "hard_stop_flags": hard_stop_flags,
         }
 
     @classmethod
@@ -199,6 +230,15 @@ class ProfitRatchet:
         }
 
     @classmethod
+    def initial_hard_stop_profile(cls, position: Dict) -> tuple[float, list]:
+        return cls._effective_hard_stop_pct(
+            position,
+            current_pnl_pct=0.0,
+            peak_pnl_pct=0.0,
+            hold_seconds=0.0,
+        )
+
+    @classmethod
     def _position_trail_override(cls, position: Dict) -> Optional[float]:
         if not isinstance(position, dict):
             return None
@@ -233,6 +273,74 @@ class ProfitRatchet:
         if override is None:
             return None
         return max(cls.INITIAL_FLOOR_PCT, min(override, 100.0))
+
+    @classmethod
+    def _effective_hard_stop_pct(
+        cls,
+        position: Dict,
+        current_pnl_pct: float,
+        peak_pnl_pct: float,
+        hold_seconds: float,
+    ) -> tuple[float, list]:
+        hard_stop_pct = cls.HARD_STOP_PCT
+        flags = []
+
+        manual_override = cls._safe_float((position or {}).get("hard_stop_override_pct"), None)
+        if manual_override is not None and manual_override < 0:
+            hard_stop_pct = max(hard_stop_pct, manual_override)
+            flags.append("manual_override")
+
+        allocator_status = str((position or {}).get("allocator_status", "") or "").strip().lower()
+        allocator_action = str((position or {}).get("allocator_recommended_action", "") or "").strip().lower()
+        allocator_control_state = str((position or {}).get("allocator_control_state", "") or "").strip().lower()
+        if not (allocator_status or allocator_action or allocator_control_state):
+            for code in list((position or {}).get("allocator_reason_codes", []) or []):
+                code = str(code or "").strip().lower()
+                if code.startswith("status_") and not allocator_status:
+                    allocator_status = code[len("status_"):]
+                elif code.startswith("action_") and not allocator_action:
+                    allocator_action = code[len("action_"):]
+                elif code.startswith("control_") and not allocator_control_state:
+                    allocator_control_state = code[len("control_"):]
+
+        if allocator_status == "disable" or allocator_action == "disable" or allocator_control_state in {
+            "manual_disabled",
+            "hard_disabled",
+            "soft_disabled",
+        }:
+            hard_stop_pct = max(hard_stop_pct, cls.PROBATION_HARD_STOP_PCT)
+            flags.append("disabled_book")
+        elif allocator_status == "probation" or allocator_action == "probation" or allocator_control_state == "probation":
+            hard_stop_pct = max(hard_stop_pct, cls.PROBATION_HARD_STOP_PCT)
+            flags.append("probation_book")
+        elif (
+            allocator_status == "observe"
+            or allocator_action == "observe"
+            or allocator_control_state == "observe"
+        ):
+            hard_stop_pct = max(hard_stop_pct, cls.OBSERVE_HARD_STOP_PCT)
+            flags.append("observe_book")
+
+        entry_quality = str((position or {}).get("entry_quality", "neutral") or "neutral").strip().lower()
+        if entry_quality == "at_highs":
+            hard_stop_pct = max(hard_stop_pct, cls.AT_HIGHS_HARD_STOP_PCT)
+            flags.append("at_highs_entry")
+
+        if bool((position or {}).get("extended_hours_entry")):
+            hard_stop_pct = max(hard_stop_pct, cls.EXTENDED_HOURS_HARD_STOP_PCT)
+            flags.append("extended_hours_entry")
+
+        holding_horizon = str((position or {}).get("holding_horizon", "intraday") or "intraday").strip().lower()
+        if (
+            holding_horizon != "swing"
+            and hold_seconds >= cls.STALLED_LOSER_HOURS * 3600.0
+            and peak_pnl_pct <= cls.STALLED_LOSER_MAX_PEAK_PNL_PCT
+            and current_pnl_pct <= cls.STALLED_LOSER_MIN_PNL_PCT
+        ):
+            hard_stop_pct = max(hard_stop_pct, cls.STALLED_LOSER_HARD_STOP_PCT)
+            flags.append("stalled_loser")
+
+        return round(hard_stop_pct, 4), flags
 
     @classmethod
     def is_dead_money(

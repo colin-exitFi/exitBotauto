@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -114,6 +115,15 @@ class TestTradingCalendar(unittest.TestCase):
         from src.data.trading_calendar import is_same_trading_day
         now = time.time()
         self.assertFalse(is_same_trading_day(now, now - 100000))
+
+    def test_trading_session_day_rolls_at_4am_eastern(self):
+        from src.data.trading_calendar import EASTERN, trading_session_day
+
+        after_midnight = datetime(2026, 3, 31, 0, 30, tzinfo=EASTERN).timestamp()
+        after_roll = datetime(2026, 3, 31, 4, 5, tzinfo=EASTERN).timestamp()
+
+        self.assertEqual(trading_session_day(after_midnight), "2026-03-30")
+        self.assertEqual(trading_session_day(after_roll), "2026-03-31")
 
 
 class TestRiskAgentDefaultDeny(unittest.TestCase):

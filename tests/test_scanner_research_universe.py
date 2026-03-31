@@ -52,6 +52,33 @@ class ScannerResearchUniverseTests(unittest.TestCase):
         self.assertEqual(stats["live"], 1)
         self.assertEqual(stats["research"], 25)
 
+    def test_scan_stats_have_safe_defaults_before_first_scan(self):
+        scanner = Scanner()
+
+        stats = scanner.get_last_scan_stats()
+
+        self.assertEqual(stats["status"], "idle")
+        self.assertEqual(stats["live"], 0)
+        self.assertEqual(stats["research"], 0)
+        self.assertIn("last_started_at", stats)
+        self.assertIn("last_completed_at", stats)
+
+    def test_background_research_cycle_primes_scan_status(self):
+        scanner = Scanner(watchlist_provider=_Watchlist())
+        scanner.record_background_research_cycle(
+            live_candidates=[{"symbol": "NVDA", "score": 0.9}],
+            regime="risk_on",
+        )
+
+        stats = scanner.get_last_scan_stats()
+
+        self.assertEqual(stats["status"], "research_ready")
+        self.assertEqual(stats["live"], 1)
+        self.assertEqual(stats["research"], 2)
+        self.assertEqual(stats["merged_unique"], 2)
+        self.assertEqual(stats["regime"], "risk_on")
+        self.assertIsNotNone(stats["last_completed_at"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,5 @@
 import unittest
+import types
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -7,6 +8,36 @@ import src.ai.tuner as tuner_module
 
 
 class TunerImpactTests(unittest.IsolatedAsyncioTestCase):
+    async def test_disabled_tuner_ignores_persisted_config_and_never_runs(self):
+        with TemporaryDirectory() as tmp_dir:
+            config_file = Path(tmp_dir) / "config_state.json"
+            impact_file = Path(tmp_dir) / "tuner_impact.json"
+            config_file.write_text('{"SCAN_INTERVAL_SECONDS": 300}')
+            with patch.object(tuner_module, "CONFIG_STATE_FILE", config_file), \
+                 patch.object(tuner_module, "IMPACT_STATE_FILE", impact_file), \
+                 patch.object(tuner_module.settings, "TUNER_ENABLED", False, create=True), \
+                 patch.object(tuner_module.settings, "TUNER_LOAD_PERSISTED_CONFIG", False, create=True), \
+                 patch.object(tuner_module.settings, "SCAN_INTERVAL_SECONDS", 60, create=True):
+                tuner = tuner_module.Tuner()
+                result = await tuner.run(bot=types.SimpleNamespace(), advisor_output=None)
+
+        self.assertEqual(tuner_module.settings.SCAN_INTERVAL_SECONDS, 60)
+        self.assertIsNone(result)
+
+    async def test_load_persisted_config_respects_explicit_load_flag(self):
+        with TemporaryDirectory() as tmp_dir:
+            config_file = Path(tmp_dir) / "config_state.json"
+            impact_file = Path(tmp_dir) / "tuner_impact.json"
+            config_file.write_text('{"SCAN_INTERVAL_SECONDS": 300}')
+            with patch.object(tuner_module, "CONFIG_STATE_FILE", config_file), \
+                 patch.object(tuner_module, "IMPACT_STATE_FILE", impact_file), \
+                 patch.object(tuner_module.settings, "TUNER_ENABLED", True, create=True), \
+                 patch.object(tuner_module.settings, "TUNER_LOAD_PERSISTED_CONFIG", False, create=True), \
+                 patch.object(tuner_module.settings, "SCAN_INTERVAL_SECONDS", 60, create=True):
+                tuner_module.Tuner()
+
+        self.assertEqual(tuner_module.settings.SCAN_INTERVAL_SECONDS, 60)
+
     async def test_snapshot_performance_reads_current_metrics(self):
         with TemporaryDirectory() as tmp_dir:
             config_file = Path(tmp_dir) / "config_state.json"
@@ -20,6 +51,36 @@ class TunerImpactTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot["trade_count"], 12)
         self.assertEqual(snapshot["total_pnl"], 42.0)
         self.assertEqual(snapshot["sharpe"], 1.2)
+
+    async def test_snapshot_performance_prefers_clean_metrics(self):
+        with TemporaryDirectory() as tmp_dir:
+            config_file = Path(tmp_dir) / "config_state.json"
+            impact_file = Path(tmp_dir) / "tuner_impact.json"
+            with patch.object(tuner_module, "CONFIG_STATE_FILE", config_file), \
+                 patch.object(tuner_module, "IMPACT_STATE_FILE", impact_file), \
+                 patch.object(tuner_module, "get_analytics", return_value={
+                     "total_trades": 40,
+                     "clean_total_trades": 12,
+                     "win_rate": 0.25,
+                     "clean_win_rate": 0.5,
+                     "total_pnl": -80.0,
+                     "clean_pnl": 42.0,
+                     "sharpe_ratio": 1.2,
+                     "recent_20": {
+                         "win_rate_pct": 30.0,
+                         "clean_win_rate_pct": 55.0,
+                         "pnl": -10.0,
+                         "clean_pnl": 8.0,
+                     },
+                 }):
+                tuner = tuner_module.Tuner()
+                snapshot = tuner._snapshot_performance()
+
+        self.assertEqual(snapshot["trade_count"], 12)
+        self.assertEqual(snapshot["win_rate"], 0.5)
+        self.assertEqual(snapshot["total_pnl"], 42.0)
+        self.assertEqual(snapshot["recent_20_win_rate"], 55.0)
+        self.assertEqual(snapshot["recent_20_pnl"], 8.0)
 
     async def test_measure_impact_waits_for_15_trades(self):
         with TemporaryDirectory() as tmp_dir:

@@ -332,6 +332,53 @@ class ScannerUnusualWhalesEnrichmentTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("uw_news_summary", candidates[5])
         self.assertNotIn("uw_chain_summary", candidates[5])
 
+    async def test_uw_news_populates_generic_news_headlines_for_scoring(self):
+        class _UW:
+            def is_configured(self):
+                return True
+
+            def get_budget_mode(self):
+                return "normal"
+
+            def summarize_news_for_symbol(self, symbol):
+                return {
+                    "bias": "bullish",
+                    "summary": f"{symbol} headline flow",
+                    "headlines": [f"{symbol} breaks on major headline"],
+                }
+
+            def summarize_option_chain_validation(self, symbol, side):
+                return {"bias": "neutral", "summary": "", "top_contracts": [], "supports_thesis": False, "contradicts_thesis": False}
+
+        scanner = Scanner(unusual_whales_client=_UW())
+        candidates = [{"symbol": "AAPL", "side": "long", "uw_score_adjustment": 0.0, "news_headlines": []}]
+
+        await scanner._apply_unusual_whales_news_and_chain_confirmation(candidates)
+
+        self.assertEqual(candidates[0]["news_headlines"], ["AAPL breaks on major headline"])
+
+    def test_calculate_score_treats_uw_news_as_real_news_context(self):
+        scanner = Scanner()
+        candidate_without_news = {
+            "volume_spike": 3.0,
+            "change_pct": 4.0,
+            "sentiment_score": 0.2,
+            "stocktwits_trending_score": 10.0,
+            "pharma_score": 0.0,
+            "news_headlines": [],
+            "side": "long",
+            "strategy_tag": "momentum_long",
+            "signal_sources": ["polygon"],
+        }
+        candidate_with_uw_news = dict(candidate_without_news)
+        candidate_with_uw_news["uw_news_summary"] = "Major bullish headline"
+        neutral_perf = {"by_strategy": {}, "by_source": {}}
+
+        no_news_score = scanner._calculate_score(candidate_without_news, regime="risk_on", performance=neutral_perf)
+        with_news_score = scanner._calculate_score(candidate_with_uw_news, regime="risk_on", performance=neutral_perf)
+
+        self.assertGreater(with_news_score, no_news_score)
+
     async def test_news_and_chain_confirmation_penalize_contradictions_more_than_they_reward(self):
         class _UW:
             def is_configured(self):

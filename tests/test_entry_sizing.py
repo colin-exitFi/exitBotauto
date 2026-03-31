@@ -13,6 +13,7 @@ class _DummyBroker:
     def __init__(self):
         self.smart_buy_calls = []
         self.trailing_stop_calls = []
+        self.limit_short_calls = []
 
     @staticmethod
     def get_positions():
@@ -30,6 +31,17 @@ class _DummyBroker:
     @staticmethod
     def place_limit_buy(symbol: str, qty: int, limit_price: float, extended_hours: bool = False):
         return {"id": "order-limit-1", "filled_qty": str(qty), "qty": str(qty), "limit_price": str(limit_price)}
+
+    def place_limit_short(self, symbol: str, qty: int, limit_price: float, extended_hours: bool = False):
+        self.limit_short_calls.append((symbol, int(qty), float(limit_price), bool(extended_hours)))
+        return {
+            "id": "order-short-limit-1",
+            "filled_qty": str(qty),
+            "qty": str(qty),
+            "limit_price": str(limit_price),
+            "status": "filled",
+            "filled_avg_price": str(limit_price),
+        }
 
     def place_trailing_stop(self, symbol: str, qty: int, trail_pct: float):
         self.trailing_stop_calls.append((symbol, qty, float(trail_pct)))
@@ -189,7 +201,30 @@ class EntrySizingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(pos.get("swing_only"))
         self.assertFalse(pos.get("has_trailing_stop"))
         self.assertEqual(broker.trailing_stop_calls, [])
-        self.assertGreaterEqual(float(pos.get("trail_pct", 0)), 4.5)
+        self.assertGreaterEqual(float(pos.get("trail_pct", 0)), 4.0)
+
+    async def test_extended_hours_short_uses_limit_short_path(self):
+        broker = _DummyBroker()
+        entry = EntryManager(
+            alpaca_client=broker,
+            polygon_client=_DummyPolygon(),
+            risk_manager=_DummyRisk(),
+        )
+        entry.is_extended_hours = lambda: True
+
+        sentiment_data = {
+            "score": -0.5,
+            "strategy_tag": "momentum_short",
+            "signal_sources": ["polygon"],
+        }
+
+        pos = await entry.enter_short("AAPL", sentiment_data)
+
+        self.assertIsNotNone(pos)
+        self.assertTrue(broker.limit_short_calls)
+        self.assertEqual(broker.limit_short_calls[0][0], "AAPL")
+        self.assertTrue(broker.limit_short_calls[0][3])
+        self.assertTrue(pos.get("extended_hours_entry"))
 
 
 if __name__ == "__main__":

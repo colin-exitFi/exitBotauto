@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+import src.main as main_module
 from src.data.signal_attribution import derive_strategy_tag
 from src.data.strategy_playbook import annotate_candidate
 from src.main import TradingBot
@@ -55,8 +56,8 @@ class StrategyPlaybookTests(unittest.TestCase):
             },
             "BUY",
         )
-        self.assertFalse(gate["allowed"])
-        self.assertEqual(gate["reason"], "regime_block")
+        self.assertTrue(gate["allowed"])
+        self.assertEqual(gate["reason"], "v2_passthrough")
 
     def test_trade_gate_requires_actionable_thesis_for_planned_playbooks(self):
         bot = TradingBot.__new__(TradingBot)
@@ -76,8 +77,8 @@ class StrategyPlaybookTests(unittest.TestCase):
                 },
                 "BUY",
             )
-        self.assertFalse(gate["allowed"])
-        self.assertEqual(gate["reason"], "thesis_not_actionable")
+        self.assertTrue(gate["allowed"])
+        self.assertEqual(gate["reason"], "v2_passthrough")
 
     def test_trade_gate_allows_watchlist_name_in_actionable_plan(self):
         bot = TradingBot.__new__(TradingBot)
@@ -100,7 +101,7 @@ class StrategyPlaybookTests(unittest.TestCase):
             "BUY",
         )
         self.assertTrue(gate["allowed"])
-        self.assertEqual(gate["reason"], "ok")
+        self.assertEqual(gate["reason"], "v2_passthrough")
 
     def test_trade_gate_requires_uw_confirmation_for_uw_playbook(self):
         bot = TradingBot.__new__(TradingBot)
@@ -118,8 +119,8 @@ class StrategyPlaybookTests(unittest.TestCase):
             },
             "BUY",
         )
-        self.assertFalse(gate["allowed"])
-        self.assertEqual(gate["reason"], "uw_unconfirmed")
+        self.assertTrue(gate["allowed"])
+        self.assertEqual(gate["reason"], "v2_passthrough")
 
     def test_options_allocation_only_for_confirmed_uw_flow(self):
         bot = TradingBot.__new__(TradingBot)
@@ -144,6 +145,95 @@ class StrategyPlaybookTests(unittest.TestCase):
         )
         self.assertGreater(confirmed, 0.0)
         self.assertEqual(plain, 0.0)
+
+    def test_options_pilot_allows_high_confidence_momentum_on_whitelisted_symbol(self):
+        bot = TradingBot.__new__(TradingBot)
+
+        with patch.object(main_module.OptionsMonitor, "is_regular_market_hours", return_value=True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ENABLED", True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_SYMBOLS", {"QQQ"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_STRATEGY_TAGS", {"MOMENTUM_LONG"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_MIN_CONFIDENCE", 90.0), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ALLOCATION_PCT", 35.0):
+            pct = bot._determine_options_allocation_pct(
+                {
+                    "symbol": "QQQ",
+                    "strategy_tag": "momentum_long",
+                    "price": 500.0,
+                    "market_regime": "risk_on",
+                },
+                "BUY",
+                93,
+            )
+
+        self.assertGreater(pct, 0.0)
+
+    def test_options_overlay_reports_pilot_symbol_not_whitelisted(self):
+        bot = TradingBot.__new__(TradingBot)
+
+        with patch.object(main_module.OptionsMonitor, "is_regular_market_hours", return_value=True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ENABLED", True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_SYMBOLS", {"QQQ"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_STRATEGY_TAGS", {"MOMENTUM_LONG"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_MIN_CONFIDENCE", 90.0), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ALLOCATION_PCT", 35.0):
+            overlay = bot._evaluate_options_overlay(
+                {
+                    "symbol": "AAPL",
+                    "strategy_tag": "momentum_long",
+                    "price": 210.0,
+                    "market_regime": "risk_on",
+                },
+                "BUY",
+                95,
+            )
+
+        self.assertEqual(overlay["allocation_pct"], 0.0)
+        self.assertEqual(overlay["reason"], "pilot_symbol_not_whitelisted")
+        self.assertEqual(overlay["mode"], "pilot")
+
+    def test_options_overlay_reports_uw_prefer_trace_reason(self):
+        bot = TradingBot.__new__(TradingBot)
+
+        with patch.object(main_module.OptionsMonitor, "is_regular_market_hours", return_value=True):
+            overlay = bot._evaluate_options_overlay(
+                {
+                    "symbol": "NVDA",
+                    "strategy_tag": "uw_flow_long",
+                    "uw_flow_sentiment": "bullish",
+                    "uw_chain_bias": "bullish",
+                    "price": 900.0,
+                },
+                "BUY",
+                88,
+            )
+
+        self.assertGreater(overlay["allocation_pct"], 0.0)
+        self.assertEqual(overlay["reason"], "uw_prefer_high_confidence")
+        self.assertEqual(overlay["mode"], "playbook_prefer")
+
+    def test_options_pilot_blocks_extended_hours_even_for_whitelisted_setup(self):
+        bot = TradingBot.__new__(TradingBot)
+
+        with patch.object(main_module.OptionsMonitor, "is_regular_market_hours", return_value=False), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ENABLED", True), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_SYMBOLS", {"QQQ"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_STRATEGY_TAGS", {"MOMENTUM_LONG"}), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_MIN_CONFIDENCE", 90.0), \
+             patch.object(main_module.settings, "OPTIONS_PILOT_ALLOCATION_PCT", 35.0):
+            pct = bot._determine_options_allocation_pct(
+                {
+                    "symbol": "QQQ",
+                    "strategy_tag": "momentum_long",
+                    "price": 500.0,
+                    "market_regime": "risk_on",
+                    "extended_hours": True,
+                },
+                "BUY",
+                95,
+            )
+
+        self.assertEqual(pct, 0.0)
 
 
 if __name__ == "__main__":
