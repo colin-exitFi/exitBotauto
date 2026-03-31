@@ -6,13 +6,16 @@ File: data/trade_history.json
 import json
 import math
 import time
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
 
 from src import persistence
+from src.data import strategy_controls
 from src.data.setup_snapshots import load_setup_snapshots
+from src.data.trading_calendar import trading_session_day
 from src.data.trade_schema import normalize_trade_record
 from src.data.strategy_tags import is_artifact_strategy_tag, normalize_strategy_tag
 from src.signals.mode_classifier import mode_features_from_dict
@@ -128,23 +131,123 @@ def get_recent(n: int = 50) -> List[Dict]:
     return load_all()[-n:]
 
 
+def get_analytic_history(*, clean_only: bool = False) -> List[Dict]:
+    """Get strategy-analytic trades, optionally excluding quarantined rows."""
+    history = [t for t in load_all() if _is_strategy_analytic_trade(t)]
+    if clean_only:
+        history = [t for t in history if not _trade_has_anomaly(t)]
+    return history
+
+
+def get_learning_history() -> List[Dict]:
+    """Get trades safe to feed back into game film and tuner."""
+    return get_analytic_history(clean_only=True)
+
+
+def get_quarantined_history() -> List[Dict]:
+    """Get analytic trades excluded from learning due to anomaly flags."""
+    return [t for t in get_analytic_history(clean_only=False) if _trade_has_anomaly(t)]
+
+
+def _trade_signal_sources(trade: Dict) -> List[str]:
+    sources = trade.get("signal_sources", []) or ["unknown"]
+    if isinstance(sources, str):
+        sources = [s.strip() for s in sources.split(",") if s.strip()]
+    if not isinstance(sources, list):
+        return ["unknown"]
+    normalized = []
+    seen = set()
+    for source in sources:
+        tag = str(source or "").strip().lower()
+        if not tag or tag in seen:
+            continue
+        seen.add(tag)
+        normalized.append(tag)
+    return normalized or ["unknown"]
+
+
+def _build_unusual_whales_analytics(trades: List[Dict]) -> Dict:
+    groups = {
+        "overall": _metric_bucket_init(),
+        "flow_book": _metric_bucket_init(),
+        "stream_assisted": _metric_bucket_init(),
+        "rest_assisted": _metric_bucket_init(),
+        "congress_follow": _metric_bucket_init(),
+    }
+
+    for trade in trades or []:
+        strategy = normalize_strategy_tag(
+            trade.get("strategy_tag", "unknown"),
+            fallback="unknown",
+            allow_artifacts=True,
+        )
+        sources = set(_trade_signal_sources(trade))
+        is_flow_book = strategy.startswith("uw_flow_")
+        is_stream = "unusual_whales_stream" in sources
+        is_rest = any(
+            source in sources
+            for source in ("unusual_whales", "unusual_options", "options_flow")
+        )
+        is_congress = strategy == "congress_follow" or "congress" in sources
+
+        if any((is_flow_book, is_stream, is_rest, is_congress)):
+            _update_metric_bucket(groups["overall"], trade)
+        if is_flow_book:
+            _update_metric_bucket(groups["flow_book"], trade)
+        if is_stream:
+            _update_metric_bucket(groups["stream_assisted"], trade)
+        if is_rest:
+            _update_metric_bucket(groups["rest_assisted"], trade)
+        if is_congress:
+            _update_metric_bucket(groups["congress_follow"], trade)
+
+    return {
+        key: _finalize_metric_bucket(bucket)
+        for key, bucket in groups.items()
+    }
+
+
 def get_analytics() -> Dict:
     """Generate structured analytics for AI consumption."""
     history = load_all()
     if not history:
         return {
             "total_trades": 0,
+            "clean_total_trades": 0,
             "message": "No trade history yet.",
             "win_rate": 0.0,
+            "clean_win_rate": 0.0,
             "total_pnl": 0.0,
             "clean_pnl": 0.0,
             "sharpe_ratio": 0.0,
             "sharpe_ratio_recent_50": 0.0,
             "today": {
                 "trades": 0,
+                "clean_trades": 0,
+                "quarantined_trades": 0,
                 "raw_pnl": 0.0,
                 "clean_pnl": 0.0,
                 "anomaly_count": 0,
+            },
+            "quarantine": {
+                "trades": 0,
+                "pnl": 0.0,
+                "today_trades": 0,
+                "today_pnl": 0.0,
+                "by_flag": {},
+                "by_reason": {},
+            },
+            "book_report": {
+                "summary": {
+                    "books": 0,
+                    "scale": 0,
+                    "hold": 0,
+                    "probation": 0,
+                    "disable": 0,
+                    "observe": 0,
+                },
+                "books": [],
+                "generated_at": time.time(),
             },
         }
 
@@ -153,10 +256,14 @@ def get_analytics() -> Dict:
     raw_total_pnl = sum(t.get("pnl", 0) for t in history)
     raw_clean_pnl = sum(t.get("pnl", 0) for t in history if not _trade_has_anomaly(t))
 
-    analytics_history = [t for t in history if _is_strategy_analytic_trade(t)]
+    analytics_history = get_analytic_history(clean_only=False)
+    clean_history = [t for t in analytics_history if not _trade_has_anomaly(t)]
+    quarantined_history = [t for t in analytics_history if _trade_has_anomaly(t)]
     wins = [t for t in analytics_history if t.get("pnl", 0) > 0]
     losses = [t for t in analytics_history if t.get("pnl", 0) < 0]
     breakevens = [t for t in analytics_history if t.get("pnl", 0) == 0]
+    clean_wins = [t for t in clean_history if t.get("pnl", 0) > 0]
+    clean_losses = [t for t in clean_history if t.get("pnl", 0) < 0]
     total_pnl = sum(t.get("pnl", 0) for t in analytics_history)
     clean_pnl = sum(t.get("pnl", 0) for t in analytics_history if not _trade_has_anomaly(t))
     latency_samples = [
@@ -329,18 +436,30 @@ def get_analytics() -> Dict:
     recent_pnl = sum(t.get("pnl", 0) for t in recent)
     recent_20 = analytics_history[-20:]
     recent_20_wins = len([t for t in recent_20 if t.get("pnl", 0) > 0])
+    recent_clean = clean_history[-50:]
+    recent_clean_wins = len([t for t in recent_clean if t.get("pnl", 0) > 0])
+    recent_20_clean = clean_history[-20:]
+    recent_20_clean_wins = len([t for t in recent_20_clean if t.get("pnl", 0) > 0])
     sharpe_ratio = _compute_sharpe(analytics_history)
     sharpe_ratio_recent_50 = _compute_sharpe(recent)
     overall_metrics = _finalize_metric_bucket(_build_metric_bucket(analytics_history))
+    unusual_whales_metrics = _build_unusual_whales_analytics(analytics_history)
+    book_report = _build_book_report(analytics_history)
+    play_report = _build_play_report(analytics_history)
     today_key = _current_day_key()
     today_trades = [t for t in analytics_history if _trade_day_key(t) == today_key]
     today_metrics = _finalize_metric_bucket(_build_metric_bucket(today_trades))
+    quarantine_summary = _build_quarantine_summary(quarantined_history, today_key=today_key)
 
     return {
         "total_trades": len(analytics_history),
+        "clean_total_trades": len(clean_history),
         "wins": len(wins),
         "losses": len(losses),
         "win_rate": round(len(wins) / max(1, len(analytics_history)), 4),
+        "clean_wins": len(clean_wins),
+        "clean_losses": len(clean_losses),
+        "clean_win_rate": round(len(clean_wins) / max(1, len(clean_history)), 4) if clean_history else 0.0,
         "total_pnl": round(total_pnl, 2),
         "clean_pnl": round(clean_pnl, 2),
         "raw_total_trades": len(history),
@@ -354,6 +473,10 @@ def get_analytics() -> Dict:
             "wins": len(wins),
             "losses": len(losses),
             "win_rate_pct": round(len(wins) / max(1, len(analytics_history)) * 100, 1),
+            "clean_trades": len(clean_history),
+            "clean_wins": len(clean_wins),
+            "clean_losses": len(clean_losses),
+            "clean_win_rate_pct": round(len(clean_wins) / max(1, len(clean_history)) * 100, 1) if clean_history else 0.0,
             "total_pnl": round(total_pnl, 2),
             "clean_pnl": round(clean_pnl, 2),
             "avg_win": round(sum(t.get("pnl", 0) for t in wins) / max(1, len(wins)), 2),
@@ -380,6 +503,9 @@ def get_analytics() -> Dict:
         "by_setup_mode": dict(sorted(by_setup_mode.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_signal_source": dict(sorted(by_signal_source.items(), key=lambda x: x[1]["pnl"], reverse=True)),
         "by_asset_type": dict(sorted(by_asset_type.items(), key=lambda x: x[1]["pnl"], reverse=True)),
+        "unusual_whales": unusual_whales_metrics,
+        "book_report": book_report,
+        "play_report": play_report,
         "by_hold_duration": by_hold,
         "equity_curve": equity_curve[-500:],
         "recent_50": {
@@ -387,19 +513,30 @@ def get_analytics() -> Dict:
             "win_rate_pct": round(recent_wins / max(1, len(recent)) * 100, 1),
             "pnl": round(recent_pnl, 2),
             "sharpe_ratio": round(sharpe_ratio_recent_50, 4),
+            "clean_trades": len(recent_clean),
+            "clean_wins": recent_clean_wins,
+            "clean_win_rate_pct": round(recent_clean_wins / max(1, len(recent_clean)) * 100, 1) if recent_clean else 0.0,
+            "clean_pnl": round(sum(t.get("pnl", 0) for t in recent_clean), 2),
         },
         "recent_20": {
             "wins": recent_20_wins,
             "win_rate_pct": round(recent_20_wins / max(1, len(recent_20)) * 100, 1),
             "pnl": round(sum(t.get("pnl", 0) for t in recent_20), 2),
+            "clean_trades": len(recent_20_clean),
+            "clean_wins": recent_20_clean_wins,
+            "clean_win_rate_pct": round(recent_20_clean_wins / max(1, len(recent_20_clean)) * 100, 1) if recent_20_clean else 0.0,
+            "clean_pnl": round(sum(t.get("pnl", 0) for t in recent_20_clean), 2),
         },
         "today": {
             "date": today_key,
             "trades": today_metrics["trades"],
+            "clean_trades": today_metrics["clean_trades"],
+            "quarantined_trades": quarantine_summary["today_trades"],
             "raw_pnl": today_metrics["pnl"],
             "clean_pnl": today_metrics["clean_pnl"],
             "anomaly_count": today_metrics["anomaly_count"],
         },
+        "quarantine": quarantine_summary,
     }
 
 
@@ -621,8 +758,11 @@ def _bucket_init():
 def _metric_bucket_init() -> Dict:
     return {
         "trades": 0,
+        "clean_trades": 0,
         "wins": 0,
+        "clean_wins": 0,
         "losses": 0,
+        "clean_losses": 0,
         "pnl": 0.0,
         "clean_pnl": 0.0,
         "win_pnl_sum": 0.0,
@@ -645,6 +785,8 @@ def _metric_bucket_init() -> Dict:
         "ratchet_activations": 0,
         "latency_sum": 0.0,
         "latency_count": 0,
+        "best_trade_pnl": None,
+        "worst_trade_pnl": None,
     }
 
 
@@ -662,10 +804,41 @@ def _trade_has_anomaly(trade: Dict) -> bool:
     return bool(flags)
 
 
+def _build_quarantine_summary(trades: List[Dict], *, today_key: Optional[str] = None) -> Dict:
+    by_flag = Counter()
+    by_reason = Counter()
+    today_rows = []
+    target_today = str(today_key or _current_day_key())
+    for trade in trades or []:
+        reason = str(trade.get("reason", "") or "").strip() or "unknown"
+        by_reason[reason] += 1
+        flags = trade.get("anomaly_flags", []) or []
+        if isinstance(flags, str):
+            flags = [f.strip() for f in flags.split(",") if f.strip()]
+        for flag in flags:
+            normalized = str(flag or "").strip()
+            if normalized:
+                by_flag[normalized] += 1
+        if _trade_day_key(trade) == target_today:
+            today_rows.append(trade)
+    return {
+        "trades": len(trades or []),
+        "pnl": round(sum(float(t.get("pnl", 0) or 0) for t in (trades or [])), 2),
+        "today_trades": len(today_rows),
+        "today_pnl": round(sum(float(t.get("pnl", 0) or 0) for t in today_rows), 2),
+        "by_flag": dict(sorted(by_flag.items(), key=lambda item: (-item[1], item[0]))),
+        "by_reason": dict(sorted(by_reason.items(), key=lambda item: (-item[1], item[0]))),
+    }
+
+
 def _update_metric_bucket(bucket: Dict, trade: Dict):
     pnl = float(trade.get("pnl", 0) or 0)
     bucket["trades"] += 1
     bucket["pnl"] += pnl
+    best_trade = bucket.get("best_trade_pnl")
+    worst_trade = bucket.get("worst_trade_pnl")
+    bucket["best_trade_pnl"] = pnl if best_trade is None else max(float(best_trade), pnl)
+    bucket["worst_trade_pnl"] = pnl if worst_trade is None else min(float(worst_trade), pnl)
     if pnl > 0:
         bucket["wins"] += 1
         bucket["win_pnl_sum"] += pnl
@@ -675,7 +848,12 @@ def _update_metric_bucket(bucket: Dict, trade: Dict):
     if _trade_has_anomaly(trade):
         bucket["anomaly_count"] += 1
     else:
+        bucket["clean_trades"] += 1
         bucket["clean_pnl"] += pnl
+        if pnl > 0:
+            bucket["clean_wins"] += 1
+        elif pnl < 0:
+            bucket["clean_losses"] += 1
     if _trade_reached_ratchet_activation(trade):
         bucket["ratchet_activations"] += 1
 
@@ -719,8 +897,11 @@ def _update_metric_bucket(bucket: Dict, trade: Dict):
 
 def _finalize_metric_bucket(bucket: Dict) -> Dict:
     trades = int(bucket.get("trades", 0) or 0)
+    clean_trades = int(bucket.get("clean_trades", 0) or 0)
     wins = int(bucket.get("wins", 0) or 0)
+    clean_wins = int(bucket.get("clean_wins", 0) or 0)
     losses = int(bucket.get("losses", 0) or 0)
+    clean_losses = int(bucket.get("clean_losses", 0) or 0)
     avg_win = _avg_or_none(bucket.get("win_pnl_sum", 0.0), wins)
     avg_loss = _avg_or_none(bucket.get("loss_pnl_sum", 0.0), losses)
     win_rate_pct = round(wins / max(1, trades) * 100, 1)
@@ -728,18 +909,36 @@ def _finalize_metric_bucket(bucket: Dict) -> Dict:
     avg_win_abs = float(avg_win or 0.0)
     avg_loss_abs = abs(float(avg_loss or 0.0))
     expectancy = (win_rate_ratio * avg_win_abs) - ((1.0 - win_rate_ratio) * avg_loss_abs)
+    gross_profit = round(float(bucket.get("win_pnl_sum", 0.0) or 0.0), 2)
+    gross_loss = round(abs(float(bucket.get("loss_pnl_sum", 0.0) or 0.0)), 2)
+    profit_factor = None
+    if gross_loss > 0:
+        profit_factor = round(gross_profit / gross_loss, 4)
     return {
         "trades": trades,
+        "clean_trades": clean_trades,
         "wins": wins,
+        "clean_wins": clean_wins,
         "losses": losses,
+        "clean_losses": clean_losses,
         "pnl": round(float(bucket.get("pnl", 0.0) or 0.0), 2),
         "clean_pnl": round(float(bucket.get("clean_pnl", 0.0) or 0.0), 2),
+        "gross_profit": gross_profit,
+        "gross_loss": gross_loss,
+        "profit_factor": profit_factor,
         "win_rate": win_rate_pct,
         "win_rate_pct": win_rate_pct,
+        "clean_win_rate_pct": round(clean_wins / max(1, clean_trades) * 100, 1) if clean_trades else 0.0,
         "avg_pnl": round(float(bucket.get("pnl", 0.0) or 0.0) / max(1, trades), 2),
         "avg_win": round(float(avg_win or 0.0), 2) if avg_win is not None else None,
         "avg_loss": round(float(avg_loss or 0.0), 2) if avg_loss is not None else None,
         "expectancy": round(expectancy, 2),
+        "best_trade_pnl": round(float(bucket.get("best_trade_pnl", 0.0) or 0.0), 2)
+        if bucket.get("best_trade_pnl") is not None
+        else None,
+        "worst_trade_pnl": round(float(bucket.get("worst_trade_pnl", 0.0) or 0.0), 2)
+        if bucket.get("worst_trade_pnl") is not None
+        else None,
         "anomaly_count": int(bucket.get("anomaly_count", 0) or 0),
         "ratchet_activation_rate_pct": _rate_pct(bucket.get("ratchet_activations", 0), trades),
         "first_1m_green_rate_pct": _rate_pct(bucket.get("green_1m_hits", 0), bucket.get("green_1m_seen", 0)),
@@ -792,36 +991,21 @@ def _trade_reached_ratchet_activation(trade: Dict) -> bool:
 
 
 def _current_day_key() -> str:
-    try:
-        import zoneinfo
-
-        return datetime.now(zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
-    except Exception:
-        return datetime.now().strftime("%Y-%m-%d")
+    return trading_session_day()
 
 
 def _trade_day_key(trade: Dict) -> str:
     ts = float(trade.get("exit_time", trade.get("recorded_at", 0)) or 0)
     if ts <= 0:
         return ""
-    try:
-        import zoneinfo
-
-        return datetime.fromtimestamp(ts, zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
-    except Exception:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+    return trading_session_day(ts)
 
 
 def _snapshot_day_key(snapshot: Dict) -> str:
     ts = float(snapshot.get("recorded_at", 0) or 0)
     if ts <= 0:
         return ""
-    try:
-        import zoneinfo
-
-        return datetime.fromtimestamp(ts, zoneinfo.ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
-    except Exception:
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+    return trading_session_day(ts)
 
 
 def _snapshot_trigger_live(snapshot: Dict) -> Optional[bool]:
@@ -856,6 +1040,566 @@ def _trade_return(trade: Dict) -> Optional[float]:
     if notional <= 0:
         return None
     return float(trade.get("pnl", 0) or 0) / notional
+
+
+def _trade_timestamp(trade: Dict) -> float:
+    return float(
+        trade.get("exit_time", trade.get("recorded_at", trade.get("entry_time", 0))) or 0
+    )
+
+
+def _normalize_regime(value: Optional[str]) -> str:
+    text = str(value or "").strip().lower()
+    return text or "unknown"
+
+
+def _trade_session_type(trade: Dict) -> str:
+    session_type = str(trade.get("session_type", "") or "").strip().lower()
+    if session_type in {"pre", "regular", "after", "overnight"}:
+        return session_type
+    entry_time = float(trade.get("entry_time", 0) or 0)
+    if entry_time > 0:
+        try:
+            from zoneinfo import ZoneInfo
+
+            dt = datetime.fromtimestamp(entry_time, ZoneInfo("America/New_York"))
+            minutes = (dt.hour * 60) + dt.minute
+            if 240 <= minutes < 570:
+                return "pre"
+            if 570 <= minutes < 960:
+                return "regular"
+            if 960 <= minutes < 1200:
+                return "after"
+            return "overnight"
+        except Exception:
+            pass
+    if bool(trade.get("extended_hours_entry", False)):
+        return "extended"
+    if entry_time > 0:
+        return "regular"
+    return "unknown"
+
+
+def _compute_max_drawdown(trades: List[Dict]) -> float:
+    if not trades:
+        return 0.0
+    running_pnl = 0.0
+    peak_pnl = 0.0
+    max_drawdown = 0.0
+    for trade in sorted(trades, key=_trade_timestamp):
+        running_pnl += float(trade.get("pnl", 0.0) or 0.0)
+        peak_pnl = max(peak_pnl, running_pnl)
+        max_drawdown = max(max_drawdown, peak_pnl - running_pnl)
+    return round(max_drawdown, 2)
+
+
+def _build_dimension_metrics(groups: Dict[str, List[Dict]]) -> Dict:
+    metrics_by_key = {}
+    for key, trades in (groups or {}).items():
+        if not trades:
+            continue
+        metrics = _finalize_metric_bucket(_build_metric_bucket(trades))
+        metrics["sharpe_ratio"] = round(_compute_sharpe(trades), 4)
+        metrics["max_drawdown"] = _compute_max_drawdown(trades)
+        metrics_by_key[str(key)] = metrics
+    return dict(sorted(metrics_by_key.items(), key=lambda item: item[1]["pnl"], reverse=True))
+
+
+def _best_and_worst_dimension(metrics_by_key: Dict[str, Dict]) -> Dict[str, Optional[Dict]]:
+    rows = [(key, value) for key, value in (metrics_by_key or {}).items() if int(value.get("trades", 0) or 0) > 0]
+    if not rows:
+        return {"best": None, "worst": None}
+
+    qualified = [item for item in rows if int(item[1].get("trades", 0) or 0) >= 3] or rows
+    best_key, best_value = max(
+        qualified,
+        key=lambda item: (
+            int(item[1].get("trades", 0) or 0),
+            float(item[1].get("expectancy", 0.0) or 0.0),
+            float(item[1].get("pnl", 0.0) or 0.0),
+            item[0],
+        ),
+    )
+    worst_key, worst_value = min(
+        qualified,
+        key=lambda item: (
+            -int(item[1].get("trades", 0) or 0),
+            float(item[1].get("expectancy", 0.0) or 0.0),
+            float(item[1].get("pnl", 0.0) or 0.0),
+            item[0],
+        ),
+    )
+    return {
+        "best": {"name": best_key, **best_value},
+        "worst": {"name": worst_key, **worst_value},
+    }
+
+
+def _book_control_metadata(strategy_tag: str, controls: Dict) -> Dict:
+    tag = normalize_strategy_tag(strategy_tag, fallback="unknown")
+    manual_enabled = dict((controls or {}).get("manual_enabled", {}) or {})
+    manual_disabled = dict((controls or {}).get("manual_disabled", {}) or {})
+    hard_disabled = dict((controls or {}).get("hard_disabled", {}) or {})
+    soft_disabled = dict((controls or {}).get("soft_disabled", {}) or {})
+    probation = dict((controls or {}).get("probation", {}) or {})
+    size_reductions = dict((controls or {}).get("size_reductions", {}) or {})
+
+    control_state = "active"
+    control_reason = ""
+    if tag in manual_disabled:
+        control_state = "manual_disabled"
+        control_reason = str(manual_disabled.get(tag, {}).get("reason", "") or "")
+    elif tag in hard_disabled and tag not in manual_enabled:
+        control_state = "hard_disabled"
+        control_reason = str(hard_disabled.get(tag, {}).get("reason", "") or "")
+    elif tag in soft_disabled and tag not in manual_enabled:
+        control_state = "soft_disabled"
+        control_reason = str(soft_disabled.get(tag, {}).get("reason", "") or "")
+    elif isinstance(probation.get(tag), dict) and str(probation[tag].get("status", "active") or "active") == "active":
+        control_state = "probation"
+        control_reason = str(probation[tag].get("reason", "") or "")
+    elif tag in size_reductions:
+        control_state = "size_reduced"
+        control_reason = str(size_reductions.get(tag, {}).get("reason", "") or "")
+    elif tag in manual_enabled:
+        control_state = "manual_enabled"
+        control_reason = str(manual_enabled.get(tag, {}).get("reason", "") or "")
+
+    size_multiplier = float(strategy_controls.get_size_multiplier(tag, controls) or 1.0)
+    return {
+        "control_state": control_state,
+        "control_reason": control_reason,
+        "size_multiplier": round(size_multiplier, 4),
+        "disabled": control_state in {"manual_disabled", "hard_disabled", "soft_disabled"},
+    }
+
+
+def _effective_metric_inputs(metrics: Dict) -> Dict:
+    raw_trades = int(metrics.get("trades", 0) or 0)
+    clean_trades = int(metrics.get("clean_trades", 0) or 0)
+    anomaly_count = int(metrics.get("anomaly_count", 0) or 0)
+    anomaly_ratio = (float(anomaly_count) / float(raw_trades)) if raw_trades > 0 else 0.0
+    use_clean = clean_trades > 0
+    trades = clean_trades if use_clean else raw_trades
+    pnl = float(
+        metrics.get("clean_pnl", metrics.get("pnl", 0.0)) if use_clean else metrics.get("pnl", 0.0)
+        or 0.0
+    )
+    win_rate = float(
+        metrics.get(
+            "clean_win_rate_pct",
+            metrics.get("win_rate_pct", metrics.get("win_rate", 0.0)),
+        )
+        if use_clean
+        else metrics.get("win_rate_pct", metrics.get("win_rate", 0.0))
+        or 0.0
+    )
+    expectancy = round(pnl / max(1, trades), 2) if trades > 0 else 0.0
+    evidence_source = "clean" if use_clean else "raw"
+    return {
+        "raw_trades": raw_trades,
+        "clean_trades": clean_trades,
+        "trades": trades,
+        "pnl": pnl,
+        "win_rate": win_rate,
+        "expectancy": expectancy,
+        "anomaly_count": anomaly_count,
+        "anomaly_ratio": anomaly_ratio,
+        "evidence_source": evidence_source,
+    }
+
+
+def _recent_trade_window(trades: List[Dict], limit: int) -> List[Dict]:
+    if not trades or limit <= 0:
+        return []
+    rows = sorted((trades or []), key=_trade_timestamp, reverse=True)
+    return rows[: max(1, int(limit or 0))]
+
+
+def _attach_recent_metrics(summary: Dict, trades: List[Dict], *, limit: int) -> Dict:
+    recent_trades = _recent_trade_window(trades, limit)
+    if not recent_trades:
+        return summary
+
+    recent_summary = _finalize_metric_bucket(_build_metric_bucket(recent_trades))
+    recent_summary["max_drawdown"] = _compute_max_drawdown(recent_trades)
+    recent_summary["sharpe_ratio"] = round(_compute_sharpe(recent_trades), 4)
+
+    summary.update(
+        {
+            "recent_window_trades": int(recent_summary.get("trades", 0) or 0),
+            "recent_window_clean_trades": int(recent_summary.get("clean_trades", 0) or 0),
+            "recent_window_pnl": round(float(recent_summary.get("pnl", 0.0) or 0.0), 2),
+            "recent_window_clean_pnl": round(float(recent_summary.get("clean_pnl", 0.0) or 0.0), 2),
+            "recent_window_win_rate_pct": round(
+                float(recent_summary.get("win_rate_pct", recent_summary.get("win_rate", 0.0)) or 0.0),
+                1,
+            ),
+            "recent_window_clean_win_rate_pct": round(
+                float(recent_summary.get("clean_win_rate_pct", 0.0) or 0.0),
+                1,
+            ),
+            "recent_window_expectancy": round(float(recent_summary.get("expectancy", 0.0) or 0.0), 2),
+            "recent_window_profit_factor": recent_summary.get("profit_factor"),
+            "recent_window_sharpe_ratio": round(float(recent_summary.get("sharpe_ratio", 0.0) or 0.0), 4),
+            "recent_window_max_drawdown": round(float(recent_summary.get("max_drawdown", 0.0) or 0.0), 2),
+        }
+    )
+    return summary
+
+
+def _sample_is_degraded(metrics: Dict, *, minimum_trades: int) -> bool:
+    effective = _effective_metric_inputs(metrics)
+    raw_trades = int(effective.get("raw_trades", 0) or 0)
+    clean_trades = int(effective.get("clean_trades", 0) or 0)
+    anomaly_ratio = float(effective.get("anomaly_ratio", 0.0) or 0.0)
+    anomaly_count = int(effective.get("anomaly_count", 0) or 0)
+
+    if anomaly_count <= 0:
+        return False
+    if clean_trades <= 0:
+        return True
+    if raw_trades >= minimum_trades and clean_trades < max(3, minimum_trades // 2):
+        return True
+    return anomaly_ratio >= 0.5
+
+
+def _recent_recovery_action(
+    metrics: Dict,
+    *,
+    label: str,
+    hold_trades: int,
+    scale_trades: int,
+    scale_win_rate: float,
+    scale_profit_factor: float,
+) -> Optional[Dict]:
+    recent_clean_trades = int(metrics.get("recent_window_clean_trades", 0) or 0)
+    recent_raw_trades = int(metrics.get("recent_window_trades", 0) or 0)
+    recent_trades = recent_clean_trades if recent_clean_trades > 0 else recent_raw_trades
+    if recent_trades < max(1, int(hold_trades or 0)):
+        return None
+
+    recent_pnl = float(
+        metrics.get("recent_window_clean_pnl", metrics.get("recent_window_pnl", 0.0)) or 0.0
+    )
+    recent_win_rate = float(
+        metrics.get(
+            "recent_window_clean_win_rate_pct",
+            metrics.get("recent_window_win_rate_pct", 0.0),
+        )
+        or 0.0
+    )
+    recent_expectancy = float(metrics.get("recent_window_expectancy", 0.0) or 0.0)
+    recent_profit_factor = metrics.get("recent_window_profit_factor")
+    recent_sharpe = float(metrics.get("recent_window_sharpe_ratio", 0.0) or 0.0)
+
+    if recent_pnl <= 0 or recent_expectancy <= 0:
+        return None
+
+    if (
+        recent_trades >= max(hold_trades, scale_trades)
+        and recent_win_rate >= float(scale_win_rate or 0.0)
+        and (recent_profit_factor is None or float(recent_profit_factor or 0.0) >= float(scale_profit_factor or 0.0))
+        and recent_sharpe >= 0.0
+    ):
+        return {
+            "status": "scale",
+            "recommended_action": "scale",
+            "status_reason": (
+                f"Recent clean {label} recovery: expectancy {recent_expectancy:.2f}, "
+                f"win rate {recent_win_rate:.1f}% over {recent_trades} trades"
+            ),
+        }
+
+    return {
+        "status": "hold",
+        "recommended_action": "hold",
+        "status_reason": (
+            f"Recent clean {label} recovery: expectancy {recent_expectancy:.2f}, "
+            f"pnl ${recent_pnl:.2f} over {recent_trades} trades"
+        ),
+    }
+
+
+def _recommend_book_action(metrics: Dict, control_metadata: Dict) -> Dict:
+    control_state = str(control_metadata.get("control_state", "active") or "active")
+    control_reason = str(control_metadata.get("control_reason", "") or "")
+    if control_state in {"manual_disabled", "hard_disabled", "soft_disabled"}:
+        return {
+            "status": "disable",
+            "recommended_action": "disable",
+            "status_reason": control_reason or f"{control_state} control active",
+        }
+    if control_state == "probation":
+        return {
+            "status": "probation",
+            "recommended_action": "probation",
+            "status_reason": control_reason or "Probation active",
+        }
+
+    recent_recovery = _recent_recovery_action(
+        metrics,
+        label="book",
+        hold_trades=5,
+        scale_trades=8,
+        scale_win_rate=58.0,
+        scale_profit_factor=1.15,
+    )
+    if recent_recovery:
+        return recent_recovery
+
+    effective = _effective_metric_inputs(metrics)
+    trades = int(effective.get("trades", 0) or 0)
+    expectancy = float(effective.get("expectancy", 0.0) or 0.0)
+    pnl = float(effective.get("pnl", 0.0) or 0.0)
+    evidence_source = str(effective.get("evidence_source", "raw") or "raw")
+    anomaly_ratio = float(effective.get("anomaly_ratio", 0.0) or 0.0)
+    profit_factor = metrics.get("profit_factor")
+    max_drawdown = float(metrics.get("max_drawdown", 0.0) or 0.0)
+    sharpe_ratio = float(metrics.get("sharpe_ratio", 0.0) or 0.0)
+
+    if _sample_is_degraded(metrics, minimum_trades=10):
+        return {
+            "status": "hold",
+            "recommended_action": "observe",
+            "status_reason": (
+                f"Book sample degraded by anomalies ({effective.get('clean_trades', 0)}/"
+                f"{effective.get('raw_trades', 0)} clean trades)"
+            ),
+        }
+    if trades < 10:
+        return {
+            "status": "hold",
+            "recommended_action": "observe",
+            "status_reason": (
+                f"Only {trades} {evidence_source} closed trades; not enough sample size yet"
+            ),
+        }
+    if expectancy <= 0 or pnl <= 0:
+        recommended_action = "disable" if trades >= 25 and pnl < 0 else "probation"
+        return {
+            "status": recommended_action,
+            "recommended_action": recommended_action,
+            "status_reason": (
+                f"{evidence_source.capitalize()} expectancy {expectancy:.2f}, pnl ${pnl:.2f} over {trades} trades"
+            ),
+        }
+    if (
+        trades >= 20
+        and anomaly_ratio < 0.25
+        and (profit_factor is None or float(profit_factor) >= 1.25)
+        and sharpe_ratio > 0
+    ):
+        drawdown_limit = max(75.0, pnl * 0.75)
+        if max_drawdown <= drawdown_limit:
+            return {
+                "status": "scale",
+                "recommended_action": "scale",
+                "status_reason": (
+                    f"Positive {evidence_source} expectancy {expectancy:.2f}, PF {profit_factor if profit_factor is not None else 'n/a'}, "
+                    f"Sharpe {sharpe_ratio:.2f}, max DD ${max_drawdown:.2f}"
+                ),
+            }
+    return {
+        "status": "hold",
+        "recommended_action": "hold",
+        "status_reason": (
+            f"Positive {evidence_source} expectancy {expectancy:.2f} but still stabilizing over {trades} trades"
+        ),
+    }
+
+
+def _build_book_report(trades: List[Dict]) -> Dict:
+    analytic_trades = [t for t in trades or [] if _is_strategy_analytic_trade(t)]
+    controls = strategy_controls.load_controls()
+    by_strategy: Dict[str, List[Dict]] = {}
+    for trade in analytic_trades:
+        strategy = normalize_strategy_tag(trade.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
+        if is_artifact_strategy_tag(strategy):
+            continue
+        by_strategy.setdefault(strategy, []).append(trade)
+
+    rows: List[Dict] = []
+    for strategy, strategy_trades in by_strategy.items():
+        summary = _finalize_metric_bucket(_build_metric_bucket(strategy_trades))
+        summary = _attach_recent_metrics(summary, strategy_trades, limit=10)
+        summary["max_drawdown"] = _compute_max_drawdown(strategy_trades)
+        summary["sharpe_ratio"] = round(_compute_sharpe(strategy_trades), 4)
+        summary["net_pnl"] = summary["pnl"]
+
+        regime_groups: Dict[str, List[Dict]] = {}
+        session_groups: Dict[str, List[Dict]] = {}
+        for trade in strategy_trades:
+            regime_groups.setdefault(_normalize_regime(trade.get("market_regime")), []).append(trade)
+            session_groups.setdefault(_trade_session_type(trade), []).append(trade)
+
+        regimes = _build_dimension_metrics(regime_groups)
+        sessions = _build_dimension_metrics(session_groups)
+        regime_extremes = _best_and_worst_dimension(regimes)
+        session_extremes = _best_and_worst_dimension(sessions)
+        control_metadata = _book_control_metadata(strategy, controls)
+        action_metadata = _recommend_book_action(summary, control_metadata)
+
+        row = {
+            "strategy_tag": strategy,
+            **summary,
+            **control_metadata,
+            **action_metadata,
+            "trade_count": summary["trades"],
+            "regimes": regimes,
+            "sessions": sessions,
+            "best_regime": regime_extremes["best"],
+            "worst_regime": regime_extremes["worst"],
+            "best_session": session_extremes["best"],
+            "worst_session": session_extremes["worst"],
+        }
+        rows.append(row)
+
+    rows.sort(
+        key=lambda row: (
+            {"scale": 0, "hold": 1, "probation": 2, "disable": 3}.get(str(row.get("status", "hold")), 9),
+            -float(row.get("pnl", 0.0) or 0.0),
+            -float(row.get("expectancy", 0.0) or 0.0),
+            row.get("strategy_tag", ""),
+        )
+    )
+
+    summary = {
+        "books": len(rows),
+        "scale": sum(1 for row in rows if row.get("status") == "scale"),
+        "hold": sum(1 for row in rows if row.get("status") == "hold"),
+        "probation": sum(1 for row in rows if row.get("status") == "probation"),
+        "disable": sum(1 for row in rows if row.get("status") == "disable"),
+        "observe": sum(1 for row in rows if row.get("recommended_action") == "observe"),
+    }
+    return {
+        "summary": summary,
+        "books": rows,
+        "generated_at": time.time(),
+    }
+
+
+def _recommend_play_action(metrics: Dict) -> Dict:
+    recent_recovery = _recent_recovery_action(
+        metrics,
+        label="play",
+        hold_trades=4,
+        scale_trades=6,
+        scale_win_rate=60.0,
+        scale_profit_factor=1.1,
+    )
+    if recent_recovery:
+        return recent_recovery
+
+    effective = _effective_metric_inputs(metrics)
+    trades = int(effective.get("trades", 0) or 0)
+    expectancy = float(effective.get("expectancy", 0.0) or 0.0)
+    pnl = float(effective.get("pnl", 0.0) or 0.0)
+    evidence_source = str(effective.get("evidence_source", "raw") or "raw")
+    anomaly_ratio = float(effective.get("anomaly_ratio", 0.0) or 0.0)
+    profit_factor = metrics.get("profit_factor")
+    sharpe_ratio = float(metrics.get("sharpe_ratio", 0.0) or 0.0)
+
+    if _sample_is_degraded(metrics, minimum_trades=6):
+        return {
+            "status": "hold",
+            "recommended_action": "observe",
+            "status_reason": (
+                f"Play sample degraded by anomalies ({effective.get('clean_trades', 0)}/"
+                f"{effective.get('raw_trades', 0)} clean trades)"
+            ),
+        }
+    if trades < 6:
+        return {
+            "status": "hold",
+            "recommended_action": "observe",
+            "status_reason": f"Only {trades} {evidence_source} play samples; still observing",
+        }
+    if expectancy <= 0 or pnl <= 0:
+        recommended_action = "disable" if trades >= 16 and pnl < 0 else "probation"
+        return {
+            "status": recommended_action,
+            "recommended_action": recommended_action,
+            "status_reason": (
+                f"Play edge weak on {evidence_source} sample: expectancy {expectancy:.2f}, "
+                f"pnl ${pnl:.2f} over {trades} trades"
+            ),
+        }
+    if (
+        trades >= 12
+        and anomaly_ratio < 0.25
+        and (profit_factor is None or float(profit_factor) >= 1.15)
+        and sharpe_ratio >= 0
+    ):
+        return {
+            "status": "scale",
+            "recommended_action": "scale",
+            "status_reason": (
+                f"Play edge confirmed on {evidence_source} sample: expectancy {expectancy:.2f}, "
+                f"PF {profit_factor if profit_factor is not None else 'n/a'}, Sharpe {sharpe_ratio:.2f}"
+            ),
+        }
+    return {
+        "status": "hold",
+        "recommended_action": "hold",
+        "status_reason": f"Positive {evidence_source} play edge, still stabilizing over {trades} trades",
+    }
+
+
+def _build_play_report(trades: List[Dict]) -> Dict:
+    analytic_trades = [t for t in trades or [] if _is_strategy_analytic_trade(t)]
+    groups: Dict[tuple, List[Dict]] = {}
+    for trade in analytic_trades:
+        strategy = normalize_strategy_tag(trade.get("strategy_tag", "unknown"), fallback="unknown", allow_artifacts=True)
+        if is_artifact_strategy_tag(strategy):
+            continue
+        setup_mode = str(trade.get("setup_mode", "invalid") or "invalid").strip().lower() or "invalid"
+        if setup_mode in {"", "invalid", "unknown"}:
+            continue
+        regime = _normalize_regime(trade.get("market_regime"))
+        session = _trade_session_type(trade)
+        groups.setdefault((strategy, setup_mode, regime, session), []).append(trade)
+
+    rows: List[Dict] = []
+    for (strategy, setup_mode, regime, session), play_trades in groups.items():
+        summary = _finalize_metric_bucket(_build_metric_bucket(play_trades))
+        summary = _attach_recent_metrics(summary, play_trades, limit=8)
+        summary["max_drawdown"] = _compute_max_drawdown(play_trades)
+        summary["sharpe_ratio"] = round(_compute_sharpe(play_trades), 4)
+        action_metadata = _recommend_play_action(summary)
+        row = {
+            "play_key": f"{strategy}|{setup_mode}|{regime}|{session}",
+            "strategy_tag": strategy,
+            "setup_mode": setup_mode,
+            "market_regime": regime,
+            "session_type": session,
+            **summary,
+            **action_metadata,
+        }
+        rows.append(row)
+
+    rows.sort(
+        key=lambda row: (
+            {"scale": 0, "hold": 1, "probation": 2, "disable": 3}.get(str(row.get("status", "hold")), 9),
+            -float(row.get("pnl", 0.0) or 0.0),
+            -float(row.get("expectancy", 0.0) or 0.0),
+            row.get("play_key", ""),
+        )
+    )
+
+    summary = {
+        "plays": len(rows),
+        "scale": sum(1 for row in rows if row.get("status") == "scale"),
+        "hold": sum(1 for row in rows if row.get("status") == "hold"),
+        "probation": sum(1 for row in rows if row.get("status") == "probation"),
+        "disable": sum(1 for row in rows if row.get("status") == "disable"),
+        "observe": sum(1 for row in rows if row.get("recommended_action") == "observe"),
+    }
+    return {
+        "summary": summary,
+        "plays": rows,
+        "generated_at": time.time(),
+    }
 
 
 def _compute_sharpe(trades: List[Dict], risk_free_rate: float = 0.05) -> float:

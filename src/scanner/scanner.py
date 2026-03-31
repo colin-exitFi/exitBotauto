@@ -13,6 +13,7 @@ import httpx
 
 from config import settings
 from src.data import strategy_controls
+from src.data.symbols import is_supported_trade_symbol, normalize_trade_symbol
 from src.data.signal_attribution import extract_signal_sources, derive_strategy_tag
 from src.data.strategy_playbook import annotate_candidate
 from src.data.technicals import compute_technicals
@@ -52,7 +53,9 @@ class Scanner:
 
         self._cache: List[Dict] = []
         self._research_cache: List[Dict] = []
-        self._last_scan_stats: Dict = {}
+        self._last_runners_record_date = ""
+        self._last_market_regime = "mixed"
+        self._last_scan_stats: Dict = self._default_scan_stats()
         self._news_cache: Dict[str, tuple] = {}
         self._performance_cache: Dict = {}
         self._performance_cache_at = 0.0
@@ -68,9 +71,37 @@ class Scanner:
             300,
             int(getattr(settings, "SCANNER_SIGNAL_FIRST_SEEN_TTL_SECONDS", 3600)),
         )
-        self._last_runners_record_date = ""
-        self._last_market_regime = "mixed"
         logger.info("Scanner initialized")
+
+    def _default_scan_stats(self) -> Dict:
+        return {
+            "alpaca_movers": 0,
+            "polygon_gainers": 0,
+            "stocktwits_trending": 0,
+            "grok_x": 0,
+            "copy_trader": 0,
+            "watchlist": 0,
+            "unusual_whales": 0,
+            "human_intel": 0,
+            "merged_unique": 0,
+            "enriched": 0,
+            "filtered": 0,
+            "disabled": 0,
+            "live": 0,
+            "research": 0,
+            "regime": self._last_market_regime,
+            "status": "idle",
+            "last_started_at": None,
+            "last_completed_at": None,
+        }
+
+    @staticmethod
+    def _candidate_symbol(candidate: Dict) -> Optional[str]:
+        symbol = normalize_trade_symbol(candidate.get("symbol", ""))
+        if not is_supported_trade_symbol(symbol):
+            return None
+        candidate["symbol"] = symbol
+        return symbol
 
     def _get_unusual_whales_snapshot(self) -> Dict:
         stream = getattr(self, "unusual_whales_stream", None)
@@ -84,6 +115,16 @@ class Scanner:
     async def scan(self) -> List[Dict]:
         """Run a full scan cycle. Returns ranked candidate list."""
         logger.info("🔍 Running stock scan...")
+        scan_started_at = time.time()
+        self._last_scan_stats = {
+            **self._default_scan_stats(),
+            **dict(self._last_scan_stats or {}),
+            "live": len(self._cache),
+            "research": len(self._research_cache),
+            "regime": self._last_market_regime,
+            "status": "running",
+            "last_started_at": scan_started_at,
+        }
         cutoff = time.time() - self._signal_first_seen_ttl
         self._signal_first_seen = {s: ts for s, ts in self._signal_first_seen.items() if ts >= cutoff}
 
@@ -307,62 +348,36 @@ class Scanner:
 
         # ── MERGE: deduplicate by symbol ───────────────────────────
         seen = {}
-        for s in alpaca_candidates:
-            sym = s.get("symbol", "")
-            if sym:
-                seen[sym] = s
+        ignored_symbols: Set[str] = set()
 
-        for s in polygon_candidates:
-            sym = s.get("symbol", "")
-            if sym:
+        def _merge_rows(rows: List[Dict]):
+            for row in rows:
+                raw_symbol = str(row.get("symbol", "") or "").upper().strip()
+                sym = self._candidate_symbol(row)
+                if not sym:
+                    if raw_symbol:
+                        ignored_symbols.add(raw_symbol)
+                    continue
                 if sym in seen:
-                    self._merge_candidate(seen[sym], s)
+                    self._merge_candidate(seen[sym], row)
                 else:
-                    seen[sym] = s
+                    seen[sym] = row
 
-        for s in stocktwits_candidates:
-            sym = s["symbol"]
-            if sym in seen:
-                self._merge_candidate(seen[sym], s)
-            else:
-                seen[sym] = s
-
-        for s in grok_x_candidates:
-            sym = s["symbol"]
-            if sym in seen:
-                self._merge_candidate(seen[sym], s)
-            else:
-                seen[sym] = s
-
-        for s in copy_trader_candidates:
-            sym = s["symbol"]
-            if sym in seen:
-                self._merge_candidate(seen[sym], s)
-            else:
-                seen[sym] = s
-
-        for s in watchlist_candidates:
-            sym = s["symbol"]
-            if sym in seen:
-                self._merge_candidate(seen[sym], s)
-            else:
-                seen[sym] = s
-
-        for s in uw_candidates:
-            sym = s["symbol"]
-            if sym in seen:
-                self._merge_candidate(seen[sym], s)
-            else:
-                seen[sym] = s
-
-        for s in human_candidates:
-            sym = s["symbol"]
-            if sym in seen:
-                self._merge_candidate(seen[sym], s)
-            else:
-                seen[sym] = s
+        _merge_rows(alpaca_candidates)
+        _merge_rows(polygon_candidates)
+        _merge_rows(stocktwits_candidates)
+        _merge_rows(grok_x_candidates)
+        _merge_rows(copy_trader_candidates)
+        _merge_rows(watchlist_candidates)
+        _merge_rows(uw_candidates)
+        _merge_rows(human_candidates)
 
         all_symbols = list(seen.values())
+        if ignored_symbols:
+            logger.info(
+                f"🧹 Symbol hygiene skipped {len(ignored_symbols)} unsupported tickers: "
+                f"{', '.join(sorted(list(ignored_symbols))[:8])}"
+            )
         self._research_cache = [
             {
                 "symbol": str(row.get("symbol", "")).upper(),
@@ -510,6 +525,7 @@ class Scanner:
 
         self._cache = active_candidates[:20]  # Keep more candidates for orchestrator diversity
         self._last_scan_stats = {
+            **self._default_scan_stats(),
             "alpaca_movers": len(alpaca_candidates),
             "polygon_gainers": len(polygon_candidates),
             "stocktwits_trending": len(stocktwits_candidates),
@@ -525,6 +541,9 @@ class Scanner:
             "live": len(self._cache),
             "research": len(self._research_cache),
             "regime": regime,
+            "status": "complete",
+            "last_started_at": scan_started_at,
+            "last_completed_at": time.time(),
         }
 
         # Record today's big runners for tomorrow's fade watchlist
@@ -581,8 +600,52 @@ class Scanner:
             ][:50]
         return []
 
+    def record_background_research_cycle(
+        self,
+        *,
+        live_candidates: Optional[List[Dict]] = None,
+        research_rows: Optional[List[Dict]] = None,
+        regime: Optional[str] = None,
+        status: str = "research_ready",
+    ) -> Dict:
+        live_rows = list(live_candidates) if live_candidates is not None else self.get_cached_candidates()
+        research = list(research_rows) if research_rows is not None else self.get_research_universe()
+        if not live_rows and not research:
+            return self.get_last_scan_stats()
+
+        if live_rows:
+            self._cache = live_rows[:20]
+        if research:
+            self._research_cache = research[:50]
+
+        resolved_regime = str(regime or self._last_market_regime or "mixed")
+        self._last_market_regime = resolved_regime
+
+        symbols: Set[str] = set()
+        for row in list(self._cache) + list(self._research_cache):
+            symbol = normalize_trade_symbol(row.get("symbol") or row.get("ticker") or "")
+            if symbol and is_supported_trade_symbol(symbol):
+                symbols.add(symbol)
+
+        refreshed_at = time.time()
+        self._last_scan_stats = {
+            **self._default_scan_stats(),
+            "watchlist": len(self._research_cache),
+            "merged_unique": len(symbols),
+            "live": len(self._cache),
+            "research": len(self._research_cache),
+            "regime": resolved_regime,
+            "status": status,
+            "last_started_at": refreshed_at,
+            "last_completed_at": refreshed_at,
+        }
+        return self.get_last_scan_stats()
+
     def get_last_scan_stats(self) -> Dict:
-        return dict(self._last_scan_stats)
+        return {
+            **self._default_scan_stats(),
+            **dict(self._last_scan_stats or {}),
+        }
 
     def get_last_market_regime(self) -> str:
         return self._last_market_regime
@@ -663,7 +726,10 @@ class Scanner:
 
     async def _enrich(self, stock: Dict) -> Optional[Dict]:
         """Enrich with Alpaca snapshot (extended hours!) + StockTwits sentiment."""
-        symbol = stock["symbol"]
+        symbol = normalize_trade_symbol(stock.get("symbol", ""))
+        if not is_supported_trade_symbol(symbol):
+            return None
+        stock["symbol"] = symbol
         try:
             # ── PRICE DATA: Try Alpaca first (has extended hours), fallback Polygon ──
             alpaca_snap = None
@@ -1150,7 +1216,10 @@ class Scanner:
                 if news_summary.get("headlines"):
                     candidate["uw_news_summary"] = news_summary.get("summary", "")
                     candidate["uw_news_bias"] = news_summary.get("bias", "neutral")
-                    candidate["uw_news_headlines"] = list(news_summary.get("headlines") or [])
+                    headlines = list(news_summary.get("headlines") or [])
+                    candidate["uw_news_headlines"] = headlines
+                    if not candidate.get("news_headlines"):
+                        candidate["news_headlines"] = headlines
                     news_bias = candidate["uw_news_bias"]
                     if news_bias == "bullish" and side != "short":
                         candidate["uw_score_adjustment"] = round(float(candidate.get("uw_score_adjustment", 0.0)) + 0.05, 3)
@@ -1649,7 +1718,8 @@ class Scanner:
             sent_raw = -float(sent_raw or 0)
         sent_score = (sent_raw + 1.0) / 2.0  # map -1..1 → 0..1
         twits_score = min(c.get("stocktwits_trending_score", 0) / 30.0, 1.0)
-        news_score = 1.0 if c.get("news_headlines") else 0.3
+        has_news_context = bool(c.get("news_headlines") or c.get("uw_news_headlines") or c.get("uw_news_summary"))
+        news_score = 1.0 if has_news_context else 0.3
 
         # Pharma catalyst bonus — upcoming FDA decisions are HUGE signals
         pharma_score = c.get("pharma_score", 0)

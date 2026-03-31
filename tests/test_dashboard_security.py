@@ -76,7 +76,13 @@ class DashboardSecurityTests(unittest.TestCase):
         try:
             with patch.object(dashboard_module.settings, "DASHBOARD_TOKEN", "secret-token"):
                 client = TestClient(dashboard_module.app)
-                resp = client.get("/api/intelligence?token=secret-token")
+                with patch("src.ai.trade_history.get_analytics", return_value={
+                    "unusual_whales": {
+                        "overall": {"trades": 3, "pnl": 12.5},
+                        "stream_assisted": {"trades": 1, "pnl": 4.0},
+                    }
+                }):
+                    resp = client.get("/api/intelligence?token=secret-token")
                 self.assertEqual(resp.status_code, 200)
                 payload = resp.json()
                 self.assertIn("unusual_whales_api", payload)
@@ -84,6 +90,8 @@ class DashboardSecurityTests(unittest.TestCase):
                 self.assertEqual(payload["unusual_whales_api"]["budget_mode"], "normal")
                 self.assertIn("unusual_whales_focus", payload)
                 self.assertEqual(payload["unusual_whales_focus"][0]["symbol"], "NVDA")
+                self.assertIn("unusual_whales_trade_analytics", payload)
+                self.assertEqual(payload["unusual_whales_trade_analytics"]["overall"]["trades"], 3)
         finally:
             dashboard_module.set_bot(None)
 

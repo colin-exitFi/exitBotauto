@@ -66,7 +66,7 @@ def _prepare_snapshot(row: Dict) -> Dict:
         "symbol_state": str(row.get("symbol_state", "idle") or "idle"),
         "setup_mode": str(row.get("setup_mode", "invalid") or "invalid"),
         "direction_constraint": str(row.get("direction_constraint", "none") or "none"),
-        "timing_state": str(row.get("timing_state", "no_edge") or "no_edge"),
+        "timing_state": str(row.get("timing_state", "mode_conflict") or "mode_conflict"),
         "best_play": str(row.get("best_play", "") or ""),
         "trigger": str(row.get("trigger", "") or ""),
         "trigger_spec": dict(row.get("trigger_spec", {}) or {}),
@@ -180,7 +180,7 @@ def build_setup_replay(
         state = str(row.get("symbol_state", "idle") or "idle")
         if state not in group["states_seen"]:
             group["states_seen"].append(state)
-        timing_state = str(row.get("timing_state", "no_edge") or "no_edge")
+        timing_state = str(row.get("timing_state", "mode_conflict") or "mode_conflict")
         if timing_state not in group["timing_states_seen"]:
             group["timing_states_seen"].append(timing_state)
         group["trigger_live_any"] = bool(group["trigger_live_any"] or row.get("trigger_live") is True)

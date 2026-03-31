@@ -42,6 +42,7 @@ class AlpacaClient:
         self._rest_last_call: Dict[str, float] = {}
         self._request_stats: Dict[str, Dict[str, float]] = {}
         self._rate_limit_events: Dict[str, List[float]] = {}
+        self._order_errors: Dict[str, Dict] = {}
 
     def initialize(self) -> bool:
         """Initialize Alpaca trading and data clients."""
@@ -184,6 +185,9 @@ class AlpacaClient:
             positions = self._trading_client.get_all_positions()
             result = []
             for p in positions:
+                asset_class = str(getattr(p, "asset_class", "") or "").lower()
+                if asset_class in ("option", "us_option"):
+                    continue
                 raw_qty = float(p.qty)
                 side = str(getattr(p, "side", "")).lower()
                 if side not in ("long", "short"):
@@ -215,7 +219,10 @@ class AlpacaClient:
     ) -> Dict:
         """Get account portfolio history from Alpaca."""
         self._ensure_init()
-        endpoint = "account.portfolio_history"
+        endpoint = (
+            "account.portfolio_history."
+            f"{period}.{timeframe}.{intraday_reporting}.{pnl_reset}"
+        )
         min_interval = float(getattr(settings, "ALPACA_PORTFOLIO_HISTORY_MIN_INTERVAL_SECONDS", 20.0) or 20.0)
         cached = self._cached_response(endpoint, min_interval)
         if cached is not None:
@@ -262,29 +269,55 @@ class AlpacaClient:
         }
         if date:
             params["date"] = date
-        endpoint = f"account.activities.{str(activity_types or 'fill').lower()}"
+        endpoint = (
+            f"account.activities.{str(activity_types or 'fill').lower()}."
+            f"{str(date or 'all').strip()}.{int(page_size)}"
+        )
         min_interval = float(getattr(settings, "ALPACA_ACTIVITIES_MIN_INTERVAL_SECONDS", 20.0) or 20.0)
         cached = self._cached_response(endpoint, min_interval)
         if cached is not None:
             return cached
         try:
-            resp = requests.get(
-                f"{self._base_url}/v2/account/activities",
-                headers=self._rest_headers(),
-                params=params,
-                timeout=10,
-            )
-            self._record_rest_response(endpoint, resp.status_code)
-            if resp.status_code == 429:
-                logger.debug(f"Get account activities rate limited ({activity_types})")
-                return self._last_cached_value(endpoint, default=[])
-            resp.raise_for_status()
-            data = resp.json()
-            self._capture_payload(f"activities_{activity_types.lower()}", data)
-            if not isinstance(data, list):
-                data = []
-            self._store_cache(endpoint, data)
-            return data
+            aggregated: List[Dict] = []
+            seen_ids = set()
+            next_token: Optional[str] = None
+            while True:
+                page_params = dict(params)
+                if next_token:
+                    page_params["page_token"] = next_token
+                resp = requests.get(
+                    f"{self._base_url}/v2/account/activities",
+                    headers=self._rest_headers(),
+                    params=page_params,
+                    timeout=10,
+                )
+                self._record_rest_response(endpoint, resp.status_code)
+                if resp.status_code == 429:
+                    logger.debug(f"Get account activities rate limited ({activity_types})")
+                    fallback = self._last_cached_value(endpoint, default=None)
+                    if fallback is not None:
+                        return fallback
+                    return aggregated
+                resp.raise_for_status()
+                data = resp.json()
+                if not isinstance(data, list):
+                    data = []
+                for row in data:
+                    row_id = str((row or {}).get("id", "") or "").strip()
+                    if row_id and row_id in seen_ids:
+                        continue
+                    if row_id:
+                        seen_ids.add(row_id)
+                    aggregated.append(row)
+                if len(data) < int(page_size):
+                    break
+                last_row_id = str((data[-1] or {}).get("id", "") or "").strip() if data else ""
+                if not last_row_id or last_row_id == next_token:
+                    break
+                next_token = last_row_id
+            self._capture_payload(f"activities_{activity_types.lower()}", aggregated)
+            self._store_cache(endpoint, aggregated)
+            return aggregated
         except Exception as e:
             logger.debug(f"Get account activities failed ({activity_types}): {e}")
             self._record_rest_error(endpoint)
@@ -316,7 +349,9 @@ class AlpacaClient:
         """
         self._ensure_init()
         try:
-            is_notional = force_notional or (isinstance(qty_or_notional, float))
+            existing_position = self.get_position(symbol)
+            covering_short = bool(existing_position) and str(existing_position.get("side", "")).lower() == "short"
+            is_notional = force_notional or (isinstance(qty_or_notional, float) and not covering_short)
             if is_notional:
                 req = MarketOrderRequest(
                     symbol=symbol,
@@ -327,8 +362,7 @@ class AlpacaClient:
                 )
             else:
                 executable_qty = qty_or_notional
-                existing_position = self.get_position(symbol)
-                if existing_position and str(existing_position.get("side", "")).lower() == "short":
+                if covering_short:
                     executable_qty = self._clamp_exit_qty(symbol, qty_or_notional, side="buy", whole_only=False)
                     if executable_qty <= 0:
                         logger.warning(f"Market buy skipped for {symbol}: no executable short-cover quantity after broker sync")
@@ -531,6 +565,9 @@ class AlpacaClient:
         _retry_on_conflict: bool = True,
     ) -> Optional[Dict]:
         self._ensure_init()
+        client_order_id = str(order_data.get("client_order_id", "") or "")
+        if client_order_id:
+            self._order_errors.pop(client_order_id, None)
         try:
             resp = requests.post(
                 f"{self._base_url}/v2/orders",
@@ -540,6 +577,8 @@ class AlpacaClient:
             )
             if resp.status_code in (200, 201):
                 data = resp.json()
+                if client_order_id:
+                    self._order_errors.pop(client_order_id, None)
                 result = {
                     "id": data.get("id"),
                     "client_order_id": data.get("client_order_id"),
@@ -579,6 +618,13 @@ class AlpacaClient:
                         _retry_on_conflict=False,
                     )
             logger.error(f"{label} failed ({symbol}): {resp.status_code} {resp.text[:200]}")
+            if client_order_id:
+                self._order_errors[client_order_id] = {
+                    "label": label,
+                    "symbol": symbol,
+                    "status_code": int(resp.status_code or 0),
+                    "body": resp.text,
+                }
             return None
         except Exception as e:
             if _retry_on_conflict and self._should_retry_exit_error(e):
@@ -593,7 +639,17 @@ class AlpacaClient:
                         _retry_on_conflict=False,
                     )
             logger.error(f"{label} error ({symbol}): {e}")
+            if client_order_id:
+                self._order_errors[client_order_id] = {
+                    "label": label,
+                    "symbol": symbol,
+                    "status_code": 0,
+                    "body": str(e),
+                }
             return None
+
+    def pop_order_error(self, client_order_id: str) -> Dict:
+        return self._order_errors.pop(str(client_order_id or ""), {})
 
     def place_limit_sell(
         self,
@@ -618,6 +674,29 @@ class AlpacaClient:
             "client_order_id": client_order_id or str(uuid.uuid4()),
         }
         return self._submit_rest_order(order_data, "Limit SELL", symbol, preferred_side="sell")
+
+    def place_limit_short(
+        self,
+        symbol: str,
+        qty,
+        price: float,
+        extended_hours: bool = False,
+        client_order_id: Optional[str] = None,
+    ) -> Optional[Dict]:
+        executable_qty = float(qty or 0)
+        if executable_qty <= 0:
+            return None
+        order_data = {
+            "symbol": symbol,
+            "qty": str(int(executable_qty) if executable_qty == int(executable_qty) else executable_qty),
+            "side": "sell",
+            "type": "limit",
+            "limit_price": str(self._round_price(price)),
+            "time_in_force": "day",
+            "extended_hours": bool(extended_hours),
+            "client_order_id": client_order_id or str(uuid.uuid4()),
+        }
+        return self._submit_rest_order(order_data, "Limit SHORT", symbol, preferred_side="sell")
 
     def place_limit_cover(
         self,
@@ -867,6 +946,12 @@ class AlpacaClient:
             logger.info(f"Skipping {symbol} {side}: no broker position exists")
             return 0.0
         position_side = str(position.get("side", "") or "").lower()
+        if position_side not in {"long", "short"}:
+            try:
+                raw_qty = float(position.get("qty", position.get("quantity", 0)) or 0)
+            except Exception:
+                raw_qty = 0.0
+            position_side = "short" if raw_qty < 0 else "long"
         if side == "sell" and position_side != "long":
             logger.info(
                 f"Skipping {symbol} sell: broker position side is {position_side or 'unknown'} "

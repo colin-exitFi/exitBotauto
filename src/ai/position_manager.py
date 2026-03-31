@@ -115,6 +115,7 @@ class PositionManager:
         self._emergency_call_count: Dict[str, int] = {}
         self._emergency_last_call: Dict[str, float] = {}
         self._emergency_last_reason: Dict[str, str] = {}
+        self._strategic_last_call: Dict[str, float] = {}
         DATA_DIR.mkdir(exist_ok=True)
 
     async def run(self, bot, advisor_output: Optional[Dict] = None) -> Optional[Dict]:
@@ -124,9 +125,6 @@ class PositionManager:
             return None
         self._last_run = now
 
-        if not self._client:
-            return None
-
         positions = bot.entry_manager.get_positions() if bot.entry_manager else []
         if not positions:
             self._vetoed_symbols.clear()
@@ -135,14 +133,27 @@ class PositionManager:
         try:
             risk_status = bot.risk_manager.get_status() if bot.risk_manager else {}
             observer_output = bot.observer.get_last_output() if getattr(bot, "observer", None) else {}
+            if not isinstance(observer_output, dict):
+                observer_output = {}
             advisor_output = advisor_output or self._load_latest_advisor_output()
+            if isinstance(advisor_output, list):
+                advisor_output = next((row for row in reversed(advisor_output) if isinstance(row, dict)), None)
+            if not isinstance(advisor_output, dict):
+                advisor_output = {}
             advisor_actions = self._extract_advisor_actions(advisor_output)
+            market_open = True
+            try:
+                if getattr(bot, "entry_manager", None):
+                    market_open = bool(bot.entry_manager.is_market_open())
+            except Exception:
+                market_open = True
             exit_agent = getattr(getattr(bot, "orchestrator", None), "exit_agent", None)
             latest_briefs = getattr(exit_agent, "_last_briefs", {}) if exit_agent else {}
 
             # Enrich positions with current prices, sentiment, peak-P&L context, and latest agent briefs
             enriched = []
             positions_by_symbol = {}
+            analysis_by_symbol = {}
             for pos in positions:
                 symbol = str(pos.get("symbol", "") or "").upper()
                 if not symbol:
@@ -200,6 +211,9 @@ class PositionManager:
                         "agent_briefs": brief_summary,
                     }
                 )
+                analysis_by_symbol[symbol] = enriched[-1]
+
+            fallback_result = self._build_rule_based_result(enriched, advisor_actions)
 
             specialist_briefs = []
             for row in enriched:
@@ -241,25 +255,59 @@ If the Advisor says exit but catalyst/technical/macro evidence says the run is s
 If profits are fading and the thesis is weakening, act immediately.
 Which positions need emergency exits, strategic exits, or tighter trails right now? Which new entries should be vetoed?"""
 
-            response = await asyncio.to_thread(
-                self._client.messages.create,
-                model=MODEL,
-                max_tokens=1400,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = response.content[0].text
-            result = _parse_json(text)
+            if not self._client:
+                result = dict(fallback_result)
+            else:
+                try:
+                    timeout = float(getattr(settings, "POSITION_MANAGER_MODEL_TIMEOUT_SECONDS", 20.0) or 20.0)
+                    response = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            self._client.messages.create,
+                            model=MODEL,
+                            max_tokens=900,
+                            system=SYSTEM_PROMPT,
+                            messages=[{"role": "user", "content": prompt}],
+                        ),
+                        timeout=max(5.0, timeout),
+                    )
+                    text = response.content[0].text
+                    result = self._merge_rule_based_actions(_parse_json(text), fallback_result)
+                except Exception as e:
+                    logger.warning(
+                        f"Position manager AI fallback ({type(e).__name__}): {e!r}"
+                    )
+                    result = dict(fallback_result)
             self._last_output = result
 
             # Recommendations only in v2 stabilization.
             emergency_exits = result.get("emergency_exits", []) or []
             for exit_rec in emergency_exits:
                 symbol = str(exit_rec.get("symbol", "") or "").upper()
+                pos = positions_by_symbol.get(symbol)
+                if not pos:
+                    continue
                 reason = str(exit_rec.get("reason", "AI position manager emergency") or "AI position manager emergency")
                 urgency = str(exit_rec.get("urgency", "medium") or "medium").lower()
                 if urgency not in {"critical", "high"}:
                     continue
+                if not self._allow_emergency_exit(bot, symbol, reason, pos):
+                    continue
+                if not market_open and self._should_execute_emergency_exit(pos, urgency):
+                    queued = self._queue_deferred_exit(pos, reason, "pm_emergency_exit")
+                    if queued:
+                        logger.warning(f"🤖 PM emergency exit queued for next session: {symbol} — {reason}")
+                    continue
+                if self._should_execute_emergency_exit(pos, urgency):
+                    order = await self._execute_market_exit(bot, pos, reason, "pm_emergency_exit")
+                    if order:
+                        logger.warning(f"🤖 PM emergency exit executed: {symbol} — {reason}")
+                        try:
+                            from src.dashboard.dashboard import log_activity
+
+                            log_activity("trade", f"🤖 PM emergency EXIT: {symbol} — {reason}")
+                        except Exception:
+                            pass
+                        continue
                 logger.warning(f"🤖 PM emergency recommendation only: {symbol} — {reason}")
                 try:
                     from src.dashboard.dashboard import log_activity
@@ -285,12 +333,34 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
                 current_price = float(pos.get("current_price", entry_price) or entry_price)
                 side = str(pos.get("side", "long") or "long").lower()
                 pnl_pct = self._calc_pnl_pct(entry_price, current_price, side)
+                analysis = analysis_by_symbol.get(symbol, {}) if isinstance(analysis_by_symbol, dict) else {}
                 if urgency != "critical" and hold_minutes < min_hold_minutes and pnl_pct > -1.0:
                     logger.info(
                         f"🤖 PM strategic exit deferred for {symbol}: hold {hold_minutes:.1f}m < "
                         f"{min_hold_minutes:.1f}m (pnl={pnl_pct:+.2f}%)"
                     )
                     continue
+                if not market_open and bool(pos.get("deferred_exit_on_open")):
+                    continue
+                if not self._allow_strategic_exit(symbol, pos, analysis, urgency):
+                    logger.info(f"🤖 PM strategic exit throttled for {symbol}: cooldown active")
+                    continue
+                if not market_open and self._should_execute_strategic_exit(pos, analysis, urgency):
+                    queued = self._queue_deferred_exit(pos, reason, "pm_strategic_exit")
+                    if queued:
+                        logger.warning(f"🤖 PM strategic exit queued for next session: {symbol} — {reason}")
+                    continue
+                if self._should_execute_strategic_exit(pos, analysis, urgency):
+                    order = await self._execute_market_exit(bot, pos, reason, "pm_strategic_exit")
+                    if order:
+                        logger.warning(f"🤖 PM strategic exit executed: {symbol} — {reason}")
+                        try:
+                            from src.dashboard.dashboard import log_activity
+
+                            log_activity("trade", f"🤖 PM strategic EXIT: {symbol} — {reason}")
+                        except Exception:
+                            pass
+                        continue
                 logger.info(f"🤖 PM strategic recommendation only: {symbol} — {reason}")
                 try:
                     from src.dashboard.dashboard import log_activity
@@ -404,6 +474,196 @@ Which positions need emergency exits, strategic exits, or tighter trails right n
         if isinstance(raw, dict):
             return raw
         return None
+
+    def _build_rule_based_result(self, enriched: List[Dict], advisor_actions: Dict[str, Dict]) -> Dict:
+        min_hold_minutes = float(getattr(settings, "POSITION_MANAGER_MIN_HOLD_MINUTES", 3.0) or 3.0)
+        loss_trigger = abs(float(getattr(settings, "POSITION_MANAGER_AUTO_EXIT_LOSS_PCT", 0.75) or 0.75))
+        dead_money_minutes = float(getattr(settings, "POSITION_MANAGER_DEAD_MONEY_MIN_HOLD_MINUTES", 45.0) or 45.0)
+        dead_money_band = abs(float(getattr(settings, "POSITION_MANAGER_DEAD_MONEY_BAND_PCT", 0.25) or 0.25))
+
+        strategic_exits = []
+        trail_adjustments = []
+        position_notes = []
+
+        for row in enriched or []:
+            symbol = str(row.get("symbol", "") or "").upper()
+            pnl_pct = float(row.get("pnl_pct", 0.0) or 0.0)
+            hold_minutes = float(row.get("hold_minutes", 0.0) or 0.0)
+            drawdown_from_peak = float(row.get("drawdown_from_peak_pct", 0.0) or 0.0)
+            advisor_rec = advisor_actions.get(symbol, {}) if isinstance(advisor_actions, dict) else {}
+            advisor_action = str(advisor_rec.get("action", "") or "").lower()
+            advisor_urgency = str(advisor_rec.get("urgency", "") or "").lower()
+
+            if hold_minutes >= min_hold_minutes and pnl_pct <= -loss_trigger:
+                strategic_exits.append(
+                    {
+                        "symbol": symbol,
+                        "reason": f"Rule-based loss cut at {pnl_pct:+.2f}% after {hold_minutes:.0f}m",
+                        "urgency": "high",
+                    }
+                )
+                position_notes.append({"symbol": symbol, "status": "exit", "note": "rule_based_loss_cut"})
+                continue
+
+            if hold_minutes >= dead_money_minutes and abs(pnl_pct) <= dead_money_band:
+                strategic_exits.append(
+                    {
+                        "symbol": symbol,
+                        "reason": f"Rule-based dead money exit after {hold_minutes:.0f}m at {pnl_pct:+.2f}%",
+                        "urgency": "high",
+                    }
+                )
+                position_notes.append({"symbol": symbol, "status": "exit", "note": "rule_based_dead_money"})
+                continue
+
+            if advisor_action == "exit" and advisor_urgency == "high" and hold_minutes >= min_hold_minutes:
+                if pnl_pct <= -0.25 or (hold_minutes >= dead_money_minutes and pnl_pct <= dead_money_band):
+                    strategic_exits.append(
+                        {
+                            "symbol": symbol,
+                            "reason": f"Advisor-aligned rule exit: {advisor_rec.get('reason', 'high urgency exit')}",
+                            "urgency": "high",
+                        }
+                    )
+                    position_notes.append({"symbol": symbol, "status": "exit", "note": "advisor_aligned_rule_exit"})
+                    continue
+
+            if pnl_pct >= 1.0 and drawdown_from_peak >= 0.75:
+                trail_adjustments.append(
+                    {
+                        "symbol": symbol,
+                        "trail_pct": 1.0,
+                        "reason": f"Rule-based profit protection after {drawdown_from_peak:.2f}% giveback",
+                        "action": "tighten",
+                    }
+                )
+                position_notes.append({"symbol": symbol, "status": "trim", "note": "rule_based_profit_protection"})
+                continue
+
+            position_notes.append({"symbol": symbol, "status": "hold", "note": "rule_based_hold"})
+
+        health = "stressed" if strategic_exits else "healthy"
+        action_taken = "exits_recommended" if strategic_exits else ("profit_protection" if trail_adjustments else "none")
+        return {
+            "emergency_exits": [],
+            "strategic_exits": strategic_exits,
+            "trail_adjustments": trail_adjustments,
+            "vetoes": [],
+            "position_notes": position_notes,
+            "portfolio_health": health,
+            "action_taken": action_taken,
+        }
+
+    @staticmethod
+    def _merge_rule_based_actions(primary: Dict, fallback: Dict) -> Dict:
+        merged = dict(primary or {})
+        for key in ("emergency_exits", "strategic_exits", "trail_adjustments", "position_notes"):
+            rows = []
+            seen = set()
+            for source in ((primary or {}).get(key, []) or [], (fallback or {}).get(key, []) or []):
+                for row in source:
+                    if not isinstance(row, dict):
+                        continue
+                    symbol = str(row.get("symbol", "") or "").upper()
+                    dedupe_key = (symbol, key)
+                    if symbol and dedupe_key in seen:
+                        continue
+                    if symbol:
+                        seen.add(dedupe_key)
+                    rows.append(row)
+            merged[key] = rows
+        merged.setdefault("vetoes", (fallback or {}).get("vetoes", []) or [])
+        if (fallback or {}).get("portfolio_health") == "stressed" and merged.get("portfolio_health") == "healthy":
+            merged["portfolio_health"] = "stressed"
+        merged.setdefault("portfolio_health", (fallback or {}).get("portfolio_health", "healthy"))
+        if merged.get("action_taken") in (None, "", "none") and (fallback or {}).get("action_taken") not in (None, "", "none"):
+            merged["action_taken"] = fallback.get("action_taken")
+        return merged
+
+    @staticmethod
+    def _should_execute_emergency_exit(position: Dict, urgency: str) -> bool:
+        if not bool(getattr(settings, "POSITION_MANAGER_AUTO_EXIT_ENABLED", True)):
+            return False
+        if not bool(getattr(settings, "POSITION_MANAGER_AUTO_EMERGENCY_EXIT_ENABLED", True)):
+            return False
+        if bool(position.get("exit_pending")):
+            return False
+        return str(urgency or "").lower() in {"critical", "high"}
+
+    def _should_execute_strategic_exit(self, position: Dict, analysis: Dict, urgency: str) -> bool:
+        if not bool(getattr(settings, "POSITION_MANAGER_AUTO_EXIT_ENABLED", True)):
+            return False
+        if not bool(getattr(settings, "POSITION_MANAGER_AUTO_STRATEGIC_EXIT_ENABLED", True)):
+            return False
+        if bool(position.get("exit_pending")):
+            return False
+
+        if str(urgency or "").lower() == "critical":
+            return True
+
+        now = time.time()
+        entry_price = float(position.get("entry_price", 0) or 0)
+        current_price = float((analysis or {}).get("current_price", position.get("current_price", entry_price)) or entry_price)
+        side = str(position.get("side", "long") or "long").lower()
+        pnl_pct = float((analysis or {}).get("pnl_pct", self._calc_pnl_pct(entry_price, current_price, side)) or 0.0)
+        hold_minutes = float(
+            (analysis or {}).get(
+                "hold_minutes",
+                max(0.0, (now - float(position.get("entry_time", now) or now)) / 60.0),
+            )
+            or 0.0
+        )
+
+        loss_trigger = abs(float(getattr(settings, "POSITION_MANAGER_AUTO_EXIT_LOSS_PCT", 0.75) or 0.75))
+        if pnl_pct <= -loss_trigger:
+            return True
+
+        dead_money_minutes = float(getattr(settings, "POSITION_MANAGER_DEAD_MONEY_MIN_HOLD_MINUTES", 45.0) or 45.0)
+        dead_money_band = abs(float(getattr(settings, "POSITION_MANAGER_DEAD_MONEY_BAND_PCT", 0.25) or 0.25))
+        if hold_minutes >= dead_money_minutes and abs(pnl_pct) <= dead_money_band:
+            return True
+
+        return False
+
+    def _allow_strategic_exit(self, symbol: str, position: Dict, analysis: Dict, urgency: str) -> bool:
+        if str(urgency or "").lower() == "critical":
+            self._strategic_last_call[symbol] = time.time()
+            return True
+
+        now = time.time()
+        last_ts = float(self._strategic_last_call.get(symbol, 0.0) or 0.0)
+        cooldown = float(
+            getattr(settings, "POSITION_MANAGER_STRATEGIC_EXIT_COOLDOWN_SECONDS", 900.0) or 900.0
+        )
+        if cooldown <= 0:
+            self._strategic_last_call[symbol] = now
+            return True
+
+        entry_price = float(position.get("entry_price", 0) or 0.0)
+        current_price = float((analysis or {}).get("current_price", position.get("current_price", entry_price)) or entry_price)
+        side = str(position.get("side", "long") or "long").lower()
+        pnl_pct = float((analysis or {}).get("pnl_pct", self._calc_pnl_pct(entry_price, current_price, side)) or 0.0)
+        loss_trigger = abs(float(getattr(settings, "POSITION_MANAGER_AUTO_EXIT_LOSS_PCT", 0.75) or 0.75))
+
+        # Allow immediate re-fire if the position materially worsens into a real loser.
+        if pnl_pct <= -(loss_trigger * 1.5):
+            self._strategic_last_call[symbol] = now
+            return True
+
+        if last_ts > 0 and (now - last_ts) < cooldown:
+            return False
+
+        self._strategic_last_call[symbol] = now
+        return True
+
+    @staticmethod
+    def _queue_deferred_exit(position: Dict, reason: str, source: str) -> bool:
+        if bool(position.get("exit_pending")):
+            return False
+        position["deferred_exit_on_open"] = True
+        position["deferred_exit_reason"] = f"{source}: {reason}"
+        position["deferred_exit_queued_at"] = time.time()
+        return True
 
     async def _execute_market_exit(self, bot, position: Dict, reason: str, source: str) -> Optional[Dict]:
         symbol = str(position.get("symbol", "") or "").upper()

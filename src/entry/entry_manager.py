@@ -9,8 +9,10 @@ from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 from config import settings
+from src import persistence
 from src.data import strategy_controls
 from src.data.setup_identity import normalize_symbol_state
+from src.data.trade_schema import normalize_position_context
 from src.data.strategy_tags import is_artifact_strategy_tag, normalize_strategy_tag
 from src.exit.profit_ratchet import ProfitRatchet
 
@@ -163,6 +165,168 @@ class EntryManager:
             return entry_time, "broker_orders"
         return fallback, "broker_fallback"
 
+    @staticmethod
+    def _restored_snapshot_has_meaningful_context(snapshot: Optional[Dict]) -> bool:
+        if not isinstance(snapshot, dict) or not snapshot:
+            return False
+
+        strategy_tag = normalize_strategy_tag(
+            snapshot.get("strategy_tag", "unknown"),
+            fallback="unknown",
+            allow_artifacts=True,
+        )
+        if strategy_tag not in {"unknown", "carryover"} and not is_artifact_strategy_tag(strategy_tag):
+            return True
+
+        if str(snapshot.get("setup_id", "") or "").strip():
+            return True
+
+        entry_path = str(snapshot.get("entry_path", "") or "").strip().lower()
+        if entry_path and not entry_path.startswith("broker_sync") and entry_path != "unknown":
+            return True
+
+        entry_reason_code = str(snapshot.get("entry_reason_code", "") or "").strip().lower()
+        if entry_reason_code and entry_reason_code not in {"unknown", "broker_sync"}:
+            return True
+
+        signal_sources = snapshot.get("signal_sources", []) or []
+        if isinstance(signal_sources, str):
+            signal_sources = [s.strip() for s in signal_sources.split(",") if s.strip()]
+        normalized_sources = {
+            str(source or "").strip().lower()
+            for source in signal_sources
+            if str(source or "").strip()
+        }
+        if normalized_sources - {"broker_sync", "broker_reconciliation"}:
+            return True
+
+        if snapshot.get("entry_model_votes"):
+            return True
+
+        return False
+
+    @staticmethod
+    def _prune_recently_removed_positions(
+        positions: Optional[Dict[str, Dict]],
+        max_age_seconds: float = 172800.0,
+        max_entries: int = 500,
+    ) -> Dict[str, Dict]:
+        now_ts = time.time()
+        trimmed: List[tuple] = []
+        for symbol, payload in (positions or {}).items():
+            if not isinstance(payload, dict):
+                continue
+            removed_at = float(payload.get("removed_at", 0) or 0)
+            if removed_at > 0 and (now_ts - removed_at) > float(max_age_seconds or 0):
+                continue
+            trimmed.append((str(symbol or "").upper(), payload))
+        trimmed.sort(key=lambda item: float((item[1] or {}).get("removed_at", 0) or 0), reverse=True)
+        return {symbol: payload for symbol, payload in trimmed[: max(1, int(max_entries or 1))]}
+
+    def _apply_whole_share_floor_notional(
+        self,
+        symbol: str,
+        price: float,
+        notional: float,
+        sentiment_data: Dict,
+        side: str,
+    ) -> float:
+        """
+        Prevent strong whole-share-only setups from dying at zero size when a
+        single share still fits inside a small, capped slice of equity.
+        """
+        if str(side or "").lower() != "short":
+            return notional
+        if not bool(getattr(settings, "WHOLE_SHARE_FLOOR_ENABLED", True)):
+            return notional
+        if price <= 0 or notional >= price:
+            return notional
+        if self._options_overlay_active(sentiment_data):
+            return notional
+
+        confidence = float(sentiment_data.get("consensus_confidence", 0.0) or 0.0)
+        min_confidence = float(getattr(settings, "WHOLE_SHARE_FLOOR_MIN_CONFIDENCE", 75.0) or 75.0)
+        if confidence < min_confidence:
+            return notional
+
+        provider_used = str(sentiment_data.get("provider_used", "") or "").lower()
+        if not (provider_used.startswith("classifier_auto") or provider_used.startswith("council")):
+            return notional
+
+        entry_quality = str(sentiment_data.get("entry_quality", "neutral") or "neutral").lower()
+        if entry_quality == "at_highs":
+            return notional
+
+        equity = getattr(self.risk, "equity", None) if self.risk else None
+        if equity is None:
+            equity = getattr(self.risk, "_equity", 25000) if self.risk else 25000
+        max_pct = float(getattr(settings, "WHOLE_SHARE_FLOOR_MAX_NOTIONAL_PCT", 3.0) or 3.0)
+        max_one_share_notional = float(equity or 0) * (max_pct / 100.0)
+        if price > max_one_share_notional:
+            return notional
+
+        lifted_notional = price
+        logger.info(
+            f"🔼 WHOLE-SHARE FLOOR {symbol}: lifting short notional from ${notional:.2f} "
+            f"to ${lifted_notional:.2f} (conf={confidence:.0f}% provider={provider_used})"
+        )
+        return lifted_notional
+
+    @staticmethod
+    def _options_overlay_active(sentiment_data: Dict) -> bool:
+        used = float(sentiment_data.get("options_budget_used", 0.0) or 0.0)
+        share_mult = float(sentiment_data.get("share_notional_multiplier", 1.0) or 1.0)
+        return used > 0.0 or share_mult < 0.999
+
+    def _apply_high_confidence_min_notional(
+        self,
+        symbol: str,
+        notional: float,
+        sentiment_data: Dict,
+        side: str,
+    ) -> float:
+        """
+        Lift tiny but valid high-confidence entries to a slightly higher
+        baseline notional without changing the broader sizing regime.
+        """
+        if not bool(getattr(settings, "HIGH_CONFIDENCE_MIN_NOTIONAL_ENABLED", True)):
+            return notional
+        if notional <= 0:
+            return notional
+        if self._options_overlay_active(sentiment_data):
+            return notional
+
+        confidence = float(sentiment_data.get("consensus_confidence", 0.0) or 0.0)
+        min_confidence = float(
+            getattr(settings, "HIGH_CONFIDENCE_MIN_NOTIONAL_MIN_CONFIDENCE", 75.0) or 75.0
+        )
+        if confidence < min_confidence:
+            return notional
+
+        provider_used = str(sentiment_data.get("provider_used", "") or "").lower()
+        if not (provider_used.startswith("classifier_auto") or provider_used.startswith("council")):
+            return notional
+
+        entry_quality = str(sentiment_data.get("entry_quality", "neutral") or "neutral").lower()
+        if entry_quality == "at_highs":
+            return notional
+
+        equity = getattr(self.risk, "equity", None) if self.risk else None
+        if equity is None:
+            equity = getattr(self.risk, "_equity", 25000) if self.risk else 25000
+
+        floor_abs = float(getattr(settings, "HIGH_CONFIDENCE_MIN_NOTIONAL", 325.0) or 325.0)
+        max_pct = float(getattr(settings, "HIGH_CONFIDENCE_MIN_NOTIONAL_MAX_PCT", 1.5) or 1.5)
+        capped_floor = min(floor_abs, float(equity or 0.0) * (max_pct / 100.0))
+        if capped_floor <= 0 or notional >= capped_floor:
+            return notional
+
+        logger.info(
+            f"🔼 HIGH-CONF FLOOR {symbol}: lifting {side} notional from ${notional:.2f} "
+            f"to ${capped_floor:.2f} (conf={confidence:.0f}% provider={provider_used})"
+        )
+        return capped_floor
+
     async def _cancel_conflicting_protection_orders(self, symbol: str, side: str) -> int:
         if not self.broker:
             return 0
@@ -180,7 +344,27 @@ class EntryManager:
             logger.warning(f"Could not cancel conflicting protection orders for {symbol}: {e}")
             return 0
 
-    async def _place_hard_stop_order(self, symbol: str, qty: int, entry_price: float, side: str):
+    @staticmethod
+    def _initial_hard_stop_profile(sentiment_data: Dict, extended: bool) -> Tuple[float, List[str]]:
+        position_context = {
+            "entry_quality": sentiment_data.get("entry_quality", "neutral"),
+            "extended_hours_entry": bool(extended),
+            "holding_horizon": sentiment_data.get("holding_horizon", "intraday"),
+            "allocator_status": sentiment_data.get("allocator_status", "hold"),
+            "allocator_recommended_action": sentiment_data.get("allocator_recommended_action", "hold"),
+            "allocator_control_state": sentiment_data.get("allocator_control_state", "active"),
+            "allocator_reason_codes": list(sentiment_data.get("allocator_reason_codes", []) or []),
+        }
+        return ProfitRatchet.initial_hard_stop_profile(position_context)
+
+    async def _place_hard_stop_order(
+        self,
+        symbol: str,
+        qty: int,
+        entry_price: float,
+        side: str,
+        hard_stop_pct: Optional[float] = None,
+    ):
         if qty < 1:
             return None, False
         # Only place protection when a matching broker position already exists.
@@ -200,7 +384,7 @@ class EntryManager:
 
         stop_price = ProfitRatchet.price_for_pnl(
             float(entry_price or 0),
-            ProfitRatchet.HARD_STOP_PCT,
+            hard_stop_pct if hard_stop_pct is not None else ProfitRatchet.HARD_STOP_PCT,
             side,
         )
         client_order_id = ProfitRatchet.make_client_order_id(symbol, "hardstop", stop_price)
@@ -261,27 +445,61 @@ class EntryManager:
             missing_fields = [field.strip() for field in missing_fields.split(",") if field.strip()]
         if not isinstance(missing_fields, list):
             missing_fields = []
+        normalized = normalize_position_context(
+            {
+                "symbol": data.get("symbol"),
+                "side": data.get("side"),
+                "source": data.get("source"),
+                "strategy_tag": data.get("strategy_tag"),
+                "provider_used": data.get("provider_used"),
+                "entry_path": data.get("entry_path"),
+                "entry_reason_code": data.get("entry_reason_code"),
+                "signal_sources": data.get("signal_sources"),
+                "setup_id": data.get("setup_id"),
+                "setup_mode": data.get("setup_mode"),
+                "direction_constraint": data.get("direction_constraint"),
+                "timing_state": data.get("timing_state"),
+                "best_play": data.get("best_play"),
+                "trigger": data.get("trigger"),
+                "trigger_spec": dict(data.get("trigger_spec", {}) or {}),
+                "invalidation": data.get("invalidation"),
+                "hold_style": data.get("hold_style"),
+                "holding_horizon": data.get("holding_horizon"),
+                "entry_quality": data.get("entry_quality"),
+                "size_posture": data.get("size_posture"),
+                "no_trade_reason": data.get("no_trade_reason"),
+                "classifier_confidence": data.get("classifier_confidence"),
+                "resolver_confidence": data.get("resolver_confidence"),
+                "execution_confidence": data.get("execution_confidence"),
+                "feature_snapshot_id": data.get("feature_snapshot_id"),
+                "feature_quality_score": data.get("feature_quality_score"),
+                "feature_quality": data.get("feature_quality"),
+                "missing_fields": list(missing_fields),
+                "material_change_signature": data.get("material_change_signature"),
+                "symbol_state": data.get("symbol_state", "live_position"),
+            }
+        )
         return {
-            "setup_id": data.get("setup_id"),
-            "setup_mode": str(data.get("setup_mode", "invalid") or "invalid"),
-            "direction_constraint": str(data.get("direction_constraint", "none") or "none"),
-            "timing_state": str(data.get("timing_state", "enter_now") or "enter_now"),
-            "best_play": data.get("best_play"),
-            "trigger": data.get("trigger"),
-            "trigger_spec": dict(data.get("trigger_spec", {}) or {}),
-            "invalidation": data.get("invalidation"),
-            "hold_style": data.get("hold_style"),
-            "size_posture": data.get("size_posture", "normal"),
-            "no_trade_reason": data.get("no_trade_reason"),
-            "classifier_confidence": float(data.get("classifier_confidence", 0.0) or 0.0),
-            "resolver_confidence": float(data.get("resolver_confidence", 0.0) or 0.0),
-            "execution_confidence": float(data.get("execution_confidence", 0.0) or 0.0),
-            "feature_snapshot_id": data.get("feature_snapshot_id"),
-            "feature_quality_score": float(data.get("feature_quality_score", 0.0) or 0.0),
-            "feature_quality": str(data.get("feature_quality", "") or ""),
+            "setup_id": normalized.get("setup_id"),
+            "setup_mode": str(normalized.get("setup_mode", "general_momentum_long") or "general_momentum_long"),
+            "direction_constraint": str(normalized.get("direction_constraint", "long_only") or "long_only"),
+            "timing_state": str(normalized.get("timing_state", "enter_now") or "enter_now"),
+            "best_play": normalized.get("best_play"),
+            "trigger": normalized.get("trigger"),
+            "trigger_spec": dict(normalized.get("trigger_spec", {}) or {}),
+            "invalidation": normalized.get("invalidation"),
+            "hold_style": normalized.get("hold_style"),
+            "size_posture": normalized.get("size_posture", "normal"),
+            "no_trade_reason": normalized.get("no_trade_reason"),
+            "classifier_confidence": float(normalized.get("classifier_confidence", 0.0) or 0.0),
+            "resolver_confidence": float(normalized.get("resolver_confidence", 0.0) or 0.0),
+            "execution_confidence": float(normalized.get("execution_confidence", 0.0) or 0.0),
+            "feature_snapshot_id": normalized.get("feature_snapshot_id"),
+            "feature_quality_score": float(normalized.get("feature_quality_score", 0.0) or 0.0),
+            "feature_quality": str(normalized.get("feature_quality", "") or ""),
             "missing_fields": list(missing_fields),
-            "material_change_signature": data.get("material_change_signature"),
-            "symbol_state": normalize_symbol_state(data.get("symbol_state", "live_position")),
+            "material_change_signature": normalized.get("material_change_signature"),
+            "symbol_state": normalize_symbol_state(normalized.get("symbol_state", "live_position")),
             "mode_features": dict(data.get("mode_features", {}) or {}),
             "bar_context": dict(data.get("bar_context", {}) or {}),
             "setup_created_at": data.get("created_at"),
@@ -293,6 +511,11 @@ class EntryManager:
             "jury_hold_style": data.get("jury_hold_style"),
             "jury_size_posture": data.get("jury_size_posture"),
             "jury_no_trade_reason": data.get("jury_no_trade_reason"),
+            "pharma_signal": bool(data.get("pharma_signal", False)),
+            "pharma_catalyst_type": str(data.get("pharma_catalyst_type", "") or ""),
+            "earnings": bool(data.get("earnings", False)),
+            "earnings_date": data.get("earnings_date"),
+            "catalyst_date": data.get("catalyst_date"),
         }
 
     def _apply_strategy_controls(self, symbol: str, sentiment_data: Dict, notional: float) -> Optional[float]:
@@ -417,6 +640,7 @@ class EntryManager:
         if equity is None:
             equity = getattr(self.risk, '_equity', 25000) if self.risk else 25000
         notional = min(notional, equity * 0.25)
+        notional = self._apply_high_confidence_min_notional(symbol, notional, sentiment_data, "long")
         min_notional = float(getattr(settings, "MIN_NOTIONAL", 25.0) or 25.0)
         if notional < min_notional:
             logger.warning(f"Notional ${notional:.2f} below MIN_NOTIONAL ${min_notional:.2f} for {symbol} — rejecting dust entry")
@@ -521,7 +745,11 @@ class EntryManager:
                 await asyncio.sleep(1)
                 stop_entry_price = float(order.get("filled_avg_price", price) or price)
                 hard_stop_order, protection_failed = await self._place_hard_stop_order(
-                    symbol, filled_qty, entry_price=stop_entry_price, side="long"
+                    symbol,
+                    filled_qty,
+                    entry_price=stop_entry_price,
+                    side="long",
+                    hard_stop_pct=self._initial_hard_stop_profile(sentiment_data, extended)[0],
                 )
                 if hard_stop_order:
                     logger.success(
@@ -596,12 +824,13 @@ class EntryManager:
             signal_sources = ["unknown"]
         if not signal_sources:
             signal_sources = ["unknown"]
-        hard_stop_price = ProfitRatchet.price_for_pnl(entry_price, ProfitRatchet.HARD_STOP_PCT, "long")
         entry_votes = dict(sentiment_data.get("entry_model_votes", {}) or {})
         risk_constraints = list(sentiment_data.get("risk_constraints_applied", []) or [])
         signal_tier = str(sentiment_data.get("signal_tier", "tier_2") or "tier_2")
         holding_horizon = str(sentiment_data.get("holding_horizon", "intraday") or "intraday")
         market_regime = str(sentiment_data.get("market_regime", "mixed") or "mixed")
+        hard_stop_pct, hard_stop_flags = self._initial_hard_stop_profile(sentiment_data, extended)
+        hard_stop_price = ProfitRatchet.price_for_pnl(entry_price, hard_stop_pct, "long")
         position = {
             "symbol": symbol,
             "entry_price": entry_price,
@@ -626,6 +855,8 @@ class EntryManager:
             "trailing_stop_order_id": None,
             "has_trailing_stop": False,
             "hard_stop_price": hard_stop_price,
+            "hard_stop_pct": hard_stop_pct,
+            "hard_stop_flags": list(hard_stop_flags),
             "hard_stop_order_id": hard_stop_order.get("id") if hard_stop_order else None,
             "ratchet_limit_order_id": None,
             "ratchet_peak_pnl_pct": 0.0,
@@ -642,6 +873,7 @@ class EntryManager:
             "signal_tier": signal_tier,
             "holding_horizon": holding_horizon,
             "market_regime": market_regime,
+            "session_type": str(sentiment_data.get("session_type", "") or ""),
             "entry_reason_code": sentiment_data.get("entry_reason_code", "jury_consensus"),
             "entry_model_votes": entry_votes,
             "risk_constraints_applied": risk_constraints,
@@ -657,6 +889,17 @@ class EntryManager:
             "actual_qty": actual_qty,
             "entry_quality": sentiment_data.get("entry_quality", "neutral"),
             "overnight_context": sentiment_data.get("overnight_context", ""),
+            "allocator_state": sentiment_data.get("allocator_state", "neutral"),
+            "allocator_alignment": sentiment_data.get("allocator_alignment", "neutral"),
+            "allocator_budget_pct": float(sentiment_data.get("allocator_budget_pct", 0.0) or 0.0),
+            "allocator_exposure_pct": float(sentiment_data.get("allocator_exposure_pct", 0.0) or 0.0),
+            "allocator_remaining_budget_pct": float(sentiment_data.get("allocator_remaining_budget_pct", 0.0) or 0.0),
+            "allocator_size_multiplier": float(sentiment_data.get("allocator_size_multiplier", 1.0) or 1.0),
+            "allocator_reason": sentiment_data.get("allocator_reason", "allocator_ok"),
+            "allocator_reason_codes": list(sentiment_data.get("allocator_reason_codes", []) or []),
+            "allocator_status": sentiment_data.get("allocator_status", "hold"),
+            "allocator_recommended_action": sentiment_data.get("allocator_recommended_action", "hold"),
+            "allocator_control_state": sentiment_data.get("allocator_control_state", "active"),
             "dead_money_tightened": False,
             "dead_money": False,
             "anomaly_flags": list(sentiment_data.get("anomaly_flags", []) or []),
@@ -752,11 +995,13 @@ class EntryManager:
         if equity is None:
             equity = getattr(self.risk, '_equity', 25000) if self.risk else 25000
         notional = min(notional, equity * 0.25)
+        notional = self._apply_high_confidence_min_notional(symbol, notional, sentiment_data, "short")
         min_notional = float(getattr(settings, "MIN_NOTIONAL", 25.0) or 25.0)
         if notional < min_notional:
             logger.warning(f"SHORT notional ${notional:.2f} below MIN_NOTIONAL ${min_notional:.2f} for {symbol} — rejecting")
             self.last_order_error = "below_min_notional"
             return None
+        notional = self._apply_whole_share_floor_notional(symbol, price, notional, sentiment_data, "short")
         shares = int(notional / price) if price > 0 else 0
         if shares < 1:
             logger.warning(f"SHORT position size too small for {symbol} @ ${price:.2f}")
@@ -774,34 +1019,75 @@ class EntryManager:
 
         logger.info(f"🩳 Shorting {symbol}: {shares}sh @ ${price:.2f} (${shares * price:.2f} total, conviction={conviction})")
 
-        # Place short sell order via REST API
+        # Place short sell order. Extended hours requires a limit order.
         order = None
         entry_order_timestamp = time.time()
         try:
-            import requests as req_lib
-            order_data = {
-                'symbol': symbol,
-                'qty': str(shares),
-                'side': 'sell',
-                'type': 'market',
-                'time_in_force': 'day',
-            }
-            resp = req_lib.post(
-                f'{self.broker._base_url}/v2/orders',
-                headers=self.broker._rest_headers(),
-                json=order_data,
-                timeout=10,
-            )
-            if resp.status_code in (200, 201):
-                order = resp.json()
+            if extended and bool(getattr(settings, "EXTENDED_HOURS_LIMIT_ONLY", True)):
+                limit_price = round(price * 0.998, 2) if price >= 1.0 else round(price * 0.998, 4)
+                if hasattr(self.broker, "place_limit_short"):
+                    order = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        self.broker.place_limit_short,
+                        symbol,
+                        int(shares),
+                        limit_price,
+                        True,
+                    )
+                else:
+                    import requests as req_lib
+
+                    order_data = {
+                        "symbol": symbol,
+                        "qty": str(shares),
+                        "side": "sell",
+                        "type": "limit",
+                        "limit_price": str(limit_price),
+                        "time_in_force": "day",
+                        "extended_hours": True,
+                    }
+                    resp = req_lib.post(
+                        f"{self.broker._base_url}/v2/orders",
+                        headers=self.broker._rest_headers(),
+                        json=order_data,
+                        timeout=10,
+                    )
+                    if resp.status_code in (200, 201):
+                        order = resp.json()
+                    else:
+                        logger.error(f"Extended short limit failed: {resp.status_code} {resp.text[:200]}")
+                        self.last_order_error = f"alpaca_short_rejected_{resp.status_code}"
+                        if "cannot be sold short" in str(resp.text or "").lower():
+                            if self.broker and hasattr(self.broker, "mark_unshortable"):
+                                self.broker.mark_unshortable(symbol)
+                                logger.warning(f"🩳 Marked {symbol} as unshortable for the session")
+                        return None
             else:
-                logger.error(f"Short sell failed: {resp.status_code} {resp.text[:200]}")
-                self.last_order_error = f"alpaca_short_rejected_{resp.status_code}"
-                if "cannot be sold short" in str(resp.text or "").lower():
-                    if self.broker and hasattr(self.broker, "mark_unshortable"):
-                        self.broker.mark_unshortable(symbol)
-                        logger.warning(f"🩳 Marked {symbol} as unshortable for the session")
-                return None
+                import requests as req_lib
+
+                order_data = {
+                    'symbol': symbol,
+                    'qty': str(shares),
+                    'side': 'sell',
+                    'type': 'market',
+                    'time_in_force': 'day',
+                }
+                resp = req_lib.post(
+                    f'{self.broker._base_url}/v2/orders',
+                    headers=self.broker._rest_headers(),
+                    json=order_data,
+                    timeout=10,
+                )
+                if resp.status_code in (200, 201):
+                    order = resp.json()
+                else:
+                    logger.error(f"Short sell failed: {resp.status_code} {resp.text[:200]}")
+                    self.last_order_error = f"alpaca_short_rejected_{resp.status_code}"
+                    if "cannot be sold short" in str(resp.text or "").lower():
+                        if self.broker and hasattr(self.broker, "mark_unshortable"):
+                            self.broker.mark_unshortable(symbol)
+                            logger.warning(f"🩳 Marked {symbol} as unshortable for the session")
+                    return None
         except Exception as e:
             logger.error(f"Short sell error for {symbol}: {e}")
             self.last_order_error = "alpaca_short_exception"
@@ -823,7 +1109,11 @@ class EntryManager:
                 if stop_qty >= 1 and order_status in {"filled", "partially_filled"}:
                     stop_entry_price = float(order.get("filled_avg_price", price) or price)
                     hard_stop_order, protection_failed = await self._place_hard_stop_order(
-                        symbol, stop_qty, stop_entry_price, "short"
+                        symbol,
+                        stop_qty,
+                        stop_entry_price,
+                        "short",
+                        hard_stop_pct=self._initial_hard_stop_profile(sentiment_data, extended)[0],
                     )
                 else:
                     logger.info(
@@ -878,12 +1168,13 @@ class EntryManager:
             order_status = "filled"
         actual_notional = entry_price * actual_qty
 
-        hard_stop_price = ProfitRatchet.price_for_pnl(entry_price, ProfitRatchet.HARD_STOP_PCT, "short")
         entry_votes = dict(sentiment_data.get("entry_model_votes", {}) or {})
         risk_constraints = list(sentiment_data.get("risk_constraints_applied", []) or [])
         signal_tier = str(sentiment_data.get("signal_tier", "tier_2") or "tier_2")
         holding_horizon = str(sentiment_data.get("holding_horizon", "intraday") or "intraday")
         market_regime = str(sentiment_data.get("market_regime", "mixed") or "mixed")
+        hard_stop_pct, hard_stop_flags = self._initial_hard_stop_profile(sentiment_data, extended)
+        hard_stop_price = ProfitRatchet.price_for_pnl(entry_price, hard_stop_pct, "short")
         position = {
             "symbol": symbol,
             "side": "short",
@@ -907,6 +1198,8 @@ class EntryManager:
             "trailing_stop_order_id": None,
             "has_trailing_stop": False,
             "hard_stop_price": hard_stop_price,
+            "hard_stop_pct": hard_stop_pct,
+            "hard_stop_flags": list(hard_stop_flags),
             "hard_stop_order_id": hard_stop_order.get("id") if hard_stop_order else None,
             "ratchet_limit_order_id": None,
             "ratchet_peak_pnl_pct": 0.0,
@@ -923,6 +1216,7 @@ class EntryManager:
             "signal_tier": signal_tier,
             "holding_horizon": holding_horizon,
             "market_regime": market_regime,
+            "session_type": str(sentiment_data.get("session_type", "") or ""),
             "entry_reason_code": sentiment_data.get("entry_reason_code", "jury_consensus"),
             "entry_model_votes": entry_votes,
             "risk_constraints_applied": risk_constraints,
@@ -938,6 +1232,17 @@ class EntryManager:
             "actual_qty": actual_qty,
             "entry_quality": sentiment_data.get("entry_quality", "neutral"),
             "overnight_context": sentiment_data.get("overnight_context", ""),
+            "allocator_state": sentiment_data.get("allocator_state", "neutral"),
+            "allocator_alignment": sentiment_data.get("allocator_alignment", "neutral"),
+            "allocator_budget_pct": float(sentiment_data.get("allocator_budget_pct", 0.0) or 0.0),
+            "allocator_exposure_pct": float(sentiment_data.get("allocator_exposure_pct", 0.0) or 0.0),
+            "allocator_remaining_budget_pct": float(sentiment_data.get("allocator_remaining_budget_pct", 0.0) or 0.0),
+            "allocator_size_multiplier": float(sentiment_data.get("allocator_size_multiplier", 1.0) or 1.0),
+            "allocator_reason": sentiment_data.get("allocator_reason", "allocator_ok"),
+            "allocator_reason_codes": list(sentiment_data.get("allocator_reason_codes", []) or []),
+            "allocator_status": sentiment_data.get("allocator_status", "hold"),
+            "allocator_recommended_action": sentiment_data.get("allocator_recommended_action", "hold"),
+            "allocator_control_state": sentiment_data.get("allocator_control_state", "active"),
             "dead_money_tightened": False,
             "dead_money": False,
             "anomaly_flags": list(sentiment_data.get("anomaly_flags", []) or []),
@@ -1151,6 +1456,9 @@ class EntryManager:
             if not self.broker:
                 return 0
             brokerage_positions = self.broker.get_positions()
+        self._recently_removed_positions = self._prune_recently_removed_positions(
+            getattr(self, "_recently_removed_positions", {}) or {}
+        )
 
         missing_symbols = [
             str(p.get("symbol", "")).upper()
@@ -1187,7 +1495,13 @@ class EntryManager:
             existing = self.positions.get(sym)
             if existing:
                 old_qty = float(existing.get("quantity", 0) or 0)
-                existing.setdefault("hard_stop_price", ProfitRatchet.price_for_pnl(avg_price, ProfitRatchet.HARD_STOP_PCT, side))
+                existing_hard_stop_pct, existing_hard_stop_flags = ProfitRatchet.initial_hard_stop_profile(existing)
+                existing.setdefault("hard_stop_pct", existing_hard_stop_pct)
+                existing.setdefault("hard_stop_flags", list(existing_hard_stop_flags))
+                existing.setdefault(
+                    "hard_stop_price",
+                    ProfitRatchet.price_for_pnl(avg_price, float(existing.get("hard_stop_pct") or existing_hard_stop_pct), side),
+                )
                 existing.setdefault("hard_stop_order_id", "")
                 existing.setdefault("ratchet_limit_order_id", "")
                 existing.setdefault("ratchet_peak_pnl_pct", 0.0)
@@ -1198,6 +1512,9 @@ class EntryManager:
                 existing.setdefault("market_regime", "mixed")
                 existing.setdefault("entry_quality", "neutral")
                 existing.setdefault("overnight_context", "")
+                existing.setdefault("allocator_status", "hold")
+                existing.setdefault("allocator_recommended_action", "hold")
+                existing.setdefault("allocator_control_state", "active")
                 existing.setdefault("dead_money_tightened", False)
                 existing.setdefault("dead_money", False)
                 existing.setdefault("entry_reason_code", "unknown")
@@ -1218,11 +1535,13 @@ class EntryManager:
                         existing.pop("_dust_remainder", None)
                     logger.warning(f"🔄 Synced {sym} quantity {old_qty:.4f} → {qty:.4f} from Alpaca")
                     updates += 1
+                self.positions[sym] = normalize_position_context(existing)
                 continue
 
             entry_time, entry_time_source = self._estimate_carryover_entry_time(sym, side, closed_orders)
             recent_removed = (getattr(self, "_recently_removed_positions", {}) or {}).get(sym)
             recent_snapshot = dict((recent_removed or {}).get("position", {}) or {})
+            meaningful_local_context = self._restored_snapshot_has_meaningful_context(recent_snapshot)
             reload_reason = "broker_sync_missing_local"
             open_exit_order = None
             if recent_removed:
@@ -1254,7 +1573,26 @@ class EntryManager:
             restored_strategy_tag = normalize_strategy_tag(_raw_tag, fallback="unknown", allow_artifacts=True)
             if is_artifact_strategy_tag(restored_strategy_tag):
                 restored_strategy_tag = "unknown"
-            self.positions[sym] = {
+            anomaly_flags = list(recent_snapshot.get("anomaly_flags", []) or [])
+            if recent_removed:
+                anomaly_flags = [
+                    flag
+                    for flag in anomaly_flags
+                    if str(flag or "").strip().lower()
+                    not in {"carryover_sync", "broker_reloaded_after_local_removal"}
+                ]
+            normalized_anomaly_flags = {
+                str(flag or "").strip().lower()
+                for flag in anomaly_flags
+                if str(flag or "").strip()
+            }
+            if (
+                not meaningful_local_context
+                and not recent_removed
+                and "carryover_sync" not in normalized_anomaly_flags
+            ):
+                anomaly_flags.append("carryover_sync")
+            restored_position = normalize_position_context({
                 "symbol": sym,
                 "side": side,
                 "entry_price": avg_price,
@@ -1281,7 +1619,9 @@ class EntryManager:
                 "actual_notional": avg_price * qty,
                 "intended_qty": qty,
                 "actual_qty": qty,
-                "hard_stop_price": ProfitRatchet.price_for_pnl(avg_price, ProfitRatchet.HARD_STOP_PCT, side),
+                "hard_stop_price": recent_snapshot.get("hard_stop_price"),
+                "hard_stop_pct": recent_snapshot.get("hard_stop_pct"),
+                "hard_stop_flags": list(recent_snapshot.get("hard_stop_flags", []) or []),
                 "hard_stop_order_id": "",
                 "ratchet_limit_order_id": "",
                 "ratchet_peak_pnl_pct": max(
@@ -1297,15 +1637,21 @@ class EntryManager:
                 "signal_tier": recent_snapshot.get("signal_tier", "tier_2"),
                 "holding_horizon": recent_snapshot.get("holding_horizon", "intraday"),
                 "market_regime": recent_snapshot.get("market_regime", "mixed"),
+                "entry_quality": recent_snapshot.get("entry_quality", "neutral"),
+                "overnight_context": recent_snapshot.get("overnight_context", ""),
                 "entry_reason_code": recent_snapshot.get("entry_reason_code", "broker_sync"),
                 "entry_model_votes": dict(recent_snapshot.get("entry_model_votes", {}) or {}),
                 "risk_constraints_applied": list(recent_snapshot.get("risk_constraints_applied", []) or []),
+                "allocator_status": recent_snapshot.get("allocator_status", "hold"),
+                "allocator_recommended_action": recent_snapshot.get("allocator_recommended_action", "hold"),
+                "allocator_control_state": recent_snapshot.get("allocator_control_state", "active"),
+                "allocator_reason_codes": list(recent_snapshot.get("allocator_reason_codes", []) or []),
                 "order_state": {
                     "entry": "open",
                     "hard_stop": "unknown",
                     "ratchet": "inactive",
                 },
-                "anomaly_flags": list(recent_snapshot.get("anomaly_flags", []) or ["carryover_sync"]),
+                "anomaly_flags": anomaly_flags,
                 "scout_escalated": False,
                 "swing_only": False,
                 "_exit_recorded": False,
@@ -1313,12 +1659,26 @@ class EntryManager:
                 "broker_synced_at": time.time(),
                 "reload_reason": reload_reason,
                 "reloaded_from_broker": bool(recent_removed),
-            }
-            if recent_removed:
+            })
+            restored_hard_stop_pct, restored_hard_stop_flags = ProfitRatchet.initial_hard_stop_profile(restored_position)
+            restored_position["hard_stop_pct"] = float(
+                restored_position.get("hard_stop_pct", restored_hard_stop_pct) or restored_hard_stop_pct
+            )
+            restored_position["hard_stop_flags"] = list(
+                restored_position.get("hard_stop_flags", restored_hard_stop_flags) or restored_hard_stop_flags
+            )
+            restored_position["hard_stop_price"] = ProfitRatchet.price_for_pnl(
+                avg_price,
+                restored_position["hard_stop_pct"],
+                side,
+            )
+            self.positions[sym] = restored_position
+            if recent_removed and not meaningful_local_context and not open_exit_order:
                 self.positions[sym]["anomaly_flags"] = list({
                     *self.positions[sym].get("anomaly_flags", []),
                     "broker_reloaded_after_local_removal",
                 })
+            if recent_removed:
                 self.positions[sym]["last_exit_reason"] = recent_removed.get("last_exit_reason", "")
                 self.positions[sym]["last_exit_attempt_at"] = recent_removed.get("removed_at", time.time())
                 if open_exit_order:
@@ -1361,6 +1721,13 @@ class EntryManager:
                 "side": pos.get("side", "long"),
                 "position": dict(pos),
             }
+            self._recently_removed_positions = self._prune_recently_removed_positions(
+                self._recently_removed_positions
+            )
+            try:
+                persistence.save_recently_removed_positions(self._recently_removed_positions)
+            except Exception:
+                logger.debug(f"Could not persist removed position snapshot for {symbol}")
 
     def update_peak_price(self, symbol: str, current_price: float):
         """Update favorable excursion tracking for ratchet logic."""

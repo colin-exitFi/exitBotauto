@@ -15,6 +15,7 @@ from loguru import logger
 import anthropic
 
 from config import settings
+from src.ai.position_payload import sanitize_positions_for_ai
 from .trade_history import get_analytics
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
@@ -58,6 +59,14 @@ Output JSON:
     "key_insight": "most important thing the bot should know right now"
 }}"""
 
+SYSTEM_PROMPT += """
+
+Interpretation rules for live positions:
+- `position_origin="tracked_live_position"` means the position has structured thesis/protection context and was simply re-confirmed from broker truth after restart or reconciliation. Do not recommend exiting solely because it was broker-confirmed, broker-synced, or inherited.
+- `position_origin="broker_restored_live"` means the position exists at the broker but local thesis context is thin. That can justify extra caution.
+- Do not describe protected, thesis-tagged live positions as random leftovers, inherited debris, or forced baggage unless the payload explicitly shows missing context or broken protection.
+"""
+
 
 class Advisor:
     """Layer 2 AI: strategic recommendations based on accumulated intelligence."""
@@ -73,6 +82,20 @@ class Advisor:
         self._last_output: Optional[Dict] = None
         DATA_DIR.mkdir(exist_ok=True)
 
+    @staticmethod
+    def _runtime_ready(bot, now: float, observer_output: Optional[Dict]) -> bool:
+        scanner = getattr(bot, "scanner", None)
+        if scanner:
+            scan_stats = getattr(scanner, "_last_scan_stats", {}) or {}
+            if not float(scan_stats.get("last_completed_at") or 0):
+                bot_start = float(getattr(bot, "start_time", 0.0) or 0.0)
+                uptime_seconds = max(0.0, now - bot_start) if bot_start else 0.0
+                if uptime_seconds < 180.0:
+                    return False
+        if observer_output:
+            return True
+        return False
+
     async def run(self, bot, observer_output: Optional[Dict] = None) -> Optional[Dict]:
         """Run advisory cycle."""
         now = time.time()
@@ -85,13 +108,18 @@ class Advisor:
         interval = self.INTERVAL if 4 <= et_hour < 20 else self.INTERVAL_AFTER_HOURS
         if now - self._last_run < interval:
             return None
-        self._last_run = now
 
         if not self._client:
             return None
+        if not self._runtime_ready(bot, now, observer_output):
+            logger.info("Advisor warmup: waiting for first completed scan and fresh observer output")
+            return None
+        self._last_run = now
 
         try:
-            positions = bot.entry_manager.get_positions() if bot.entry_manager else []
+            positions = sanitize_positions_for_ai(
+                bot.entry_manager.get_positions() if bot.entry_manager else []
+            )
             risk_status = bot.risk_manager.get_status() if bot.risk_manager else {}
             trade_analytics = get_analytics()
             recent_trades = bot.exit_manager.get_history(30) if bot.exit_manager else []
@@ -227,7 +255,20 @@ What's your strategic advice?"""
 
 
 def _parse_json(text: str) -> dict:
-    text = text.strip()
+    def _default(raw_text: str) -> dict:
+        return {
+            "raw": raw_text,
+            "strategy": "",
+            "position_advice": [],
+            "sector_bias": {},
+            "aggression_level": "",
+            "parameter_suggestions": [],
+            "key_insight": "",
+        }
+
+    text = str(text or "").strip()
+    if not text:
+        return _default("")
     if "```" in text:
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0]
@@ -235,10 +276,22 @@ def _parse_json(text: str) -> dict:
             text = text.split("```")[1].split("```")[0]
     text = text.strip()
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
     except json.JSONDecodeError:
         start = text.find("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
-            return json.loads(text[start:end])
-        return {"raw": text}
+            parsed = json.loads(text[start:end])
+        else:
+            return _default(text)
+    if isinstance(parsed, list):
+        parsed = next((row for row in reversed(parsed) if isinstance(row, dict)), None)
+    if not isinstance(parsed, dict):
+        return _default(text)
+    parsed.setdefault("strategy", "")
+    parsed.setdefault("position_advice", [])
+    parsed.setdefault("sector_bias", {})
+    parsed.setdefault("aggression_level", "")
+    parsed.setdefault("parameter_suggestions", [])
+    parsed.setdefault("key_insight", "")
+    return parsed

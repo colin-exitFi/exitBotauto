@@ -27,14 +27,6 @@ from src.agents.base_agent import (
     get_api_cost_stats,
 )
 from src.data import entry_controls, strategy_controls
-try:
-    from src.data import governance_registry
-except ImportError:
-    governance_registry = None
-try:
-    from src.ai import committee_memo
-except ImportError:
-    committee_memo = None
 from src.data.pending_setups import list_pending_setups
 from src.data.trade_schema import normalize_position_context
 from src.data.strategy_tags import PRIMARY_BOOKS, is_artifact_strategy_tag, normalize_strategy_tag
@@ -53,12 +45,6 @@ _CHAT_HISTORY_LIMIT = 8
 _CHAT_ACTIVITY_LIMIT = 15
 _PANEL_STARTING_EQUITY = 27500.0
 _ALPACA_TERMINAL_CACHE_TTL = 5.0
-_EQUITY_CURVE_PRESETS = {
-    "1D": {"period": "1D", "timeframe": "5Min"},
-    "1W": {"period": "1W", "timeframe": "15Min"},
-    "1M": {"period": "1M", "timeframe": "1D"},
-}
-_VALID_EQUITY_TIMEFRAMES = {"1Min", "5Min", "15Min", "1H", "1D"}
 _CHAT_STOPWORDS = {
     "A", "AN", "AND", "ARE", "AS", "AT", "BE", "BUT", "BY", "DO", "FOR", "FROM",
     "FRIDAY", "HOURS", "I", "IF", "IN", "IS", "IT", "ITS", "LOOK", "ME", "MONDAY",
@@ -167,69 +153,6 @@ def _get_cached_alpaca_terminal_snapshot() -> Dict:
     except Exception as e:
         logger.debug(f"Alpaca terminal snapshot unavailable: {e}")
         return dict(cached or {})
-
-
-def _get_trade_analytics_scoreboard() -> Dict:
-    try:
-        from src.ai import trade_history
-
-        analytics = trade_history.get_analytics() or {}
-        total_trades = int(analytics.get("total_trades", 0) or 0)
-        wins = int(analytics.get("wins", 0) or 0)
-        losses = int(analytics.get("losses", 0) or 0)
-        win_rate_pct = round((wins / total_trades * 100.0), 2) if total_trades > 0 else 0.0
-        return {
-            "total_trades": total_trades,
-            "winning_trades": wins,
-            "losing_trades": losses,
-            "win_rate_pct": win_rate_pct,
-        }
-    except Exception:
-        return {
-            "total_trades": 0,
-            "winning_trades": 0,
-            "losing_trades": 0,
-            "win_rate_pct": 0.0,
-        }
-
-
-def _apply_restart_safe_runtime_metrics(payload: Dict, reconciliation_state: Optional[Dict] = None) -> Dict:
-    enriched = dict(payload or {})
-    state = reconciliation_state if isinstance(reconciliation_state, dict) else _get_reconciliation_state()
-    broker = state.get("broker", {}) if isinstance(state, dict) else {}
-    internal = state.get("internal", {}) if isinstance(state, dict) else {}
-    reconciliation = state.get("reconciliation", {}) if isinstance(state, dict) else {}
-    snap = _get_cached_alpaca_terminal_snapshot()
-
-    equity = snap.get("equity", broker.get("equity", enriched.get("equity", 0)))
-    if equity is not None:
-        enriched["equity"] = round(float(equity or 0), 2)
-    last_equity = snap.get("last_equity", broker.get("last_equity"))
-    if last_equity is not None:
-        enriched["last_equity"] = round(float(last_equity or 0), 2)
-
-    daily_pnl = snap.get("day_pnl", broker.get("day_pnl", enriched.get("daily_pnl", 0)))
-    enriched["daily_pnl"] = round(float(daily_pnl or 0), 2)
-    daily_pnl_pct = snap.get("day_pnl_pct", broker.get("day_pnl_pct", enriched.get("daily_pnl_pct", 0)))
-    enriched["daily_pnl_pct"] = round(float(daily_pnl_pct or 0), 2)
-
-    scoreboard = _get_trade_analytics_scoreboard()
-    if scoreboard["total_trades"] > 0:
-        enriched["total_trades"] = scoreboard["total_trades"]
-        enriched["winning_trades"] = scoreboard["winning_trades"]
-        enriched["losing_trades"] = scoreboard["losing_trades"]
-        enriched["win_rate"] = round(scoreboard["win_rate_pct"], 2)
-        enriched["win_rate_pct"] = round(scoreboard["win_rate_pct"], 2)
-
-    if "canonical_realized_pnl" in reconciliation:
-        enriched["today_realized"] = round(float(reconciliation.get("canonical_realized_pnl", 0) or 0), 2)
-
-    if isinstance(internal, dict) and internal:
-        enriched["today_trade_count"] = int(internal.get("trade_history_trade_count", 0) or 0)
-        enriched["today_win_rate_pct"] = round(float(internal.get("trade_history_win_rate_pct", 0) or 0), 2)
-        enriched["today_realized"] = round(float(enriched.get("today_realized", internal.get("trade_history_realized", enriched.get("daily_pnl", 0))) or 0), 2)
-
-    return enriched
 
 
 def _dashboard_connect_host(host: str) -> str:
@@ -354,36 +277,12 @@ def _position_unrealized_pnl(position: Dict) -> float:
     return round((current_price - entry_price) * quantity, 2)
 
 
-def _book_live_position_context() -> Dict[str, Dict]:
-    positions = _bot.entry_manager.get_positions() if _bot and getattr(_bot, "entry_manager", None) else []
-    books: Dict[str, Dict] = {}
-    for position in positions or []:
-        strategy_tag = normalize_strategy_tag(position.get("strategy_tag", "unknown"), fallback="unknown")
-        if is_artifact_strategy_tag(strategy_tag):
-            continue
-        row = books.setdefault(
-            strategy_tag,
-            {"open_position_count": 0, "unrealized_pnl": 0.0},
-        )
-        row["open_position_count"] += 1
-        row["unrealized_pnl"] = round(
-            float(row.get("unrealized_pnl", 0.0) or 0.0) + _position_unrealized_pnl(position),
-            2,
-        )
-    return books
-
-
 def _build_book_scoreboard_rows() -> List[Dict]:
     from src.ai import trade_history
 
     analytics = trade_history.get_analytics()
     strategy_stats = dict((analytics.get("by_strategy_tag", {}) or {}))
-    report_books = {
-        str(row.get("strategy_tag", "") or ""): dict(row)
-        for row in ((analytics.get("book_report", {}) or {}).get("books", []) or [])
-        if isinstance(row, dict)
-    }
-    live_context = _book_live_position_context()
+    positions = _bot.entry_manager.get_positions() if _bot and getattr(_bot, "entry_manager", None) else []
     books: Dict[str, Dict] = {}
 
     def _ensure_row(strategy_tag: str) -> Dict:
@@ -401,13 +300,6 @@ def _build_book_scoreboard_rows() -> List[Dict]:
                 "avg_loss": None,
                 "expectancy": 0.0,
                 "ratchet_activation_rate_pct": None,
-                "profit_factor": None,
-                "max_drawdown": 0.0,
-                "sharpe_ratio": 0.0,
-                "status": "hold",
-                "recommended_action": "observe",
-                "control_state": "active",
-                "status_reason": "",
             },
         )
 
@@ -425,19 +317,17 @@ def _build_book_scoreboard_rows() -> List[Dict]:
         row["avg_loss"] = bucket.get("avg_loss")
         row["expectancy"] = round(float(bucket.get("expectancy", 0) or 0), 2)
         row["ratchet_activation_rate_pct"] = bucket.get("ratchet_activation_rate_pct")
-        report_row = report_books.get(strategy_tag, {})
-        row["profit_factor"] = report_row.get("profit_factor")
-        row["max_drawdown"] = report_row.get("max_drawdown", 0.0)
-        row["sharpe_ratio"] = report_row.get("sharpe_ratio", 0.0)
-        row["status"] = report_row.get("status", row.get("status", "hold"))
-        row["recommended_action"] = report_row.get("recommended_action", row.get("recommended_action", "observe"))
-        row["control_state"] = report_row.get("control_state", row.get("control_state", "active"))
-        row["status_reason"] = report_row.get("status_reason", row.get("status_reason", ""))
 
-    for strategy_tag, live_row in live_context.items():
+    for position in positions or []:
+        strategy_tag = normalize_strategy_tag(position.get("strategy_tag", "unknown"), fallback="unknown")
+        if is_artifact_strategy_tag(strategy_tag):
+            continue
         row = _ensure_row(strategy_tag)
-        row["open_position_count"] = int(live_row.get("open_position_count", 0) or 0)
-        row["unrealized_pnl"] = round(float(live_row.get("unrealized_pnl", 0) or 0), 2)
+        row["open_position_count"] += 1
+        row["unrealized_pnl"] = round(
+            float(row.get("unrealized_pnl", 0) or 0) + _position_unrealized_pnl(position),
+            2,
+        )
 
     primary_order = {tag: idx for idx, tag in enumerate(PRIMARY_BOOKS)}
     rows = list(books.values())
@@ -445,69 +335,6 @@ def _build_book_scoreboard_rows() -> List[Dict]:
         key=lambda row: (
             primary_order.get(row["strategy_tag"], len(PRIMARY_BOOKS)),
             -float(row.get("realized_pnl", 0) or 0),
-            row["strategy_tag"],
-        )
-    )
-    return rows
-
-
-def _build_book_report_rows() -> List[Dict]:
-    from src.ai import trade_history
-
-    analytics = trade_history.get_analytics()
-    report = dict(analytics.get("book_report", {}) or {})
-    report_rows = report.get("books", []) or []
-    live_context = _book_live_position_context()
-    books: Dict[str, Dict] = {}
-
-    def _ensure_row(strategy_tag: str) -> Dict:
-        normalized = normalize_strategy_tag(strategy_tag, fallback="unknown")
-        return books.setdefault(
-            normalized,
-            {
-                "strategy_tag": normalized,
-                "trade_count": 0,
-                "trades": 0,
-                "pnl": 0.0,
-                "net_pnl": 0.0,
-                "open_position_count": 0,
-                "unrealized_pnl": 0.0,
-                "status": "hold",
-                "recommended_action": "observe",
-                "control_state": "active",
-                "status_reason": "",
-                "regimes": {},
-                "sessions": {},
-            },
-        )
-
-    for strategy_tag in PRIMARY_BOOKS:
-        _ensure_row(strategy_tag)
-
-    for raw_row in report_rows:
-        if not isinstance(raw_row, dict):
-            continue
-        strategy_tag = raw_row.get("strategy_tag", "unknown")
-        if is_artifact_strategy_tag(strategy_tag):
-            continue
-        row = _ensure_row(strategy_tag)
-        row.update(raw_row)
-        row["trade_count"] = int(raw_row.get("trade_count", raw_row.get("trades", 0)) or 0)
-        row["open_position_count"] = int(row.get("open_position_count", 0) or 0)
-        row["unrealized_pnl"] = round(float(row.get("unrealized_pnl", 0.0) or 0.0), 2)
-
-    for strategy_tag, live_row in live_context.items():
-        row = _ensure_row(strategy_tag)
-        row["open_position_count"] = int(live_row.get("open_position_count", 0) or 0)
-        row["unrealized_pnl"] = round(float(live_row.get("unrealized_pnl", 0) or 0), 2)
-
-    primary_order = {tag: idx for idx, tag in enumerate(PRIMARY_BOOKS)}
-    rows = list(books.values())
-    rows.sort(
-        key=lambda row: (
-            {"scale": 0, "hold": 1, "probation": 2, "disable": 3}.get(str(row.get("status", "hold")), 9),
-            primary_order.get(row["strategy_tag"], len(PRIMARY_BOOKS)),
-            -float(row.get("pnl", 0) or 0),
             row["strategy_tag"],
         )
     )
@@ -916,23 +743,14 @@ async def get_status():
     broker_api = reconciliation_state.get("broker_api", {}) if isinstance(reconciliation_state, dict) else {}
     recon_meta = reconciliation_state.get("meta", {}) if isinstance(reconciliation_state, dict) else {}
     ai = getattr(_bot, "ai_layers", {}) or {}
-    options_engine_ready = bool(getattr(_bot, "options_engine", None))
-    options_enabled = bool(getattr(settings, "OPTIONS_ENABLED", False))
-    options_entry_enabled = bool(
-        options_enabled
-        and options_engine_ready
-        and bool(getattr(settings, "OPTIONS_PILOT_ENABLED", False))
-    )
-    payload = {
+    return {
         "running": _bot.running,
         "paused": _bot.paused,
         "market_open": _bot.entry_manager.is_market_open() if _bot.entry_manager else False,
         "positions_count": len(positions),
         "uptime_seconds": int(time.time() - _bot.start_time) if hasattr(_bot, 'start_time') else 0,
-        "options_enabled": options_enabled,
-        "options_execution_enabled": options_engine_ready,
-        "options_entry_enabled": options_entry_enabled,
-        "options_pilot_enabled": bool(getattr(settings, "OPTIONS_PILOT_ENABLED", False)),
+        "options_enabled": bool(getattr(settings, "OPTIONS_ENABLED", False)),
+        "options_execution_enabled": bool(getattr(_bot, "options_engine", None)),
         "reconciliation_status": recon.get("status", "unknown"),
         "trust_flags": trust,
         "recon_health": {
@@ -945,7 +763,6 @@ async def get_status():
         "provider_health": ai.get("provider_health", {}),
         **risk_status,
     }
-    return _apply_restart_safe_runtime_metrics(payload, reconciliation_state=reconciliation_state)
 
 
 @app.get("/api/recon-health")
@@ -1227,58 +1044,6 @@ async def get_book_scoreboard():
     }
 
 
-@app.get("/api/book-report")
-async def get_book_report():
-    from src.ai import trade_history
-
-    analytics = trade_history.get_analytics()
-    report = dict(analytics.get("book_report", {}) or {})
-    return {
-        "summary": dict(report.get("summary", {}) or {}),
-        "books": _build_book_report_rows(),
-        "generated_at": time.time(),
-    }
-
-
-@app.get("/api/governance/committee")
-async def get_governance_committee(include_docs: bool = False):
-    if governance_registry is None:
-        return {
-            "available": False,
-            "error": "governance_registry_unavailable",
-            "generated_at": time.time(),
-        }
-    payload = governance_registry.get_governance_committee_summary(include_docs=bool(include_docs))
-    payload["generated_at"] = time.time()
-    return payload
-
-
-@app.get("/api/governance/summary")
-async def get_governance_summary():
-    if committee_memo is None:
-        return {
-            "available": False,
-            "error": "committee_memo_unavailable",
-            "generated_at": time.time(),
-        }
-    payload = committee_memo.build_governance_summary()
-    payload["generated_at"] = time.time()
-    return payload
-
-
-@app.get("/api/governance/weekly-memo")
-async def get_governance_weekly_memo():
-    if committee_memo is None:
-        return {
-            "available": False,
-            "error": "committee_memo_unavailable",
-            "generated_at": time.time(),
-        }
-    payload = committee_memo.build_weekly_committee_memo()
-    payload["generated_at"] = time.time()
-    return payload
-
-
 @app.get("/api/pending-setups")
 async def get_pending_setups(limit: int = 50):
     rows = list_pending_setups(limit=max(1, min(int(limit or 50), 200)))
@@ -1356,33 +1121,19 @@ async def enable_strategy(tag: str, reason: str = ""):
     }
 
 
-def _resolve_equity_curve_request(period: Optional[str], timeframe: Optional[str]) -> Dict[str, str]:
-    requested_period = str(period or "1D").upper()
-    preset = dict(_EQUITY_CURVE_PRESETS.get(requested_period, _EQUITY_CURVE_PRESETS["1D"]))
-    requested_timeframe = str(timeframe or "").strip()
-    if requested_timeframe in _VALID_EQUITY_TIMEFRAMES:
-        preset["timeframe"] = requested_timeframe
-    preset["requested_period"] = requested_period
-    return preset
-
-
 @app.get("/api/equity-curve")
-async def get_equity_curve(limit: int = 120, period: str = "1D", timeframe: Optional[str] = None):
+async def get_equity_curve(limit: int = 120):
     """Return broker-backed equity curve points, with internal fallback if unavailable."""
     if limit < 1:
         limit = 1
-    curve_request = _resolve_equity_curve_request(period, timeframe)
     if _bot and getattr(_bot, "alpaca_client", None):
         try:
-            history = _bot.alpaca_client.get_portfolio_history(
-                period=curve_request["period"],
-                timeframe=curve_request["timeframe"],
-            ) or {}
+            history = _bot.alpaca_client.get_portfolio_history(period="1D", timeframe="15Min") or {}
             timestamps = list(history.get("timestamp") or []) if isinstance(history, dict) else []
             equities = list(history.get("equity") or []) if isinstance(history, dict) else []
             if timestamps and equities:
                 count = min(len(timestamps), len(equities))
-                series = [
+                points = [
                     {
                         "timestamp": timestamps[idx],
                         "cumulative_pnl": round(float(equities[idx]) - _PANEL_STARTING_EQUITY, 2),
@@ -1390,17 +1141,11 @@ async def get_equity_curve(limit: int = 120, period: str = "1D", timeframe: Opti
                     }
                     for idx in range(count)
                 ]
-                visible_points = series[-limit:]
                 return {
                     "starting_equity": round(_PANEL_STARTING_EQUITY, 2),
-                    "count": len(visible_points),
-                    "total_count": count,
-                    "points": visible_points,
+                    "count": count,
+                    "points": points[-limit:],
                     "source": "alpaca",
-                    "period": curve_request["period"],
-                    "timeframe": curve_request["timeframe"],
-                    "first_timestamp": visible_points[0]["timestamp"] if visible_points else None,
-                    "last_timestamp": visible_points[-1]["timestamp"] if visible_points else None,
                 }
         except Exception as e:
             logger.debug(f"Broker equity curve unavailable: {e}")
@@ -1424,14 +1169,9 @@ async def get_equity_curve(limit: int = 120, period: str = "1D", timeframe: Opti
     ]
     return {
         "starting_equity": round(starting, 2),
-        "count": len(series),
-        "total_count": len(curve),
+        "count": len(curve),
         "points": series,
         "source": "internal",
-        "period": curve_request["period"],
-        "timeframe": curve_request["timeframe"],
-        "first_timestamp": series[0]["timestamp"] if series else None,
-        "last_timestamp": series[-1]["timestamp"] if series else None,
     }
 
 
@@ -1704,10 +1444,9 @@ async def get_metrics():
     if not _bot or not _bot.risk_manager:
         return {}
     payload = dict(_bot.risk_manager.get_status())
-    reconciliation_state = _get_reconciliation_state() if getattr(_bot, "reconciler", None) else {}
-    if reconciliation_state:
-        payload["trust_flags"] = reconciliation_state.get("trust", {})
-    return _apply_restart_safe_runtime_metrics(payload, reconciliation_state=reconciliation_state)
+    if getattr(_bot, "reconciler", None):
+        payload["trust_flags"] = (_get_reconciliation_state() or {}).get("trust", {})
+    return payload
 
 
 @app.get("/api/activity")
@@ -1902,732 +1641,78 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 @keyframes countUp{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes neonPulse{0%,100%{text-shadow:0 0 7px currentColor,0 0 10px currentColor}50%{text-shadow:0 0 20px currentColor,0 0 40px currentColor}}
-@keyframes drift{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-6px,0)}}
-:root{
-  --bg:#0d0b08;
-  --bg2:#15120e;
-  --panel:#17130f;
-  --panel-2:#1d1812;
-  --panel-3:#241d15;
-  --panel-ink:#12161d;
-  --panel-ink-2:#0c1016;
-  --line:#2f271d;
-  --line-strong:#4a3e2d;
-  --text:#f4efe6;
-  --muted:#b5a792;
-  --accent:#d4b07a;
-  --accent-2:#f1dec0;
-  --accent-3:#c8ab7a;
-  --good:#87af88;
-  --warn:#c7a36b;
-  --bad:#cb8575;
-  --cool:#88a9d8;
-  --shadow:0 34px 90px rgba(0,0,0,.30);
-}
 *{margin:0;padding:0;box-sizing:border-box}
-html{
-  width:100%;
-  max-width:100%;
-  overflow-x:hidden;
-}
-body{
-  background:
-    radial-gradient(circle at top left, rgba(212,176,122,.10), transparent 30%),
-    radial-gradient(circle at top right, rgba(241,222,192,.07), transparent 20%),
-    linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
-  color:var(--text);
-  font-family:"Avenir Next","Helvetica Neue","Segoe UI",Helvetica,Arial,sans-serif;
-  font-size:14px;
-  min-height:100vh;
-  width:100%;
-  max-width:100%;
-  overflow-x:hidden;
-}
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(90deg, rgba(255,245,229,.012) 0 1px, transparent 1px 132px),
-    linear-gradient(180deg, rgba(255,241,215,.04), transparent 26%);
-  opacity:.26;
-  mix-blend-mode:screen;
-}
-body::after{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:
-    radial-gradient(circle at 50% -8%, rgba(212,176,122,.18), transparent 34%),
-    radial-gradient(circle at 92% 22%, rgba(136,169,216,.05), transparent 22%),
-    radial-gradient(circle at 6% 60%, rgba(203,133,117,.05), transparent 22%);
-}
+body{background:#0a0e14;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0a0e14}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
-.header{
-  background:linear-gradient(135deg,rgba(10,8,6,.97) 0%,rgba(21,18,14,.94) 100%);
-  border-bottom:1px solid rgba(212,176,122,.14);
-  padding:20px 28px 18px;
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:space-between;
-  align-items:center;
-  gap:18px;
-  position:sticky;
-  top:0;
-  z-index:100;
-  backdrop-filter:blur(14px);
-  box-shadow:0 18px 46px rgba(0,0,0,.32);
-}
-.header::after{
-  content:"";
-  position:absolute;
-  left:28px;
-  right:28px;
-  bottom:0;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(212,176,122,.45), transparent);
-}
-.brand-block{display:flex;flex-direction:column;gap:4px;min-width:0}
-.header h1{
-  font-size:26px;
-  color:var(--accent-2);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  letter-spacing:.12em;
-  font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
-  font-weight:600;
-}
+.header{background:linear-gradient(135deg,#0d1117 0%,#161b22 100%);border-bottom:1px solid #1f6feb33;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+.header h1{font-size:22px;color:#58a6ff;display:flex;align-items:center;gap:10px}
 .header h1 .logo{font-size:28px}
-.header-subtitle{font-size:12px;color:#c7b89d;letter-spacing:.14em;text-transform:uppercase}
 .scan-dot{width:10px;height:10px;border-radius:50%;background:#3fb950;display:inline-block;animation:pulse 1.5s ease-in-out infinite}
 .scan-dot.idle{background:#484f58;animation:none}
-.header .status{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.badge{padding:8px 16px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;border:1px solid rgba(255,255,255,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.badge.running{background:linear-gradient(135deg,#163f28,#1d5f3a);color:#d7ffe8;box-shadow:0 0 18px rgba(46,160,67,.25)}
-.badge.paused{background:linear-gradient(135deg,#5a4417,#7a5c1e);color:#fff1cf;box-shadow:0 0 18px rgba(227,179,65,.18)}
-.badge.stopped{background:linear-gradient(135deg,#5c1918,#7c2422);color:#ffd7d4;box-shadow:0 0 18px rgba(248,81,73,.22)}
-.jumpbar{
-  position:sticky;
-  top:77px;
-  z-index:80;
-  padding:12px 24px 4px;
-  background:linear-gradient(180deg,rgba(13,11,8,.92) 0%,rgba(13,11,8,.70) 76%,transparent 100%);
-  backdrop-filter:blur(10px);
-}
-.jumpbar-inner{
-  max-width:1640px;
-  margin:0 auto;
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-}
-.jump-link{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  text-decoration:none;
-  color:var(--muted);
-  background:linear-gradient(180deg,rgba(27,22,16,.94),rgba(21,18,14,.98));
-  border:1px solid rgba(212,176,122,.12);
-  border-radius:999px;
-  padding:10px 15px;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  transition:all .2s ease;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
-}
-.jump-link:hover{color:var(--text);border-color:rgba(212,176,122,.30);transform:translateY(-1px);background:linear-gradient(180deg,rgba(34,27,20,.96),rgba(24,20,15,.99))}
-.container{
-  width:100%;
-  max-width:1640px;
-  margin:0 auto;
-  padding:18px clamp(14px,2vw,24px) 28px;
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:16px;
-}
-.card{
-  position:relative;
-  background:linear-gradient(145deg,rgba(23,19,15,.98) 0%,rgba(18,15,11,.99) 100%);
-  border:1px solid rgba(212,176,122,.12);
-  border-radius:22px;
-  padding:22px;
-  min-width:0;
-  animation:slideIn .4s ease-out;
-  transition:border-color .3s,box-shadow .3s;
-  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,248,234,.03);
-  overflow:hidden;
-}
-.card::before{
-  content:"";
-  position:absolute;
-  left:18px;
-  right:18px;
-  top:0;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,238,209,.22), transparent);
-  pointer-events:none;
-}
-.card::after{
-  content:"";
-  position:absolute;
-  width:240px;
-  height:240px;
-  right:-120px;
-  bottom:-140px;
-  background:radial-gradient(circle, rgba(212,176,122,.08), transparent 70%);
-  pointer-events:none;
-}
-.card > *{position:relative;z-index:1}
-.card:hover{border-color:rgba(212,176,122,.18);box-shadow:0 38px 96px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,248,234,.035)}
-.priority-card{border-color:rgba(212,176,122,.18);box-shadow:0 40px 110px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,248,234,.04)}
-.secondary-card{opacity:.94}
-.card h2{
-  font-size:13px;
-  color:#c9bca6;
-  text-transform:uppercase;
-  letter-spacing:.24em;
-  margin-bottom:16px;
-  border-bottom:1px solid rgba(241,222,192,.08);
-  padding-bottom:14px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  position:relative;
-}
-.card h2::after{
-  content:"";
-  position:absolute;
-  left:0;
-  bottom:-1px;
-  width:84px;
-  height:1px;
-  background:linear-gradient(90deg, rgba(212,176,122,.5), transparent);
-}
-.card h2 .icon{display:none}
+.header .status{display:flex;gap:12px;align-items:center}
+.badge{padding:5px 14px;border-radius:12px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.badge.running{background:linear-gradient(135deg,#238636,#2ea043);color:#fff;box-shadow:0 0 12px rgba(46,160,67,.4)}
+.badge.paused{background:linear-gradient(135deg,#d29922,#e3b341);color:#000;box-shadow:0 0 12px rgba(227,179,65,.4)}
+.badge.stopped{background:linear-gradient(135deg,#da3633,#f85149);color:#fff;box-shadow:0 0 12px rgba(248,81,73,.4)}
+.container{max-width:1500px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:linear-gradient(145deg,#161b22 0%,#0d1117 100%);border:1px solid #30363d;border-radius:12px;padding:18px;animation:slideIn .4s ease-out;transition:border-color .3s,box-shadow .3s}
+.card:hover{border-color:#1f6feb55;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.card h2{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;border-bottom:1px solid #21262d;padding-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h2 .icon{font-size:16px}
 .full{grid-column:1/-1}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
-.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
-.metrics.metrics-risk{grid-template-columns:repeat(6,minmax(0,1fr))}
-.metrics.pnl-grid .metric{padding:14px 10px}
-.metrics.pnl-grid .metric .value{
-  display:block;
-  width:100%;
-  min-width:0;
-  font-variant-numeric:tabular-nums;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:clip;
-}
-.metrics.pnl-grid .metric .label{
-  display:block;
-  letter-spacing:.12em;
-}
-.metric{text-align:center;padding:16px 12px;background:linear-gradient(180deg,rgba(28,22,16,.96),rgba(20,17,13,.98));border-radius:18px;border:1px solid rgba(241,222,192,.06);transition:all .3s;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,248,234,.025)}
-.metric:hover{border-color:rgba(212,176,122,.20);box-shadow:0 18px 32px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,248,234,.035)}
-.metric .value{font-size:18px;font-weight:900;color:var(--accent-2);transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.metrics.pnl-grid{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.metric{text-align:center;padding:12px 8px;background:linear-gradient(145deg,#0d1117,#161b22);border-radius:8px;border:1px solid #21262d;transition:all .3s;overflow:hidden}
+.metric:hover{border-color:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.metric .value{font-size:16px;font-weight:800;color:#58a6ff;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .metric .value.positive{color:#3fb950}
 .metric .value.negative{color:#f85149}
 .metric .value.muted{color:#6e7681!important}
 .metric .value.animated{animation:countUp .4s ease-out}
-.metric .label{font-size:10px;color:var(--muted);margin-top:8px;text-transform:uppercase;letter-spacing:.16em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.big-pnl{font-weight:900;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:none}
+.metric .label{font-size:9px;color:#6e7681;margin-top:5px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big-pnl{font-size:17px!important;font-weight:800!important;line-height:1.1;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;animation:neonPulse 2s ease-in-out infinite}
 .recon-banner{display:none;margin:0 0 12px 0;padding:12px 14px;border:1px solid #8b0000;border-radius:10px;background:linear-gradient(145deg,#2a0f12,#1c0b0d);color:#ffb3b3;font-size:12px;line-height:1.45;white-space:normal;word-break:break-word;overflow-wrap:anywhere;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .recon-banner strong{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ff8e8e;margin-bottom:4px}
 .recon-banner .muted{color:#d88f8f}
-table{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0}
-th{text-align:left;font-size:10px;color:#c7b89d;text-transform:uppercase;letter-spacing:.18em;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(26,21,15,.98),rgba(21,18,14,.98));position:sticky;top:0;z-index:1}
-td{padding:14px 14px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;transition:background .2s;color:#ece3d5;vertical-align:top}
-tbody tr:nth-child(even) td{background:rgba(255,255,255,.012)}
-tbody tr:hover td{background:rgba(241,222,192,.028)}
-td strong{color:var(--accent-2);font-weight:700}
-.positive{color:#58d06b}.negative{color:#ff6e63}.info{color:#7cb8ff}
-.tag{display:inline-block;padding:5px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);white-space:nowrap}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px solid #21262d}
+td{padding:8px 10px;border-bottom:1px solid #21262d44;font-size:13px;transition:background .2s}
+tr:hover td{background:#161b2288}
+.positive{color:#3fb950}.negative{color:#f85149}.info{color:#58a6ff}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
 .tag-buy{background:#23863622;color:#3fb950;border:1px solid #23863644}
-.tag-short{background:#cb857522;color:#f2b8ad;border:1px solid #cb857544}
+.tag-short{background:#a371f722;color:#d2a8ff;border:1px solid #a371f744}
 .tag-skip{background:#da363322;color:#f85149;border:1px solid #da363344}
-.tag-live{background:#264d8226;color:#7cb8ff;border:1px solid #426ba244}
+.tag-live{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
 .tag-wait{background:#e3b34122;color:#e3b341;border:1px solid #e3b34144}
 .tag-noedge{background:#6e768122;color:#8b949e;border:1px solid #6e768144}
-.tag-lock{background:#f8514922;color:#f5a397;border:1px solid #f8514944}
-.status-pill{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.status-pill.good{background:rgba(135,175,136,.12);border-color:rgba(135,175,136,.26);color:#d6f0d7}
-.status-pill.warn{background:rgba(199,163,107,.12);border-color:rgba(199,163,107,.24);color:#f2dcba}
-.status-pill.bad{background:rgba(203,133,117,.12);border-color:rgba(203,133,117,.24);color:#f3c3b9}
-.status-pill.neutral{background:rgba(212,176,122,.10);border-color:rgba(212,176,122,.22);color:#ead4af}
+.tag-lock{background:#f8514922;color:#f85149;border:1px solid #f8514944}
 .controls{display:flex;gap:8px}
-.btn{
-  padding:10px 18px;
-  border-radius:999px;
-  cursor:pointer;
-  font-weight:700;
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:.14em;
-  transition:all .2s;
-  background:transparent;
-  border:1px solid var(--line-strong);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
-}
-.btn-start{color:#dbe7dc;background:rgba(135,175,136,.08);border-color:rgba(135,175,136,.24)}
-.btn-pause{color:#f0dcc0;background:rgba(199,163,107,.08);border-color:rgba(199,163,107,.22)}
-.btn-stop{color:#efcbc4;background:rgba(203,133,117,.08);border-color:rgba(203,133,117,.22)}
-.btn-intel{color:var(--accent-2);background:rgba(212,176,122,.08);border-color:rgba(212,176,122,.22)}
-.btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.05);border-color:var(--accent)}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;transition:all .2s}
+.btn-start{background:linear-gradient(135deg,#238636,#2ea043);color:#fff}
+.btn-pause{background:linear-gradient(135deg,#d29922,#e3b341);color:#000}
+.btn-stop{background:linear-gradient(135deg,#da3633,#f85149);color:#fff}
+.btn-intel{background:linear-gradient(135deg,#1f6feb,#58a6ff);color:#fff}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .btn:active{transform:translateY(0)}
 .empty{color:#484f58;text-align:center;padding:24px;font-style:italic}
 .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
-.summary-row.setup-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
-.summary-item{background:linear-gradient(180deg,rgba(28,22,16,.96),rgba(20,17,13,.98));border:1px solid rgba(241,222,192,.06);border-radius:18px;padding:14px 12px;text-align:center;overflow:hidden;min-width:0;box-shadow:inset 0 1px 0 rgba(255,248,234,.025)}
-.summary-item .val{font-size:18px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.03em}
+.summary-item{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px 12px;text-align:center;overflow:hidden}
+.summary-item .val{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .summary-item .val.val-sm{font-size:13px;font-weight:700}
-.summary-item .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;margin-top:6px;letter-spacing:.16em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.summary-item .lbl{font-size:9px;color:#6e7681;text-transform:uppercase;margin-top:3px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .setup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.subcard{background:linear-gradient(180deg,rgba(28,22,16,.96),rgba(20,17,13,.98));border:1px solid rgba(241,222,192,.06);border-radius:18px;padding:16px;overflow:hidden;min-width:0;box-shadow:inset 0 1px 0 rgba(255,248,234,.025)}
-.subcard h3{font-size:11px;color:#bcae97;text-transform:uppercase;letter-spacing:.18em;margin-bottom:10px}
-.pending-setup-head{
-  display:grid;
-  grid-template-columns:minmax(160px,1.1fr) minmax(170px,.95fr) minmax(88px,.42fr) minmax(0,1.85fr);
-  gap:16px;
-  align-items:end;
-  padding:0 12px 12px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-}
-.pending-setup-head span{
-  font-size:10px;
-  color:#c7b89d;
-  text-transform:uppercase;
-  letter-spacing:.18em;
-}
-.pending-setups-list{
-  display:flex;
-  flex-direction:column;
-}
-.pending-setup-row{
-  display:grid;
-  grid-template-columns:minmax(160px,1.1fr) minmax(170px,.95fr) minmax(88px,.42fr) minmax(0,1.85fr);
-  gap:16px;
-  align-items:center;
-  padding:18px 12px;
-  border-bottom:1px solid rgba(255,255,255,.05);
-}
-.pending-setup-row:last-child{border-bottom:none}
-.pending-setup-symbol,
-.pending-setup-play,
-.pending-setup-state,
-.pending-setup-trigger{min-width:0}
-.pending-setup-symbol strong{
-  display:block;
-  color:var(--accent-2);
-  font-size:17px;
-  font-weight:800;
-  line-height:1.1;
-}
-.pending-setup-id{
-  margin-top:8px;
-  color:#aa9b84;
-  font-size:11px;
-  line-height:1.45;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.pending-setup-play-title{
-  color:#eee3d0;
-  font-size:15px;
-  font-weight:700;
-  line-height:1.3;
-}
-.pending-setup-play-sub{
-  margin-top:7px;
-  color:#a9987d;
-  font-size:12px;
-  line-height:1.45;
-}
-.pending-setup-state{
-  display:flex;
-  justify-content:flex-start;
-}
-.pending-setup-state .tag{
-  padding:7px 12px;
-  font-size:10px;
-}
-.pending-setup-trigger-main{
-  color:#ece3d5;
-  font-size:14px;
-  line-height:1.58;
-  display:-webkit-box;
-  -webkit-line-clamp:3;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-  overflow-wrap:anywhere;
-}
-.pending-setup-trigger-meta{
-  margin-top:8px;
-  color:#a9987d;
-  font-size:11px;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
+.subcard{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:10px;overflow:hidden}
+.subcard h3{font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
 .timeline-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto}
-.timeline-item{padding:10px 12px;background:rgba(29,24,18,.88);border:1px solid rgba(241,222,192,.06);border-radius:14px;font-size:12px;line-height:1.55}
+.timeline-item{padding:8px 10px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:12px;line-height:1.5}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-.subtle{font-size:11px;color:var(--muted)}
-.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.ai-card{
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  min-height:144px;
-  padding:18px 18px 16px;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(255,255,255,.03), transparent 34%),
-    linear-gradient(180deg,rgba(25,22,18,.98),rgba(18,16,12,.99));
-  border:1px solid rgba(241,222,192,.08);
-  border-radius:18px;
-  overflow:hidden;
-  box-shadow:inset 0 1px 0 rgba(255,248,234,.025);
-  text-align:left;
-}
-.ai-card.observer{border-color:rgba(212,176,122,.10)}
-.ai-card.advisor{border-color:rgba(212,176,122,.10)}
-.ai-card.tuner{border-color:rgba(210,168,255,.22)}
-.ai-card.pm{border-color:rgba(63,185,80,.22)}
-.ai-card-header{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  min-width:0;
-}
-.ai-card-kicker{
-  font-size:10px;
-  line-height:1;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-  color:#8f8068;
-  font-weight:800;
-}
-.ai-card-title{
-  color:var(--accent-2);
-  display:block;
-  margin:0;
-  letter-spacing:.01em;
-  font-size:15px;
-  font-weight:800;
-}
-.ai-card-body{
-  color:#ebe2d4;
-  font-size:15px;
-  line-height:1.72;
-  word-wrap:break-word;
-  overflow-wrap:break-word;
-  text-wrap:pretty;
-}
-.ai-card-body em{
-  color:#c0b29b;
-  font-style:normal;
-}
-.ai-card-body strong{
-  display:inline;
-  margin:0;
-  color:#f5ead8;
-}
-.insight-stack{
-  display:grid;
-  gap:12px;
-  margin-top:14px;
-}
-.insight-strip{
-  display:grid;
-  grid-template-columns:minmax(170px,220px) minmax(0,1fr);
-  gap:16px;
-  align-items:start;
-  padding:15px 18px;
-  background:linear-gradient(180deg,rgba(15,18,24,.84),rgba(11,14,18,.98));
-  border:1px solid rgba(124,184,255,.14);
-  border-radius:15px;
-  color:#dde5f0;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
-}
-.insight-label{
-  display:flex;
-  flex-direction:column;
-  gap:5px;
-}
-.insight-label strong{
-  display:block;
-  margin:0;
-  color:#7cb8ff;
-  font-size:12px;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:.16em;
-}
-.insight-label span{
-  font-size:10px;
-  color:#8fa0b6;
-  text-transform:uppercase;
-  letter-spacing:.14em;
-}
-.insight-body{
-  min-width:0;
-  color:#e7dde0;
-  font-size:14px;
-  line-height:1.72;
-  text-wrap:pretty;
-}
-.insight-body strong{color:#f3eadb}
-.insight-strip.tone-green{border-color:rgba(141,209,154,.14)}
-.insight-strip.tone-violet{border-color:rgba(214,181,255,.14)}
-.insight-strip.tone-rose{border-color:rgba(240,177,162,.14)}
-.insight-strip.tone-amber{border-color:rgba(227,192,127,.16)}
-.insight-strip.tone-green .insight-label strong{color:#8dd19a}
-.insight-strip.tone-violet .insight-label strong{color:#d6b5ff}
-.insight-strip.tone-rose .insight-label strong{color:#f0b1a2}
-.insight-strip.tone-amber .insight-label strong{color:#e3c07f}
-.provider-health-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:10px;
-}
-.provider-pill{
-  padding:12px 14px;
-  border-radius:14px;
-  background:rgba(255,255,255,.025);
-  border:1px solid rgba(255,255,255,.06);
-}
-.provider-pill.ok{border-color:rgba(63,185,80,.20);background:rgba(24,42,25,.34)}
-.provider-pill.fail{border-color:rgba(240,177,162,.20);background:rgba(49,23,21,.34)}
-.provider-name{
-  color:#f2e9d9;
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-.provider-state{
-  margin-top:8px;
-  font-size:12px;
-  font-weight:700;
-}
-.provider-pill.ok .provider-state{color:#8dd19a}
-.provider-pill.fail .provider-state{color:#f0b1a2}
-.provider-latency{
-  margin-top:4px;
-  color:#bcae97;
-  font-size:12px;
-}
-.provider-detail{
-  margin-top:8px;
-  color:#9e8e76;
-  font-size:11px;
-  line-height:1.55;
-}
-.operator-deck{
-  position:relative;
-  overflow:hidden;
-}
-.operator-deck::after{
-  content:"";
-  position:absolute;
-  inset:auto -60px -60px auto;
-  width:180px;
-  height:180px;
-  background:radial-gradient(circle, rgba(79,193,181,.16), transparent 70%);
-  animation:drift 8s ease-in-out infinite;
-  pointer-events:none;
-}
-.deck-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:16px;
-  margin-bottom:16px;
-  min-width:0;
-}
-.deck-title{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  min-width:0;
-}
-.deck-kicker{
-  font-size:11px;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-  color:var(--accent);
-  font-weight:800;
-}
-.deck-title h2{
-  margin:0;
-  padding:0;
-  border:none;
-  font-size:38px;
-  line-height:.98;
-  color:var(--accent-2);
-  letter-spacing:-.03em;
-  text-transform:none;
-  font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
-  font-weight:600;
-  max-width:760px;
-}
-.deck-lead{
-  font-size:15px;
-  line-height:1.7;
-  color:#d0c3ae;
-  max-width:820px;
-}
-.deck-pill-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  min-width:0;
-}
-.deck-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:12px;
-  margin-bottom:14px;
-}
-.deck-tile{
-  background:linear-gradient(160deg,rgba(18,15,11,.96),rgba(32,26,20,.98));
-  border:1px solid rgba(241,222,192,.07);
-  border-radius:18px;
-  padding:16px;
-  min-height:124px;
-  min-width:0;
-  box-shadow:inset 0 1px 0 rgba(255,248,234,.025);
-}
-.deck-label{
-  font-size:10px;
-  text-transform:uppercase;
-  letter-spacing:.16em;
-  color:var(--muted);
-  margin-bottom:10px;
-}
-.deck-value{
-  font-size:30px;
-  font-weight:900;
-  line-height:1.05;
-  letter-spacing:-.03em;
-}
-.deck-value.positive{color:#8ff0bc}
-.deck-value.negative{color:#ffb6af}
-.deck-value.info{color:#ead3aa}
-.deck-sub{
-  margin-top:8px;
-  font-size:12px;
-  line-height:1.5;
-  color:var(--muted);
-}
-.deck-lists{
-  display:grid;
-  grid-template-columns:1.2fr 1fr 1fr;
-  gap:12px;
-}
-.brief-panel{
-  background:linear-gradient(145deg,rgba(20,17,13,.95),rgba(29,24,18,.98));
-  border:1px solid rgba(241,222,192,.06);
-  border-radius:18px;
-  padding:16px;
-  min-width:0;
-  box-shadow:inset 0 1px 0 rgba(255,248,234,.02);
-}
-.brief-panel h3{
-  font-size:11px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.16em;
-  margin-bottom:12px;
-}
-.brief-list{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.brief-item{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:10px;
-  padding:12px 14px;
-  border-radius:14px;
-  background:rgba(255,255,255,.018);
-  border:1px solid rgba(241,222,192,.06);
-}
-.brief-item-main{
-  min-width:0;
-}
-.brief-item-title{
-  font-size:13px;
-  font-weight:800;
-  color:var(--text);
-  margin-bottom:4px;
-}
-.brief-item-sub{
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.45;
-}
-.brief-empty{
-  padding:12px;
-  border-radius:12px;
-  background:rgba(255,255,255,.025);
-  color:var(--muted);
-  font-size:12px;
-  line-height:1.5;
-}
-.table-wrap{
-  width:100%;
-  max-width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
-  border-radius:18px;
-  border:1px solid rgba(241,222,192,.06);
-  background:rgba(10,8,6,.22);
-  box-shadow:inset 0 1px 0 rgba(255,248,234,.025);
-}
-.table-scroll{
-  width:100%;
-  max-width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
-  border-radius:18px;
-  border:1px solid rgba(241,222,192,.06);
-  background:rgba(10,8,6,.20);
-  box-shadow:inset 0 1px 0 rgba(255,248,234,.02);
-}
-.book-name{
-  display:flex;
-  flex-direction:column;
-  gap:3px;
-}
-.book-sub{
-  font-size:11px;
-  color:var(--muted);
-}
-.section-note{
-  color:var(--muted);
-  font-size:11px;
-  font-weight:500;
-  letter-spacing:.04em;
-  margin-left:8px;
-  text-transform:none;
-}
-.watermark{text-align:center;padding:28px 24px;color:#6a5b47;font-size:11px;letter-spacing:.28em;text-transform:uppercase}
-.activity-line{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);line-height:1.7}
-.activity-time{display:inline-block;width:66px;color:#6d614f;font-size:11px;letter-spacing:.08em}
-.activity-tag{display:inline-flex;align-items:center;justify-content:center;min-width:54px;padding:3px 8px;margin-right:8px;border-radius:999px;border:1px solid rgba(255,255,255,.06);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-.side-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.side-pill::before{content:"";width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 18px currentColor}
-.side-pill.long{color:#41d35b}
-.side-pill.short{color:#ff6258}
+.subtle{font-size:11px;color:#8b949e}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ai-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;font-size:12px;line-height:1.5;max-height:200px;overflow-y:auto;word-wrap:break-word;overflow-wrap:break-word}
+.ai-card strong{color:#58a6ff;display:block;margin-bottom:4px}
+.ai-card.tuner{border-color:#d2a8ff33}.ai-card.pm{border-color:#3fb95033}
+.watermark{text-align:center;padding:20px;color:#21262d;font-size:11px;letter-spacing:2px}
 .modal-backdrop{position:fixed;inset:0;background:rgba(10,14,20,.78);display:none;align-items:center;justify-content:center;z-index:300}
 .modal-backdrop.open{display:flex}
 .modal{width:min(680px,92vw);background:linear-gradient(145deg,#161b22 0%,#0d1117 100%);border:1px solid #30363d;border-radius:14px;padding:18px;box-shadow:0 12px 60px rgba(0,0,0,.45)}
@@ -2652,228 +1737,30 @@ td strong{color:var(--accent-2);font-weight:700}
 .chat-role{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .chat-examples{font-size:12px;color:#8b949e;line-height:1.6;margin-bottom:12px}
 .chat-input{width:100%;min-height:96px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#c9d1d9;padding:12px;font-size:13px;resize:vertical}
-.equity-chart-shell{
-  width:100%;
-  height:248px;
-  border-radius:18px;
-  border:1px solid rgba(212,176,122,.10);
-  background:
-    radial-gradient(circle at 18% 16%, rgba(212,176,122,.08), transparent 34%),
-    radial-gradient(circle at 84% 18%, rgba(114,141,196,.10), transparent 28%),
-    linear-gradient(180deg, rgba(15,18,28,.96), rgba(20,16,12,.98));
-  box-shadow:
-    inset 0 1px 0 rgba(255,248,234,.03),
-    inset 0 -28px 80px rgba(6,8,14,.34);
-  overflow:hidden;
-}
-.equity-chart-empty{
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#9a907e;
-  font-size:12px;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-.equity-chart-shell .apexcharts-canvas,
-.equity-chart-shell .apexcharts-svg{background:transparent !important}
-.equity-chart-shell .apexcharts-gridline{stroke:rgba(212,176,122,.08)}
-.equity-chart-shell .apexcharts-tooltip{
-  backdrop-filter:blur(14px);
-  background:rgba(12,13,18,.92) !important;
-  border:1px solid rgba(212,176,122,.20) !important;
-  box-shadow:0 18px 45px rgba(0,0,0,.28);
-}
-.equity-chart-shell .apexcharts-tooltip-title{
-  background:rgba(212,176,122,.08) !important;
-  border-bottom:1px solid rgba(212,176,122,.12) !important;
-  color:#f4e7d1 !important;
-}
-.equity-chart-shell .apexcharts-xaxistooltip,
-.equity-chart-shell .apexcharts-yaxistooltip{
-  background:rgba(12,13,18,.94) !important;
-  border:1px solid rgba(212,176,122,.18) !important;
-  color:#f3eadc !important;
-}
-.equity-curve-toolbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  margin-bottom:10px;
-  flex-wrap:wrap;
-}
-.equity-curve-meta{
-  flex:1 1 360px;
-  min-width:260px;
-  font-size:12px;
-  color:#a9987d;
-  line-height:1.55;
-}
-.equity-range-tabs{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:4px;
-  border-radius:999px;
-  border:1px solid rgba(212,176,122,.12);
-  background:rgba(21,18,13,.82);
-  box-shadow:inset 0 1px 0 rgba(255,248,234,.03);
-}
-.equity-range-btn{
-  border:none;
-  outline:none;
-  cursor:pointer;
-  border-radius:999px;
-  padding:7px 12px;
-  background:transparent;
-  color:#a9987d;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
-}
-.equity-range-btn:hover{
-  color:#efe2cb;
-  background:rgba(212,176,122,.08);
-}
-.equity-range-btn.active{
-  color:#fcf5e8;
-  background:linear-gradient(180deg, rgba(212,176,122,.22), rgba(212,176,122,.12));
-  box-shadow:0 0 0 1px rgba(212,176,122,.14) inset, 0 10px 20px rgba(0,0,0,.18);
-}
-.equity-range-btn:focus-visible{
-  box-shadow:0 0 0 2px rgba(212,176,122,.22);
-}
-@media (max-width:1500px){
-  .metrics.metrics-risk{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .summary-row.setup-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .pending-setup-head,
-  .pending-setup-row{
-    grid-template-columns:minmax(150px,1fr) minmax(150px,.88fr) minmax(80px,.38fr) minmax(0,1.7fr);
-  }
-}
 @media (max-width:1100px){
   .container{grid-template-columns:1fr}
-  .ai-grid,.setup-grid,.deck-grid,.deck-lists{grid-template-columns:1fr}
-  .deck-top{flex-direction:column}
-  .jumpbar{top:84px}
-  .header{padding:18px 16px 16px}
-  .jumpbar{padding:10px 16px 4px}
-  .card{padding:18px}
-  .deck-title h2{font-size:32px}
-  .metrics.metrics-risk{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .insight-strip{grid-template-columns:1fr}
-  .equity-curve-toolbar{align-items:flex-start}
-  .summary-row.setup-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .pending-setup-head{
-    display:none;
-  }
-  .pending-setup-row{
-    grid-template-columns:1.1fr .9fr;
-    align-items:start;
-  }
-  .pending-setup-state{
-    grid-column:1/2;
-  }
-  .pending-setup-trigger{
-    grid-column:1/-1;
-    padding-top:2px;
-  }
-}
-@media (max-width:700px){
-  .metrics.metrics-risk{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ai-card-body{font-size:14px}
-  .insight-body{font-size:13px}
-  .summary-row.setup-summary{grid-template-columns:1fr}
-  .pending-setup-row{
-    grid-template-columns:1fr;
-    gap:12px;
-  }
-  .pending-setup-state,
-  .pending-setup-trigger{grid-column:auto}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ai-grid,.setup-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <div class="header">
-  <div class="brand-block">
-    <h1><span class="logo"><svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="vg" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#4fc1b5"/><stop offset="100%" stop-color="#f6b85f"/></linearGradient></defs><path d="M15 75L45 15L55 45L85 15L55 75L45 50Z" fill="url(#vg)"/></svg></span>VELOX <span class="scan-dot idle" id="scanDot"></span></h1>
-    <div class="header-subtitle">Operator Console for Capital, Risk, Execution, and Governance</div>
-  </div>
+  <h1><span class="logo"><svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="vg" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#58a6ff"/><stop offset="100%" stop-color="#a371f7"/></linearGradient></defs><path d="M15 75L45 15L55 45L85 15L55 75L45 50Z" fill="url(#vg)"/></svg></span>VELOX <span class="scan-dot idle" id="scanDot"></span></h1>
   <div class="status">
     <span id="statusBadge" class="badge stopped">LOADING</span>
     <div class="controls">
-      <button class="btn btn-intel" onclick="openCopilotModal()">Copilot</button>
-      <button class="btn btn-start" onclick="api('/api/resume','POST')">Resume</button>
-      <button class="btn btn-pause" onclick="api('/api/pause','POST')">Pause</button>
-      <button class="btn btn-stop" onclick="api('/api/stop','POST')">Stop</button>
+      <button class="btn btn-intel" onclick="openCopilotModal()">💬 Ask AI</button>
+      <button class="btn btn-start" onclick="api('/api/resume','POST')">▶ Resume</button>
+      <button class="btn btn-pause" onclick="api('/api/pause','POST')">⏸ Pause</button>
+      <button class="btn btn-stop" onclick="api('/api/stop','POST')">⏹ Stop</button>
     </div>
-  </div>
-</div>
-<div class="jumpbar">
-  <div class="jumpbar-inner">
-    <a class="jump-link" href="#operatorDeck">Command Deck</a>
-    <a class="jump-link" href="#capitalDesk">Capital</a>
-    <a class="jump-link" href="#booksDesk">Books</a>
-    <a class="jump-link" href="#liveDesk">Live Desk</a>
-    <a class="jump-link" href="#systemDesk">System</a>
-    <a class="jump-link" href="#researchDesk">Research</a>
   </div>
 </div>
 <div class="container">
 
-  <div class="card full priority-card operator-deck" id="operatorDeck">
-    <div class="deck-top">
-      <div class="deck-title">
-        <div class="deck-kicker">Operator Deck</div>
-        <h2>Run the machine from the top down.</h2>
-        <div class="deck-lead" id="operatorLead">Loading the current capital, risk, and execution picture...</div>
-      </div>
-      <div class="deck-pill-row" id="operatorPills"></div>
-    </div>
-    <div class="deck-grid">
-      <div class="deck-tile">
-        <div class="deck-label">Capital</div>
-        <div class="deck-value info" id="deckCapitalValue">—</div>
-        <div class="deck-sub" id="deckCapitalSub">Waiting for broker snapshot</div>
-      </div>
-      <div class="deck-tile">
-        <div class="deck-label">Live Risk</div>
-        <div class="deck-value" id="deckRiskValue">—</div>
-        <div class="deck-sub" id="deckRiskSub">Heat, drawdown, and open exposure</div>
-      </div>
-      <div class="deck-tile">
-        <div class="deck-label">Integrity</div>
-        <div class="deck-value" id="deckIntegrityValue">—</div>
-        <div class="deck-sub" id="deckIntegritySub">Reconciliation and trust state</div>
-      </div>
-      <div class="deck-tile">
-        <div class="deck-label">Execution</div>
-        <div class="deck-value" id="deckExecutionValue">—</div>
-        <div class="deck-sub" id="deckExecutionSub">Positions, pending setups, and market state</div>
-      </div>
-    </div>
-    <div class="deck-lists">
-      <div class="brief-panel">
-        <h3>What Needs Attention</h3>
-        <div id="operatorAlerts" class="brief-list"></div>
-      </div>
-      <div class="brief-panel">
-        <h3>Hot / Cold Books</h3>
-        <div id="operatorBooks" class="brief-list"></div>
-      </div>
-      <div class="brief-panel">
-        <h3>Live Focus</h3>
-        <div id="operatorFocus" class="brief-list"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- P&L Terminal -->
-  <div class="card full priority-card" id="capitalDesk">
+  <div class="card full">
     <h2><span class="icon">💰</span> P&L Terminal <span id="pnlTimestamp" style="margin-left:auto;color:#484f58;font-size:11px;font-weight:400"></span></h2>
     <div id="reconBanner" class="recon-banner"></div>
     <div class="metrics pnl-grid" id="pnlMetrics">
@@ -2894,63 +1781,40 @@ td strong{color:var(--accent-2);font-weight:700}
   <!-- Equity Curve -->
   <div class="card full">
     <h2><span class="icon">📈</span> Equity Curve <span id="equityCurveStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
-    <div class="equity-curve-toolbar">
-      <div id="equityCurveMeta" class="equity-curve-meta">Loading...</div>
-      <div class="equity-range-tabs" id="equityCurveRanges" aria-label="Equity curve range">
-        <button type="button" class="equity-range-btn active" data-range="1D" onclick="setEquityRange('1D')">1D</button>
-        <button type="button" class="equity-range-btn" data-range="1W" onclick="setEquityRange('1W')">1W</button>
-        <button type="button" class="equity-range-btn" data-range="1M" onclick="setEquityRange('1M')">1M</button>
-      </div>
-    </div>
-    <div id="equityCurveChart" class="equity-chart-shell"></div>
+    <div id="equityCurveMeta" style="font-size:12px;color:#8b949e;margin-bottom:8px">Loading...</div>
+    <svg id="equityCurveSvg" viewBox="0 0 900 180" preserveAspectRatio="none" style="width:100%;height:180px;background:#0b1020;border:1px solid #21262d;border-radius:8px"></svg>
   </div>
 
   <!-- Performance Metrics -->
-  <div class="card full" id="riskDesk">
+  <div class="card full">
     <h2><span class="icon">📊</span> Risk Metrics</h2>
-    <div class="metrics metrics-risk" id="metrics"></div>
-  </div>
-
-  <div class="card full priority-card" id="booksDesk">
-    <h2><span class="icon">📚</span> Book Scoreboard <span class="section-note">Capital should follow proven expectancy, not noise.</span> <span id="bookScoreStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
-    <div class="summary-row" id="bookScoreSummary"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Book</th><th>Status</th><th>Live</th><th>Realized</th><th>Unrealized</th><th>Trades</th><th>Win Rate</th><th>Expect.</th><th>PF</th><th>Max DD</th><th>Why</th></tr>
-        </thead>
-        <tbody id="bookScoreboard"></tbody>
-      </table>
-    </div>
+    <div class="metrics" id="metrics"></div>
   </div>
 
   <!-- AI Layers -->
-  <div class="card full secondary-card" id="systemDesk">
+  <div class="card full">
     <h2><span class="icon">🧠</span> AI Layers <span id="aiEnabled" style="margin-left:auto;color:#8b949e;font-size:11px"></span></h2>
     <div id="aiStatus" class="empty">Loading AI status...</div>
   </div>
 
   <!-- Consensus Panel -->
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">🗳️</span> AI Agent Jury <span style="font-size:11px;color:#6e7681;font-weight:400;margin-left:8px">Resolver-aware play selection</span> <span id="consensusStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="consensusSummary"></div>
-    <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Verdict</th><th>Play</th><th>Mode</th><th>State</th><th>Confidence</th><th>Size</th><th>Trigger / Why</th></tr></thead>
-    <tbody id="consensus"></tbody></table></div>
+    <table><thead><tr><th>Symbol</th><th>Verdict</th><th>Play</th><th>Mode</th><th>State</th><th>Confidence</th><th>Size</th><th>Trigger / Why</th></tr></thead>
+    <tbody id="consensus"></tbody></table>
   </div>
 
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">🧭</span> Setup Resolver <span id="setupOpsStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
-    <div class="summary-row setup-summary" id="setupOpsSummary"></div>
+    <div class="summary-row" id="setupOpsSummary"></div>
     <div class="setup-grid">
       <div class="subcard">
         <h3>Pending Setups</h3>
-        <div class="pending-setup-head">
-          <span>Symbol</span>
-          <span>Play</span>
-          <span>State</span>
-          <span>Trigger</span>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Symbol</th><th>Play</th><th>State</th><th>Trigger</th><th>Expires</th></tr></thead>
+          <tbody id="pendingSetups"></tbody></table>
         </div>
-        <div id="pendingSetups" class="pending-setups-list"><div class="empty">Loading pending setups...</div></div>
       </div>
       <div class="subcard">
         <h3>Mode Report</h3>
@@ -2974,7 +1838,7 @@ td strong{color:var(--accent-2);font-weight:700}
   </div>
 
   <!-- Trade History Panel -->
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">💰</span> Trade History <span id="tradeStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div class="summary-row" id="tradeSummary"></div>
     <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th><th>Strategy</th><th>Tier</th><th>Ratchet</th><th>Sources</th><th>Slip</th><th>Latency</th></tr></thead>
@@ -2982,17 +1846,17 @@ td strong{color:var(--accent-2);font-weight:700}
   </div>
 
   <!-- Strategy Controls -->
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">🧩</span> Strategy Controls <span id="strategyControlsStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
-    <div class="table-scroll"><table><thead><tr><th>Strategy Tag</th><th>Status</th><th>Reason</th><th>Timestamp</th><th>Source</th></tr></thead>
-    <tbody id="strategyControls"></tbody></table></div>
+    <table><thead><tr><th>Strategy Tag</th><th>Status</th><th>Reason</th><th>Timestamp</th><th>Source</th></tr></thead>
+    <tbody id="strategyControls"></tbody></table>
   </div>
 
   <!-- Portfolio -->
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">💼</span> Alpaca Portfolio <span id="portfolioValue" style="margin-left:auto;color:#58a6ff;font-size:12px"></span></h2>
-    <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Shares</th><th>Avg Price</th><th>Current</th><th>Value</th><th>P&L</th></tr></thead>
-    <tbody id="portfolio"></tbody></table></div>
+    <table><thead><tr><th>Symbol</th><th>Shares</th><th>Avg Price</th><th>Current</th><th>Value</th><th>P&L</th></tr></thead>
+    <tbody id="portfolio"></tbody></table>
   </div>
 
   <!-- Options Positions -->
@@ -3003,22 +1867,22 @@ td strong{color:var(--accent-2);font-weight:700}
   </div>
 
   <!-- Activity Feed + Watchlist side by side -->
-  <div class="card priority-card" id="liveDesk">
+  <div class="card">
     <h2><span class="icon">🧠</span> Bot Activity Feed</h2>
     <div id="activityFeed" style="max-height:600px;overflow-y:auto;font-size:12px;line-height:1.8;word-wrap:break-word;overflow-wrap:break-word"></div>
   </div>
-  <div class="card priority-card">
+  <div class="card">
     <h2><span class="icon">📋</span> Watchlist <span id="watchlistCount" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
-    <div class="table-scroll"><table><thead><tr><th>Ticker</th><th>Side</th><th>Conv</th><th>Source</th><th>Reason</th></tr></thead>
-    <tbody id="watchlist"></tbody></table></div>
+    <table><thead><tr><th>Ticker</th><th>Side</th><th>Conv</th><th>Source</th><th>Reason</th></tr></thead>
+    <tbody id="watchlist"></tbody></table>
   </div>
 
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">🧠</span> Human Intel <span id="humanIntelCount" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div id="humanIntelList" class="empty">No operator context yet</div>
   </div>
 
-  <div class="card full secondary-card" id="researchDesk">
+  <div class="card full">
     <h2><span class="icon">📡</span> Copy Trader Intel</h2>
     <div class="summary-row" id="copyTraderSummary"></div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
@@ -3041,32 +1905,32 @@ td strong{color:var(--accent-2);font-weight:700}
   </div>
 
   <!-- Positions + Candidates side by side -->
-  <div class="card priority-card">
+  <div class="card">
     <h2><span class="icon">📈</span> Bot Positions</h2>
     <div style="overflow-x:auto"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Current</th><th>P&L</th><th>Play</th><th>Mode</th><th>Ratchet</th><th>Protection</th><th>Hold</th></tr></thead>
     <tbody id="positions"></tbody></table></div>
   </div>
-  <div class="card priority-card">
+  <div class="card">
     <h2><span class="icon">🔍</span> Live Scanner Candidates <span id="candidateStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
     <div id="candidateMeta" style="font-size:12px;color:#8b949e;margin-bottom:8px"></div>
-    <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol</th><th>Sent</th><th>Score</th><th>UW</th></tr></thead>
-    <tbody id="candidates"></tbody></table></div>
+    <table><thead><tr><th>Symbol</th><th>Price</th><th>Change</th><th>Vol</th><th>Sent</th><th>Score</th><th>UW</th></tr></thead>
+    <tbody id="candidates"></tbody></table>
   </div>
 
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">🧭</span> Research Universe <span id="researchStats" style="margin-left:auto;color:#6e7681;font-size:11px;font-weight:400"></span></h2>
-    <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Side</th><th>Source</th><th>Priority</th><th>Context</th></tr></thead>
-    <tbody id="researchUniverse"></tbody></table></div>
+    <table><thead><tr><th>Symbol</th><th>Side</th><th>Source</th><th>Priority</th><th>Context</th></tr></thead>
+    <tbody id="researchUniverse"></tbody></table>
   </div>
 
   <!-- Recent Exits -->
-  <div class="card full secondary-card">
+  <div class="card full">
     <h2><span class="icon">📋</span> Recent Exits</h2>
-    <div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th></tr></thead>
-    <tbody id="history"></tbody></table></div>
+    <table><thead><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th><th>%</th><th>Reason</th><th>Hold</th></tr></thead>
+    <tbody id="history"></tbody></table>
   </div>
 </div>
-<div class="watermark">Velox Private Operator Console</div>
+<div class="watermark">VELOX v2.0 — autonomous velocity trading</div>
 
 <div id="copilotModal" class="modal-backdrop" onclick="if(event.target===this)closeCopilotModal()">
   <div class="modal" style="width:min(920px,95vw)">
@@ -3110,20 +1974,10 @@ td strong{color:var(--accent-2);font-weight:700}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 const $ = s => document.getElementById(s);
 let _prevPnl = null;
 let _copilotHistory = [];
-let _equityChart = null;
-let _apexLoader = null;
-let _lastEquityPayload = {points: [], meta: {}};
-let _equityRange = '1D';
-const _equityRangeConfig = {
-  '1D': {limit: 120, label: '1D'},
-  '1W': {limit: 160, label: '1W'},
-  '1M': {limit: 90, label: '1M'},
-};
 const _dashToken = new URLSearchParams(window.location.search).get('token') || '';
 function withToken(url) {
   if (!_dashToken) return url;
@@ -3173,24 +2027,6 @@ function fmtRelativeSeconds(secs) {
   const hours = Math.floor(mins / 60);
   if (hours < 1) return `${mins}m`;
   return `${hours}h ${mins % 60}m`;
-}
-function compactSetupId(setupId) {
-  const text = String(setupId || '').trim();
-  if (!text) return '';
-  const parts = text.split(':');
-  const compact = parts.length > 2 ? parts.slice(2).join(' · ') : text;
-  return compact.length > 36 ? compact.slice(0, 36) + '…' : compact;
-}
-function compactTimingLabel(state) {
-  const text = String(state || '').toLowerCase();
-  if (!text || text === 'wait_for_trigger') return 'Wait';
-  if (text === 'enter_now') return 'Enter';
-  if (text === 'broker_blocked') return 'Broker Blocked';
-  if (text === 'capital_blocked') return 'Capital Blocked';
-  if (text === 'shadow_only') return 'Shadow';
-  if (text === 'data_insufficient') return 'Insufficient';
-  if (text === 'mode_conflict') return 'Conflict';
-  return humanizeKey(text);
 }
 function pickReplaySymbol(lastConsensus, pendingPayload, entryControls) {
   const lastSymbol = String(lastConsensus?.symbol || '').trim().toUpperCase();
@@ -3281,666 +2117,30 @@ function topPnlBucket(obj) {
   rows.sort((a, b) => (b[1]?.pnl || 0) - (a[1]?.pnl || 0));
   return {name: rows[0][0], pnl: rows[0][1]?.pnl || 0};
 }
-function ensureApexCharts() {
-  if (window.ApexCharts) return Promise.resolve(true);
-  if (_apexLoader) return _apexLoader;
-  _apexLoader = new Promise(resolve => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/apexcharts';
-    script.async = true;
-    script.dataset.apexchartsLoader = '1';
-    script.onload = () => resolve(!!window.ApexCharts);
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
-  return _apexLoader;
-}
-function destroyEquityChart() {
-  if (_equityChart) {
-    _equityChart.destroy();
-    _equityChart = null;
-  }
-}
-function renderEquityCurveFallback(points, meta={}) {
-  const shell = $('equityCurveChart');
-  if (!shell) return;
-  destroyEquityChart();
+function renderEquityCurve(points) {
+  const svg = $('equityCurveSvg');
+  if (!svg) return;
   if (!points || points.length < 2) {
-    shell.innerHTML = '<div class="equity-chart-empty">Not enough trade history for equity curve</div>';
+    svg.innerHTML = '<text x="20" y="90" fill="#8b949e" font-size="12">Not enough trade history for equity curve</text>';
     return;
   }
-  const w = 900, h = 248, padX = 18, padY = 16;
-  const ys = points.map(p => Number(p.equity || 0));
+  const w = 900, h = 180, pad = 12;
+  const ys = points.map(p => p.equity || 0);
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
   const spanY = (maxY - minY) || 1;
-  const first = ys[0];
-  const last = ys[ys.length - 1];
-  const positive = last >= first;
-  const line = positive ? '#d7bc8a' : '#dba792';
-  const glow = positive ? 'rgba(215,188,138,.32)' : 'rgba(219,167,146,.28)';
-  const fill = positive ? 'rgba(215,188,138,.18)' : 'rgba(219,167,146,.14)';
-  const coords = points.map((p, i) => {
-    const x = padX + (i / (points.length - 1)) * (w - (padX * 2));
-    const y = h - padY - (((Number(p.equity || 0) - minY) / spanY) * (h - (padY * 2)));
-    return [x, y];
-  });
-  const pts = coords.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
-  const areaPts = `${padX},${h - padY} ${pts} ${w - padX},${h - padY}`;
-  const lastPoint = coords[coords.length - 1];
-  const baseline = meta.startingEquity || first;
-  const baselineY = h - padY - (((baseline - minY) / spanY) * (h - (padY * 2)));
-  shell.innerHTML = `
-    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:100%">
-      <defs>
-        <linearGradient id="equityPanelWash" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="rgba(17,22,34,.82)" />
-          <stop offset="100%" stop-color="rgba(14,12,9,.98)" />
-        </linearGradient>
-        <linearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${fill}" />
-          <stop offset="100%" stop-color="rgba(0,0,0,0)" />
-        </linearGradient>
-        <filter id="curveGlow">
-          <feGaussianBlur stdDeviation="5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <rect x="0" y="0" width="${w}" height="${h}" rx="18" fill="url(#equityPanelWash)" />
-      <line x1="${padX}" y1="${h - padY}" x2="${w - padX}" y2="${h - padY}" stroke="rgba(212,176,122,.08)" stroke-width="1" />
-      <line x1="${padX}" y1="${baselineY.toFixed(2)}" x2="${w - padX}" y2="${baselineY.toFixed(2)}" stroke="rgba(212,176,122,.12)" stroke-dasharray="4 8" stroke-width="1" />
-      <polygon points="${areaPts}" fill="url(#equityFill)" />
-      <polyline points="${pts}" fill="none" stroke="${glow}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#curveGlow)" opacity=".42" />
-      <polyline points="${pts}" fill="none" stroke="${line}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-      <circle cx="${lastPoint[0].toFixed(2)}" cy="${lastPoint[1].toFixed(2)}" r="5.5" fill="${line}" stroke="rgba(255,248,234,.82)" stroke-width="2" />
-    </svg>
+  const pts = points.map((p, i) => {
+    const x = pad + (i / (points.length - 1)) * (w - 2 * pad);
+    const y = h - pad - (((p.equity || 0) - minY) / spanY) * (h - 2 * pad);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+  const last = points[points.length - 1]?.equity || 0;
+  const first = points[0]?.equity || 0;
+  const stroke = last >= first ? '#3fb950' : '#f85149';
+  svg.innerHTML = `
+    <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="2.5" />
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#21262d" stroke-width="1" />
   `;
-}
-function renderEquityCurveApex(points, meta={}) {
-  const shell = $('equityCurveChart');
-  if (!shell || !window.ApexCharts) return false;
-  if (!points || points.length < 2) {
-    renderEquityCurveFallback(points, meta);
-    return true;
-  }
-  const ys = points.map(p => Number(p.equity || 0));
-  const first = ys[0];
-  const last = ys[ys.length - 1];
-  const positive = last >= first;
-  const spanY = (Math.max(...ys) - Math.min(...ys)) || 1;
-  const axisPad = Math.max(spanY * 0.18, 28);
-  const useDatetime = points.every(p => Number(p.timestamp || 0) > 0);
-  const series = points.map((p, idx) => ({
-    x: useDatetime ? Number(p.timestamp) * 1000 : idx + 1,
-    y: Number(p.equity || 0),
-  }));
-  const tone = positive
-    ? {
-        line: '#d8bf93',
-        fillTo: '#5fd3c6',
-        marker: '#f4e5cb',
-        labelBorder: 'rgba(216,191,147,.26)',
-        shadow: 'rgba(216,191,147,.22)',
-      }
-    : {
-        line: '#d9b28e',
-        fillTo: '#a96d64',
-        marker: '#f2d7c3',
-        labelBorder: 'rgba(217,178,142,.24)',
-        shadow: 'rgba(169,109,100,.24)',
-      };
-  const latestPoint = series[series.length - 1];
-  const baseline = Number(meta.startingEquity || first);
-  const highY = Math.max(...ys);
-  const highIndex = ys.indexOf(highY);
-  const annotations = {
-    yaxis: [
-      {
-        y: baseline,
-        borderColor: 'rgba(212,176,122,.18)',
-        strokeDashArray: 6,
-        label: {
-          text: 'START',
-          borderColor: 'rgba(212,176,122,.18)',
-          style: {
-            background: 'rgba(15,14,12,.84)',
-            color: '#d5c0a1',
-            fontSize: '10px',
-            fontWeight: 700,
-          },
-        },
-      },
-    ],
-    points: [
-      {
-        x: latestPoint.x,
-        y: latestPoint.y,
-        marker: {
-          size: 5,
-          fillColor: tone.marker,
-          strokeColor: tone.line,
-          strokeWidth: 3,
-        },
-        label: {
-          text: fmtUsd(latestPoint.y),
-          borderColor: tone.labelBorder,
-          offsetY: -8,
-          style: {
-            background: 'rgba(11,13,18,.88)',
-            color: '#f5ead8',
-            fontSize: '11px',
-            fontWeight: 700,
-          },
-        },
-      },
-    ],
-  };
-  if (highIndex > 0 && highIndex < series.length - 1) {
-    annotations.points.push({
-      x: series[highIndex].x,
-      y: series[highIndex].y,
-      marker: {
-        size: 0,
-        fillColor: 'transparent',
-        strokeColor: 'transparent',
-      },
-      label: {
-        text: 'HIGH',
-        borderColor: 'rgba(255,255,255,.10)',
-        offsetY: -10,
-        style: {
-          background: 'rgba(11,13,18,.62)',
-          color: '#e7d7bb',
-          fontSize: '10px',
-          fontWeight: 700,
-        },
-      },
-    });
-  }
-  const options = {
-    chart: {
-      type: 'area',
-      height: 248,
-      background: 'transparent',
-      toolbar: {show: false},
-      zoom: {enabled: false},
-      foreColor: '#cbbda5',
-      fontFamily: '"Avenir Next", "SF Pro Display", "Helvetica Neue", sans-serif',
-      animations: {
-        enabled: true,
-        easing: 'easeinout',
-        speed: 650,
-        dynamicAnimation: {enabled: true, speed: 420},
-      },
-      dropShadow: {
-        enabled: true,
-        top: 10,
-        left: 0,
-        blur: 16,
-        color: tone.shadow,
-        opacity: 0.28,
-      },
-    },
-    series: [{name: 'Equity', data: series}],
-    stroke: {
-      curve: 'straight',
-      width: 3.5,
-      lineCap: 'round',
-      colors: [tone.line],
-    },
-    fill: {
-      type: 'gradient',
-      gradient: {
-        shade: 'dark',
-        type: 'vertical',
-        shadeIntensity: 0.18,
-        gradientToColors: [tone.fillTo],
-        inverseColors: false,
-        opacityFrom: 0.32,
-        opacityTo: 0.02,
-        stops: [0, 68, 100],
-      },
-    },
-    dataLabels: {enabled: false},
-    legend: {show: false},
-    markers: {
-      size: 0,
-      strokeWidth: 0,
-      hover: {size: 5},
-    },
-    grid: {
-      show: true,
-      borderColor: 'rgba(212,176,122,.08)',
-      strokeDashArray: 0,
-      padding: {top: 8, right: 18, bottom: 8, left: 18},
-      xaxis: {lines: {show: false}},
-      yaxis: {lines: {show: true}},
-    },
-    xaxis: {
-      type: useDatetime ? 'datetime' : 'numeric',
-      tickAmount: String(meta.period || _equityRange || '1D').toUpperCase() === '1D' ? 6 : 5,
-      labels: {
-        show: true,
-        trim: false,
-        hideOverlappingLabels: true,
-        style: {
-          colors: '#93876f',
-          fontSize: '11px',
-          fontWeight: 600,
-        },
-        formatter: (value, timestamp) => useDatetime ? formatEquityAxisLabel(timestamp || value, meta) : value,
-      },
-      axisBorder: {show: false},
-      axisTicks: {
-        show: true,
-        color: 'rgba(212,176,122,.08)',
-      },
-      tooltip: {enabled: false},
-      crosshairs: {
-        show: true,
-        stroke: {
-          color: 'rgba(212,176,122,.16)',
-          width: 1,
-          dashArray: 4,
-        },
-      },
-    },
-    yaxis: {
-      min: Math.min(...ys) - (axisPad * 0.35),
-      max: Math.max(...ys) + axisPad,
-      tickAmount: 4,
-      show: true,
-      labels: {
-        show: true,
-        minWidth: 72,
-        maxWidth: 72,
-        style: {
-          colors: '#8c826f',
-          fontSize: '11px',
-          fontWeight: 600,
-        },
-        formatter: value => fmtUsdCompact(value),
-      },
-    },
-    tooltip: {
-      theme: 'dark',
-      marker: {show: false},
-      x: {
-        formatter: (_value, opts) => {
-          const point = points[opts.dataPointIndex];
-          if (useDatetime && point && Number(point.timestamp || 0) > 0) {
-            return new Date(Number(point.timestamp) * 1000).toLocaleString([], {
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            });
-          }
-          return `Point ${opts.dataPointIndex + 1} of ${points.length}`;
-        },
-      },
-      y: {
-        formatter: value => `${fmtUsd(value)} · ${(meta.source === 'alpaca') ? `${timeframeLabel(meta.timeframe)} bars` : 'replay step'}`,
-      },
-    },
-    annotations,
-    states: {
-      hover: {filter: {type: 'lighten', value: 0.05}},
-      active: {filter: {type: 'none'}},
-    },
-    noData: {text: 'Not enough trade history for equity curve'},
-  };
-  if (_equityChart) {
-    _equityChart.updateOptions(options, false, true, true);
-    _equityChart.updateSeries([{name: 'Equity', data: series}], true);
-    return true;
-  }
-  shell.innerHTML = '';
-  _equityChart = new window.ApexCharts(shell, options);
-  _equityChart.render();
-  return true;
-}
-function renderEquityCurve(points, meta={}) {
-  _lastEquityPayload = {points: Array.isArray(points) ? points.slice() : [], meta: meta || {}};
-  if (window.ApexCharts) {
-    renderEquityCurveApex(_lastEquityPayload.points, _lastEquityPayload.meta);
-    return;
-  }
-  renderEquityCurveFallback(_lastEquityPayload.points, _lastEquityPayload.meta);
-  ensureApexCharts().then(loaded => {
-    if (loaded) renderEquityCurveApex(_lastEquityPayload.points, _lastEquityPayload.meta);
-  });
-}
-function fmtUsd(v) {
-  if (!(typeof v === 'number' && isFinite(v))) return '—';
-  return v.toLocaleString(undefined, {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
-}
-function fmtUsdCompact(v) {
-  if (!(typeof v === 'number' && isFinite(v))) return '—';
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    notation: 'compact',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  }).format(v);
-}
-function timeframeLabel(value) {
-  const text = String(value || '').trim();
-  if (!text) return '—';
-  return text
-    .replace('Min', 'm')
-    .replace('Hour', 'h')
-    .replace('H', 'h')
-    .replace('Day', 'd')
-    .replace('D', 'd');
-}
-function formatEquityAxisLabel(value, meta={}) {
-  const stamp = Number(value || 0);
-  if (!(stamp > 0)) return '';
-  const date = new Date(stamp);
-  const period = String(meta.period || _equityRange || '1D').toUpperCase();
-  if (period === '1D') {
-    return date.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
-  }
-  if (period === '1W') {
-    return date.toLocaleDateString([], {weekday: 'short', day: 'numeric'});
-  }
-  return date.toLocaleDateString([], {month: 'short', day: 'numeric'});
-}
-function describeEquityTimeline(firstTs, lastTs, meta={}) {
-  const first = Number(firstTs || 0);
-  const last = Number(lastTs || 0);
-  if (!(first > 0) || !(last > 0)) return '';
-  const period = String(meta.period || _equityRange || '1D').toUpperCase();
-  const firstDate = new Date(first * 1000);
-  const lastDate = new Date(last * 1000);
-  if (period === '1D') {
-    return `${firstDate.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})} → ${lastDate.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}`;
-  }
-  return `${firstDate.toLocaleDateString([], {month: 'short', day: 'numeric'})} → ${lastDate.toLocaleDateString([], {month: 'short', day: 'numeric'})}`;
-}
-function updateEquityRangeButtons() {
-  document.querySelectorAll('#equityCurveRanges .equity-range-btn').forEach(btn => {
-    const active = btn.dataset.range === _equityRange;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-}
-function setEquityRange(range) {
-  const next = String(range || '').toUpperCase();
-  if (!_equityRangeConfig[next] || next === _equityRange) return;
-  _equityRange = next;
-  updateEquityRangeButtons();
-  if ($('equityCurveMeta')) {
-    $('equityCurveMeta').textContent = 'Loading range...';
-  }
-  refresh();
-}
-function fitTextToWidth(el, minSize=12, important=false) {
-  if (!el) return;
-  el.style.removeProperty('font-size');
-  el.style.whiteSpace = 'nowrap';
-  el.style.overflowWrap = 'normal';
-  el.style.removeProperty('line-height');
-  let size = parseFloat(getComputedStyle(el).fontSize || '16');
-  while (el.scrollWidth > el.clientWidth && size > minSize) {
-    size -= 0.5;
-    if (important) el.style.setProperty('font-size', `${size}px`, 'important');
-    else el.style.fontSize = `${size}px`;
-  }
-  if (el.scrollWidth > el.clientWidth) {
-    el.style.whiteSpace = 'normal';
-    el.style.overflowWrap = 'anywhere';
-    el.style.lineHeight = '1.02';
-  }
-  return size;
-}
-function fitTextGroup(selector, minSize=12, options={}) {
-  const {important=false, allowWrap=false} = options;
-  const nodes = Array.from(document.querySelectorAll(selector)).filter(Boolean);
-  if (!nodes.length) return;
-  let groupSize = Infinity;
-  nodes.forEach(el => {
-    const measured = fitTextToWidth(el, minSize, important);
-    if (typeof measured === 'number' && isFinite(measured)) groupSize = Math.min(groupSize, measured);
-  });
-  if (!isFinite(groupSize)) return;
-  nodes.forEach(el => {
-    if (important) el.style.setProperty('font-size', `${groupSize}px`, 'important');
-    else el.style.fontSize = `${groupSize}px`;
-    el.style.whiteSpace = 'nowrap';
-    el.style.overflowWrap = 'normal';
-    el.style.removeProperty('line-height');
-  });
-  if (allowWrap) {
-    nodes.forEach(el => {
-      if (el.scrollWidth > el.clientWidth) {
-        el.style.whiteSpace = 'normal';
-        el.style.overflowWrap = 'anywhere';
-        el.style.lineHeight = '1.08';
-      }
-    });
-  }
-}
-function fitPnlMetricValues() {
-  fitTextGroup('#pnlMetrics .value', 11, {important:true});
-  fitTextGroup('#pnlMetrics .label', 8.5, {allowWrap:true});
-}
-function toneForStatus(value) {
-  const text = String(value || '').toLowerCase();
-  if (!text) return 'neutral';
-  if (['healthy','active','scale','running','enabled','ok','normal'].some(k => text.includes(k))) return 'good';
-  if (['probation','observe','paused','warn','waiting','hold','minor'].some(k => text.includes(k))) return 'warn';
-  if (['disable','disabled','critical','stopped','blocked','degraded','mismatch','broker_only'].some(k => text.includes(k))) return 'bad';
-  return 'neutral';
-}
-function statusPill(text, tone='neutral') {
-  return `<span class="status-pill ${tone}">${esc(text)}</span>`;
-}
-function formatAiNarrative(text, fallback='<em>Pending…</em>') {
-  const value = String(text || '').trim();
-  return value ? value.replace(/\n/g, '<br>') : fallback;
-}
-function aiBriefCardHtml(title, kicker, body, tone='') {
-  return `<div class="ai-card ${tone}">
-    <div class="ai-card-header">
-      <div class="ai-card-kicker">${esc(kicker)}</div>
-      <strong class="ai-card-title">${esc(title)}</strong>
-    </div>
-    <div class="ai-card-body">${formatAiNarrative(body)}</div>
-  </div>`;
-}
-function insightStripHtml(title, subtitle, bodyHtml, tone='blue') {
-  return `<div class="insight-strip tone-${tone}">
-    <div class="insight-label">
-      <strong>${esc(title)}</strong>
-      <span>${esc(subtitle)}</span>
-    </div>
-    <div class="insight-body">${bodyHtml}</div>
-  </div>`;
-}
-function renderProviderHealthGrid(providerHealth) {
-  const rows = Object.entries(providerHealth || {});
-  if (!rows.length) return '<span style="color:#9e8e76">No providers reporting.</span>';
-  return `<div class="provider-health-grid">${rows.map(([name, st]) => {
-    const ok = !!(st && st.ok);
-    const latency = (st && typeof st.latency_ms === 'number') ? `${st.latency_ms}ms` : '—';
-    const err = (st && st.error) ? String(st.error) : '';
-    return `<div class="provider-pill ${ok ? 'ok' : 'fail'}">
-      <div class="provider-name">${esc(name)}</div>
-      <div class="provider-state">${ok ? 'Operational' : 'Degraded'}</div>
-      <div class="provider-latency">${esc(latency)}</div>
-      ${err ? `<div class="provider-detail">${esc(err)}</div>` : ''}
-    </div>`;
-  }).join('')}</div>`;
-}
-function briefItemHtml(title, sub, tone='neutral', pill='') {
-  return `<div class="brief-item">
-    <div class="brief-item-main">
-      <div class="brief-item-title">${esc(title)}</div>
-      <div class="brief-item-sub">${esc(sub)}</div>
-    </div>
-    ${pill ? statusPill(pill, tone) : ''}
-  </div>`;
-}
-function renderBookScoreboard(rows) {
-  if (!$('bookScoreboard') || !$('bookScoreSummary') || !$('bookScoreStats')) return;
-  const books = Array.isArray(rows) ? rows.slice() : [];
-  const scaleCount = books.filter(row => String(row.status || '').toLowerCase() === 'scale').length;
-  const probationCount = books.filter(row => String(row.status || '').toLowerCase() === 'probation').length;
-  const disabledCount = books.filter(row => String(row.status || '').toLowerCase() === 'disable').length;
-  const positiveCount = books.filter(row => Number(row.expectancy || 0) > 0).length;
-  const liveBooks = books.filter(row => Number(row.open_position_count || 0) > 0).length;
-  $('bookScoreStats').textContent = `${books.length} books tracked`;
-  $('bookScoreSummary').innerHTML = `
-    <div class="summary-item"><div class="val info">${books.length}</div><div class="lbl">Books</div></div>
-    <div class="summary-item"><div class="val positive">${scaleCount}</div><div class="lbl">Scale</div></div>
-    <div class="summary-item"><div class="val">${liveBooks}</div><div class="lbl">Live</div></div>
-    <div class="summary-item"><div class="val" style="color:#d4b07a">${positiveCount}</div><div class="lbl">Positive Expect.</div></div>
-    <div class="summary-item"><div class="val negative">${probationCount}</div><div class="lbl">Probation</div></div>
-    <div class="summary-item"><div class="val negative">${disabledCount}</div><div class="lbl">Disabled</div></div>
-  `;
-  $('bookScoreboard').innerHTML = books.length ? books.map(row => {
-    const status = String(row.status || 'hold');
-    const action = String(row.recommended_action || 'observe');
-    const tone = toneForStatus(status);
-    const realized = Number(row.realized_pnl || 0);
-    const unrealized = Number(row.unrealized_pnl || 0);
-    const pf = row.profit_factor == null ? '—' : Number(row.profit_factor).toFixed(2);
-    const dd = row.max_drawdown == null ? '—' : fmt(-Math.abs(Number(row.max_drawdown || 0)));
-    return `<tr>
-      <td>
-        <div class="book-name">
-          <strong>${esc(humanizeKey(row.strategy_tag || 'unknown'))}</strong>
-          <div class="book-sub">${esc(humanizeKey(action))}</div>
-        </div>
-      </td>
-      <td>${statusPill(humanizeKey(status), tone)}</td>
-      <td>${Number(row.open_position_count || 0)}<div class="book-sub">${esc(humanizeKey(row.control_state || 'active'))}</div></td>
-      <td class="${cls(realized)}">${fmt(realized)}</td>
-      <td class="${cls(unrealized)}">${fmt(unrealized)}</td>
-      <td>${Number(row.trade_count || 0)}</td>
-      <td>${Number(row.win_rate_pct || 0).toFixed(1)}%</td>
-      <td class="${cls(Number(row.expectancy || 0))}">${fmt(Number(row.expectancy || 0))}</td>
-      <td>${pf}</td>
-      <td class="negative">${dd}</td>
-      <td style="font-size:11px;color:#b5a792;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.status_reason || '')}">${esc(truncateText(row.status_reason || '—', 92))}</td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="11" class="empty">No book analytics yet</td></tr>';
-}
-function renderOperatorDeck(payload) {
-  if (!$('operatorLead')) return;
-  const status = payload.status || {};
-  const pnl = payload.pnl || {};
-  const metrics = payload.metrics || {};
-  const books = Array.isArray(payload.books) ? payload.books.slice() : [];
-  const pending = Array.isArray(payload.pending) ? payload.pending : [];
-  const positions = Array.isArray(payload.positions) ? payload.positions.slice() : [];
-  const candidates = Array.isArray(payload.candidates) ? payload.candidates.slice() : [];
-  const trust = pnl.trust_flags || status.trust_flags || metrics.trust_flags || {};
-  const reconStatus = humanizeKey(pnl.reconciliation_status || status.reconciliation_status || 'unknown');
-  const brokerOnly = !!trust.broker_only_mode;
-  const degraded = !!trust.internal_analytics_degraded;
-  const paused = !!status.paused;
-  const running = !!status.running;
-  const marketOpen = !!status.market_open;
-  const hotBooks = books
-    .filter(row => Number(row.trade_count || 0) > 0)
-    .sort((a, b) => (Number(b.realized_pnl || 0) + Number(b.unrealized_pnl || 0)) - (Number(a.realized_pnl || 0) + Number(a.unrealized_pnl || 0)));
-  const bestBook = hotBooks[0];
-  const worstBook = hotBooks.slice().reverse().find(row => Number(row.realized_pnl || 0) < 0 || Number(row.expectancy || 0) < 0);
-  const topPosition = positions.slice().sort((a, b) => Math.abs(Number(b.pnl || 0)) - Math.abs(Number(a.pnl || 0)))[0];
-  const topCandidate = candidates.slice().sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0];
-  const probationBooks = books.filter(row => ['probation','disable'].includes(String(row.status || '').toLowerCase()));
-  const lead = !running
-    ? 'The engine is stopped. This surface should feel like an investment committee console, not a trading terminal.'
-    : paused
-      ? 'Trading is paused. Use this session to review integrity, book posture, and the next live promotion decision.'
-      : brokerOnly
-        ? 'Broker truth is leading right now. Treat internal analytics cautiously until reconciliation settles.'
-        : topPosition
-          ? `${positions.length} live position${positions.length === 1 ? '' : 's'} on. Primary focus: ${topPosition.symbol} ${fmt(Number(topPosition.pnl || 0))} with ${humanizeKey(topPosition.protection || 'active protection')}.`
-          : pending.length
-            ? `${pending.length} setup${pending.length === 1 ? '' : 's'} waiting for trigger. The machine is patient, not idle.`
-            : topCandidate
-              ? `No live positions. Scanner leadership is ${topCandidate.symbol} with score ${(Number(topCandidate.score || 0)).toFixed(3)} and ${fmt(Number(topCandidate.change_pct || 0), 1)}% change.`
-              : 'No urgent live risk. This is a clean window to review books, governance, and allocator posture.';
-  $('operatorLead').textContent = lead;
-  $('operatorPills').innerHTML = [
-    statusPill(running ? (paused ? 'Paused' : 'Running') : 'Stopped', running ? (paused ? 'warn' : 'good') : 'bad'),
-    statusPill(marketOpen ? 'Market Open' : 'Market Closed', marketOpen ? 'good' : 'neutral'),
-    statusPill(reconStatus, toneForStatus(reconStatus)),
-    brokerOnly ? statusPill('Broker Only', 'bad') : '',
-    degraded ? statusPill('Internal Degraded', 'warn') : '',
-    pending.length ? statusPill(`${pending.length} Pending`, 'warn') : '',
-  ].join('');
-
-  $('deckCapitalValue').textContent = fmtUsd(Number(pnl.equity || 0));
-  $('deckCapitalValue').className = `deck-value ${cls(Number(pnl.total_pnl || 0))}`;
-  $('deckCapitalSub').textContent = `${fmtUsd(Number(pnl.total_pnl || 0))} total · ${fmtUsd(Number(pnl.today_realized || pnl.broker_day_pnl || 0))} day · ROI ${(Number(pnl.roi_pct || 0)).toFixed(1)}%`;
-
-  $('deckRiskValue').textContent = `${Number(metrics.heat_pct || 0).toFixed(0)}%`;
-  $('deckRiskValue').className = `deck-value ${Number(metrics.heat_pct || 0) > 70 ? 'negative' : Number(metrics.heat_pct || 0) > 35 ? 'info' : 'positive'}`;
-  $('deckRiskSub').textContent = `Drawdown ${(Number(pnl.drawdown_pct || 0)).toFixed(1)}% · ${Number(status.positions_count || positions.length || 0)} open · tier ${humanizeKey(metrics.tier_name || '?')}`;
-
-  $('deckIntegrityValue').textContent = brokerOnly ? 'Broker-led' : degraded ? 'Caution' : 'Clean';
-  $('deckIntegrityValue').className = `deck-value ${brokerOnly ? 'negative' : degraded ? 'info' : 'positive'}`;
-  $('deckIntegritySub').textContent = `${reconStatus} · ${(trust.degraded_mode_reasons || []).length ? (trust.degraded_mode_reasons || []).slice(0,2).map(humanizeKey).join(' · ') : 'No active trust flags'}`;
-
-  $('deckExecutionValue').textContent = positions.length ? `${positions.length} live` : pending.length ? `${pending.length} queued` : 'Standby';
-  $('deckExecutionValue').className = `deck-value ${positions.length ? 'info' : pending.length ? 'positive' : 'info'}`;
-  $('deckExecutionSub').textContent = topPosition
-    ? `${topPosition.symbol} ${fmt(Number(topPosition.pnl_pct || 0))}% · ${humanizeKey(topPosition.best_play || topPosition.strategy_tag || 'active position')}`
-    : topCandidate
-      ? `${topCandidate.symbol} leads scanner · ${fmt(Number(topCandidate.change_pct || 0), 1)}%`
-      : 'No immediate execution focus';
-
-  const alerts = [];
-  if (!running) alerts.push({title:'Engine stopped', sub:'Autonomous execution is offline until you resume the process.', tone:'bad', pill:'stop'});
-  if (paused) alerts.push({title:'Trading paused', sub:'No fresh entries should be promoted while pause is active.', tone:'warn', pill:'pause'});
-  if (brokerOnly) alerts.push({title:'Broker-only mode', sub:'Internal analytics are being suppressed in favor of broker truth.', tone:'bad', pill:'integrity'});
-  else if (degraded) alerts.push({title:'Internal analytics degraded', sub:'Use the dashboard cautiously until reconciliation returns to healthy.', tone:'warn', pill:'integrity'});
-  if (Number(pnl.drawdown_pct || 0) >= 2.5) alerts.push({title:'Drawdown elevated', sub:`Current drawdown is ${(Number(pnl.drawdown_pct || 0)).toFixed(1)}% from peak equity.`, tone:'bad', pill:'risk'});
-  if (probationBooks.length) alerts.push({title:'Books on probation', sub:`${probationBooks.length} book${probationBooks.length === 1 ? '' : 's'} need tighter capital discipline.`, tone:'warn', pill:'books'});
-  if (pending.length) alerts.push({title:'Pending setups waiting', sub:`${pending.length} setup${pending.length === 1 ? '' : 's'} remain in trigger-watch state.`, tone:'neutral', pill:'setups'});
-  $('operatorAlerts').innerHTML = alerts.length
-    ? alerts.slice(0, 4).map(row => briefItemHtml(row.title, row.sub, row.tone, row.pill)).join('')
-    : '<div class="brief-empty">No urgent capital or integrity alerts. This is a stable operating window.</div>';
-
-  const bookBriefs = [];
-  if (bestBook) bookBriefs.push({title:humanizeKey(bestBook.strategy_tag), sub:`Leading realized ${fmt(Number(bestBook.realized_pnl || 0))} · expectancy ${fmt(Number(bestBook.expectancy || 0))}`, tone:toneForStatus(bestBook.status || 'scale'), pill:humanizeKey(bestBook.status || 'hold')});
-  if (worstBook) bookBriefs.push({title:humanizeKey(worstBook.strategy_tag), sub:`Weakest posture ${fmt(Number(worstBook.realized_pnl || 0))} · expectancy ${fmt(Number(worstBook.expectancy || 0))}`, tone:'bad', pill:humanizeKey(worstBook.status || 'hold')});
-  probationBooks.slice(0,2).forEach(row => {
-    bookBriefs.push({title:humanizeKey(row.strategy_tag), sub:truncateText(row.status_reason || 'Capital should remain constrained until evidence improves.', 92), tone:toneForStatus(row.status || 'probation'), pill:humanizeKey(row.status || 'probation')});
-  });
-  $('operatorBooks').innerHTML = bookBriefs.length
-    ? bookBriefs.slice(0,4).map(row => briefItemHtml(row.title, row.sub, row.tone, row.pill)).join('')
-    : '<div class="brief-empty">Book analytics will show up here once the trade history has enough evidence.</div>';
-
-  const focusItems = positions.length
-    ? positions
-        .slice()
-        .sort((a, b) => Math.abs(Number(b.pnl || 0)) - Math.abs(Number(a.pnl || 0)))
-        .slice(0, 4)
-        .map(row => ({
-          title:`${row.symbol} · ${fmt(Number(row.pnl || 0))}`,
-          sub:`${humanizeKey(row.best_play || row.strategy_tag || 'live position')} · ${row.protection || 'protection unknown'} · hold ${row.hold_time || '—'}`,
-          tone:Number(row.pnl || 0) >= 0 ? 'good' : 'bad',
-          pill:`${fmt(Number(row.pnl_pct || 0))}%`,
-        }))
-    : candidates.slice(0, 4).map(row => ({
-        title:`${row.symbol} · score ${(Number(row.score || 0)).toFixed(3)}`,
-        sub:`${fmt(Number(row.change_pct || 0),1)}% change · ${Number(row.volume_spike || 0).toFixed(1)}x volume · ${row.uw_chain_summary || row.uw_news_summary || 'scanner leadership'}`,
-        tone:'neutral',
-        pill:humanizeKey(row.strategy_tag || 'candidate'),
-      }));
-  $('operatorFocus').innerHTML = focusItems.length
-    ? focusItems.map(row => briefItemHtml(row.title, row.sub, row.tone, row.pill)).join('')
-    : '<div class="brief-empty">No live positions and no standout candidates yet.</div>';
 }
 
 async function refresh() {
@@ -3948,13 +2148,8 @@ async function refresh() {
   let _trustFlags = {};
   let _brokerOnlyMode = false;
   let _degradedInternal = false;
-  let statusPayload = null;
-  let pnlPayload = null;
-  let metricsPayload = null;
-  let bookScorePayload = null;
   // Status
   const s = await api('/api/status');
-  statusPayload = s;
   if (s) {
     const b = $('statusBadge'), dot = $('scanDot');
     if (!s.running) { b.textContent='STOPPED'; b.className='badge stopped'; dot.className='scan-dot idle'; }
@@ -3963,7 +2158,6 @@ async function refresh() {
   }
   // P&L Terminal
   const pnl = await api('/api/pnl');
-  pnlPayload = pnl;
   if (pnl) {
     const humanizeReason = (reason) => {
       const map = {
@@ -4064,45 +2258,20 @@ async function refresh() {
     $('pnlTimestamp').textContent = 'Updated: ' + new Date().toLocaleTimeString()
       + ` | Opt R/U: $${(pnl.options_realized_pnl||0).toFixed(2)} / $${(pnl.options_unrealized_pnl||0).toFixed(2)}`
       + (brokerOnly ? ' | Internal realized: suppressed' : ` | Internal realized: $${(pnl.internal_realized_pnl||0).toFixed(2)}`);
-    requestAnimationFrame(fitPnlMetricValues);
   }
   // Equity curve
-  const equityRangeCfg = _equityRangeConfig[_equityRange] || _equityRangeConfig['1D'];
-  const ec = await api(`/api/equity-curve?limit=${equityRangeCfg.limit}&period=${encodeURIComponent(_equityRange)}`);
+  const ec = await api('/api/equity-curve?limit=120');
   if (ec) {
     const pts = ec.points || [];
     const latest = pts.length ? pts[pts.length - 1] : null;
-    const first = pts.length ? pts[0] : null;
-    const startEquity = Number(ec.starting_equity || 0);
-    const latestEquity = Number(latest?.equity || 0);
-    const deltaEquity = latestEquity - startEquity;
-    const deltaPct = startEquity ? (deltaEquity / startEquity) * 100 : 0;
-    const deltaLabel = `${deltaEquity >= 0 ? '+' : '-'}${fmtUsd(Math.abs(deltaEquity))}`;
-    const pointLabel = (ec.source || '') === 'alpaca' ? 'bars' : 'steps';
-    const timelineLabel = describeEquityTimeline(
-      ec.first_timestamp || first?.timestamp,
-      ec.last_timestamp || latest?.timestamp,
-      ec,
-    );
-    const sourceLabel = ec.source ? String(ec.source).toUpperCase() : '—';
-    const granularityLabel = (ec.source || '') === 'alpaca' ? timeframeLabel(ec.timeframe) : 'replay';
-    $('equityCurveStats').textContent = `${String(ec.period || _equityRange).toUpperCase()} · ${granularityLabel} · ${sourceLabel}`;
+    $('equityCurveStats').textContent = `${ec.count || 0} trades`;
     $('equityCurveMeta').textContent = latest
-      ? `${timelineLabel || 'Recent history'} · ${pts.length || 0} ${pointLabel} · Start ${fmtUsd(startEquity)} → ${fmtUsd(latestEquity)} · ${deltaLabel} (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(2)}%)`
+      ? `Start $${(ec.starting_equity||0).toFixed(2)} -> ${pts.length ? '$'+(latest.equity||0).toFixed(2) : '—'}`
       : 'No completed trades yet';
-    renderEquityCurve(pts, {
-      startingEquity: startEquity,
-      source: ec.source || '',
-      count: ec.count || pts.length,
-      period: ec.period || _equityRange,
-      timeframe: ec.timeframe || '',
-      firstTimestamp: ec.first_timestamp || first?.timestamp || null,
-      lastTimestamp: ec.last_timestamp || latest?.timestamp || null,
-    });
+    renderEquityCurve(pts);
   }
   // Metrics
   const m = await api('/api/metrics');
-  metricsPayload = m;
   if (m) {
     if (m.trust_flags) { _trustFlags = m.trust_flags; _brokerOnlyMode = !!_trustFlags.broker_only_mode; _degradedInternal = !!_trustFlags.internal_analytics_degraded; }
     const pnlChanged = _prevPnl !== null && _prevPnl !== (m.daily_pnl||0);
@@ -4127,25 +2296,29 @@ async function refresh() {
   // AI Status
   const ai = await api('/api/ai-status');
   if (ai) {
-    $('aiEnabled').innerHTML = ai.enabled ? statusPill('Active', 'good') : statusPill('Disabled', 'bad');
+    $('aiEnabled').textContent = ai.enabled ? '✅ Active' : '❌ Disabled';
     if (ai.enabled) {
       let html = '<div class="ai-grid">';
-      html += aiBriefCardHtml('Observer', 'Market Read', ai.last_observation, 'observer');
-      html += aiBriefCardHtml('Advisor', 'Capital Posture', ai.last_advice, 'advisor');
-      html += aiBriefCardHtml('Tuner', 'Parameter Changes', ai.last_tuner_changes || '<em>No changes yet</em>', 'tuner');
-      html += aiBriefCardHtml('Position Manager', 'Live Oversight', ai.last_position_manager, 'pm');
+      html += '<div class="ai-card"><strong>🔭 Observer</strong>' + (ai.last_observation || '<em>Pending…</em>') + '</div>';
+      html += '<div class="ai-card"><strong>💡 Advisor</strong>' + (ai.last_advice || '<em>Pending…</em>') + '</div>';
+      html += '<div class="ai-card tuner"><strong>🎛️ Tuner</strong>' + (ai.last_tuner_changes || '<em>No changes yet</em>') + '</div>';
+      html += '<div class="ai-card pm"><strong>🛡️ Position Manager</strong>' + (ai.last_position_manager || '<em>Pending…</em>') + '</div>';
       html += '</div>';
-      html += '<div class="insight-stack">';
-      if (ai.overnight_bias_summary) html += insightStripHtml('Overnight Bias', 'Macro / Session', formatAiNarrative(ai.overnight_bias_summary), 'blue');
+      if (ai.overnight_bias_summary) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#58a6ff">🌙 Overnight bias:</strong> ' + ai.overnight_bias_summary + '</div>';
       if (ai.provider_health && Object.keys(ai.provider_health).length) {
-        html += insightStripHtml('Provider Health', 'Models / Runtime', renderProviderHealthGrid(ai.provider_health), 'green');
+        const rows = Object.entries(ai.provider_health).map(([name, st]) => {
+          const ok = !!(st && st.ok);
+          const latency = (st && typeof st.latency_ms === 'number') ? `${st.latency_ms}ms` : '—';
+          const err = (st && st.error) ? ` · ${st.error}` : '';
+          const color = ok ? '#3fb950' : '#f85149';
+          const state = ok ? 'ok' : 'fail';
+          return `<span style="display:block;color:${color}">${name}: ${state} (${latency})${err}</span>`;
+        }).join('');
+        html += `<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#58a6ff">🧪 Provider health:</strong>${rows}</div>`;
       }
-      if (ai.last_game_film) html += insightStripHtml('Game Film', 'Historical Review', formatAiNarrative(ai.last_game_film), 'violet');
-      if (ai.short_verdicts_blocked) html += insightStripHtml('Short Blocks', 'Execution Friction', `${ai.short_verdicts_blocked}${ai.last_short_block_reason ? ' · ' + esc(ai.last_short_block_reason) : ''}`, 'rose');
-      html += '</div>';
-      $('aiStatus').innerHTML = _degradedInternal
-        ? insightStripHtml('Internal Caution', 'Reconciliation State', 'Internal AI summaries are currently degraded by reconciliation state.', 'amber') + html
-        : html;
+      if (ai.last_game_film) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#d2a8ff">🎬 Game Film:</strong> ' + ai.last_game_film + '</div>';
+      if (ai.short_verdicts_blocked) html += '<div style="margin-top:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px"><strong style="color:#f85149">🩳 Short blocks:</strong> ' + ai.short_verdicts_blocked + (ai.last_short_block_reason ? ' · ' + ai.last_short_block_reason : '') + '</div>';
+      $('aiStatus').innerHTML = _degradedInternal ? `<div style="margin-bottom:10px;padding:8px 12px;background:#0d1117;border:1px solid #21262d;border-radius:8px;font-size:12px;color:#8b949e">Internal AI summaries degraded by reconciliation state.<\/div>` + html : html;
     } else { $('aiStatus').innerHTML = '<span class="empty">AI layers not initialized</span>'; }
   }
   // Consensus
@@ -4157,9 +2330,9 @@ async function refresh() {
     const history = Array.isArray(con.history) ? con.history.slice().reverse() : [];
     const enterNowCount = history.filter(h => String(h.timing_state || '').toLowerCase() === 'enter_now').length;
     const waitCount = history.filter(h => String(h.timing_state || '').toLowerCase() === 'wait_for_trigger').length;
-    const blockedCount = history.filter(h => ['data_insufficient','mode_conflict','capital_blocked','broker_blocked','shadow_only','no_edge'].includes(String(h.timing_state || '').toLowerCase())).length;
+    const blockedCount = history.filter(h => ['data_insufficient','mode_conflict','capital_blocked','broker_blocked','shadow_only','no_edge'].includes(String(h.timing_state || 'mode_conflict').toLowerCase())).length;
     const latestConsensus = con.last_consensus || history[0] || {};
-    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations${_brokerOnlyMode ? ' | degraded' : _degradedInternal ? ' | internal degraded' : ''}` : 'Disabled';
+    $('consensusStats').textContent = con.enabled ? `${st.total||0} evaluations${_brokerOnlyMode ? ' | degraded' : _degradedInternal ? ' | internal degraded' : ''}` : '❌ Disabled';
     $('consensusSummary').innerHTML = con.enabled ? `
       <div class="summary-item"><div class="val info">${st.total||0}</div><div class="lbl">Evals</div></div>
       <div class="summary-item"><div class="val positive">${enterNowCount}</div><div class="lbl">Enter Now</div></div>
@@ -4169,13 +2342,13 @@ async function refresh() {
       <div class="summary-item"><div class="val val-sm info">${esc(humanizeKey(latestConsensus.setup_mode || '—'))}</div><div class="lbl">Latest Mode</div></div>
       <div class="summary-item"><div class="val val-sm" style="color:#d2a8ff">${esc(humanizeKey(latestConsensus.best_play || '—'))}</div><div class="lbl">Latest Play</div></div>
       <div class="summary-item"><div class="val" style="color:#e3b341">${(st.actionable_avg_confidence ?? st.avg_confidence)?(st.actionable_avg_confidence ?? st.avg_confidence).toFixed(0)+'%':'—'}</div><div class="lbl">Action Conf</div></div>
-      <div class="summary-item"><div class="val val-sm" style="color:#8b949e">C ${ac.claude||0} · G ${ac.gpt||0} · X ${ac.grok||0} · P ${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
+      <div class="summary-item"><div class="val val-sm" style="color:#8b949e">🟣${ac.claude||0} 🟢${ac.gpt||0} 🔵${ac.grok||0} 🟠${ac.perplexity||0}</div><div class="lbl">API Calls</div></div>
     ` : '';
     $('consensus').innerHTML = history.length ? history.map(h => {
       const decCls = verdictTagClass(h.decision);
-      const timingState = String(h.timing_state || '').toLowerCase() || 'unknown';
-      const play = h.best_play || '—';
-      const mode = h.setup_mode || '—';
+      const timingState = String(h.timing_state || (h.decision === 'SKIP' ? 'mode_conflict' : 'enter_now')).toLowerCase();
+      const play = h.best_play || (h.decision === 'SHORT' ? 'continuation_short' : h.decision === 'BUY' ? 'continuation_long' : 'no_trade_yet');
+      const mode = h.setup_mode || 'invalid';
       const triggerBits = [
         h.trigger || h.no_trade_reason || '',
         h.invalidation ? `invalidates on ${h.invalidation}` : '',
@@ -4225,31 +2398,15 @@ async function refresh() {
   }
   if ($('pendingSetups')) {
     const setups = pendingPayload?.setups || [];
-    $('pendingSetups').innerHTML = setups.length ? setups.map(row => {
-      const primaryPlay = humanizeKey(row.best_play || row.mode || '—');
-      const secondaryMode = humanizeKey(row.mode || '');
-      const showSecondary = secondaryMode && secondaryMode !== primaryPlay;
-      const expiresLabel = fmtClock(row.expires_at);
-      return `
-        <div class="pending-setup-row">
-          <div class="pending-setup-symbol">
-            <strong>${esc(row.symbol || '?')}</strong>
-            ${row.setup_id ? `<div class="pending-setup-id mono">${esc(compactSetupId(row.setup_id))}</div>` : ''}
-          </div>
-          <div class="pending-setup-play">
-            <div class="pending-setup-play-title">${esc(primaryPlay)}</div>
-            ${showSecondary ? `<div class="pending-setup-play-sub">${esc(secondaryMode)}</div>` : ''}
-          </div>
-          <div class="pending-setup-state">
-            <span class="tag ${timingTagClass(row.timing_state || 'wait_for_trigger')}" title="${esc(humanizeKey(row.timing_state || 'wait_for_trigger'))}">${esc(compactTimingLabel(row.timing_state || 'wait_for_trigger'))}</span>
-          </div>
-          <div class="pending-setup-trigger">
-            <div class="pending-setup-trigger-main" title="${esc(row.trigger || '')}">${esc(row.trigger || '—')}</div>
-            <div class="pending-setup-trigger-meta">${expiresLabel !== '—' ? `Expires ${esc(expiresLabel)}` : 'No expiry posted'}</div>
-          </div>
-        </div>
-      `;
-    }).join('') : '<div class="empty">No waiting setups</div>';
+    $('pendingSetups').innerHTML = setups.length ? setups.map(row => `
+      <tr>
+        <td><strong>${esc(row.symbol || '?')}</strong><div class="subtle mono">${esc(row.setup_id || '')}</div></td>
+        <td><div>${esc(humanizeKey(row.best_play || row.mode || '—'))}</div><div class="subtle">${esc(humanizeKey(row.mode || ''))}</div></td>
+        <td><span class="tag ${timingTagClass(row.timing_state || 'wait_for_trigger')}">${esc(humanizeKey(row.timing_state || 'wait_for_trigger'))}</span></td>
+        <td style="font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.trigger || '')}">${esc(truncateText(row.trigger || '—', 80))}</td>
+        <td>${fmtClock(row.expires_at)}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="5" class="empty">No waiting setups</td></tr>';
   }
   if ($('modeReport')) {
     const rollup = Object.entries(modeReport?.mode_rollup || {}).sort((a, b) => (b[1]?.setups||0) - (a[1]?.setups||0));
@@ -4342,10 +2499,10 @@ async function refresh() {
       <div class="summary-item"><div class="val info">${th.stats?.total_trades||0}</div><div class="lbl">Trades</div></div>
       <div class="summary-item"><div class="val ${(s.win_rate_pct||0)>=50?'positive':'negative'}">${(s.win_rate_pct||0).toFixed(1)}%</div><div class="lbl">Win Rate</div></div>
       <div class="summary-item"><div class="val ${cls(th.broker_total_pnl!=null?th.broker_total_pnl:(s.total_pnl||0))}">${fmt(th.broker_total_pnl!=null?th.broker_total_pnl:(s.total_pnl||0))}</div><div class="lbl">Total P&L</div></div>
-      <div class="summary-item"><div class="val positive">${best?fmt(best.pnl||0):'—'}</div><div class="lbl">${best?best.symbol+' Best':'Best'}</div></div>
-      <div class="summary-item"><div class="val negative">${worst?fmt(worst.pnl||0):'—'}</div><div class="lbl">${worst?worst.symbol+' Worst':'Worst'}</div></div>
-      <div class="summary-item" title="${bestStrategy?bestStrategy.name:''}"><div class="val val-sm ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?humanizeKey(bestStrategy.name):'—'}</div><div class="lbl">Top Strategy</div></div>
-      <div class="summary-item" title="${bestSource?bestSource.name:''}"><div class="val val-sm ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?humanizeKey(bestSource.name):'—'}</div><div class="lbl">Top Source</div></div>
+      <div class="summary-item"><div class="val positive">${best?'$'+fmt(best.pnl||0):'—'}</div><div class="lbl">${best?best.symbol+' Best':'Best'}</div></div>
+      <div class="summary-item"><div class="val negative">${worst?'$'+fmt(worst.pnl||0):'—'}</div><div class="lbl">${worst?worst.symbol+' Worst':'Worst'}</div></div>
+      <div class="summary-item" title="${bestStrategy?bestStrategy.name:''}"><div class="val val-sm ${bestStrategy&&bestStrategy.pnl>=0?'positive':'negative'}">${bestStrategy?bestStrategy.name.replace('_',' '):'—'}</div><div class="lbl">Top Strategy</div></div>
+      <div class="summary-item" title="${bestSource?bestSource.name:''}"><div class="val val-sm ${bestSource&&bestSource.pnl>=0?'positive':'negative'}">${bestSource?bestSource.name:'—'}</div><div class="lbl">Top Source</div></div>
       <div class="summary-item"><div class="val info">${typeof s.avg_signal_to_fill_ms==='number'?Math.round(s.avg_signal_to_fill_ms)+'ms':'—'}</div><div class="lbl">Avg Sig→Fill</div></div>
     ` : '';
     const tradeHistoryHtml = th.trades.length ? th.trades.slice().reverse().map(t => `<tr style="${_degradedInternal ? 'opacity:0.65' : ''}">
@@ -4363,8 +2520,6 @@ async function refresh() {
     </tr>`).join('') : '<tr><td colspan="13" class="empty">No completed trades yet</td></tr>';
     $('tradeHistory').innerHTML = (_degradedInternal ? '<tr><td colspan="13" class="empty" style="color:#8b949e">Internal trade analytics degraded by reconciliation state</td></tr>' : '') + tradeHistoryHtml;
   }
-  bookScorePayload = await api('/api/book-scoreboard');
-  renderBookScoreboard((bookScorePayload && bookScorePayload.books) || []);
   // Strategy controls
   const sc = await api('/api/strategy-controls');
   if (sc) {
@@ -4440,9 +2595,6 @@ async function refresh() {
   } else if (s && s.options_enabled && !s.options_execution_enabled) {
     $('optionsValue').textContent = 'engine unavailable';
     $('optionsPositions').innerHTML = '<tr><td colspan="13" class="empty">Options are enabled in config but the execution engine did not initialize</td></tr>';
-  } else if (s && s.options_enabled && s.options_execution_enabled && !s.options_entry_enabled && (!ops || !ops.length)) {
-    $('optionsValue').textContent = 'pilot off';
-    $('optionsPositions').innerHTML = '<tr><td colspan="13" class="empty">Options engine is live for management only; new options entries are disabled</td></tr>';
   } else if (ops) {
     const totalOptPnl = ops.reduce((acc, p) => acc + (p.pnl || 0), 0);
     $('optionsValue').textContent = `${ops.length||0} contracts | Unrealized $${totalOptPnl.toFixed(2)}`;
@@ -4500,7 +2652,7 @@ async function refresh() {
     const catColors = {thinking:'#8b949e',scan:'#58a6ff',trade:'#3fb950',ai:'#d2a8ff',alert:'#f85149',research:'#f0883e'};
     $('activityFeed').innerHTML = activity.reverse().map(a => {
       const color = catColors[a.category] || '#8b949e';
-      return `<div class="activity-line"><span class="activity-time">${a.time_str}</span><span class="activity-tag" style="color:${color};border-color:${color}33;background:${color}10">${a.category}</span>${a.message}</div>`;
+      return `<div style="padding:3px 0;border-bottom:1px solid #21262d33"><span style="color:#484f58;font-size:11px">${a.time_str}</span> <span style="color:${color};font-weight:600">[${a.category}]</span> ${a.message}</div>`;
     }).join('');
   }
 
@@ -4509,7 +2661,7 @@ async function refresh() {
   $('watchlistCount').textContent = wl ? `${wl.length} tickers` : '';
   $('watchlist').innerHTML = wl && wl.length ? wl.slice(0,15).map(w => `<tr>
     <td><strong>${w.ticker}</strong></td>
-    <td>${w.side === 'short' ? '<span class="side-pill short">Short</span>' : '<span class="side-pill long">Long</span>'}</td>
+    <td>${w.side === 'short' ? '<span style="color:#f85149">🔴 SHORT</span>' : '<span style="color:#3fb950">🟢 LONG</span>'}</td>
     <td>${(w.conviction||0).toFixed(2)}</td>
     <td style="color:#6e7681">${w.sources||''}</td>
     <td style="font-size:11px;color:#8b949e">${(w.reason||'').substring(0,60)}</td>
@@ -4604,21 +2756,10 @@ async function refresh() {
     <td class="${cls(h.pnl||0)}">${fmt(h.pnl||0)}</td><td class="${cls(h.pnl_pct||0)}">${fmt(h.pnl_pct||0)}%</td>
     <td>${h.reason||''}</td><td>${h.hold_time||''}</td>
   </tr>`).join('') : '<tr><td colspan="8" class="empty">No trades yet</td></tr>';
-  renderOperatorDeck({
-    status: statusPayload,
-    pnl: pnlPayload,
-    metrics: metricsPayload,
-    books: (bookScorePayload && bookScorePayload.books) || [],
-    pending: (pendingPayload && pendingPayload.setups) || [],
-    positions: pos || [],
-    candidates: cand || [],
-  });
   } catch(e) { console.error('Dashboard refresh error:', e); }
 }
-updateEquityRangeButtons();
 refresh();
 setInterval(refresh, 5000);
-window.addEventListener('resize', () => requestAnimationFrame(fitPnlMetricValues));
 </script>
 </body>
 </html>"""

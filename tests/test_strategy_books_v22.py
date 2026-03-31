@@ -189,6 +189,59 @@ class TradeHistoryBookAnalyticsTests(unittest.TestCase):
         self.assertIn("continuation_long", analytics["by_setup_mode"])
         self.assertEqual(analytics["by_setup_mode"]["continuation_long"]["trades"], 2)
 
+    def test_unusual_whales_analytics_break_out_flow_stream_and_congress(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            history_file = Path(tmp_dir) / "trade_history.json"
+            rows = [
+                {
+                    "symbol": "NVDA",
+                    "entry_price": 100.0,
+                    "quantity": 1,
+                    "pnl": 12.0,
+                    "pnl_pct": 12.0,
+                    "strategy_tag": "uw_flow_long",
+                    "signal_sources": ["unusual_whales", "unusual_whales_stream"],
+                    "setup_mode": "continuation_long",
+                    "exit_time": 1_700_000_000,
+                },
+                {
+                    "symbol": "AAPL",
+                    "entry_price": 100.0,
+                    "quantity": 1,
+                    "pnl": -3.0,
+                    "pnl_pct": -3.0,
+                    "strategy_tag": "congress_follow",
+                    "signal_sources": ["congress"],
+                    "setup_mode": "swing_catalyst_long",
+                    "exit_time": 1_700_000_600,
+                },
+                {
+                    "symbol": "MSFT",
+                    "entry_price": 100.0,
+                    "quantity": 1,
+                    "pnl": 5.0,
+                    "pnl_pct": 5.0,
+                    "strategy_tag": "momentum_long",
+                    "signal_sources": ["polygon"],
+                    "setup_mode": "continuation_long",
+                    "exit_time": 1_700_001_200,
+                },
+            ]
+            history_file.write_text(json.dumps(rows))
+
+            with patch.object(trade_history, "HISTORY_FILE", history_file):
+                analytics = trade_history.get_analytics()
+
+        uw = analytics["unusual_whales"]
+        self.assertEqual(uw["overall"]["trades"], 2)
+        self.assertEqual(uw["overall"]["pnl"], 9.0)
+        self.assertEqual(uw["flow_book"]["trades"], 1)
+        self.assertEqual(uw["flow_book"]["pnl"], 12.0)
+        self.assertEqual(uw["stream_assisted"]["trades"], 1)
+        self.assertEqual(uw["rest_assisted"]["trades"], 1)
+        self.assertEqual(uw["congress_follow"]["trades"], 1)
+        self.assertEqual(uw["congress_follow"]["pnl"], -3.0)
+
 
 class DashboardBookEndpointsTests(unittest.TestCase):
     def test_shadow_and_book_scoreboard_endpoints(self):

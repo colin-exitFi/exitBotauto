@@ -80,6 +80,7 @@ class Tuner:
 
     def __init__(self):
         self._client = None
+        self._enabled = bool(getattr(settings, "TUNER_ENABLED", False))
         if settings.ANTHROPIC_API_KEY:
             self._client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         self._last_run = 0.0
@@ -87,17 +88,25 @@ class Tuner:
         self._change_history: list = []
         self._impact_history: list = []
         DATA_DIR.mkdir(exist_ok=True)
-        # Load persisted config state on startup
-        self._load_config_state()
+        # Tuner is opt-in during live trading; do not let stale mutations silently
+        # override runtime defaults unless explicitly enabled.
+        if self._enabled and bool(getattr(settings, "TUNER_LOAD_PERSISTED_CONFIG", False)):
+            self._load_config_state()
+        elif CONFIG_STATE_FILE.exists():
+            logger.info("🔧 Tuner: persisted config ignored (disabled or load flag off)")
         self._load_impact_state()
 
     async def run(self, bot, advisor_output: Optional[Dict] = None) -> Optional[Dict]:
         """Run tuning cycle. Returns changes applied or None."""
-        min_trades_to_tune = 10
+        if not self._enabled:
+            return None
+
+        min_trades_to_tune = max(10, int(getattr(settings, "TUNER_MIN_TRADES_TO_TUNE", 40) or 40))
         # HARD LOCK: Don't tune until we have enough REAL trades with game film data
         # Fail-closed: if we can't verify trade count, DO NOT TUNE
         try:
-            total = int(get_analytics().get("total_trades", 0))
+            analytics = get_analytics()
+            total = int(analytics.get("clean_total_trades", analytics.get("total_trades", 0)) or 0)
         except Exception as e:
             logger.warning(f"🔧 Tuner: LOCKED — cannot verify trade count ({e}), refusing to tune")
             return None
@@ -125,7 +134,7 @@ class Tuner:
         try:
             impact_updates = await self.measure_impact()
             risk_status = bot.risk_manager.get_status() if bot.risk_manager else {}
-            trade_analytics = get_analytics()
+            trade_analytics = analytics
             recent_trades = bot.exit_manager.get_history(30) if bot.exit_manager else []
 
             current_config = {
@@ -261,6 +270,8 @@ What parameters should change?"""
 
     def _load_config_state(self):
         """Load persisted config state and apply to settings."""
+        if not self._enabled or not bool(getattr(settings, "TUNER_LOAD_PERSISTED_CONFIG", False)):
+            return
         if not CONFIG_STATE_FILE.exists():
             return
         try:
@@ -300,12 +311,12 @@ What parameters should change?"""
         recent = analytics.get("recent_20", {}) or {}
         overall = analytics.get("overall", {}) or {}
         return {
-            "win_rate": float(analytics.get("win_rate", overall.get("win_rate_pct", 0) / 100.0) or 0),
-            "total_pnl": float(analytics.get("total_pnl", overall.get("total_pnl", 0)) or 0),
+            "win_rate": float(analytics.get("clean_win_rate", analytics.get("win_rate", overall.get("win_rate_pct", 0) / 100.0)) or 0),
+            "total_pnl": float(analytics.get("clean_pnl", analytics.get("total_pnl", overall.get("total_pnl", 0))) or 0),
             "sharpe": float(analytics.get("sharpe_ratio", overall.get("sharpe_ratio", 0)) or 0),
-            "trade_count": int(analytics.get("total_trades", 0) or 0),
-            "recent_20_win_rate": float(recent.get("win_rate_pct", 0) or 0),
-            "recent_20_pnl": float(recent.get("pnl", 0) or 0),
+            "trade_count": int(analytics.get("clean_total_trades", analytics.get("total_trades", 0)) or 0),
+            "recent_20_win_rate": float(recent.get("clean_win_rate_pct", recent.get("win_rate_pct", 0)) or 0),
+            "recent_20_pnl": float(recent.get("clean_pnl", recent.get("pnl", 0)) or 0),
         }
 
     async def measure_impact(self) -> List[Dict]:

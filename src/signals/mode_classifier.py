@@ -153,6 +153,26 @@ def _reason_confidence(base: float, features: List[bool], step: float = 0.03, ca
     return round(_clamp(score, 0.0, cap), 2)
 
 
+def _fallback_general_mode(features: "ModeFeatures") -> tuple[str, str]:
+    if features.daily_pct <= -0.1:
+        return "general_momentum_short", "short_only"
+    if features.daily_pct >= 0.1:
+        return "general_momentum_long", "long_only"
+    if features.uw_bias == "bearish":
+        return "general_momentum_short", "short_only"
+    if features.uw_bias == "bullish":
+        return "general_momentum_long", "long_only"
+    if features.losing_vwap:
+        return "general_momentum_short", "short_only"
+    if features.reclaiming_vwap:
+        return "general_momentum_long", "long_only"
+    if (features.vwap_distance_pct or 0.0) < 0.0:
+        return "general_momentum_short", "short_only"
+    if features.sentiment_pct < 50.0:
+        return "general_momentum_short", "short_only"
+    return "general_momentum_long", "long_only"
+
+
 def _feature_missing_fields(candidate: Dict) -> List[str]:
     missing = []
     if candidate.get("price") is None:
@@ -427,25 +447,28 @@ def mode_features_from_dict(payload: Dict) -> Optional[ModeFeatures]:
 def classify_mode(features: ModeFeatures) -> ModeClassification:
     symbol = features.symbol or "?"
     if features.feature_quality_score < 0.25:
+        mode, direction_constraint = _fallback_general_mode(features)
         return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
+            mode=mode,
+            direction_constraint=direction_constraint,
             classifier_confidence=0.9,
             reason_codes=["low_feature_quality", *[f"missing_{name}" for name in features.missing_fields[:4]]],
         )
     # Staleness is handled by feature_quality scoring (confidence haircut),
     # not as a hard block. Scanner actively refreshes candidates each cycle.
     if features.price <= 0 or features.price < 1.0:
+        mode, direction_constraint = _fallback_general_mode(features)
         return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
+            mode=mode,
+            direction_constraint=direction_constraint,
             classifier_confidence=0.95,
             reason_codes=["price_too_low", f"symbol_{symbol}"],
         )
     if "halted" in {str(flag).lower() for flag in features.anomaly_flags}:
+        mode, direction_constraint = _fallback_general_mode(features)
         return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
+            mode=mode,
+            direction_constraint=direction_constraint,
             classifier_confidence=0.9,
             reason_codes=["active_halt", f"symbol_{symbol}"],
         )
@@ -623,11 +646,12 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
             reason_codes=reasons,
         )
     else:
-        # Stock is flat (<0.5% move). Genuinely no directional edge.
+        # Flat names still need a play family for review / self-improvement.
+        mode, direction_constraint = _fallback_general_mode(features)
         return ModeClassification(
-            mode="invalid",
-            direction_constraint="none",
-            classifier_confidence=0.0,
+            mode=mode,
+            direction_constraint=direction_constraint,
+            classifier_confidence=0.2,
             reason_codes=["flat_no_directional_edge"],
         )
 

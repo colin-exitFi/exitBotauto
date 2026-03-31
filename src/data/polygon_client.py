@@ -4,6 +4,7 @@ Uses polygon-api-client and REST fallback.
 """
 
 import time
+import re
 import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -16,6 +17,7 @@ except ImportError:
     HAS_POLYGON_SDK = False
 
 from config import settings
+from src.data.symbols import is_supported_trade_symbol, normalize_trade_symbol
 
 
 class PolygonClient:
@@ -29,6 +31,7 @@ class PolygonClient:
         self._session = requests.Session()
         self._session.params = {"apiKey": self.api_key}  # type: ignore
         self._rate_limit_until = 0.0
+        self._unsupported_symbols = set()
 
     def initialize(self) -> bool:
         if not self.api_key:
@@ -63,16 +66,36 @@ class PolygonClient:
                 self._rate_limit_until = time.time() + 12
                 logger.warning("Polygon rate limited, backing off 12s")
                 return None
+            if resp.status_code == 404:
+                symbol = self._extract_symbol_from_path(path)
+                if symbol:
+                    self._unsupported_symbols.add(symbol)
+                    return None
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
             logger.error(f"Polygon REST error ({path}): {e}")
             return None
 
+    @staticmethod
+    def _extract_symbol_from_path(path: str) -> str:
+        text = str(path or "")
+        for pattern in (
+            r"/v2/last/trade/([^/?]+)",
+            r"/v2/snapshot/locale/us/markets/stocks/tickers/([^/?]+)",
+        ):
+            match = re.search(pattern, text)
+            if match:
+                return normalize_trade_symbol(match.group(1))
+        return ""
+
     # ── Quotes ─────────────────────────────────────────────────────
 
     def get_quote(self, symbol: str) -> Optional[Dict]:
         """Get latest quote for a symbol."""
+        symbol = normalize_trade_symbol(symbol)
+        if not is_supported_trade_symbol(symbol) or symbol in self._unsupported_symbols:
+            return None
         data = self._rest_get(f"/v2/last/trade/{symbol}")
         if data and "results" in data:
             r = data["results"]
@@ -94,8 +117,11 @@ class PolygonClient:
           3. Coinbase (crypto only)
         Returns 0 on total failure.
         """
+        symbol = normalize_trade_symbol(symbol)
         if symbol.upper() in self.CRYPTO_SYMBOLS:
             return self._get_crypto_price(symbol)
+        if not is_supported_trade_symbol(symbol) or symbol in self._unsupported_symbols:
+            return 0.0
 
         # Primary: Alpaca data API
         if hasattr(self, '_alpaca') and self._alpaca:
@@ -130,6 +156,9 @@ class PolygonClient:
 
     def get_snapshot(self, symbol: str) -> Optional[Dict]:
         """Get full snapshot for a single ticker."""
+        symbol = normalize_trade_symbol(symbol)
+        if not is_supported_trade_symbol(symbol) or symbol in self._unsupported_symbols:
+            return None
         data = self._rest_get(f"/v2/snapshot/locale/us/markets/stocks/tickers/{symbol}")
         if data and "ticker" in data:
             t = data["ticker"]
@@ -213,6 +242,11 @@ class PolygonClient:
         Get historical aggregate bars.
         timespan: minute, hour, day, week, month
         """
+        symbol = normalize_trade_symbol(symbol)
+        if symbol in self._unsupported_symbols:
+            return []
+        if symbol.upper() not in self.CRYPTO_SYMBOLS and not is_supported_trade_symbol(symbol):
+            return []
         if not from_date:
             from_date = (datetime.utcnow() - timedelta(days=60)).strftime("%Y-%m-%d")
         if not to_date:
@@ -220,12 +254,15 @@ class PolygonClient:
 
         data = self._rest_get(
             f"/v2/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{from_date}/{to_date}",
-            {"adjusted": "true", "sort": "asc", "limit": str(limit)},
+            # Ask Polygon for the newest bars first, then reverse them locally so
+            # callers still receive chronological order. Using ascending sort with
+            # a broad date range returns the oldest candles inside the window.
+            {"adjusted": "true", "sort": "desc", "limit": str(limit)},
         )
         if not data or "results" not in data:
             return []
         bars = []
-        for r in data["results"]:
+        for r in reversed(data["results"]):
             bars.append({
                 "timestamp": r.get("t", 0),
                 "open": r.get("o", 0),

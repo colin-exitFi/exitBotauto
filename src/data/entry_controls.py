@@ -209,6 +209,7 @@ def record_symbol_trade_result(
     exit_confirmed_at: Optional[float] = None,
     reason: str = "",
     setup_id: str = "",
+    anomaly_flags: Optional[list] = None,
     loss_limit: int = _DEFAULT_SYMBOL_CONSECUTIVE_LOSS_LIMIT,
     lock_seconds: float = _DEFAULT_SYMBOL_LOSS_LOCK_SECONDS,
 ) -> Dict:
@@ -226,6 +227,29 @@ def record_symbol_trade_result(
     state = dict(state_store.get(sym, {}) or {})
     recent_results = list(state.get("recent_results", []) or [])
     pnl_value = float(pnl or 0.0)
+    normalized_flags = {str(flag or "").strip().lower() for flag in (anomaly_flags or []) if str(flag or "").strip()}
+    bookkeeping_only_flags = {
+        "carryover_sync",
+        "broker_reconstructed",
+        "broker_reloaded_after_local_removal",
+    }
+    normalized_reason = str(reason or "").strip().lower()
+    normalized_setup_id = str(setup_id or "").strip()
+    bookkeeping_only_reason = normalized_reason in {
+        "",
+        "broker_exit_fill",
+        "broker_fill_reconstructed",
+    }
+    if (
+        normalized_flags
+        and normalized_flags <= bookkeeping_only_flags
+        and bookkeeping_only_reason
+        and not normalized_setup_id
+    ):
+        logger.info(
+            f"Skipping symbol trade state update for {sym}: anomaly_flags={sorted(normalized_flags)}"
+        )
+        return get_symbol_trade_state(sym)
 
     if pnl_value < 0:
         outcome = "loss"
@@ -240,10 +264,9 @@ def record_symbol_trade_result(
         lock_store.pop(sym, None)
     else:
         outcome = "flat"
-        consecutive_losses = 0
+        consecutive_losses = int(state.get("consecutive_losses", 0) or 0)
         consecutive_wins = 0
-        attempts_since_win = 0
-        lock_store.pop(sym, None)
+        attempts_since_win = int(state.get("attempts_since_win", 0) or 0) + 1
 
     recent_results.append(
         {

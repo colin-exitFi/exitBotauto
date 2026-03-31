@@ -66,12 +66,12 @@ class ProfitRatchet:
         peak_price = cls._compute_peak_price(position, current_price, side)
         peak_pnl_pct = cls.calc_pnl_pct(entry_price, peak_price, side)
         hold_seconds = max(0.0, now_ts - float(position.get("entry_time", now_ts) or now_ts))
-        min_hold_active = (
-            0.0 <= current_pnl_pct < horizon_profile["activation_pct"]
-            and hold_seconds < horizon_profile["min_hold_seconds"]
-        )
         dead_money = cls.is_dead_money(position, current_price, now=now_ts)
         hard_stop_pct = cls.DEAD_MONEY_TIGHT_STOP_PCT if dead_money else cls.HARD_STOP_PCT
+        min_hold_active = (
+            hold_seconds < horizon_profile["min_hold_seconds"]
+            and current_pnl_pct > hard_stop_pct
+        )
         hard_stop_price = cls.price_for_pnl(entry_price, hard_stop_pct, side)
         floor_pct = cls.compute_floor_pct(
             peak_pnl_pct,
@@ -79,6 +79,8 @@ class ProfitRatchet:
             initial_floor_pct=horizon_profile["initial_floor_pct"],
             trail_pct=horizon_profile["trail_pct"],
         )
+        if min_hold_active:
+            floor_pct = None
         ratchet_active = floor_pct is not None
         target_exit_price = cls.price_for_pnl(entry_price, floor_pct, side) if floor_pct is not None else None
         prior_floor = cls._safe_float(position.get("ratchet_floor_pct"), None)
@@ -175,23 +177,62 @@ class ProfitRatchet:
     @classmethod
     def profile_for_position(cls, position: Dict) -> Dict:
         holding_horizon = str((position or {}).get("holding_horizon", "intraday") or "intraday").lower()
+        trail_override = cls._position_trail_override(position)
+        activation_override = cls._position_activation_override(position)
+        floor_override = cls._position_floor_override(position)
         if holding_horizon == "swing":
             return {
                 "holding_horizon": "swing",
-                "activation_pct": cls.SWING_RATCHET_ACTIVATION_PCT,
-                "initial_floor_pct": cls.INITIAL_FLOOR_PCT,
-                "trail_pct": cls.SWING_RATCHET_TRAIL_PCT,
+                "activation_pct": activation_override if activation_override is not None else cls.SWING_RATCHET_ACTIVATION_PCT,
+                "initial_floor_pct": floor_override if floor_override is not None else cls.INITIAL_FLOOR_PCT,
+                "trail_pct": trail_override if trail_override is not None else cls.SWING_RATCHET_TRAIL_PCT,
                 "min_hold_seconds": cls.SWING_RATCHET_MIN_HOLD_SECONDS,
                 "dead_money_hours": cls.SWING_DEAD_MONEY_HOURS,
             }
         return {
             "holding_horizon": holding_horizon or "intraday",
-            "activation_pct": cls.RATCHET_ACTIVATION_PCT,
-            "initial_floor_pct": cls.INITIAL_FLOOR_PCT,
-            "trail_pct": cls.RATCHET_TRAIL_PCT,
+            "activation_pct": activation_override if activation_override is not None else cls.RATCHET_ACTIVATION_PCT,
+            "initial_floor_pct": floor_override if floor_override is not None else cls.INITIAL_FLOOR_PCT,
+            "trail_pct": trail_override if trail_override is not None else cls.RATCHET_TRAIL_PCT,
             "min_hold_seconds": cls.MIN_HOLD_SECONDS,
             "dead_money_hours": cls.DEAD_MONEY_HOURS,
         }
+
+    @classmethod
+    def _position_trail_override(cls, position: Dict) -> Optional[float]:
+        if not isinstance(position, dict):
+            return None
+
+        base_trail = cls._safe_float(position.get("trail_pct"), None)
+        tighten_trail = cls._safe_float(position.get("ratchet_tighten_suggestion_pct"), None)
+
+        candidates = []
+        if base_trail is not None and base_trail > 0:
+            candidates.append(base_trail)
+        if tighten_trail is not None and tighten_trail > 0:
+            candidates.append(tighten_trail)
+        if not candidates:
+            return None
+
+        return max(0.5, min(10.0, min(candidates)))
+
+    @classmethod
+    def _position_activation_override(cls, position: Dict) -> Optional[float]:
+        if not isinstance(position, dict):
+            return None
+        override = cls._safe_float(position.get("ratchet_activation_override_pct"), None)
+        if override is None or override <= 0:
+            return None
+        return max(0.1, min(override, 100.0))
+
+    @classmethod
+    def _position_floor_override(cls, position: Dict) -> Optional[float]:
+        if not isinstance(position, dict):
+            return None
+        override = cls._safe_float(position.get("ratchet_initial_floor_override_pct"), None)
+        if override is None:
+            return None
+        return max(cls.INITIAL_FLOOR_PCT, min(override, 100.0))
 
     @classmethod
     def is_dead_money(

@@ -43,6 +43,17 @@ def _invalid_resolution_state(classification: ModeClassification) -> tuple[str, 
     return "mode_conflict", "unresolved_setup", primary
 
 
+def _fallback_best_play(mode: str, direction_constraint: str) -> tuple[str, str]:
+    if mode in {"continuation_long", "continuation_short", "exhaustion_fade_short", "swing_catalyst_long", "general_momentum_long", "general_momentum_short"}:
+        resolved_direction = direction_constraint
+        if resolved_direction not in {"long_only", "short_only"}:
+            resolved_direction = "short_only" if "short" in mode else "long_only"
+        return mode, resolved_direction
+    if direction_constraint == "short_only":
+        return "general_momentum_short", "short_only"
+    return "general_momentum_long", "long_only"
+
+
 @dataclass
 class TriggerSpec:
     trigger_type: str
@@ -142,15 +153,100 @@ def resolve_play(
     base_reasons = list(classification.reason_codes or [])
     ttl = _ttl_seconds_for_mode(mode)
     expires_at = now_ts + ttl
+    best_play_mode, resolved_direction_constraint = _fallback_best_play(mode, direction_constraint)
+    primary_reason = str(base_reasons[0] if base_reasons else "unresolved_setup")
+    missing_data = primary_reason == "low_feature_quality" or any(
+        str(code).startswith("missing_") for code in base_reasons
+    )
+
+    if "mode_disabled" in base_reasons:
+        return PlayResolution(
+            symbol=features.symbol,
+            mode=best_play_mode,
+            direction_constraint=resolved_direction_constraint,
+            timing_state="shadow_only",
+            best_play=best_play_mode,
+            trigger=None,
+            invalidation=None,
+            hold_style=features.holding_horizon or "intraday",
+            classifier_confidence=classification.classifier_confidence,
+            resolver_confidence=0.0,
+            reason_codes=base_reasons or ["mode_disabled"],
+            expires_at=expires_at,
+            size_posture="zero",
+            entry_now=False,
+            no_trade_reason=primary_reason,
+            trigger_spec=None,
+        )
+
+    if missing_data or "active_halt" in base_reasons:
+        return PlayResolution(
+            symbol=features.symbol,
+            mode=best_play_mode,
+            direction_constraint=resolved_direction_constraint,
+            timing_state="data_insufficient",
+            best_play=best_play_mode,
+            trigger=None,
+            invalidation=None,
+            hold_style=features.holding_horizon or "intraday",
+            classifier_confidence=classification.classifier_confidence,
+            resolver_confidence=0.0,
+            reason_codes=base_reasons or ["low_feature_quality"],
+            expires_at=expires_at,
+            size_posture="zero",
+            entry_now=False,
+            no_trade_reason=primary_reason,
+            trigger_spec=None,
+        )
+
+    if primary_reason == "price_too_low":
+        return PlayResolution(
+            symbol=features.symbol,
+            mode=best_play_mode,
+            direction_constraint=resolved_direction_constraint,
+            timing_state="shadow_only",
+            best_play=best_play_mode,
+            trigger=None,
+            invalidation=None,
+            hold_style=features.holding_horizon or "intraday",
+            classifier_confidence=classification.classifier_confidence,
+            resolver_confidence=0.0,
+            reason_codes=base_reasons or ["price_too_low"],
+            expires_at=expires_at,
+            size_posture="zero",
+            entry_now=False,
+            no_trade_reason=primary_reason,
+            trigger_spec=None,
+        )
+
+    if primary_reason in {"flat_no_directional_edge", "no_clear_setup"}:
+        return PlayResolution(
+            symbol=features.symbol,
+            mode=best_play_mode,
+            direction_constraint=resolved_direction_constraint,
+            timing_state="mode_conflict",
+            best_play=best_play_mode,
+            trigger=None,
+            invalidation=None,
+            hold_style=features.holding_horizon or "intraday",
+            classifier_confidence=classification.classifier_confidence,
+            resolver_confidence=0.0,
+            reason_codes=base_reasons or ["flat_no_directional_edge"],
+            expires_at=expires_at,
+            size_posture="zero",
+            entry_now=False,
+            no_trade_reason=primary_reason,
+            trigger_spec=None,
+        )
 
     if mode == "invalid":
         timing_state, best_play, no_trade_reason = _invalid_resolution_state(classification)
         return PlayResolution(
             symbol=features.symbol,
-            mode=mode,
-            direction_constraint="none",
+            mode=best_play_mode,
+            direction_constraint=resolved_direction_constraint,
             timing_state=timing_state,
-            best_play=best_play,
+            best_play=best_play_mode,
             trigger=None,
             invalidation=None,
             hold_style=features.holding_horizon or "intraday",
@@ -166,25 +262,6 @@ def resolve_play(
 
     if mode == "continuation_long":
         invalidation = "lose VWAP or lose pullback low"
-        if False:
-            return PlayResolution(
-                symbol=features.symbol,
-                mode=mode,
-                direction_constraint=direction_constraint,
-                timing_state="no_edge",
-                best_play="continuation_long",
-                trigger=None,
-                invalidation=invalidation,
-                hold_style="intraday",
-                classifier_confidence=classification.classifier_confidence,
-                resolver_confidence=0.2,
-                reason_codes=base_reasons + ["timing_not_live"],
-                expires_at=expires_at,
-                size_posture="zero",
-                entry_now=False,
-                no_trade_reason="too_extended" if features.range_pct >= 98.0 else "volume_not_confirming",
-            )
-
         # Classifier already approved this setup. Enter unless volume is completely dead.
         if features.volume_accel >= -0.8 and features.entry_quality in {"pullback", "neutral", "at_highs"}:
             return PlayResolution(
@@ -229,25 +306,6 @@ def resolve_play(
 
     if mode == "continuation_short":
         invalidation = "reclaim VWAP or recover breakdown level"
-        if False:
-            return PlayResolution(
-                symbol=features.symbol,
-                mode=mode,
-                direction_constraint=direction_constraint,
-                timing_state="no_edge",
-                best_play="continuation_short",
-                trigger=None,
-                invalidation=invalidation,
-                hold_style="intraday",
-                classifier_confidence=classification.classifier_confidence,
-                resolver_confidence=0.2,
-                reason_codes=base_reasons + ["timing_not_live"],
-                expires_at=expires_at,
-                size_posture="zero",
-                entry_now=False,
-                no_trade_reason="too_extended_to_downside" if features.range_pct <= 2.0 else "volume_not_confirming",
-            )
-
         if features.volume_accel >= -0.5:
             return PlayResolution(
                 symbol=features.symbol,

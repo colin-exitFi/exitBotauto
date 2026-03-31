@@ -215,6 +215,54 @@ class ExitManager:
     async def _cancel_conflicting_exit_orders(self, symbol: str, exit_side: str) -> int:
         return await cancel_conflicting_exit_orders(self.broker, symbol, exit_side)
 
+    def _is_extended_session(self) -> bool:
+        entry = getattr(self, "entry", None)
+        if not entry:
+            return False
+        try:
+            return bool(entry.is_market_open()) and bool(entry.is_extended_hours())
+        except Exception:
+            return False
+
+    async def _submit_broker_exit_order(self, symbol: str, side: str, quantity: float, price: float) -> Optional[Dict]:
+        if not self.broker:
+            return None
+
+        extended = self._is_extended_session()
+        buffer_bps = max(
+            1.0,
+            float(getattr(settings, "EXTENDED_HOURS_EXIT_LIMIT_BUFFER_BPS", 20.0) or 20.0),
+        )
+        buffer_pct = buffer_bps / 10000.0
+        if extended:
+            if side == "short" and hasattr(self.broker, "place_limit_cover"):
+                limit_price = round(price * (1.0 + buffer_pct), 2) if price >= 1.0 else round(price * (1.0 + buffer_pct), 4)
+                return await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    self.broker.place_limit_cover,
+                    symbol,
+                    quantity,
+                    limit_price,
+                    True,
+                    None,
+                    False,
+                )
+            if side != "short" and hasattr(self.broker, "place_limit_sell"):
+                limit_price = round(price * (1.0 - buffer_pct), 2) if price >= 1.0 else round(price * (1.0 - buffer_pct), 4)
+                return await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    self.broker.place_limit_sell,
+                    symbol,
+                    quantity,
+                    limit_price,
+                    True,
+                    None,
+                    False,
+                )
+
+        broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
+        return await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, quantity)
+
     async def _execute_exit(self, position: Dict, quantity: int, price: float, reason: str, pnl_pct: float) -> Optional[Dict]:
         """Execute market sell order."""
         symbol = position["symbol"]
@@ -239,8 +287,7 @@ class ExitManager:
                 canceled = await self._cancel_conflicting_exit_orders(symbol, exit_side=exit_side)
                 if canceled:
                     logger.info(f"Cancelled {canceled} conflicting {exit_side} orders for {symbol} before market exit")
-                broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
-                order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, quantity)
+                order = await self._submit_broker_exit_order(symbol, side, quantity, price)
                 if not order:
                     logger.error(f"Exit order FAILED for {symbol}! Will retry next tick.")
                     return None

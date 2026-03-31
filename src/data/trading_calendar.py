@@ -21,6 +21,21 @@ def now_eastern() -> datetime:
     return datetime.now(EASTERN)
 
 
+TRADING_SESSION_ROLLOVER_HOUR = 4
+
+
+def trading_session_day(ts: Optional[float] = None, rollover_hour: int = TRADING_SESSION_ROLLOVER_HOUR) -> str:
+    """
+    Return the market session day as YYYY-MM-DD in Eastern time.
+
+    The session rolls at 4:00 AM ET so post-close / overnight processing does not
+    split a single trading session across two different calendar days after midnight.
+    """
+    dt = now_eastern() if ts is None else datetime.fromtimestamp(ts, EASTERN)
+    adjusted = dt - timedelta(hours=max(0, int(rollover_hour or 0)))
+    return adjusted.strftime("%Y-%m-%d")
+
+
 def trading_day(ts: Optional[float] = None) -> str:
     """Return the trading day as YYYY-MM-DD in Eastern time."""
     if ts is None:
@@ -42,6 +57,10 @@ def trading_week_start(ts: Optional[float] = None) -> str:
 
 def is_same_trading_day(ts1: float, ts2: float) -> bool:
     return trading_day(ts1) == trading_day(ts2)
+
+
+def is_same_trading_session_day(ts1: float, ts2: float) -> bool:
+    return trading_session_day(ts1) == trading_session_day(ts2)
 
 
 def is_market_hours(ts: Optional[float] = None) -> bool:

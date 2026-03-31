@@ -30,7 +30,9 @@ RISK_STATE_FILE = DATA_DIR / "risk_state.json"
 RECONCILIATION_STATE_FILE = DATA_DIR / "reconciliation_state.json"
 ENTRY_CONTROLS_FILE = DATA_DIR / "entry_controls.json"
 TOMBSTONES_FILE = DATA_DIR / "tombstones.json"
+RECENTLY_REMOVED_POSITIONS_FILE = DATA_DIR / "recently_removed_positions.json"
 SHUTDOWN_MARKER_FILE = DATA_DIR / "shutdown_marker.json"
+CHANGE_LEDGER_FILE = DATA_DIR / "change_ledger.json"
 
 _file_locks: Dict[str, threading.Lock] = {}
 
@@ -244,6 +246,39 @@ def save_reconciliation_state(state: Dict):
 
 def load_reconciliation_state() -> Dict:
     return safe_load_json(RECONCILIATION_STATE_FILE, default=dict)
+
+
+# ── Recently Removed Positions ───────────────────────────────────
+
+def save_recently_removed_positions(positions: Dict):
+    atomic_write_json(RECENTLY_REMOVED_POSITIONS_FILE, positions)
+
+
+def load_recently_removed_positions() -> Dict:
+    data = safe_load_json(RECENTLY_REMOVED_POSITIONS_FILE, default=dict)
+    return data if isinstance(data, dict) else {}
+
+
+# ── Governance Change Ledger ─────────────────────────────────────
+
+def save_change_ledger(entries: List[Dict]):
+    atomic_write_json(CHANGE_LEDGER_FILE, entries)
+
+
+def load_change_ledger() -> List[Dict]:
+    data = safe_load_json(CHANGE_LEDGER_FILE, default=list)
+    return data if isinstance(data, list) else []
+
+
+def append_change_ledger_entry(entry: Dict, max_entries: int = 500) -> Dict:
+    rows = load_change_ledger()
+    normalized = dict(entry or {})
+    normalized.setdefault("recorded_at", time.time())
+    rows.append(normalized)
+    if len(rows) > max_entries:
+        rows = rows[-max_entries:]
+    save_change_ledger(rows)
+    return normalized
 
 
 # ── Shutdown Marker ──────────────────────────────────────────────

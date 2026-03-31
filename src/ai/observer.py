@@ -15,6 +15,7 @@ from loguru import logger
 import anthropic
 
 from config import settings
+from src.ai.position_payload import sanitize_candidates_for_ai, sanitize_positions_for_ai
 from src.signals.overnight_context import OvernightContext
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
@@ -46,6 +47,14 @@ Output JSON:
     "urgency": "none|low|medium|high"
 }}"""
 
+SYSTEM_PROMPT += """
+
+Interpretation rules for open positions:
+- `position_origin="tracked_live_position"` means the bot has structured thesis/protection context for that live position even if it was reloaded from broker truth during a restart. Do not call these inherited leftovers, broker-synced baggage, random broker debris, or blind entries.
+- `position_origin="broker_restored_live"` means the position exists at the broker but local thesis context is thin. Treat that as higher-risk context.
+- If a position has setup/play metadata plus stop or trail protection, treat it as an intentional managed position unless the data explicitly says otherwise.
+"""
+
 
 class Observer:
     """Layer 1 AI: observes everything, flags issues, logs findings."""
@@ -61,6 +70,18 @@ class Observer:
         self._last_output: Optional[Dict] = None
         DATA_DIR.mkdir(exist_ok=True)
 
+    @staticmethod
+    def _runtime_ready(bot, now: float) -> bool:
+        scanner = getattr(bot, "scanner", None)
+        if not scanner:
+            return True
+        scan_stats = getattr(scanner, "_last_scan_stats", {}) or {}
+        if float(scan_stats.get("last_completed_at") or 0):
+            return True
+        bot_start = float(getattr(bot, "start_time", 0.0) or 0.0)
+        uptime_seconds = max(0.0, now - bot_start) if bot_start else 0.0
+        return uptime_seconds >= 180.0
+
     async def run(self, bot) -> Optional[Dict]:
         """Run observation cycle. Returns findings dict or None."""
         now = time.time()
@@ -74,18 +95,26 @@ class Observer:
         interval = self.INTERVAL if 4 <= et_hour < 20 else self.INTERVAL_AFTER_HOURS
         if now - self._last_run < interval:
             return None
-        self._last_run = now
 
         if not self._client:
             logger.warning("Observer: no Anthropic API key")
             return None
+        if not self._runtime_ready(bot, now):
+            logger.info("Observer warmup: waiting for first completed scan after startup")
+            return None
+        self._last_run = now
 
         try:
             # Gather state
-            positions = bot.entry_manager.get_positions() if bot.entry_manager else []
+            positions = sanitize_positions_for_ai(
+                bot.entry_manager.get_positions() if bot.entry_manager else []
+            )
             risk_status = bot.risk_manager.get_status() if bot.risk_manager else {}
             recent_trades = bot.exit_manager.get_history(20) if bot.exit_manager else []
-            candidates = bot.scanner.get_cached_candidates() if bot.scanner else []
+            candidates = sanitize_candidates_for_ai(
+                bot.scanner.get_cached_candidates() if bot.scanner else [],
+                limit=5,
+            )
 
             account = {}
             if bot.alpaca_client:
@@ -135,7 +164,7 @@ RECENT TRADES ({len(recent_trades)}):
 {json.dumps(recent_trades[-10:], indent=2, default=str)}
 
 TOP SCANNER CANDIDATES:
-{json.dumps(candidates[:5], indent=2, default=str)}
+{json.dumps(candidates, indent=2, default=str)}
 
 Analyze this state. What do you see?"""
 
@@ -176,7 +205,21 @@ Analyze this state. What do you see?"""
 
 
 def _parse_json(text: str) -> dict:
-    text = text.strip()
+    def _default(raw_text: str) -> dict:
+        return {
+            "raw": raw_text,
+            "market_assessment": "",
+            "position_health": [],
+            "risk_flags": [],
+            "what_working": [],
+            "what_not_working": [],
+            "overall_sentiment": "neutral",
+            "urgency": "none",
+        }
+
+    text = str(text or "").strip()
+    if not text:
+        return _default("")
     if "```" in text:
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0]
@@ -184,10 +227,23 @@ def _parse_json(text: str) -> dict:
             text = text.split("```")[1].split("```")[0]
     text = text.strip()
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
     except json.JSONDecodeError:
         start = text.find("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
-            return json.loads(text[start:end])
-        return {"raw": text}
+            parsed = json.loads(text[start:end])
+        else:
+            return _default(text)
+    if isinstance(parsed, list):
+        parsed = next((row for row in reversed(parsed) if isinstance(row, dict)), None)
+    if not isinstance(parsed, dict):
+        return _default(text)
+    parsed.setdefault("market_assessment", "")
+    parsed.setdefault("position_health", [])
+    parsed.setdefault("risk_flags", [])
+    parsed.setdefault("what_working", [])
+    parsed.setdefault("what_not_working", [])
+    parsed.setdefault("overall_sentiment", "neutral")
+    parsed.setdefault("urgency", "none")
+    return parsed

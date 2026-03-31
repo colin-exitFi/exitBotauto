@@ -42,6 +42,47 @@ class Orchestrator:
         self._history: List[Dict] = []
 
     @staticmethod
+    def _hydrate_verdict_context(verdict: JuryVerdict, signals_data: Optional[Dict]) -> JuryVerdict:
+        """Carry resolver context through to cached/dashboard verdicts."""
+        sd = signals_data or {}
+        verdict.setup_mode = str(sd.get("setup_mode", verdict.setup_mode) or verdict.setup_mode or "invalid")
+        verdict.direction_constraint = str(
+            sd.get("direction_constraint", verdict.direction_constraint) or verdict.direction_constraint or "none"
+        )
+        verdict.best_play = str(sd.get("best_play", verdict.best_play) or verdict.best_play or "")
+        verdict.trigger = str(sd.get("trigger", verdict.trigger) or verdict.trigger or "")
+        verdict.invalidation = str(sd.get("invalidation", verdict.invalidation) or verdict.invalidation or "")
+        verdict.hold_style = str(
+            sd.get("hold_style", verdict.hold_style or sd.get("holding_horizon", "intraday"))
+            or verdict.hold_style
+            or "intraday"
+        )
+        verdict.size_posture = str(
+            sd.get("size_posture", verdict.size_posture)
+            or verdict.size_posture
+            or ("zero" if verdict.decision == "SKIP" else "normal")
+        )
+        verdict.no_trade_reason = str(sd.get("no_trade_reason", verdict.no_trade_reason) or verdict.no_trade_reason or "")
+
+        candidate_timing = str(sd.get("timing_state", "") or "").strip()
+        if verdict.decision in {"BUY", "SHORT"}:
+            derived_timing = candidate_timing or ("enter_now" if verdict.entry_now else verdict.timing_state)
+            verdict.timing_state = str(derived_timing or "enter_now")
+            if verdict.entry_now is False:
+                verdict.entry_now = verdict.timing_state == "enter_now"
+        elif verdict.timing_state in {"", "mode_conflict"} and candidate_timing in {
+            "wait_for_trigger",
+            "broker_blocked",
+            "capital_blocked",
+            "data_insufficient",
+            "mode_conflict",
+            "shadow_only",
+        }:
+            verdict.timing_state = candidate_timing
+
+        return verdict
+
+    @staticmethod
     def _history_signature(entry: Dict) -> tuple:
         return (
             str(entry.get("symbol", "")).upper(),
@@ -191,6 +232,7 @@ class Orchestrator:
                 provider_used="none",
                 consensus_detail={"agreement": "all_agents_unavailable"},
             )
+            verdict = self._hydrate_verdict_context(verdict, signals_data)
             self._cache[cache_key] = (verdict, time.time())
             self._skip_cache[cache_key] = time.time()
             self._append_history(verdict)
@@ -198,6 +240,7 @@ class Orchestrator:
             return verdict
 
         verdict = await deliberate(symbol, price, briefs, signals_data=signals_data)
+        verdict = self._hydrate_verdict_context(verdict, signals_data)
 
         # Update exit agent with latest briefs for this symbol
         self.exit_agent.update_briefs(symbol, briefs)
@@ -265,6 +308,7 @@ class Orchestrator:
                 briefs=briefs, provider_used="council",
                 consensus_detail={"agreement": "risk_block"},
             )
+            verdict = self._hydrate_verdict_context(verdict, signals_data)
             self._cache[cache_key] = (verdict, time.time())
             self._append_history(verdict)
             return verdict
@@ -298,6 +342,7 @@ class Orchestrator:
                     "adversary": adversary.to_dict(),
                 },
             )
+            verdict = self._hydrate_verdict_context(verdict, signals_data)
             self._cache[cache_key] = (verdict, time.time())
             self._skip_cache[f"{symbol}:{direction}"] = time.time()
             self._append_history(verdict)
@@ -315,6 +360,7 @@ class Orchestrator:
                     "adversary": adversary.to_dict(),
                 },
             )
+            verdict = self._hydrate_verdict_context(verdict, signals_data)
             self._cache[cache_key] = (verdict, time.time())
             self._append_history(verdict)
             return verdict
@@ -351,6 +397,7 @@ class Orchestrator:
                 },
             },
         )
+        verdict = self._hydrate_verdict_context(verdict, signals_data)
 
         self._cache[cache_key] = (verdict, time.time())
         self._append_history(verdict)

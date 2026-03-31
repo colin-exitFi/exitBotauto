@@ -16,7 +16,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from loguru import logger
 
-from .trade_history import load_all, get_analytics
+from .trade_history import (
+    get_analytics,
+    get_analytic_history,
+    get_learning_history,
+    get_quarantined_history,
+    load_all,
+)
 from src.data import strategy_controls
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
@@ -41,18 +47,35 @@ class GameFilm:
         self._last_run = now
 
         try:
-            history = load_all()
-            if len(history) < 5:
-                logger.debug("Game film: not enough trades yet")
+            raw_history = load_all()
+            analytic_history = get_analytic_history()
+            learning_history = get_learning_history()
+            quarantined_history = get_quarantined_history()
+            if len(learning_history) < 5:
+                logger.debug(
+                    "Game film: not enough clean trades yet "
+                    f"(clean={len(learning_history)} analytic={len(analytic_history)} raw={len(raw_history)})"
+                )
                 return None
 
-            insights = self._analyze(history)
+            insights = self._analyze(learning_history)
+            quarantine_summary = (get_analytics().get("quarantine", {}) or {})
+            insights["raw_total_trades"] = len(raw_history)
+            insights["analytic_total_trades"] = len(analytic_history)
+            insights["learning_total_trades"] = len(learning_history)
+            insights["quarantined_trades"] = len(quarantined_history)
+            insights["quarantined_pnl"] = round(
+                sum(float(t.get("pnl", 0) or 0) for t in quarantined_history),
+                2,
+            )
+            insights["quarantine_by_flag"] = dict(quarantine_summary.get("by_flag", {}) or {})
+            insights["quarantine_by_reason"] = dict(quarantine_summary.get("by_reason", {}) or {})
             controls = strategy_controls.load_controls()
             recommendations = insights.get("recommendations", {}) or {}
             probation_candidates = self.check_probation_candidates(controls)
             if probation_candidates:
                 recommendations["probation_candidates"] = probation_candidates
-            probation_updates = self.evaluate_probation(history, controls)
+            probation_updates = self.evaluate_probation(learning_history, controls)
             for key, rows in probation_updates.items():
                 if rows:
                     recommendations[key] = rows
@@ -62,9 +85,10 @@ class GameFilm:
             self._last_output = insights
             self._save(insights)
             logger.info(
-                f"🎬 Game film: {insights['total_trades']} trades, "
+                f"🎬 Game film: {insights['total_trades']} clean trades, "
                 f"{insights['overall_win_rate_pct']:.0f}% win rate, "
-                f"${insights['total_pnl']:.2f} P&L"
+                f"${insights['total_pnl']:.2f} P&L "
+                f"(quarantined={insights['quarantined_trades']})"
             )
             return insights
 

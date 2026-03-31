@@ -11,8 +11,17 @@ ARTIFACT_STRATEGY_TAGS = {
 
 PRIMARY_BOOKS = (
     "momentum_long",
+    "momentum_short",
+    "social_momentum_long",
+    "social_momentum_short",
     "uw_flow_long",
     "uw_flow_short",
+    "fade_short",
+    "copy_trader_long",
+    "copy_trader_short",
+    "watchlist_long",
+    "watchlist_short",
+    "pharma_catalyst",
     "congress_follow",
 )
 

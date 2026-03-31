@@ -9,6 +9,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
+from config import settings
 from src.agents.base_agent import call_claude
 from src.exit.order_conflicts import cancel_conflicting_exit_orders
 
@@ -207,7 +208,11 @@ class ExitAgent:
         try:
             result = await call_claude(prompt, max_tokens=300)
             if not result or "action" not in result:
-                return self._rule_based_fallback_action(pos, current_price, pnl_pct, hold_seconds)
+                action = self._rule_based_fallback_action(pos, current_price, pnl_pct, hold_seconds)
+                action["current_price"] = current_price
+                action["pnl_pct"] = pnl_pct
+                action["hold_seconds"] = hold_seconds
+                return action
 
             action = {
                 "action": result.get("action", "HOLD").upper(),
@@ -222,10 +227,17 @@ class ExitAgent:
             if action["action"] != "HOLD":
                 logger.info(f"🚪 Exit Agent {symbol}: {action['action']} — {action['reasoning']}")
 
+            action["current_price"] = current_price
+            action["pnl_pct"] = pnl_pct
+            action["hold_seconds"] = hold_seconds
             return action
         except Exception as e:
             logger.error(f"Exit agent evaluation error for {symbol}: {e}")
-            return self._rule_based_fallback_action(pos, current_price, pnl_pct, hold_seconds)
+            action = self._rule_based_fallback_action(pos, current_price, pnl_pct, hold_seconds)
+            action["current_price"] = current_price
+            action["pnl_pct"] = pnl_pct
+            action["hold_seconds"] = hold_seconds
+            return action
 
     @staticmethod
     def _rule_based_fallback_action(pos: Dict, current_price: float, pnl_pct: float, hold_seconds: float) -> Dict:
@@ -264,10 +276,13 @@ class ExitAgent:
             return False, None
 
     async def _execute_action(self, symbol: str, pos: Dict, action: Dict):
-        """Recommendation-only in v2 stabilization."""
+        """Apply exit-agent actions conservatively."""
         act = action.get("action", "HOLD")
         reason = str(action.get("reasoning", "") or "").strip()
         new_trail = action.get("new_trail_pct")
+        previous_recommendation = dict(pos.get("exit_agent_recommendation") or {})
+        if act != "EXIT_NOW":
+            pos["exit_agent_exit_now_count"] = 0
         pos["exit_agent_recommendation"] = {
             "action": act,
             "reasoning": reason,
@@ -293,9 +308,148 @@ class ExitAgent:
         except Exception:
             pass
 
+        if act == "EXIT_NOW":
+            count = self._record_exit_now_confirmation(pos, previous_recommendation)
+            hold_minutes = max(0.0, float(action.get("hold_seconds", 0.0) or 0.0) / 60.0)
+            pnl_pct = float(action.get("pnl_pct", 0.0) or 0.0)
+            logger.info(
+                f"🚪 Exit Agent EXIT_NOW state {symbol}: count={count} "
+                f"hold={hold_minutes:.1f}m pnl={pnl_pct:+.2f}%"
+            )
+            if await self._should_execute_exit_now(pos, action, count):
+                order = await self._execute_exit_now(symbol, pos, action, reason)
+                if order:
+                    logger.warning(f"🚪 Exit Agent executed EXIT_NOW for {symbol} — {reason}")
+                    try:
+                        from src.dashboard.dashboard import log_activity
+
+                        log_activity("trade", f"🚪 Exit Agent EXIT_NOW executed: {symbol} — {reason}")
+                    except Exception:
+                        pass
+            return
+
+        if act == "TIGHTEN" and new_trail is not None:
+            await self._apply_trail_adjustment(symbol, pos, float(new_trail), reason)
+
     async def _cancel_conflicting_exit_orders(self, symbol: str, side: str = "long") -> int:
         exit_side = "buy" if side == "short" else "sell"
         return await cancel_conflicting_exit_orders(self.broker, symbol, exit_side)
+
+    def _record_exit_now_confirmation(self, pos: Dict, previous_recommendation: Dict) -> int:
+        prev_action = str(previous_recommendation.get("action", "") or "").upper()
+        prev_ts = float(previous_recommendation.get("timestamp", 0.0) or 0.0)
+        window_seconds = float(getattr(settings, "EXIT_AGENT_EXIT_NOW_CONFIRM_WINDOW_SECONDS", 900.0) or 900.0)
+        count = int(pos.get("exit_agent_exit_now_count", 0) or 0)
+        if prev_action == "EXIT_NOW" and prev_ts > 0 and (time.time() - prev_ts) <= window_seconds:
+            count += 1
+        else:
+            count = 1
+        pos["exit_agent_exit_now_count"] = count
+        return count
+
+    async def _should_execute_exit_now(self, pos: Dict, action: Dict, count: int) -> bool:
+        if not bool(getattr(settings, "EXIT_AGENT_EXECUTE_EXIT_NOW_ENABLED", True)):
+            return False
+        if pos.get("exit_pending"):
+            return False
+
+        min_confirms = max(1, int(getattr(settings, "EXIT_AGENT_EXIT_NOW_CONFIRMATIONS", 2) or 2))
+        if count < min_confirms:
+            return False
+
+        hold_minutes = max(0.0, float(action.get("hold_seconds", 0.0) or 0.0) / 60.0)
+        min_hold_minutes = float(getattr(settings, "EXIT_AGENT_EXIT_NOW_MIN_HOLD_MINUTES", 3.0) or 3.0)
+        if hold_minutes < min_hold_minutes:
+            return False
+
+        pnl_pct = float(action.get("pnl_pct", 0.0) or 0.0)
+        max_pnl_pct = float(getattr(settings, "EXIT_AGENT_EXIT_NOW_MAX_PNL_PCT", 0.5) or 0.5)
+        return pnl_pct <= max_pnl_pct
+
+    async def _execute_exit_now(self, symbol: str, pos: Dict, action: Dict, reason: str):
+        qty = float(pos.get("quantity", 0) or 0)
+        if qty <= 0:
+            return None
+
+        current_price = float(
+            action.get("current_price", pos.get("current_price", pos.get("entry_price", 0.0))) or 0.0
+        )
+        pnl_pct = float(action.get("pnl_pct", 0.0) or 0.0)
+        exit_reason = f"exit_agent: {reason or 'EXIT_NOW'}"
+
+        if self._exit_manager and hasattr(self._exit_manager, "_execute_exit"):
+            return await self._exit_manager._execute_exit(
+                pos,
+                qty,
+                current_price,
+                exit_reason,
+                pnl_pct,
+            )
+
+        if not self.broker:
+            return None
+
+        side = str(pos.get("side", "long") or "long").lower()
+        canceled = await self._cancel_conflicting_exit_orders(symbol, side=side)
+        if canceled:
+            logger.info(f"🚪 Exit Agent canceled {canceled} conflicting exit orders for {symbol}")
+        broker_call = self.broker.place_market_buy if side == "short" else self.broker.place_market_sell
+        order = await asyncio.get_event_loop().run_in_executor(None, broker_call, symbol, qty)
+        if order:
+            pos["exit_pending"] = True
+            pos["exit_order_id"] = order.get("id")
+            pos["exit_submitted_at"] = time.time()
+            pos["last_exit_reason"] = exit_reason
+        return order
+
+    async def _apply_trail_adjustment(self, symbol: str, pos: Dict, requested_trail_pct: float, reason: str) -> bool:
+        current_trail = float(pos.get("trail_pct", 3.0) or 3.0)
+        new_trail = max(0.5, min(current_trail, float(requested_trail_pct)))
+        if new_trail >= current_trail - 0.05:
+            return False
+
+        prior_tighten = pos.get("ratchet_tighten_suggestion_pct")
+        try:
+            prior_tighten_val = float(prior_tighten) if prior_tighten is not None else None
+        except Exception:
+            prior_tighten_val = None
+
+        pos["trail_pct"] = new_trail
+        pos["ratchet_tighten_suggestion_pct"] = (
+            min(prior_tighten_val, new_trail) if prior_tighten_val is not None else new_trail
+        )
+
+        if not self.entry_manager or not hasattr(self.entry_manager, "_place_entry_protection_order"):
+            logger.info(f"🚪 Exit Agent tightened {symbol} trail to {new_trail:.2f}% ({reason})")
+            return True
+
+        side = str(pos.get("side", "long") or "long").lower()
+        qty = int(float(pos.get("quantity", 0) or 0))
+        if qty < 1:
+            return True
+
+        try:
+            if self.broker:
+                cancel_fn = self.broker.cancel_open_buys_for_symbol if side == "short" else self.broker.cancel_open_sells_for_symbol
+                if cancel_fn:
+                    await asyncio.get_event_loop().run_in_executor(None, cancel_fn, symbol)
+            trail_order, protection_failed = await self.entry_manager._place_entry_protection_order(
+                symbol,
+                qty,
+                new_trail,
+                side,
+            )
+            pos["trail_pct"] = new_trail
+            pos["protection_failed"] = bool(protection_failed)
+            if trail_order:
+                pos["has_trailing_stop"] = True
+                pos["trailing_stop_order_id"] = trail_order.get("id", pos.get("trailing_stop_order_id"))
+                logger.info(f"🚪 Exit Agent tightened {symbol} trail to {new_trail:.2f}% ({reason})")
+                return True
+        except Exception as e:
+            logger.warning(f"Exit Agent trail refresh failed for {symbol}: {e}")
+        logger.info(f"🚪 Exit Agent tightened {symbol} trail to {new_trail:.2f}% ({reason})")
+        return True
 
     async def _check_advisor_recommendations(self, positions: List[Dict], advisor) -> List[Dict]:
         """Apply advisor-issued trim/exit suggestions conservatively."""

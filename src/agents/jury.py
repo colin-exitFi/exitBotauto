@@ -30,7 +30,7 @@ class JuryVerdict:
     consensus_detail: Dict = field(default_factory=dict)
     setup_mode: str = "invalid"
     direction_constraint: str = "none"
-    timing_state: str = "no_edge"
+    timing_state: str = "mode_conflict"
     best_play: str = ""
     entry_now: bool = False
     trigger: str = ""
@@ -278,7 +278,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
             mode_constraint_active="YES" if bool(sd.get("mode_constraint_active")) else "NO",
             setup_mode=sd.get("setup_mode", "invalid"),
             direction_constraint=sd.get("direction_constraint", "none"),
-            timing_state=sd.get("timing_state", "no_edge"),
+            timing_state=sd.get("timing_state", "mode_conflict"),
             best_play=sd.get("best_play", "none"),
             play_trigger=sd.get("trigger", "not set"),
             play_invalidation=sd.get("invalidation", "not set"),
@@ -340,7 +340,7 @@ async def deliberate(symbol: str, price: float, briefs: Dict, signals_data: Dict
         verdict.direction_constraint = str(
             sd.get("direction_constraint", verdict.direction_constraint) or verdict.direction_constraint or "none"
         )
-        verdict.timing_state = str(sd.get("timing_state", verdict.timing_state) or verdict.timing_state or "no_edge")
+        verdict.timing_state = str(sd.get("timing_state", verdict.timing_state) or verdict.timing_state or "mode_conflict")
         verdict.best_play = str(sd.get("best_play", verdict.best_play) or verdict.best_play or "")
         verdict.trigger = str(sd.get("trigger", verdict.trigger) or verdict.trigger or "")
         verdict.invalidation = str(sd.get("invalidation", verdict.invalidation) or verdict.invalidation or "")

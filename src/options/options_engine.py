@@ -32,6 +32,8 @@ class OptionsEngine:
         self._pdt_rejection_cache: Dict[str, Dict] = {}
         self._pdt_rejection_log_ts: Dict[str, float] = {}
         self.reconcile_exit_required = True
+        self.last_trade_skip_reason = ""
+        self.last_trade_skip_detail = ""
         logger.info("Options engine initialized")
 
     @staticmethod
@@ -675,6 +677,10 @@ class OptionsEngine:
         max_contracts = int(budget / premium_per_contract)
         return max(0, min(max_contracts, 5))
 
+    def _set_last_trade_skip(self, reason: str, detail: str = "") -> None:
+        self.last_trade_skip_reason = str(reason or "").strip()
+        self.last_trade_skip_detail = str(detail or "").strip()
+
     async def execute_option_trade(
         self,
         symbol: str,
@@ -691,7 +697,9 @@ class OptionsEngine:
           4. Place buy order and track position state.
         """
         sentiment_data = sentiment_data or {}
+        self._set_last_trade_skip("", "")
         if budget <= 0 or price <= 0:
+            self._set_last_trade_skip("invalid_budget", f"budget={budget:.2f} price={price:.2f}")
             return None
 
         from functools import partial
@@ -702,11 +710,13 @@ class OptionsEngine:
             partial(self.find_contract, symbol, price, direction, sentiment_data=sentiment_data),
         )
         if not contract:
+            self._set_last_trade_skip("no_suitable_contract", f"{symbol} {direction}")
             logger.info(f"No suitable options contract for {symbol} {direction}")
             return None
 
         contract_symbol = contract.get("symbol", "")
         if not contract_symbol:
+            self._set_last_trade_skip("missing_contract_symbol", symbol)
             return None
 
         bid = float(contract.get("_bid", 0) or 0)
@@ -727,6 +737,10 @@ class OptionsEngine:
         premium_per_contract = premium * 100.0
         qty = self.calculate_contract_qty(budget, premium_per_contract)
         if qty < 1:
+            self._set_last_trade_skip(
+                "budget_too_small",
+                f"budget={budget:.2f} premium_per_contract={premium_per_contract:.2f} contract={contract_symbol}",
+            )
             logger.info(
                 f"Budget ${budget:.0f} insufficient for {contract_symbol} "
                 f"(premium ~${premium_per_contract:.0f}/contract)"
@@ -745,6 +759,7 @@ class OptionsEngine:
             ),
         )
         if not order:
+            self._set_last_trade_skip("order_failed", contract_symbol)
             return None
 
         signal_sources = sentiment_data.get("signal_sources", ["unknown"])
@@ -788,6 +803,7 @@ class OptionsEngine:
             "decision_price": sentiment_data.get("decision_price", price),
         }
         self.positions[contract_symbol] = position
+        self._set_last_trade_skip("", "")
 
         logger.success(
             f"🎯 OPTIONS ENTRY: {qty}x {contract_symbol} "

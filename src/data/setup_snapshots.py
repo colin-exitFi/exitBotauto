@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from src import persistence
+from src.data.trade_schema import normalize_setup_snapshot
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 SETUP_SNAPSHOTS_FILE = DATA_DIR / "setup_snapshots.json"
@@ -18,7 +19,9 @@ MAX_SETUP_SNAPSHOTS = 5000
 
 def _load() -> List[Dict]:
     rows = persistence.safe_load_json(SETUP_SNAPSHOTS_FILE, default=list)
-    return rows if isinstance(rows, list) else []
+    if not isinstance(rows, list):
+        return []
+    return [normalize_setup_snapshot(row) for row in rows]
 
 
 def _save(rows: List[Dict]) -> None:
@@ -29,7 +32,7 @@ def _save(rows: List[Dict]) -> None:
 def record_setup_snapshot(snapshot: Dict) -> str:
     rows = _load()
     snapshot_id = str(snapshot.get("snapshot_id") or uuid.uuid4().hex)
-    payload = dict(snapshot)
+    payload = normalize_setup_snapshot(dict(snapshot))
     payload["snapshot_id"] = snapshot_id
     payload.setdefault("recorded_at", time.time())
     rows.append(payload)

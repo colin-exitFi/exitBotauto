@@ -19,7 +19,7 @@ STRATEGY_SIZE_CAPS = {
 }
 
 STRATEGY_MAX_POSITIONS = {
-    "uw_flow_short": 2,
+    "uw_flow_short": 3,
     "congress_follow": 3,
     "momentum_long": 8,
 }
@@ -159,12 +159,26 @@ async def analyze(
             constraint_flags.append("size_reduced_spread")
 
         extended = bool((signals or {}).get("extended_hours") or (signals or {}).get("extended_hours_entry"))
-        if extended and signal_tier != "tier_1" and bool(getattr(settings, "EXTENDED_HOURS_TIER1_ONLY", True)):
-            can_trade = False
-            constraint_flags.append("extended_hours_tier_block")
-        elif extended:
-            size_cap_pct *= float(getattr(settings, "EXTENDED_HOURS_SIZE_MULT", 0.5) or 0.5)
-            constraint_flags.append("size_reduced_extended_hours")
+        if extended:
+            max_extended_spread = float(getattr(settings, "EXTENDED_HOURS_MAX_SPREAD_PCT", 0.35) or 0.35)
+            allow_tier2 = bool(getattr(settings, "EXTENDED_HOURS_ALLOW_TIER2", True))
+            block_at_highs = bool(getattr(settings, "EXTENDED_HOURS_BLOCK_AT_HIGHS", True))
+            tier_allowed = signal_tier == "tier_1" or (allow_tier2 and signal_tier == "tier_2")
+
+            if block_at_highs and entry_quality == "at_highs":
+                can_trade = False
+                constraint_flags.append("extended_hours_entry_quality_block")
+            elif spread_pct > max_extended_spread:
+                can_trade = False
+                constraint_flags.append("extended_hours_spread_block")
+            elif bool(getattr(settings, "EXTENDED_HOURS_TIER1_ONLY", True)) and not tier_allowed:
+                can_trade = False
+                constraint_flags.append("extended_hours_tier_block")
+            else:
+                if signal_tier == "tier_2":
+                    constraint_flags.append("extended_hours_tier2_allowed")
+                size_cap_pct *= float(getattr(settings, "EXTENDED_HOURS_SIZE_MULT", 0.5) or 0.5)
+                constraint_flags.append("size_reduced_extended_hours")
 
         if strategy_tag in STRATEGY_SIZE_CAPS:
             strategy_cap = float(STRATEGY_SIZE_CAPS[strategy_tag] or 0)
@@ -189,6 +203,8 @@ async def analyze(
             "gross_heat",
             "execution_safety_failure",
             "extended_hours_tier_block",
+            "extended_hours_spread_block",
+            "extended_hours_entry_quality_block",
             "sector_cap",
         }]
         if hard_flags:
