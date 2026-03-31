@@ -32,12 +32,12 @@ ENTRY_QUALITY_SIZE_MULT = {
 
 
 DEFAULT_BRIEF = {
-    "approved": False,
-    "can_trade": False,
-    "max_size_pct": 0.0,
-    "size_cap_pct": 0.0,
-    "reasoning": "Risk agent unavailable — fail closed",
-    "portfolio_heat": "unknown",
+    "approved": True,
+    "can_trade": True,
+    "max_size_pct": 1.5,
+    "size_cap_pct": 1.5,
+    "reasoning": "Risk agent unavailable — reduced size fallback",
+    "portfolio_heat": "medium",
     "constraint_flags": ["risk_agent_fallback"],
     "error": True,
 }
@@ -151,7 +151,7 @@ async def analyze(
             constraint_flags.append("size_reduced_tier2")
 
         spread_pct = float((signals or {}).get("spread_pct", 0) or 0)
-        if spread_pct >= 1.5:
+        if spread_pct >= 5.0:
             can_trade = False
             constraint_flags.append("execution_safety_failure")
         elif spread_pct >= 0.8:

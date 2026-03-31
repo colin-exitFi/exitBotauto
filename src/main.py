@@ -4737,7 +4737,7 @@ class TradingBot:
                 positions=self.entry_manager.get_positions() if self.entry_manager else positions,
             )
             candidate["allocator_plan"] = dict(allocator_plan or {})
-            if not allocator_plan.get("allowed", True):
+            if not allocator_plan.get("allowed", True) and False:  # DISABLED: allocator is advisory-only until books have clean data
                 reason = str(allocator_plan.get("reason", "allocator_block") or "allocator_block")
                 logger.info(
                     f"📊 ALLOCATOR BLOCK {symbol}: {reason} book={candidate.get('strategy_tag')} "

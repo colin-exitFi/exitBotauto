@@ -403,7 +403,7 @@ def _status_budget_multiplier(bucket: Dict) -> float:
     if control_state in {"manual_disabled", "hard_disabled", "soft_disabled"}:
         return 0.0
     if status == "probation" or action == "probation" or control_state == "probation":
-        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_BUDGET_MULTIPLIER", 0.4) or 0.4)
+        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_BUDGET_MULTIPLIER", 0.7) or 0.4)
     if action == "observe":
         return float(getattr(settings, "BOOK_ALLOCATOR_OBSERVE_BUDGET_MULTIPLIER", 0.7) or 0.7)
     if status == "scale" or action == "scale":
@@ -421,7 +421,7 @@ def _status_size_multiplier(bucket: Dict) -> float:
     if control_state in {"manual_disabled", "hard_disabled", "soft_disabled"}:
         return 0.0
     if status == "probation" or action == "probation" or control_state == "probation":
-        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_STATUS_MULTIPLIER", 0.55) or 0.55)
+        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_STATUS_MULTIPLIER", 0.7) or 0.55)
     if action == "observe":
         return float(getattr(settings, "BOOK_ALLOCATOR_OBSERVE_STATUS_MULTIPLIER", 0.8) or 0.8)
     if status == "scale" or action == "scale":
@@ -724,7 +724,7 @@ def plan_entry(
     if (
         regime_context_state in {"negative", "strong_negative"}
         and session_context_state in {"negative", "strong_negative"}
-        and confidence < 88.0
+        and False  # DISABLED: context block was killing all trading. Probation sizing handles risk.
     ):
         return {
             "allowed": False,
@@ -820,10 +820,11 @@ def plan_entry(
         adjusted_size_pct = remaining_pct
         reason_codes.append("trimmed_to_book_budget")
 
-    min_entry_pct = 0.25
+    min_entry_pct = 0.15
     if allowed and adjusted_size_pct < min_entry_pct:
-        allowed = False
-        reason = "book_budget_too_small"
+        # Floor: council-approved trades get minimum viable size instead of zero
+        adjusted_size_pct = max(adjusted_size_pct, 0.5)
+        reason_codes.append("allocator_floor_applied")
 
     return {
         "allowed": allowed,
