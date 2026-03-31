@@ -403,9 +403,9 @@ def _status_budget_multiplier(bucket: Dict) -> float:
     if control_state in {"manual_disabled", "hard_disabled", "soft_disabled"}:
         return 0.0
     if status == "probation" or action == "probation" or control_state == "probation":
-        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_BUDGET_MULTIPLIER", 0.7) or 0.4)
+        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_BUDGET_MULTIPLIER", 1.0) or 0.4)
     if action == "observe":
-        return float(getattr(settings, "BOOK_ALLOCATOR_OBSERVE_BUDGET_MULTIPLIER", 0.7) or 0.7)
+        return float(getattr(settings, "BOOK_ALLOCATOR_OBSERVE_BUDGET_MULTIPLIER", 1.0) or 0.7)
     if status == "scale" or action == "scale":
         return float(getattr(settings, "BOOK_ALLOCATOR_SCALE_BUDGET_MULTIPLIER", 1.15) or 1.15)
     return 1.0
@@ -421,9 +421,9 @@ def _status_size_multiplier(bucket: Dict) -> float:
     if control_state in {"manual_disabled", "hard_disabled", "soft_disabled"}:
         return 0.0
     if status == "probation" or action == "probation" or control_state == "probation":
-        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_STATUS_MULTIPLIER", 0.7) or 0.55)
+        return float(getattr(settings, "BOOK_ALLOCATOR_PROBATION_STATUS_MULTIPLIER", 1.0) or 0.55)
     if action == "observe":
-        return float(getattr(settings, "BOOK_ALLOCATOR_OBSERVE_STATUS_MULTIPLIER", 0.8) or 0.8)
+        return float(getattr(settings, "BOOK_ALLOCATOR_OBSERVE_STATUS_MULTIPLIER", 1.0) or 0.8)
     if status == "scale" or action == "scale":
         return float(getattr(settings, "BOOK_ALLOCATOR_SCALE_STATUS_MULTIPLIER", 1.1) or 1.1)
     return 1.0
