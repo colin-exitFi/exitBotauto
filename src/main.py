@@ -60,6 +60,7 @@ from src.ai.tuner import Tuner
 from src.ai.game_film import GameFilm
 from src.ai.position_manager import PositionManager
 from src.ai import trade_history
+from src.ai.post_exit_tracker import check_post_exit_prices
 from src.agents.jury import JuryVerdict
 from src.agents import risk_agent as book_risk_agent
 from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
@@ -958,6 +959,21 @@ class TradingBot:
                     tasks_run.append("game_film")
             except Exception as e:
                 logger.debug(f"Game film review failed: {e}")
+
+        # ── POST-EXIT TRACKING: Check where prices went after exits (every 5 min) ──
+        last_post_exit = float(state.get("last_post_exit_check", 0) or 0)
+        if now - last_post_exit > 300:
+            try:
+                async def _get_price(symbol):
+                    if self.polygon_client:
+                        return await asyncio.get_event_loop().run_in_executor(
+                            None, self.polygon_client.get_price, symbol
+                        )
+                    return 0
+                await check_post_exit_prices(_get_price)
+                state["last_post_exit_check"] = now
+            except Exception as e:
+                logger.debug(f"Post-exit tracking failed: {e}")
 
         # ── PHARMA: Refresh PDUFA calendar (every 6 hours) ──
         if now - last_pharma > 6 * 3600:
