@@ -48,7 +48,7 @@ from src.execution.pre_trade_cost import PreTradeCostEstimator
 from src.execution.dust_policy import should_auto_liquidate
 from src.risk.concentration_guard import ConcentrationGuard
 from src.signals.short_interest import ShortInterestScanner
-from src.signals.sector_rotation import SectorRotationModel
+from src.signals.sector_rotation import SectorRotationModel, SECTOR_STOCKS
 from src.streams.market_stream import MarketStream
 from src.streams.trade_stream import TradeStream
 from src.streams.unusual_whales_stream import UnusualWhalesStream
@@ -3014,6 +3014,21 @@ class TradingBot:
             prepared.get("overnight_context")
             or OvernightContext.format_summary(self.get_overnight_bias_context())
         )
+
+        if self.sector_model:
+            symbol = str(prepared.get("symbol") or "").upper()
+            stock_sector = None
+            for sector_name, tickers in SECTOR_STOCKS.items():
+                if symbol in tickers:
+                    stock_sector = sector_name
+                    break
+            if stock_sector:
+                hot_names = {s[1] for s in self.sector_model.get_hot_sectors(3)}
+                cold_names = {s[1] for s in self.sector_model.get_cold_sectors(3)}
+                prepared["sector_name"] = stock_sector
+                prepared["sector_hot"] = stock_sector in hot_names
+                prepared["sector_cold"] = stock_sector in cold_names
+
         return prepared
 
     def _evaluate_trade_gate(self, candidate: Dict, direction: str) -> Dict:

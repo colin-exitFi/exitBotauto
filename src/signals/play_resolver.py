@@ -398,7 +398,7 @@ def resolve_play(
                 no_trade_reason="fade_not_confirmed_yet",
                 trigger_spec=TriggerSpec(
                     "fade_failure_reject",
-                    {"min_daily_pct": 15.0, "max_volume_accel": 0.1},
+                    {"min_daily_pct": 15.0, "max_volume_accel": 0.3},
                     "squeeze failure confirms the fade",
                 ),
             )
@@ -423,13 +423,51 @@ def resolve_play(
                 trigger_spec=TriggerSpec("already_live", {}, "entry conditions are already live"),
             )
 
+        if features.losing_vwap:
+            return PlayResolution(
+                symbol=features.symbol,
+                mode=mode,
+                direction_constraint=direction_constraint,
+                timing_state="enter_now",
+                best_play="exhaustion_fade_short",
+                trigger="losing VWAP on extended move — reversal underway",
+                invalidation=invalidation,
+                hold_style="intraday",
+                classifier_confidence=classification.classifier_confidence,
+                resolver_confidence=0.75,
+                reason_codes=base_reasons + ["vwap_loss_fade_entry"],
+                expires_at=expires_at,
+                size_posture="reduced",
+                entry_now=True,
+                trigger_spec=TriggerSpec("already_live", {}, "VWAP loss confirms exhaustion fade"),
+            )
+
+        if features.range_pct < 50.0 and features.daily_pct >= 15.0:
+            return PlayResolution(
+                symbol=features.symbol,
+                mode=mode,
+                direction_constraint=direction_constraint,
+                timing_state="enter_now",
+                best_play="exhaustion_fade_short",
+                trigger="range contraction on extended move — momentum fading",
+                invalidation=invalidation,
+                hold_style="intraday",
+                classifier_confidence=classification.classifier_confidence,
+                resolver_confidence=0.72,
+                reason_codes=base_reasons + ["range_contraction_fade_entry"],
+                expires_at=expires_at,
+                size_posture="reduced",
+                entry_now=True,
+                trigger_spec=TriggerSpec("already_live", {}, "range contraction confirms exhaustion"),
+            )
+
         return PlayResolution(
             symbol=features.symbol,
             mode=mode,
             direction_constraint=direction_constraint,
             timing_state="wait_for_trigger",
             best_play="exhaustion_fade_short",
-            trigger="volume needs to stop accelerating",
+            trigger="volume needs to decelerate or lose VWAP",
             invalidation=invalidation,
             hold_style="intraday",
             classifier_confidence=classification.classifier_confidence,
@@ -440,8 +478,8 @@ def resolve_play(
             entry_now=False,
             trigger_spec=TriggerSpec(
                 "fade_failure_reject",
-                {"min_daily_pct": 15.0, "max_volume_accel": 0.1},
-                "volume deceleration confirms exhaustion",
+                {"min_daily_pct": 15.0, "max_volume_accel": 0.5},
+                "volume deceleration confirms exhaustion (relaxed threshold)",
             ),
         )
 
