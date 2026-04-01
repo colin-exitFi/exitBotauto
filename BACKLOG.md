@@ -8,6 +8,9 @@ Dashboard showed a +$154.33 / +154% AAPL trade that doesn't exist in trade_histo
 ### Stop Reconstructed Trades From Polluting Win Rate
 The reconciler creates `broker_fill_reconstructed` trades from broker activity it can't match to pipeline entries (dust closures, manual actions, partial ratchet exits on carryovers). These inflate trade count and drag win rate. Today: 37 trades reported but many are phantom reconstructions. Fix: the dashboard win rate and scoreboard should read from analytics_trade_ledger (which excludes reconstructed), not raw trade_history. Wire the analytics ledger separation into the reconciler write path so reconstructed trades go to raw only.
 
+### Asymmetric Risk/Reward: Losers Bigger Than Winners
+Day 1 data: 57% win rate but -$78 P&L. Winners avg +$3-7, losers avg -$10-23. The hard stop allows -1% drawdown ($18 on $1,800 position) but the ratchet exits winners too early at +0.3-0.5% ($5-7). Risk/reward is backwards -- risking $18 to make $5. Options: (a) tighten hard stop to -0.5% on intraday momentum, (b) widen ratchet activation threshold so winners run further before locking in, (c) use pre-trade cost to skip low-edge names where the expected move is smaller than the stop distance, (d) size down on names with high ATR relative to expected edge.
+
 ### Exhaustion Fade Short Triggers Too Strict
 17 pending exhaustion_fade_short setups today, 0 entered. Trigger "volume needs to stop accelerating" never fires because volume keeps running on big momentum names. Need to either: (a) add alternative triggers like "price loses VWAP" or "range contraction after extension", or (b) reduce the volume deceleration threshold so it fires earlier in the exhaustion process. Currently these setups expire unused every time.
 
