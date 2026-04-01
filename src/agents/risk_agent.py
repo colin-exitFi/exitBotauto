@@ -9,9 +9,7 @@ from loguru import logger
 from config import settings
 from src.risk.risk_manager import SECTOR_MAP
 
-DISABLED_STRATEGIES = {
-    "uw_flow_long",
-}
+DISABLED_STRATEGIES = set()  # Paper account: all strategies enabled for data collection
 
 STRATEGY_SIZE_CAPS = {
     "uw_flow_short": 2.0,
