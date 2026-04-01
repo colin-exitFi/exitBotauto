@@ -1,0 +1,147 @@
+{
+  "committee": {
+    "name": "Velox Governance Committee",
+    "operator_role": "human_chairman",
+    "mission": "Govern Velox as a capital allocation machine: preserve edge, control drawdown, prevent ungoverned complexity, and scale only what proves durable expectancy after friction.",
+    "doctrine": "Do not optimize for activity, novelty, or sophistication. Optimize for durable net expectancy, controlled losses, reliable execution, honest attribution, and disciplined capital scaling.",
+    "artifacts": {
+      "governance_os": "docs/governance/VELOX_GOVERNANCE_OS.md",
+      "committee_prompt": "docs/governance/AGENT_GOVERNANCE_PROMPT.md",
+      "change_proposal_template": "docs/governance/CHANGE_PROPOSAL_TEMPLATE.md",
+      "weekly_committee_memo_template": "docs/governance/WEEKLY_COMMITTEE_MEMO_TEMPLATE.md"
+    }
+  },
+  "rollout_states": [
+    "logging/reporting only",
+    "shadow",
+    "paper",
+    "capped live",
+    "scaled live"
+  ],
+  "book_lifecycle": [
+    "incubation",
+    "active",
+    "scaled",
+    "probation",
+    "retired"
+  ],
+  "roles": [
+    {
+      "id": "builder",
+      "title": "Builder",
+      "order": 1,
+      "summary": "Owns implementation clarity, operational safety, and rollback realism.",
+      "persona": "principal engineer",
+      "doc_path": "docs/governance/roles/BUILDER.md",
+      "focus_layers": [
+        "observability",
+        "candidate generation",
+        "execution timing",
+        "reconciliation"
+      ],
+      "required_questions": [
+        "What changed?",
+        "What system layer does it touch?",
+        "What can break operationally?",
+        "How do we roll it back?"
+      ]
+    },
+    {
+      "id": "quant_reviewer",
+      "title": "Quant Reviewer",
+      "order": 2,
+      "summary": "Owns statistical honesty, regime fit, and edge validation by book.",
+      "persona": "quant researcher",
+      "doc_path": "docs/governance/roles/QUANT_REVIEWER.md",
+      "focus_layers": [
+        "setup classification",
+        "exit logic",
+        "sizing",
+        "allocator behavior"
+      ],
+      "required_questions": [
+        "Does this improve expectancy or just activity?",
+        "Which books or regimes should benefit?",
+        "What evidence would falsify the claim?",
+        "Is the sample size good enough to believe this?"
+      ]
+    },
+    {
+      "id": "portfolio_manager",
+      "title": "Portfolio Manager",
+      "order": 3,
+      "summary": "Owns book lifecycle, capital routing, and portfolio-level judgment.",
+      "persona": "hedge fund portfolio manager",
+      "doc_path": "docs/governance/roles/PORTFOLIO_MANAGER.md",
+      "focus_layers": [
+        "sizing",
+        "allocator behavior",
+        "risk controls"
+      ],
+      "required_questions": [
+        "Which books deserve more or less capital?",
+        "How does this affect concentration and cross-book exposure?",
+        "Should this book be incubation, active, scaled, probation, or retired?",
+        "What should happen to capital if the change underperforms?"
+      ]
+    },
+    {
+      "id": "risk_committee",
+      "title": "Risk Committee",
+      "order": 4,
+      "summary": "Owns downside protection, tail-risk skepticism, and de-risking rules.",
+      "persona": "hedge fund risk officer",
+      "doc_path": "docs/governance/roles/RISK_COMMITTEE.md",
+      "focus_layers": [
+        "stop logic",
+        "exit logic",
+        "risk controls",
+        "reconciliation"
+      ],
+      "required_questions": [
+        "What gets worse if this is wrong?",
+        "Could this increase tail losses, churn, or hidden fragility?",
+        "Should this be capped, shadowed, or rejected?",
+        "What kill-switch or rollback condition applies?"
+      ]
+    },
+    {
+      "id": "outside_critic",
+      "title": "Outside Critic",
+      "order": 5,
+      "summary": "Owns pressure-testing the narrative and calling out when architecture outruns proof.",
+      "persona": "independent investment committee critic",
+      "doc_path": "docs/governance/roles/OUTSIDE_CRITIC.md",
+      "focus_layers": [
+        "allocator behavior",
+        "risk controls",
+        "observability"
+      ],
+      "required_questions": [
+        "Are we fixing the right bottleneck?",
+        "Is complexity outrunning evidence?",
+        "Should we prune instead of add?",
+        "Is the story stronger than the data?"
+      ]
+    },
+    {
+      "id": "human_chairman",
+      "title": "Human Chairman",
+      "order": 6,
+      "summary": "Owns final approval, capital/risk escalation, and weekly governance review.",
+      "persona": "operator and capital governor",
+      "doc_path": "docs/governance/roles/HUMAN_CHAIRMAN.md",
+      "focus_layers": [
+        "allocator behavior",
+        "risk controls",
+        "reconciliation"
+      ],
+      "required_questions": [
+        "What are we optimizing for this week?",
+        "What should be approved, capped, or rejected?",
+        "Which books earn more or less capital now?",
+        "What must be rolled back or put on probation?"
+      ]
+    }
+  ]
+}

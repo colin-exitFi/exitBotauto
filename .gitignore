@@ -10,3 +10,7 @@ config_state.json
 .env.bak*
 .env.backup*
 data/archive/velox_v2_reset_vps/dotenv_vps
+*.db
+*.db-shm
+*.db-wal
+data/archive/

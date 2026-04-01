@@ -1,0 +1,104 @@
+{
+  "blacklist": {},
+  "cooldowns": {
+    "AAPL": {
+      "exit_confirmed_at": 1773156660.0,
+      "cooldown_until": 1773156960.0,
+      "expires_at": 1773156960.0
+    },
+    "TSLA": {
+      "exit_confirmed_at": 1772704860.0,
+      "cooldown_until": 1772705160.0,
+      "expires_at": 1772705160.0
+    }
+  },
+  "jury_vetoes": {},
+  "tombstones": {},
+  "symbol_trade_state": {
+    "AAPL": {
+      "symbol": "AAPL",
+      "last_exit_time": 1773156660.0,
+      "last_pnl": 35.0,
+      "last_outcome": "win",
+      "last_reason": "advisor_strategic_exit",
+      "last_setup_id": "",
+      "consecutive_losses": 0,
+      "consecutive_wins": 23,
+      "attempts_since_win": 0,
+      "recent_results": [
+        {
+          "timestamp": 1773156660.0,
+          "pnl": 35.0,
+          "outcome": "win",
+          "reason": "advisor_strategic_exit",
+          "setup_id": ""
+        },
+        {
+          "timestamp": 1774932834.299834,
+          "pnl": 40.0,
+          "outcome": "win",
+          "reason": "take_profit",
+          "setup_id": ""
+        },
+        {
+          "timestamp": 1774932834.3581738,
+          "pnl": 50.0,
+          "outcome": "win",
+          "reason": "trailing_stop_ws",
+          "setup_id": ""
+        },
+        {
+          "timestamp": 1773156660.0,
+          "pnl": 35.0,
+          "outcome": "win",
+          "reason": "advisor_strategic_exit",
+          "setup_id": ""
+        },
+        {
+          "timestamp": 1774932834.283652,
+          "pnl": 50.0,
+          "outcome": "win",
+          "reason": "trailing_stop_ws",
+          "setup_id": ""
+        },
+        {
+          "timestamp": 1773156660.0,
+          "pnl": 35.0,
+          "outcome": "win",
+          "reason": "advisor_strategic_exit",
+          "setup_id": ""
+        }
+      ],
+      "updated_at": 1774938474.435015
+    },
+    "TSLA": {
+      "symbol": "TSLA",
+      "last_exit_time": 1772704860.0,
+      "last_pnl": 15.0,
+      "last_outcome": "win",
+      "last_reason": "broker_exit_fill",
+      "last_setup_id": "",
+      "consecutive_losses": 0,
+      "consecutive_wins": 2,
+      "attempts_since_win": 0,
+      "recent_results": [
+        {
+          "timestamp": 1772704860.0,
+          "pnl": 15.0,
+          "outcome": "win",
+          "reason": "broker_exit_fill",
+          "setup_id": ""
+        },
+        {
+          "timestamp": 1772704860.0,
+          "pnl": 15.0,
+          "outcome": "win",
+          "reason": "broker_exit_fill",
+          "setup_id": ""
+        }
+      ],
+      "updated_at": 1774369573.8722749
+    }
+  },
+  "symbol_loss_locks": {}
+}

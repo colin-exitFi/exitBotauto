@@ -1,0 +1,21 @@
+{
+  "AAPL": {
+    "symbol": "AAPL",
+    "entry_price": 100.0,
+    "quantity": 10.0,
+    "entry_time": 1774932774.275609,
+    "side": "long",
+    "_exit_recorded": false,
+    "_exit_recording": true,
+    "exit_recorded": true,
+    "exit_finalized_at": 1774932834.283652,
+    "exit_pending": false,
+    "exit_fill_qty": 10.0,
+    "current_price": 105.0,
+    "price_at_1m": 105.0,
+    "time_to_green_seconds": 60,
+    "mfe_pct": 5.0,
+    "time_to_peak_seconds": 60,
+    "mae_pct": 5.0
+  }
+}

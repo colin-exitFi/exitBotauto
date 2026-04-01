@@ -1,0 +1,34 @@
+[
+  {
+    "symbol": "AAPL",
+    "strategy_tag": "uw_flow_long",
+    "direction": "BUY",
+    "signal_tier": "tier_2",
+    "entry_quality": "pullback",
+    "signal_price": 100.0,
+    "spread_pct": 0.0,
+    "range_pct": 0.0,
+    "timestamp": 1774630755.428843,
+    "price_1h": null,
+    "price_4h": null,
+    "price_eod": null,
+    "mfe": null,
+    "mae": null
+  },
+  {
+    "symbol": "AAPL",
+    "strategy_tag": "uw_flow_long",
+    "direction": "BUY",
+    "signal_tier": "tier_2",
+    "entry_quality": "pullback",
+    "signal_price": 100.0,
+    "spread_pct": 0.0,
+    "range_pct": 0.0,
+    "timestamp": 1774642534.814066,
+    "price_1h": null,
+    "price_4h": null,
+    "price_eod": null,
+    "mfe": null,
+    "mae": null
+  }
+]

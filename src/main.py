@@ -4541,6 +4541,22 @@ class TradingBot:
                 continue
             evaluated_symbols.add(symbol)
 
+            # ── V3: Record scan in funnel + state machine ──
+            _setup_id = str(candidate.get("setup_id", "") or "")
+            _mode = str(candidate.get("setup_mode", "") or "")
+            _book = str(candidate.get("strategy_tag", "") or "")
+            if hasattr(self, "state_store"):
+                try:
+                    self.state_store.record_funnel_event(symbol, _setup_id, "scanned", _mode, _book)
+                except Exception:
+                    pass
+            if hasattr(self, "symbol_state_tracker"):
+                try:
+                    if not self.symbol_state_tracker.is_occupied(symbol):
+                        self.symbol_state_tracker.transition(symbol, "classified", "scan_candidate", setup_id=_setup_id, setup_mode=_mode)
+                except Exception:
+                    pass
+
             cooldown_remaining = self._symbol_reentry_cooldown_remaining(symbol)
             if cooldown_remaining > 0:
                 logger.info(f"🧊 ENTRY COOLDOWN {symbol}: {int(cooldown_remaining)}s after recent exit")
@@ -4610,12 +4626,50 @@ class TradingBot:
             current_mode = str(candidate.get("setup_mode", "invalid") or "invalid").strip().lower()
             timing_state = str(candidate.get("timing_state", "mode_conflict") or "mode_conflict").strip().lower()
             candidate["mode_constraint_active"] = self._mode_classifier_enforced()
+            _setup_id = str(candidate.get("setup_id", _setup_id) or _setup_id)
+            _mode = current_mode
+
+            # ── V3: Record classification in funnel ──
+            if hasattr(self, "state_store"):
+                try:
+                    self.state_store.record_funnel_event(symbol, _setup_id, "classified", _mode, _book)
+                except Exception:
+                    pass
+
+            # ── V3: Pre-trade executability check on every candidate ──
+            if hasattr(self, "pre_trade_cost") and current_mode != "invalid":
+                try:
+                    _exec_report = self.pre_trade_cost.evaluate(
+                        candidate,
+                        self.session_context.snapshot if hasattr(self, "session_context") else None,
+                    )
+                    candidate["executability_report"] = _exec_report.to_dict()
+                    candidate["execution_quality_score"] = _exec_report.execution_quality_score
+                    candidate["edge_survives_cost"] = _exec_report.edge_survives_cost
+                except Exception as e:
+                    logger.debug(f"PreTradeCost eval failed for {symbol}: {e}")
 
             if pending_mode and pending_mode != current_mode:
                 self._remove_waiting_setup(symbol, mode=pending_mode)
 
             if timing_state == "wait_for_trigger":
                 self._persist_waiting_setup(candidate, shadow_mode=not self._mode_classifier_enforced())
+                # V3: persist to trigger engine + SQLite + funnel
+                if hasattr(self, "trigger_engine"):
+                    try:
+                        self.trigger_engine.add_pending(candidate)
+                    except Exception:
+                        pass
+                if hasattr(self, "state_store"):
+                    try:
+                        self.state_store.record_funnel_event(symbol, _setup_id, "pending_trigger", _mode, _book)
+                    except Exception:
+                        pass
+                if hasattr(self, "symbol_state_tracker"):
+                    try:
+                        self.symbol_state_tracker.transition(symbol, "pending_trigger", "wait_for_trigger", setup_id=_setup_id, setup_mode=_mode)
+                    except Exception:
+                        pass
                 logger.info(
                     f"⏳ SETUP WAIT {symbol}: mode={current_mode} trigger={candidate.get('trigger', 'n/a')} "
                     f"expires_at={candidate.get('expires_at')}"
