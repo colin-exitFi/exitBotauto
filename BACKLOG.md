@@ -13,6 +13,18 @@ The reconciler creates `broker_fill_reconstructed` trades from broker activity i
 
 ## High Priority (Next Session)
 
+### Catalyst Hold Mode (Pharma/Earnings/Congress Pre-Positioning)
+The bot finds pharma catalysts (BIIB NDA in 2 days, DNLI BLA in 4 days) but can't act on them because the classifier requires intraday momentum. Catalyst plays need a dedicated mode:
+- New classifier mode: `catalyst_hold` -- enters BEFORE the event, holds until catalyst date
+- Wider stops (5-8%) since pre-catalyst price action is noise
+- Dead money detector DISABLED for catalyst_hold positions
+- Ratchet only activates AFTER catalyst date hits
+- Post-catalyst: if it runs, switch to momentum ratchet rules; if it gaps down, hard stop catches it
+- Exit rules tied to catalyst expiry date, not hold time
+- Options integration: these are ideal defined-risk options plays (buy calls ahead of FDA)
+- Congress/earnings same pattern: position ahead, hold through noise, let event be the trigger
+This is how you catch 200% pharma runners and earnings gaps instead of watching from the sidelines.
+
 ### EOD Partial Exit (Scale-Out at Close)
 Instead of binary close/hold at EOD, scale out 60-70% and let 30-40% ride overnight for multi-day runners. Requires: partial exit by percentage in exit manager, ratchet tracking on reduced position, hold-style awareness (intraday = close all, swing = scale out). Directly addresses "monsters we liquidated before close that ran another 7-8% the next day."
 
