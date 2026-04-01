@@ -19,7 +19,7 @@ RISK_TIERS = {
     "SURVIVAL":  {"min": 0,      "max": 500,    "size_pct": 10.0, "max_positions": 3,  "stop_pct": 2.0, "daily_loss_pct": 8.0},
     "GROWTH":    {"min": 500,    "max": 2000,   "size_pct": 7.0,  "max_positions": 5,  "stop_pct": 1.5, "daily_loss_pct": 6.0},
     "SCALING":   {"min": 2000,   "max": 10000,  "size_pct": 4.0,  "max_positions": 8,  "stop_pct": 1.5, "daily_loss_pct": 5.0},
-    "COMPOUND":  {"min": 10000,  "max": 50000,  "size_pct": 5.0,  "max_positions": 20, "stop_pct": 1.0, "daily_loss_pct": 5.0},
+    "COMPOUND":  {"min": 10000,  "max": 50000,  "size_pct": 5.0,  "max_positions": 40, "stop_pct": 1.0, "daily_loss_pct": 5.0},
     "PROTECT":   {"min": 50000,  "max": 250000, "size_pct": 1.5,  "max_positions": 12, "stop_pct": 1.0, "daily_loss_pct": 3.0},
     "PRESERVE":  {"min": 250000, "max": 1000000,"size_pct": 0.8,  "max_positions": 15, "stop_pct": 0.8, "daily_loss_pct": 2.0},
 }
