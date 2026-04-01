@@ -4920,16 +4920,10 @@ class TradingBot:
             )
             candidate["allocator_plan"] = dict(allocator_plan or {})
             alloc_size = float(allocator_plan.get("size_pct", effective_size_pct) or effective_size_pct)
-            if alloc_size < effective_size_pct and alloc_size > 0:
+            if alloc_size < effective_size_pct:
                 logger.info(
-                    f"📊 ALLOCATOR CAP {symbol}: size reduced {effective_size_pct:.2f}→{alloc_size:.2f} "
-                    f"book={candidate.get('strategy_tag')} reason={allocator_plan.get('reason', 'budget')}"
-                )
-                effective_size_pct = alloc_size
-            elif alloc_size <= 0:
-                logger.info(
-                    f"📊 ALLOCATOR ADVISORY BLOCK {symbol}: would block but running advisory mode "
-                    f"book={candidate.get('strategy_tag')} reason={allocator_plan.get('reason', 'budget')}"
+                    f"📊 ALLOCATOR LOG {symbol}: allocator recommends {alloc_size:.2f}% vs tier {effective_size_pct:.2f}% "
+                    f"book={candidate.get('strategy_tag')} — using tier size (paper account mode)"
                 )
             size_modifier = max(0.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
 
