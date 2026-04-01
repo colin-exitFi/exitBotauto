@@ -1,5 +1,10 @@
 # Velox V3 Backlog
 
+## URGENT (Tonight)
+
+### Stop Reconstructed Trades From Polluting Win Rate
+The reconciler creates `broker_fill_reconstructed` trades from broker activity it can't match to pipeline entries (dust closures, manual actions, partial ratchet exits on carryovers). These inflate trade count and drag win rate. Today: 37 trades reported but many are phantom reconstructions. Fix: the dashboard win rate and scoreboard should read from analytics_trade_ledger (which excludes reconstructed), not raw trade_history. Wire the analytics ledger separation into the reconciler write path so reconstructed trades go to raw only.
+
 ## High Priority (Next Session)
 
 ### EOD Partial Exit (Scale-Out at Close)
