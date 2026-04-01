@@ -8,6 +8,9 @@ Dashboard showed a +$154.33 / +154% AAPL trade that doesn't exist in trade_histo
 ### Stop Reconstructed Trades From Polluting Win Rate
 The reconciler creates `broker_fill_reconstructed` trades from broker activity it can't match to pipeline entries (dust closures, manual actions, partial ratchet exits on carryovers). These inflate trade count and drag win rate. Today: 37 trades reported but many are phantom reconstructions. Fix: the dashboard win rate and scoreboard should read from analytics_trade_ledger (which excludes reconstructed), not raw trade_history. Wire the analytics ledger separation into the reconciler write path so reconstructed trades go to raw only.
 
+### Exhaustion Fade Short Triggers Too Strict
+17 pending exhaustion_fade_short setups today, 0 entered. Trigger "volume needs to stop accelerating" never fires because volume keeps running on big momentum names. Need to either: (a) add alternative triggers like "price loses VWAP" or "range contraction after extension", or (b) reduce the volume deceleration threshold so it fires earlier in the exhaustion process. Currently these setups expire unused every time.
+
 ## High Priority (Next Session)
 
 ### EOD Partial Exit (Scale-Out at Close)
