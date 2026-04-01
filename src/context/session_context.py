@@ -229,17 +229,27 @@ class SessionContext:
         return (time.time() - self._last_refresh) > ttl
 
     async def refresh(self) -> SessionContextSnapshot:
-        """Rebuild the session context from all sources."""
+        """Rebuild the session context from all sources.
+        Each data source is independently try/excepted so a single
+        slow or broken provider never kills the whole refresh."""
+        import asyncio
         snap = SessionContextSnapshot(timestamp=time.time())
+        loop = asyncio.get_event_loop()
+        for populate_fn in (
+            self._populate_overnight,
+            self._populate_fred,
+            self._populate_sectors,
+            self._populate_events,
+            self._populate_vix,
+        ):
+            try:
+                await loop.run_in_executor(None, populate_fn, snap)
+            except Exception as e:
+                logger.debug(f"SessionContext {populate_fn.__name__} failed: {e}")
         try:
-            self._populate_overnight(snap)
-            self._populate_fred(snap)
-            self._populate_sectors(snap)
-            self._populate_events(snap)
-            self._populate_vix(snap)
             self._compute_composites(snap)
         except Exception as e:
-            logger.warning(f"SessionContext refresh partial failure: {e}")
+            logger.warning(f"SessionContext composite computation failed: {e}")
 
         self._snapshot = snap
         self._last_refresh = time.time()

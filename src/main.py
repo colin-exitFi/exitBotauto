@@ -772,10 +772,12 @@ class TradingBot:
                     except Exception as e:
                         logger.debug(f"Reconciliation snapshot error: {e}")
 
-                # ── SESSION CONTEXT ────────────────────────────────
+                # ── SESSION CONTEXT (timeout-guarded to never block scan cycle) ──
                 if self.session_context.is_stale():
                     try:
-                        await self.session_context.refresh()
+                        await asyncio.wait_for(self.session_context.refresh(), timeout=15.0)
+                    except asyncio.TimeoutError:
+                        logger.warning("SessionContext refresh timed out (15s) — using cached snapshot")
                     except Exception as e:
                         logger.debug(f"SessionContext refresh error: {e}")
 
