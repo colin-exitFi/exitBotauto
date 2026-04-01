@@ -62,7 +62,7 @@ UW_STREAM_MIN_DARK_POOL_PREMIUM = _env_float("UW_STREAM_MIN_DARK_POOL_PREMIUM", 
 UW_STREAM_LOG_RAW = _env("UW_STREAM_LOG_RAW", "false").lower() in ("true", "1", "yes")
 FRED_API_KEY = _env("FRED_API_KEY")
 FINNHUB_API_KEY = _env("FINNHUB_API_KEY")
-ALPHA_VANTAGE_API_KEY = _env("ALPHA_VANTAGE_API_KEY")
+ALPHA_VANTAGE_API_KEY = _env("ALPHA_VANTAGE_API_KEY")  # reserved for future Polygon fallback
 
 # ── Trading Parameters ────────────────────────────────────────────
 TOTAL_CAPITAL = _env_float("TOTAL_CAPITAL", 25000)

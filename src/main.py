@@ -40,6 +40,12 @@ from src.signals.unusual_options import UnusualOptionsScanner
 from src.signals.congress import CongressScanner
 from src.signals.overnight_context import OvernightContext
 from src.signals.unusual_whales import UnusualWhalesClient
+from src.context.session_context import SessionContext
+from src.data.symbol_state_machine import SymbolStateTracker
+from src.data.state_store import StateStore
+from src.execution.trigger_engine import TriggerEngine
+from src.execution.pre_trade_cost import PreTradeCostEstimator
+from src.risk.concentration_guard import ConcentrationGuard
 from src.signals.short_interest import ShortInterestScanner
 from src.signals.sector_rotation import SectorRotationModel
 from src.streams.market_stream import MarketStream
@@ -64,7 +70,6 @@ from src.ai.post_exit_tracker import check_post_exit_prices
 from src.agents.jury import JuryVerdict
 from src.agents import risk_agent as book_risk_agent
 from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
-from src.ai.consensus import ConsensusEngine
 from src.agents.orchestrator import Orchestrator
 from src.dashboard.dashboard import start_dashboard
 from src.data import entry_controls
@@ -388,11 +393,39 @@ class TradingBot:
             polygon_client=self.polygon_client,
         )
 
-        # Consensus engine (legacy — kept for fallback/dashboard compat)
-        self.consensus_engine = ConsensusEngine()
         self.overnight_context = OvernightContext(
             alpaca_client=self.alpaca_client,
             polygon_client=self.polygon_client,
+        )
+
+        # Session Context Stack (institutional morning stack equivalent)
+        self.session_context = SessionContext(
+            fred_client=self.fred_client,
+            polygon_client=self.polygon_client,
+            finnhub_client=self.finnhub_client,
+            overnight_context=self.overnight_context,
+            sector_model=self.sector_model,
+        )
+
+        # SQLite-backed state store — durable runtime persistence
+        self.state_store = StateStore()
+
+        # Symbol state machine — enforces lifecycle transitions, prevents duplicates
+        self.symbol_state_tracker = SymbolStateTracker(state_store=self.state_store)
+
+        # Trigger engine — continuous background monitoring of pending setups
+        self.trigger_engine = TriggerEngine(state_store=self.state_store)
+
+        # Pre-trade cost estimator — Bloomberg TRA equivalent
+        self.pre_trade_cost = PreTradeCostEstimator(
+            broker_client=self.alpaca_client,
+            polygon_client=self.polygon_client,
+        )
+
+        # Portfolio concentration guard — Bloomberg PORT equivalent (V1)
+        self.concentration_guard = ConcentrationGuard(
+            polygon_client=self.polygon_client,
+            alpaca_client=self.alpaca_client,
         )
 
         # Options engine
@@ -560,6 +593,7 @@ class TradingBot:
 
         # Trade updates stream: instant order fill detection
         self.trade_stream.set_fill_callback(self._on_trade_update_fill)
+        self.trade_stream.set_stop_callback(self._on_trailing_stop_filled)
         await self.trade_stream.start()
 
         # Unusual Whales realtime stream: live flow alerts + dark pool prints
@@ -631,6 +665,9 @@ class TradingBot:
         ai_task = asyncio.create_task(self._ai_loop())
         options_task = asyncio.create_task(self._options_monitor_loop()) if self.options_engine else None
         monitor_task = asyncio.create_task(self._monitor_positions_loop())
+        trigger_task = asyncio.create_task(
+            self.trigger_engine.start(market_stream=self.market_stream)
+        )
 
         # Start Exit Agent monitoring loop
         await self.orchestrator.start_exit_agent()
@@ -734,6 +771,13 @@ class TradingBot:
                         self.ai_layers["broker_truth"] = recon_state.get("broker", {})
                     except Exception as e:
                         logger.debug(f"Reconciliation snapshot error: {e}")
+
+                # ── SESSION CONTEXT ────────────────────────────────
+                if self.session_context.is_stale():
+                    try:
+                        await self.session_context.refresh()
+                    except Exception as e:
+                        logger.debug(f"SessionContext refresh error: {e}")
 
                 # ── SCAN ───────────────────────────────────────────
                 if now - last_scan >= scan_interval:
@@ -3346,6 +3390,12 @@ class TradingBot:
         return False, "momentum_not_strong_enough", ""
 
     def _allow_classifier_auto_enter(self, candidate: dict, verdict) -> tuple[bool, str, str]:
+        """
+        THE CENTERPIECE: reduced-size deterministic entry for the cleanest setups.
+
+        Production-trusted modes: continuation_long, continuation_short, swing_catalyst_long.
+        Jury becomes refinement (size upgrade), not existential veto.
+        """
         if not self._mode_classifier_enforced():
             return False, "mode_classifier_not_enforced", ""
         if not bool(getattr(settings, "MODE_CLASSIFIER_AUTO_ENTER", False)):
@@ -3363,30 +3413,91 @@ class TradingBot:
             return False, "risk_denied", ""
 
         auto_decision = "SHORT" if str(candidate.get("direction_constraint", "none") or "").lower() == "short_only" else "BUY"
-        if str(candidate.get("setup_mode", "") or "").lower() not in {
-            "continuation_long",
-            "continuation_short",
-            "general_momentum_long",
-            "general_momentum_short",
-        }:
-            return False, "setup_mode_not_supported", auto_decision
+        setup_mode = str(candidate.get("setup_mode", "") or "").lower()
+
+        PRODUCTION_TRUSTED = {"continuation_long", "continuation_short", "swing_catalyst_long"}
+        if setup_mode not in PRODUCTION_TRUSTED:
+            return False, "setup_mode_not_trusted", auto_decision
+
         if str(candidate.get("timing_state", "") or "").lower() != "enter_now":
             return False, "timing_not_live", auto_decision
         if str(candidate.get("entry_quality", "") or "").lower() not in {"pullback", "at_highs"}:
             return False, "entry_quality_not_clean", auto_decision
-        if float(candidate.get("classifier_confidence", 0) or 0) < 0.65:
+
+        min_confidence = 0.70 if setup_mode == "swing_catalyst_long" else 0.65
+        if float(candidate.get("classifier_confidence", 0) or 0) < min_confidence:
             return False, "classifier_confidence_too_low", auto_decision
         if float(candidate.get("resolver_confidence", 0) or 0) < 0.55:
             return False, "resolver_confidence_too_low", auto_decision
-        if float(candidate.get("spread_pct", 0) or 0) > 0.6:
+
+        if setup_mode == "swing_catalyst_long":
+            max_spread = 0.5
+            catalyst_tag = str(candidate.get("catalyst_tag", "") or "").lower()
+            if catalyst_tag not in {"congress", "insider", "fda", "earnings"}:
+                return False, "catalyst_not_tier1", auto_decision
+        else:
+            max_spread = 0.6
+
+        if float(candidate.get("spread_pct", 0) or 0) > max_spread:
             return False, "spread_too_wide", auto_decision
+
         if not self.entry_manager.is_market_open():
             return False, "market_closed", auto_decision
         if self.entry_manager.is_extended_hours():
             return False, "extended_hours", auto_decision
         if auto_decision == "SHORT" and not self._shorting_ready():
             return False, "shorting_not_ready", auto_decision
+
+        if hasattr(self, "session_context") and self.session_context.snapshot:
+            if auto_decision == "BUY":
+                block_longs, reason = self.session_context.should_block_longs()
+                if block_longs:
+                    return False, f"session_context:{reason}", auto_decision
+            if self.session_context.snapshot.broad_risk_tone == "risk_off" and auto_decision == "BUY":
+                return False, "risk_off_blocks_auto_longs", auto_decision
+
+        if hasattr(self, "pre_trade_cost"):
+            report = self.pre_trade_cost.evaluate(candidate, self.session_context.snapshot if hasattr(self, "session_context") else None)
+            candidate["executability_report"] = report.to_dict()
+            if report.execution_verdict in ("broker_blocked", "execution_unfavorable"):
+                return False, f"executability:{report.dominant_blocker}", auto_decision
+            if not report.edge_survives_cost:
+                return False, "edge_does_not_survive_cost", auto_decision
+
+        if hasattr(self, "concentration_guard"):
+            positions = self.entry_manager.get_positions() if self.entry_manager else {}
+            conc = self.concentration_guard.evaluate(candidate, positions)
+            candidate["concentration_report"] = conc.to_dict()
+            if not conc.new_entry_allowed:
+                return False, f"concentration:{conc.dominant_blocker}", auto_decision
+
         return True, "ok", auto_decision
+
+    def _compute_auto_entry_size_pct(self, candidate: dict) -> float:
+        """Tiered sizing for auto-entry: 35% / 50% / 75% based on gate quality."""
+        base = 0.50
+        classifier_conf = float(candidate.get("classifier_confidence", 0) or 0)
+        exec_report = candidate.get("executability_report", {})
+        exec_quality = float(exec_report.get("execution_quality_score", 0.5) or 0.5)
+
+        if classifier_conf >= 0.80 and exec_quality >= 0.85:
+            base = 0.75
+        elif classifier_conf < 0.70 or exec_quality < 0.6:
+            base = 0.35
+
+        if hasattr(self, "session_context"):
+            ctx_mod = self.session_context.get_sizing_modifier()
+            base *= ctx_mod
+
+        if hasattr(self, "pre_trade_cost") and exec_report:
+            cost_mod = self.pre_trade_cost.get_size_adjustment(
+                type("R", (), exec_report)()
+                if not hasattr(exec_report, "execution_verdict")
+                else exec_report
+            )
+            base *= cost_mod
+
+        return round(max(0.1, min(0.75, base)), 3)
 
     def _effective_entry_confidence_floor(self, candidate: dict, verdict) -> tuple[float, list[str]]:
         """
@@ -4768,18 +4879,18 @@ class TradingBot:
                 positions=self.entry_manager.get_positions() if self.entry_manager else positions,
             )
             candidate["allocator_plan"] = dict(allocator_plan or {})
-            if False:  # ALLOCATOR FULLY BYPASSED: council decides, .env sizes
-                reason = str(allocator_plan.get("reason", "allocator_block") or "allocator_block")
+            alloc_size = float(allocator_plan.get("size_pct", effective_size_pct) or effective_size_pct)
+            if alloc_size < effective_size_pct and alloc_size > 0:
                 logger.info(
-                    f"📊 ALLOCATOR BLOCK {symbol}: {reason} book={candidate.get('strategy_tag')} "
-                    f"regime={candidate.get('market_regime')} "
-                    f"exposure={allocator_plan.get('current_exposure_pct', 0):.2f}%/"
-                    f"{allocator_plan.get('budget_pct', 0):.2f}%"
+                    f"📊 ALLOCATOR CAP {symbol}: size reduced {effective_size_pct:.2f}→{alloc_size:.2f} "
+                    f"book={candidate.get('strategy_tag')} reason={allocator_plan.get('reason', 'budget')}"
                 )
-                log_activity("trade", f"📊 ALLOCATOR BLOCK: {symbol} {reason} ({candidate.get('strategy_tag')})")
-                self._record_candidate_block(candidate, "capital_blocked", f"allocator:{reason}", verdict=verdict)
-                continue
-            effective_size_pct = effective_size_pct  # ALLOCATOR SIZING BYPASSED: use council/tier size directly
+                effective_size_pct = alloc_size
+            elif alloc_size <= 0:
+                logger.info(
+                    f"📊 ALLOCATOR ADVISORY BLOCK {symbol}: would block but running advisory mode "
+                    f"book={candidate.get('strategy_tag')} reason={allocator_plan.get('reason', 'budget')}"
+                )
             size_modifier = max(0.0, effective_size_pct / tier_size) if tier_size > 0 else 1.0
 
             sentiment_data["consensus_size_modifier"] = size_modifier

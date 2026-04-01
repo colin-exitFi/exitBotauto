@@ -417,6 +417,7 @@ def normalize_trade_record(trade: Dict) -> Dict:
     t.setdefault("decision_price", t.get("entry_price", 0))
     t.setdefault("fill_price", t.get("exit_price", 0))
     t.setdefault("slippage_bps", 0.0)
+    t.setdefault("entry_order_id", None)
     t.setdefault("signal_timestamp", None)
     t.setdefault("entry_order_timestamp", None)
     t.setdefault("fill_timestamp", None)
