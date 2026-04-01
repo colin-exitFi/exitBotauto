@@ -174,14 +174,14 @@ def _get_trade_analytics_scoreboard() -> Dict:
         from src.ai import trade_history
 
         analytics = trade_history.get_analytics() or {}
-        total_trades = int(analytics.get("total_trades", 0) or 0)
-        wins = int(analytics.get("wins", 0) or 0)
-        losses = int(analytics.get("losses", 0) or 0)
-        win_rate_pct = round((wins / total_trades * 100.0), 2) if total_trades > 0 else 0.0
+        total_trades = int(analytics.get("clean_total_trades", analytics.get("total_trades", 0)) or 0)
+        clean_wins = int(analytics.get("clean_wins", analytics.get("wins", 0)) or 0)
+        clean_losses = int(analytics.get("clean_losses", analytics.get("losses", 0)) or 0)
+        win_rate_pct = round((clean_wins / total_trades * 100.0), 2) if total_trades > 0 else 0.0
         return {
             "total_trades": total_trades,
-            "winning_trades": wins,
-            "losing_trades": losses,
+            "winning_trades": clean_wins,
+            "losing_trades": clean_losses,
             "win_rate_pct": win_rate_pct,
         }
     except Exception:

@@ -192,13 +192,17 @@ class Reconciler:
             ):
                 skipped_duplicates += 1
                 continue
+            t["_reconstructed"] = True
+            t.setdefault("anomaly_flags", [])
+            if "broker_reconstructed" not in t.get("anomaly_flags", []):
+                t["anomaly_flags"].append("broker_reconstructed")
             trade_history.record_trade(t)
             existing_keys.add(key)
             existing.append(t)
             self._recent_backfilled_trade_keys.add(key)
             added += 1
         if added > 0:
-            logger.info(f"🧾 Backfilled {added} reconstructed broker trade(s) into history")
+            logger.info(f"🧾 Backfilled {added} reconstructed broker trade(s) into raw history (excluded from analytics)")
         if skipped_duplicates > 0:
             logger.info(f"🧾 Skipped {skipped_duplicates} duplicate reconstructed broker trade(s)")
 
