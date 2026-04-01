@@ -2,6 +2,9 @@
 
 ## URGENT (Tonight)
 
+### Dashboard Showing Phantom P&L (AAPL +$154.33 Ghost)
+Dashboard showed a +$154.33 / +154% AAPL trade that doesn't exist in trade_history. Likely computing unrealized P&L on a dust fragment using original entry price from weeks ago vs current price, then presenting it as a closed trade. The trade was never actually realized at that P&L. Dashboard P&L calculations need to read from trade_history only, not compute phantom gains from position entry prices.
+
 ### Stop Reconstructed Trades From Polluting Win Rate
 The reconciler creates `broker_fill_reconstructed` trades from broker activity it can't match to pipeline entries (dust closures, manual actions, partial ratchet exits on carryovers). These inflate trade count and drag win rate. Today: 37 trades reported but many are phantom reconstructions. Fix: the dashboard win rate and scoreboard should read from analytics_trade_ledger (which excludes reconstructed), not raw trade_history. Wire the analytics ledger separation into the reconciler write path so reconstructed trades go to raw only.
 
