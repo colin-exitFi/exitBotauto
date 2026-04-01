@@ -283,7 +283,7 @@ class SessionContext:
         snap.cpi_yoy = float(macro.get("cpi_yoy", 0.0) or 0.0)
         snap.rates_regime = _classify_rates_regime(snap.fed_funds_rate, snap.yield_curve_10y2y)
 
-        vix = self._get_vix_from_fred()
+        vix = self._get_vix_live()
         if vix is not None:
             snap.vix_level = vix
             snap.vix_regime = _classify_vix_regime(vix)
@@ -297,21 +297,27 @@ class SessionContext:
         if vix_3m is not None and snap.vix_level > 0:
             snap.vix_term_structure = _classify_vix_term_structure(snap.vix_level, vix_3m)
 
-    def _get_vix_from_fred(self) -> Optional[float]:
-        if not self._fred:
-            return None
-        try:
-            obs = self._fred.get_series_observations("VIXCLS", limit=1)
-            if obs:
-                val = self._fred._to_float(obs[0].get("value"))
-                return val
-        except Exception:
-            pass
+    def _get_vix_live(self) -> Optional[float]:
+        """Get live VIX. Polygon/Alpaca first (real-time), FRED fallback (delayed 1+ day)."""
         if self._polygon:
+            for ticker in ("VIXY", "VIX", "UVXY"):
+                try:
+                    price = self._polygon.get_price(ticker)
+                    if price and price > 0:
+                        if ticker == "UVXY":
+                            return float(price) * 0.5
+                        if ticker == "VIXY":
+                            return float(price) * 1.1
+                        return float(price)
+                except Exception:
+                    continue
+        if self._fred:
             try:
-                price = self._polygon.get_price("VIX")
-                if price and price > 0:
-                    return float(price)
+                obs = self._fred.get_series_observations("VIXCLS", limit=1)
+                if obs:
+                    val = self._fred._to_float(obs[0].get("value"))
+                    if val is not None:
+                        return val
             except Exception:
                 pass
         return None
