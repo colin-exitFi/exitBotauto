@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 
 
 _VALID_MODES = {
+    "catalyst_hold",
     "continuation_long",
     "continuation_short",
     "exhaustion_fade_short",
@@ -229,12 +230,12 @@ def _apply_regime_overlay(confidence: float, mode: str, market_regime: str) -> t
             return round(_clamp(conf + 0.04, 0.0, 0.95), 2), "regime_tailwind"
         if mode == "exhaustion_fade_short":
             return round(_clamp(conf - 0.03, 0.0, 0.95), 2), "regime_headwind"
-        if mode == "swing_catalyst_long":
+        if mode in {"swing_catalyst_long", "catalyst_hold"}:
             return round(_clamp(conf + 0.02, 0.0, 0.95), 2), "regime_tailwind"
     if regime == "risk_off":
         if mode in {"exhaustion_fade_short", "continuation_short"}:
             return round(_clamp(conf + 0.04, 0.0, 0.95), 2), "regime_tailwind"
-        if mode in {"continuation_long", "swing_catalyst_long"}:
+        if mode in {"continuation_long", "swing_catalyst_long", "catalyst_hold"}:
             return round(_clamp(conf - 0.05, 0.0, 0.95), 2), "regime_headwind"
     return round(_clamp(conf, 0.0, 0.95), 2), None
 
@@ -505,6 +506,40 @@ def classify_mode(features: ModeFeatures) -> ModeClassification:
         return ModeClassification(
             mode="exhaustion_fade_short",
             direction_constraint="short_only",
+            classifier_confidence=confidence,
+            reason_codes=reasons,
+        )
+
+    # Catalyst hold: pre-event positioning for known catalysts (FDA, earnings,
+    # congress, insider).  The stock is NOT already running (daily_pct < 10%)
+    # so we enter early and hold into the event with wider stops.
+    if (
+        features.catalyst_tag in {"congress", "insider", "fda", "earnings"}
+        and features.catalyst_age_hours is not None
+        and abs(features.daily_pct) < 10.0
+    ):
+        catalyst_hold_flags = [
+            features.catalyst_tag in {"congress", "insider", "fda", "earnings"},
+            features.catalyst_age_hours is not None,
+            abs(features.daily_pct) < 10.0,
+            features.spread_pct < 1.0,
+            features.uw_bias != "bearish",
+        ]
+        reasons = ["pre_event_catalyst", f"catalyst_{features.catalyst_tag}"]
+        if features.catalyst_age_hours is not None and features.catalyst_age_hours <= 24.0:
+            reasons.append("catalyst_imminent")
+        if features.spread_pct < 1.0:
+            reasons.append("spread_ok")
+        confidence, regime_code = _apply_regime_overlay(
+            _reason_confidence(0.68, catalyst_hold_flags),
+            "catalyst_hold",
+            features.market_regime,
+        )
+        if regime_code:
+            reasons.append(regime_code)
+        return ModeClassification(
+            mode="catalyst_hold",
+            direction_constraint="long_only",
             classifier_confidence=confidence,
             reason_codes=reasons,
         )

@@ -45,6 +45,7 @@ from src.data.symbol_state_machine import SymbolStateTracker
 from src.data.state_store import StateStore
 from src.execution.trigger_engine import TriggerEngine
 from src.execution.pre_trade_cost import PreTradeCostEstimator
+from src.execution.dust_policy import should_auto_liquidate
 from src.risk.concentration_guard import ConcentrationGuard
 from src.signals.short_interest import ShortInterestScanner
 from src.signals.sector_rotation import SectorRotationModel
@@ -67,6 +68,7 @@ from src.ai.game_film import GameFilm
 from src.ai.position_manager import PositionManager
 from src.ai import trade_history
 from src.ai.post_exit_tracker import check_post_exit_prices
+from src.analytics.daily_review import build_daily_review
 from src.agents.jury import JuryVerdict
 from src.agents import risk_agent as book_risk_agent
 from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
@@ -158,6 +160,7 @@ class TradingBot:
         self._latest_broker_positions_synced_at = 0.0
         self._tomorrow_thesis_cache = None
         self._tomorrow_thesis_cache_at = 0.0
+        self._last_daily_review_date: Optional[str] = None
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -1692,12 +1695,56 @@ class TradingBot:
                     vetoes = len(pm.get("vetoes", []))
                     self.ai_layers["last_position_manager"] = f"{health} | {exits} exits | {vetoes} vetoes"
 
+                # Daily Operating Review at 4:15 PM ET (once per day)
+                await self._maybe_run_daily_review()
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"AI layer error: {e}")
 
             await asyncio.sleep(30)  # Check every 30s, layers self-throttle
+
+    async def _maybe_run_daily_review(self):
+        """Run the daily operating review once at 4:15 PM ET."""
+        try:
+            import zoneinfo
+            et = zoneinfo.ZoneInfo("US/Eastern")
+            now_et = datetime.now(et)
+        except Exception:
+            return
+        if now_et.hour != 16 or now_et.minute < 15 or now_et.minute > 25:
+            return
+        today_str = trading_session_day()
+        if self._last_daily_review_date == today_str:
+            return
+        self._last_daily_review_date = today_str
+        try:
+            session_snap = None
+            if hasattr(self, "session_context") and self.session_context and hasattr(self.session_context, "snapshot") and self.session_context.snapshot:
+                session_snap = self.session_context.snapshot.to_dict() if hasattr(self.session_context.snapshot, "to_dict") else {}
+            today_trades = [
+                t for t in trade_history.load_all()
+                if trading_session_day(float(t.get("exit_time", t.get("recorded_at", 0)) or 0)) == today_str
+            ]
+            shadow_trades = self._load_shadow_trades()
+            funnel_summary = None
+            if hasattr(self, "state_store") and self.state_store:
+                funnel_summary = self.state_store.get_funnel_summary()
+            review = build_daily_review(
+                date_str=today_str,
+                session_snapshot=session_snap,
+                funnel_summary=funnel_summary,
+                trades_today=today_trades,
+                shadow_trades=shadow_trades,
+            )
+            review_dir = _DATA_DIR / "daily_reviews"
+            review_dir.mkdir(parents=True, exist_ok=True)
+            review_path = review_dir / f"{today_str}.json"
+            review_path.write_text(json.dumps(review.to_dict(), indent=2, default=str))
+            logger.info(f"📋 Daily operating review saved → {review_path.name}")
+        except Exception as e:
+            logger.error(f"Daily review generation failed: {e}")
 
     @staticmethod
     def _extract_signal_sources(candidate: dict) -> list:
@@ -6545,19 +6592,18 @@ class TradingBot:
         if not positions:
             return
 
-        # Dust cleanup: close fractional/micro positions that are dead capital
+        # Dust cleanup: close micro positions that are dead capital (uses dust_policy rules)
         if self.entry_manager.is_market_open():
             for pos in list(positions):
-                sym = pos.get("symbol", "")
-                qty = float(pos.get("quantity", 0) or 0)
-                price = float(pos.get("current_price", 0) or pos.get("entry_price", 0) or 0)
-                notional = qty * price
-                is_dust = 0 < notional < 5.0
-                is_fractional_carryover = False  # DISABLED: was killing legitimate fractional positions on restart
-                if is_dust and not pos.get("exit_pending") and not pos.get("_dust_close_attempted"):
-                    label = "DUST" if is_dust else "FRACTIONAL CARRYOVER"
-                    logger.warning(f"🧹 {label} CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — closing via Alpaca close_position")
-                    await self._submit_dust_cleanup_exit(pos, label.lower().replace(" ", "_"))
+                if pos.get("exit_pending") or pos.get("_dust_close_attempted"):
+                    continue
+                if should_auto_liquidate(pos):
+                    sym = pos.get("symbol", "")
+                    qty = float(pos.get("quantity", 0) or 0)
+                    price = float(pos.get("current_price", 0) or pos.get("entry_price", 0) or 0)
+                    notional = qty * price
+                    logger.warning(f"🧹 DUST CLEANUP {sym}: {qty:.6f} shares (${notional:.2f} notional) — auto-liquidating via dust_policy")
+                    await self._submit_dust_cleanup_exit(pos, "dust")
 
         try:
             alpaca_positions = await asyncio.get_event_loop().run_in_executor(
@@ -7142,6 +7188,47 @@ class TradingBot:
             position["ratchet_limit_order_id"] = ""
             position.setdefault("order_state", {})["hard_stop"] = "canceled_for_close_review"
             position.setdefault("order_state", {})["ratchet"] = "canceled_for_close_review"
+
+        holding_horizon = str(position.get("holding_horizon", "intraday") or "intraday").lower()
+        eod_partial_horizons = {"swing", "multiday", "catalyst"}
+
+        if holding_horizon in eod_partial_horizons and self.alpaca_client:
+            eod_partial_pct = float(getattr(settings, "EOD_PARTIAL_EXIT_PCT", 60.0) or 60.0)
+            logger.warning(
+                f"🌆 Close review PARTIAL EXIT {symbol} ({eod_partial_pct:.0f}%): {decision.get('reason')} "
+                f"(horizon={holding_horizon} pnl={float(decision.get('current_pnl_pct', 0) or 0):+.2f}% "
+                f"peak={float(decision.get('peak_pnl_pct', 0) or 0):+.2f}% "
+                f"giveback={float(decision.get('giveback_pct', 0) or 0):.0f}% "
+                f"{minutes_to_close:.0f}m to close)"
+            )
+            try:
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.alpaca_client.close_position(symbol, percentage=eod_partial_pct),
+                )
+            except Exception as e:
+                logger.error(f"EOD partial exit failed for {symbol}: {e}")
+                result = None
+
+            if result and str(result.get("status", "") or "").lower() != "not_found":
+                old_qty = float(position.get("quantity", 0) or 0)
+                keep_pct = (100.0 - eod_partial_pct) / 100.0
+                new_qty = round(old_qty * keep_pct, 6)
+                position["quantity"] = new_qty
+                position["actual_qty"] = new_qty
+                entry_price = float(position.get("entry_price", 0) or 0)
+                position["actual_notional"] = entry_price * new_qty
+                position["partial_exit"] = True
+                position["eod_partial_exit_at"] = time.time()
+                position["eod_partial_exit_pct"] = eod_partial_pct
+                position["last_exit_reason"] = "eod_partial_exit"
+                logger.success(
+                    f"🌆 EOD partial exit: {symbol} {old_qty:.4f} → {new_qty:.4f} shares "
+                    f"({eod_partial_pct:.0f}% closed, {100 - eod_partial_pct:.0f}% carried overnight)"
+                )
+                log_activity("trade", f"🌆 EOD partial exit {symbol}: {eod_partial_pct:.0f}% closed, {100 - eod_partial_pct:.0f}% overnight — {decision.get('reason')}")
+                return True
+            return False
 
         logger.warning(
             f"🌆 Close review FLATTEN {symbol}: {decision.get('reason')} "

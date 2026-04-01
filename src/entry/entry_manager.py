@@ -14,6 +14,7 @@ from src.data import strategy_controls
 from src.data.setup_identity import normalize_symbol_state
 from src.data.trade_schema import normalize_position_context
 from src.data.strategy_tags import is_artifact_strategy_tag, normalize_strategy_tag
+from src.execution.dust_policy import residual_blocks_entry
 from src.exit.profit_ratchet import ProfitRatchet
 
 
@@ -553,6 +554,10 @@ class EntryManager:
         if symbol in self.positions:
             logger.info(f"⛔ Already in position: {symbol} — duplicate entry blocked")
             return self._set_gate(symbol, False, "already_held")
+
+        if residual_blocks_entry(symbol, self.positions):
+            logger.info(f"⛔ {symbol} blocked by dust residual — existing dust position must close first")
+            return self._set_gate(symbol, False, "dust_residual_blocks_entry")
 
         if sentiment_score < self.min_sentiment:
             logger.info(f"⛔ {symbol} sentiment {sentiment_score:.2f} < threshold {self.min_sentiment}")

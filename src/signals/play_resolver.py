@@ -19,6 +19,8 @@ def _to_float(value, default: float = 0.0) -> float:
 
 
 def _ttl_seconds_for_mode(mode: str) -> int:
+    if mode == "catalyst_hold":
+        return 259200  # 3 days
     if mode.startswith("continuation"):
         return 30 * 60
     if mode.startswith("exhaustion"):
@@ -44,7 +46,7 @@ def _invalid_resolution_state(classification: ModeClassification) -> tuple[str, 
 
 
 def _fallback_best_play(mode: str, direction_constraint: str) -> tuple[str, str]:
-    if mode in {"continuation_long", "continuation_short", "exhaustion_fade_short", "swing_catalyst_long", "general_momentum_long", "general_momentum_short"}:
+    if mode in {"catalyst_hold", "continuation_long", "continuation_short", "exhaustion_fade_short", "swing_catalyst_long", "general_momentum_long", "general_momentum_short"}:
         resolved_direction = direction_constraint
         if resolved_direction not in {"long_only", "short_only"}:
             resolved_direction = "short_only" if "short" in mode else "long_only"
@@ -258,6 +260,34 @@ def resolve_play(
             entry_now=False,
             no_trade_reason=no_trade_reason,
             trigger_spec=None,
+        )
+
+    if mode == "catalyst_hold":
+        catalyst_expires = expires_at
+        for key in ("catalyst_date", "earnings_date", "expires_at"):
+            raw = (features.bar_context or {}).get(key)
+            if raw is not None:
+                try:
+                    catalyst_expires = float(raw) if isinstance(raw, (int, float)) else now_ts + ttl
+                except Exception:
+                    pass
+                break
+        return PlayResolution(
+            symbol=features.symbol,
+            mode=mode,
+            direction_constraint=direction_constraint,
+            timing_state="enter_now",
+            best_play="catalyst_hold",
+            trigger=None,
+            invalidation="catalyst thesis invalidated or hard stop hit",
+            hold_style="catalyst",
+            classifier_confidence=classification.classifier_confidence,
+            resolver_confidence=0.70,
+            reason_codes=base_reasons + ["catalyst_enter_now"],
+            expires_at=catalyst_expires,
+            size_posture="capped",
+            entry_now=True,
+            trigger_spec=TriggerSpec("already_live", {}, "pre-event catalyst -- position before the event"),
         )
 
     if mode == "continuation_long":

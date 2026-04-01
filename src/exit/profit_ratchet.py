@@ -224,6 +224,21 @@ class ProfitRatchet:
         trail_override = cls._position_trail_override(position)
         activation_override = cls._position_activation_override(position)
         floor_override = cls._position_floor_override(position)
+        strategy_tag = str((position or {}).get("strategy_tag", "") or "").lower()
+        is_catalyst = (
+            holding_horizon == "catalyst"
+            or "pharma" in strategy_tag
+            or "congress" in strategy_tag
+        )
+        if is_catalyst:
+            return {
+                "holding_horizon": "catalyst",
+                "activation_pct": activation_override if activation_override is not None else cls.SWING_RATCHET_ACTIVATION_PCT,
+                "initial_floor_pct": floor_override if floor_override is not None else cls.INITIAL_FLOOR_PCT,
+                "trail_pct": trail_override if trail_override is not None else cls.SWING_RATCHET_TRAIL_PCT,
+                "min_hold_seconds": cls.SWING_RATCHET_MIN_HOLD_SECONDS,
+                "dead_money_hours": 0,  # no dead-money tightening for catalyst holds
+            }
         if holding_horizon == "swing":
             return {
                 "holding_horizon": "swing",
@@ -298,6 +313,12 @@ class ProfitRatchet:
         hard_stop_pct = cls.HARD_STOP_PCT
         flags = []
 
+        holding_horizon = str((position or {}).get("holding_horizon", "intraday") or "intraday").strip().lower()
+        strategy_tag = str((position or {}).get("strategy_tag", "") or "").lower()
+        if holding_horizon == "catalyst" or "pharma" in strategy_tag or "congress" in strategy_tag:
+            hard_stop_pct = -5.0
+            flags.append("catalyst_wide_stop")
+
         manual_override = cls._safe_float((position or {}).get("hard_stop_override_pct"), None)
         if manual_override is not None and manual_override < 0:
             hard_stop_pct = max(hard_stop_pct, manual_override)
@@ -343,9 +364,9 @@ class ProfitRatchet:
             hard_stop_pct = max(hard_stop_pct, cls.EXTENDED_HOURS_HARD_STOP_PCT)
             flags.append("extended_hours_entry")
 
-        holding_horizon = str((position or {}).get("holding_horizon", "intraday") or "intraday").strip().lower()
+        _hh = str((position or {}).get("holding_horizon", "intraday") or "intraday").strip().lower()
         if (
-            holding_horizon != "swing"
+            _hh not in {"swing", "catalyst"}
             and hold_seconds >= cls.STALLED_LOSER_HOURS * 3600.0
             and peak_pnl_pct <= cls.STALLED_LOSER_MAX_PEAK_PNL_PCT
             and current_pnl_pct <= cls.STALLED_LOSER_MIN_PNL_PCT
@@ -362,6 +383,9 @@ class ProfitRatchet:
         current_price: float,
         now: Optional[float] = None,
     ) -> bool:
+        profile = cls.profile_for_position(position)
+        if profile.get("dead_money_hours", 0) <= 0:
+            return False
         now_ts = float(now or time.time())
         hold_hours = max(0.0, now_ts - float(position.get("entry_time", now_ts) or now_ts)) / 3600.0
         entry_price = float(position.get("entry_price", 0) or 0)
@@ -371,7 +395,6 @@ class ProfitRatchet:
         peak_price = cls._compute_peak_price(position, current_price, side)
         peak_pnl_pct = cls.calc_pnl_pct(entry_price, peak_price, side)
         current_pnl_pct = cls.calc_pnl_pct(entry_price, current_price, side)
-        profile = cls.profile_for_position(position)
         activation_reference = min(cls.RATCHET_ACTIVATION_PCT, profile["activation_pct"])
         dead_money_hours = float(profile.get("dead_money_hours", cls.DEAD_MONEY_HOURS) or cls.DEAD_MONEY_HOURS)
         return (

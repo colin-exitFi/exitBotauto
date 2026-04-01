@@ -1192,7 +1192,35 @@ class Reconciler:
                 recommended_action="Flatten or explicitly classify broker residual fragments.",
             )
 
-        return canaries
+        return self._deduplicate_canaries(canaries, max_entries=20)
+
+    @staticmethod
+    def _deduplicate_canaries(canaries: List[Dict], max_entries: int = 20) -> List[Dict]:
+        """Collapse repeated canary codes into single entries with a count suffix."""
+        from collections import Counter
+
+        code_counts: Counter = Counter(c.get("code", "") for c in canaries)
+        seen_codes: Dict[str, int] = {}
+        deduped: List[Dict] = []
+        for canary in canaries:
+            code = canary.get("code", "")
+            count = code_counts[code]
+            if count <= 1:
+                deduped.append(canary)
+                continue
+            if code in seen_codes:
+                continue
+            seen_codes[code] = count
+            merged = dict(canary)
+            merged["code"] = f"{code}:{count}"
+            merged["symbol"] = None
+            merged["current_magnitude"] = round(float(count), 4)
+            deduped.append(merged)
+        if len(deduped) > max_entries:
+            critical = [c for c in deduped if c.get("severity") == "critical"]
+            rest = [c for c in deduped if c.get("severity") != "critical"]
+            deduped = (critical + rest)[:max_entries]
+        return deduped
 
     @staticmethod
     def build_trust_flags(
