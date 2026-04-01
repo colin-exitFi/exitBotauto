@@ -4362,6 +4362,21 @@ class TradingBot:
             return
         if not self.risk_manager.can_trade():
             return
+
+        # Market open delay: skip the first 15 minutes of regular session (9:30-9:45 ET)
+        # Data shows 9-10 AM ET is our worst hour (-$239 PnL). Let the chaos settle.
+        try:
+            from datetime import datetime
+            import zoneinfo
+            et_now = datetime.now(zoneinfo.ZoneInfo("US/Eastern"))
+            if et_now.hour == 9 and et_now.minute < 45:
+                if not getattr(self, "_open_delay_logged", False):
+                    logger.info("⏳ Market open delay: waiting until 9:45 ET for opening chaos to settle")
+                    self._open_delay_logged = True
+                return
+            self._open_delay_logged = False
+        except Exception:
+            pass
         guardrails = self._get_operating_guardrails()
         if not guardrails.get("allow_new_entries", True):
             self._log_guardrail_block("⛔ Entry pipeline", guardrails.get("reasons", []))
