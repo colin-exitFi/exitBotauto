@@ -73,7 +73,8 @@ async def analyze(
         signal_tier = str((signals or {}).get("signal_tier", "tier_2") or "tier_2").lower()
         strategy_tag = str((signals or {}).get("strategy_tag", "") or "").lower()
         entry_quality = str((signals or {}).get("entry_quality", "neutral") or "neutral").lower()
-        tier_size_pct = max(0.0, min(5.0, float(tier.get("size_pct", 1.0) or 1.0)))
+        env_size = float(getattr(settings, "POSITION_SIZE_PCT", 0) or 0)
+        tier_size_pct = max(0.0, min(10.0, env_size if env_size > 0 else float(tier.get("size_pct", 1.0) or 1.0)))
         size_cap_pct = tier_size_pct
         constraint_flags: List[str] = []
         can_trade = True
