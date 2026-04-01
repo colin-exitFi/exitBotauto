@@ -1,74 +1,57 @@
 # Velox V3 Backlog
 
-## URGENT (Tonight)
+## DONE (April 1)
 
-### Dashboard Showing Phantom P&L (AAPL +$154.33 Ghost)
-Dashboard showed a +$154.33 / +154% AAPL trade that doesn't exist in trade_history. Likely computing unrealized P&L on a dust fragment using original entry price from weeks ago vs current price, then presenting it as a closed trade. The trade was never actually realized at that P&L. Dashboard P&L calculations need to read from trade_history only, not compute phantom gains from position entry prices.
-
-### Stop Reconstructed Trades From Polluting Win Rate
-The reconciler creates `broker_fill_reconstructed` trades from broker activity it can't match to pipeline entries (dust closures, manual actions, partial ratchet exits on carryovers). These inflate trade count and drag win rate. Today: 37 trades reported but many are phantom reconstructions. Fix: the dashboard win rate and scoreboard should read from analytics_trade_ledger (which excludes reconstructed), not raw trade_history. Wire the analytics ledger separation into the reconciler write path so reconstructed trades go to raw only.
-
-### Asymmetric Risk/Reward: Losers Bigger Than Winners
-Day 1 data: 57% win rate but -$78 P&L. Winners avg +$3-7, losers avg -$10-23. The hard stop allows -1% drawdown ($18 on $1,800 position) but the ratchet exits winners too early at +0.3-0.5% ($5-7). Risk/reward is backwards -- risking $18 to make $5. Options: (a) tighten hard stop to -0.5% on intraday momentum, (b) widen ratchet activation threshold so winners run further before locking in, (c) use pre-trade cost to skip low-edge names where the expected move is smaller than the stop distance, (d) size down on names with high ATR relative to expected edge.
-
-### Exhaustion Fade Short Triggers Too Strict
-17 pending exhaustion_fade_short setups today, 0 entered. Trigger "volume needs to stop accelerating" never fires because volume keeps running on big momentum names. Need to either: (a) add alternative triggers like "price loses VWAP" or "range contraction after extension", or (b) reduce the volume deceleration threshold so it fires earlier in the exhaustion process. Currently these setups expire unused every time.
+- [x] Reconstructed trades tagged, dashboard uses clean analytics for win rate
+- [x] Ratchet rebalanced: hard stop -0.75%, activation 0.3%, trail 1.0%, min hold 2min
+- [x] Catalyst hold mode: new classifier mode for pharma/earnings/congress pre-positioning
+- [x] Dust cleanup automated: dust_policy wired into monitor, blocks new entries on dusty symbols
+- [x] EOD partial exit: swing/multiday/catalyst keep 40% overnight, intraday close fully
+- [x] Daily review: triggers at 4:15 PM ET, saves to data/daily_reviews/
+- [x] Reconciliation canaries deduplicated (no more 100-line log spam)
+- [x] uw_flow_long enabled (was hardcoded disabled)
+- [x] Position sizing: .env 8% respected, allocator advisory only
+- [x] Position cap raised to 40
+- [x] All 6 dust positions manually closed
 
 ## High Priority (Next Session)
 
-### Catalyst Hold Mode (Pharma/Earnings/Congress Pre-Positioning)
-The bot finds pharma catalysts (BIIB NDA in 2 days, DNLI BLA in 4 days) but can't act on them because the classifier requires intraday momentum. Catalyst plays need a dedicated mode:
-- New classifier mode: `catalyst_hold` -- enters BEFORE the event, holds until catalyst date
-- Wider stops (5-8%) since pre-catalyst price action is noise
-- Dead money detector DISABLED for catalyst_hold positions
-- Ratchet only activates AFTER catalyst date hits
-- Post-catalyst: if it runs, switch to momentum ratchet rules; if it gaps down, hard stop catches it
-- Exit rules tied to catalyst expiry date, not hold time
-- Options integration: these are ideal defined-risk options plays (buy calls ahead of FDA)
-- Congress/earnings same pattern: position ahead, hold through noise, let event be the trigger
-This is how you catch 200% pharma runners and earnings gaps instead of watching from the sidelines.
+### Dashboard Phantom P&L Fix
+The AAPL +$154.33 ghost needs deeper investigation. The dashboard may be computing P&L from position entry prices on removed positions. Need to trace exactly where the dashboard builds the trade list for display and ensure it reads ONLY from trade_history, not from position state.
 
-### EOD Partial Exit (Scale-Out at Close)
-Instead of binary close/hold at EOD, scale out 60-70% and let 30-40% ride overnight for multi-day runners. Requires: partial exit by percentage in exit manager, ratchet tracking on reduced position, hold-style awareness (intraday = close all, swing = scale out). Directly addresses "monsters we liquidated before close that ran another 7-8% the next day."
+### Exhaustion Fade Short Triggers Too Strict
+17 pending setups today, 0 entered. Trigger "volume needs to stop accelerating" never fires. Add alternative triggers: "price loses VWAP", "range contraction after extension". Or reduce volume decel threshold.
 
 ### Scale-In on Conviction
-Watch live positions for "add more" signals: holding VWAP, volume reacceleration, sector confirming. Use trigger engine to monitor live positions (not just pending setups). Pre-trade cost + concentration guard provide the guardrails that were missing when scale-in went crazy before. Cap at 2x original position size.
+Watch live positions for "add more" signals. Use trigger engine to monitor live positions. Cap at 2x original. Pre-trade cost + concentration guard provide guardrails.
 
-### Scale-Out on Profit
-Partial profit-taking at configurable thresholds (e.g., take 50% at +5%, let rest ride with tightened ratchet). Different from EOD exit -- this is intraday profit scaling. The ratchet already knows peak P&L; extend it to trigger partial exits at milestones.
+### Scale-Out on Profit (Intraday)
+Partial profit-taking at milestones (e.g., take 50% at +3%, let rest ride). Different from EOD exit -- this is active profit management during the session.
 
-### Dust Cleanup Automation
-Wire dust_policy.py into _monitor_positions loop. Auto-liquidate positions below $5 notional. Block new entries on symbols with existing dust residuals. Current dust positions (SOXL $10, APLD $18, NIO $5) are fragments from partial ratchet exits that should be cleaned up.
+### Options Pilot Whitelist
+OPTIONS_PILOT_STRATEGY_TAGS needs UW_FLOW_LONG, UW_FLOW_SHORT added. OPTIONS_PILOT_MIN_CONFIDENCE at 93% is too restrictive -- lower to 60%. Currently blocking every options candidate.
 
 ## Medium Priority
 
 ### Wire Setup Funnel Into Dashboard
-The SetupFunnel is recording events to SQLite but the dashboard doesn't display conversion rates yet. Add endpoints: /api/funnel/summary, /api/funnel/by_mode, /api/funnel/block_reasons. This is how you answer "why didn't we trade X?"
-
-### Wire Daily Review Into Scheduled Task
-build_daily_review() exists but isn't called anywhere. Schedule it at 4:15 PM ET in the main loop or as a cron. Output to data/daily_reviews/ as JSON for historical comparison.
+SetupFunnel records events to SQLite but dashboard doesn't display it. Add endpoints for conversion rates by mode.
 
 ### Replay Harness CLI
-replay.py exists but has no CLI entry point. Add a simple script: `python -m src.analytics.replay AAPL 2026-04-01` that prints the pipeline journey for a symbol on a given day.
+Add `python -m src.analytics.replay AAPL 2026-04-01` entry point.
 
-### Reconciliation Log Noise
-The broker_activity_missing_internal_history canary repeats 100+ times per reconciliation cycle, flooding logs. Cap the canary list or deduplicate it. The reconciliation is working correctly; the logging is just too verbose.
-
-## Lower Priority
-
-### Analytics Trade Ledger Write Path
-persistence.py needs a write path for analytics_trade_ledger.json that filters out reconstructed/dust trades automatically on every trade record. Currently the ledger was manually created on the VPS.
+### Analytics Trade Ledger Auto-Write
+Wire persistence.py to auto-filter reconstructed trades into separate analytics ledger on every record_trade call.
 
 ### Provider Health Wiring
-provider_health.py exists but isn't wired into the jury/council error handling. Track success/failure per provider and feed degradation policy into auto-enter decisions.
-
-### Book Allocator Hard-Block Mode
-Re-enable allocator hard-blocking once ConcentrationGuard V1 has proven itself. Currently in advisory-only mode (logs but doesn't block). When going live with real money, this needs to actually constrain capital.
+Wire provider_health.py into jury/council error handling.
 
 ## Ideas (Parking Lot)
 
 ### Real Money Transition Checklist
-Before switching from paper to real: re-enable extended hours auto-entry restriction, re-enable 9:30-9:45 opening delay, re-enable allocator hard-blocking, set POSITION_SIZE_PCT to live-appropriate value, verify all ratchet/stop protections work on real fills.
+Re-enable: extended hours restriction, opening delay, allocator hard-blocking, appropriate position sizing, tighter ratchet settings.
 
 ### Multi-Day Position Management
-Positions that survive EOD need different ratchet profiles for overnight (wider stops, no trailing during closed market). The profit ratchet already has swing profiles but they're not automatically assigned based on hold-style.
+Overnight positions need different ratchet profiles (wider stops during closed market).
+
+### Pre-Trade Cost Gate on Every Entry (Not Just Auto-Enter)
+Currently PreTradeCost runs on every candidate for data collection but only gates auto-enter path. Consider making it gate the jury path too -- skip jury eval entirely if spread is trash or liquidity is zero.
