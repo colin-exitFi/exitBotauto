@@ -221,17 +221,162 @@ This is evolutionary optimization applied to trading. Instead of guessing which 
 
 ---
 
+---
+
+## The Full Hedge Fund Playbook
+
+A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, and its own performance metrics. Velox needs the same structure.
+
+### Desk 1: Momentum / Intraday (Active Now)
+**Strategy:** Buy strength, sell weakness. Tight ratchet, quick in and out.
+**Edge:** Speed of signal processing across 8+ data sources.
+**Best regime:** Risk-on trending days.
+**Risk budget:** 30% of active capital.
+**Books:** momentum_long, momentum_short, social_momentum_long/short
+**Infrastructure:** Scanner, classifier, jury/council, profit ratchet.
+
+### Desk 2: Event-Driven / Catalyst (Active Now)
+**Strategy:** Position ahead of known catalysts. Hold through event. Asymmetric payoff.
+**Edge:** Pharma FDA dates, earnings calendar, congress filings, 13F changes.
+**Best regime:** Any -- catalysts are regime-independent.
+**Risk budget:** 20% of active capital.
+**Books:** pharma_catalyst, congress_follow, catalyst_hold
+**Infrastructure:** Pharma scanner, congress scanner, EDGAR 13F scanner, earnings scanner.
+**Signal sources already built:**
+- `src/signals/edgar.py` -- SEC EDGAR filings (8-K, Form 4 insider, SC 13D activist stakes). Already scanning and feeding insider signals to watchlist. Extend with 13F quarterly filing parser for Berkshire, Bridgewater, Renaissance, Citadel, Pershing Square position changes.
+- `src/signals/congress.py` -- Congress trades from Unusual Whales + Quiver. 87 cached trades. Already wired into scanner.
+- Pharma scanner -- FDA NDA/BLA dates with scores. Already finding BIIB, DNLI, ORCA.
+- `src/signals/earnings.py` -- Earnings calendar. Already initialized.
+- `src/signals/finnhub.py` -- Economic calendar for macro catalysts.
+
+**13F Follower Book (to build):**
+- Parse quarterly 13F-HR filings from SEC EDGAR for top funds
+- Detect new positions (fund didn't hold last quarter, holds now)
+- Detect significant increases (>25% position size increase)
+- Detect significant decreases (>25% reduction or full exit)
+- Map to catalyst_hold mode with quarterly rebalance horizon
+- Buffett buys XYZ → we buy XYZ as a swing_catalyst_long
+- When multiple top funds converge on the same name → higher conviction
+- Funds to track: Berkshire Hathaway, Bridgewater, Renaissance Technologies, Citadel, Pershing Square, Appaloosa, Third Point, Greenlight Capital, Soros Fund Management, Viking Global
+
+### Desk 3: Exhaustion / Mean Reversion (Active Now)
+**Strategy:** Short overextended runners after they lose momentum. Fade the euphoria.
+**Edge:** Pattern recognition on exhaustion signals (VWAP loss, range contraction, volume decel).
+**Best regime:** Volatile days with big movers. Natural hedge against momentum desk.
+**Risk budget:** 10% of active capital.
+**Books:** fade_runner, exhaustion_fade_short
+**Infrastructure:** Mode classifier, loosened triggers (just shipped).
+
+### Desk 4: Swing / Multi-Day (Partially Built)
+**Strategy:** Enter quality setups, hold 2-10 days. Wider stops, bigger targets.
+**Edge:** Patience. Most bots can't hold overnight. We can with EOD partial exit.
+**Best regime:** Trending markets with sector rotation.
+**Risk budget:** 15% of active capital.
+**Books:** watchlist_long/short, swing plays
+**Infrastructure:** EOD partial exit (just shipped), sector rotation model, overnight context.
+
+### Desk 5: Options (Infrastructure Exists, Needs Tuning)
+**Strategy:** Defined-risk bets for leverage and hedging.
+**Edge:** Asymmetric payoff on catalysts. Income generation on core holdings.
+**Best regime:** Any -- different option strategies for different regimes.
+**Risk budget:** 10% of active capital.
+**Plays:**
+- Catalyst calls: buy calls ahead of FDA/earnings for leveraged upside, capped downside
+- Covered calls: sell calls against core index holdings for income
+- Protective puts: buy puts on portfolio during high-VIX for crash protection
+- Bull/bear spreads: defined-risk directional bets on high-conviction setups
+- Iron condors: sell premium on range-bound names during choppy regime
+**Infrastructure:** Options engine (live, pilot mode), Unusual Whales options flow, Polygon options data (upgrade needed for full chain).
+
+### Desk 6: Core Holdings / Index (To Build)
+**Strategy:** Long-term compounding through low-cost index funds and dividend growth.
+**Edge:** Discipline. Systematic DCA. Rebalancing. Tax efficiency.
+**Best regime:** All -- this is the permanent allocation.
+**Risk budget:** Separate from active trading. Target 30-50% of total portfolio.
+**Holdings:**
+- QQQM (Nasdaq 100 -- growth)
+- VOO (S&P 500 -- broad market)
+- VUG (Growth index)
+- VTI (Total market)
+- SCHD (Dividend growth)
+- VYM (High dividend yield)
+**Rules:**
+- Weekly DCA when cash exceeds threshold
+- Quarterly rebalance to target weights
+- Never sold by active trading logic
+- Dividends reinvested per allocation weights
+- Tax-loss harvest near year-end (swap VOO↔IVV, VTI↔ITOT)
+
+### Desk 7: Risk / Hedging (To Build)
+**Strategy:** Portfolio protection during regime transitions and tail events.
+**Edge:** Session context detects risk-off before positions bleed.
+**Risk budget:** 5% of active capital (insurance cost).
+**Plays:**
+- VIX calls when term structure inverts (backwardation = stress)
+- SPY puts when portfolio delta exceeds threshold
+- Reduce all position sizes automatically during risk_off regime
+- Inverse ETFs (SQQQ, SH) as temporary hedges during fast selloffs
+**Infrastructure:** Session context (VIX, term structure, SKEW already built). Concentration guard (beta/delta monitoring).
+
+### Desk 8: Cash Management (To Build)
+**Strategy:** Optimal allocation of capital across all desks.
+**Edge:** Never over-deployed, never under-deployed. Dynamic based on regime and opportunity.
+**Rules:**
+- Active trading desks (1-5): size based on regime confidence
+- Risk-on: deploy up to 80% across active desks
+- Neutral: deploy up to 60%
+- Risk-off: deploy up to 30%, rest in cash or hedges
+- Core holdings (Desk 6): steady accumulation regardless of regime
+- Cash reserve: minimum 10% always available for opportunities
+- When a catalyst fires (FDA approval, earnings beat): immediate cash available for scale-in
+- When drawdown exceeds -3% weekly: reduce active allocation, increase cash
+
+---
+
+## The Competitor Bot
+
+Two identical Velox instances, different strategies, full visibility into each other:
+
+```
+Bot A (Aggressor)                    Bot B (Conservative)
+- Tight ratchet (0.3% activation)   - Wider ratchet (1% activation)
+- All modes active                   - Only continuation + catalyst
+- 8% position sizes                  - 5% position sizes
+- Extended hours trading             - Regular hours only
+- High trade count target            - Low trade count, high conviction
+
+Both see each other's:
+- Daily P&L
+- Win rate
+- Sharpe ratio
+- Max drawdown
+- Position count
+- Best/worst trades
+
+Weekly: winning strategy's edge gets adopted by the loser
+Monthly: full strategy comparison report
+```
+
+Evolutionary optimization applied to trading. Instead of guessing, let them fight it out.
+
+---
+
 ## What This Becomes
 
-A self-managed portfolio system that:
+**Velox Capital:** A self-managed portfolio system that runs every play a real hedge fund runs.
 
-1. **Generates cash** from active trading (momentum, fades, catalysts, options)
-2. **Compounds wealth** through index fund accumulation (VOO, VUG, SCHD)
-3. **Protects capital** through hedging and risk management (puts, VIX, correlation)
-4. **Improves continuously** through competitor bot testing and data-driven tuning
-5. **Manages taxes** through loss harvesting and strategic rebalancing
-6. **Replaces a financial advisor** completely -- one account, fully automated
+1. **Generates cash** from 5 active trading desks (momentum, catalyst, fades, swing, options)
+2. **Compounds wealth** through systematic index accumulation (VOO, VUG, SCHD, VYM)
+3. **Protects capital** through hedging desk and regime-aware cash management
+4. **Discovers edge** by following smart money (13F filings, insider trades, congress, whale flow)
+5. **Improves continuously** through competitor bot A/B testing
+6. **Manages taxes** through loss harvesting and strategic rebalancing
+7. **Replaces a financial advisor** completely -- one account, fully automated
 
-No financial advisor. No 17 brokerages. No guessing. Just data-driven portfolio management that gets better every week.
+No financial advisor. No 17 brokerages. No guessing. Data-driven portfolio management that gets better every week.
+
+The infrastructure exists today to support all of this. The scanner feeds, the classifier, the state machine, the SQLite store, the session context, the book system, the ratchet -- they're all designed for multi-strategy portfolio management. What remains is connecting the pieces and proving each desk one at a time.
+
+**The path:** Prove Desk 1 (momentum) → Add Desk 2 (catalyst) → Add Desk 6 (index core) → Layer in Desks 3-5 and 7-8 → Launch competitor bot → Deploy real capital → Velox Capital LLC.
 
 That's the hedge fund in a box.
