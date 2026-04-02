@@ -1,0 +1,94 @@
+---
+description: Velox Vision & Operating Rules — the north star for all development
+globs:
+alwaysApply: true
+---
+
+# Velox North Star
+
+You are building Velox — a self-managed, multi-strategy portfolio operating system that will replace a financial advisor. One brokerage account, fully automated, continuously improving.
+
+## Required Reading Before Any Work
+
+Before making any changes to this codebase, read:
+
+1. **VISION_ROADMAP.md** — the full hedge fund architecture (8 desks, capital hierarchy, graduation framework, benchmarks)
+2. **BACKLOG.md** — current priorities and what's been done
+3. **docs/VELOX_OPERATING_TEMPLATES.md** — governance templates for reviews, scorecards, postmortems
+
+## Core Architecture (V3)
+
+Velox runs an institutional workflow: context first, then classification, then trigger/persistence, then executability, then entry, then protection, then analytics.
+
+Key modules:
+- `src/context/session_context.py` — macro regime (VIX, rates, sectors, risk tone)
+- `src/data/symbol_state_machine.py` — enforced symbol lifecycle transitions
+- `src/data/state_store.py` — SQLite-backed durable state (pending setups, transitions, funnel)
+- `src/execution/trigger_engine.py` — background trigger monitoring for pending setups
+- `src/execution/pre_trade_cost.py` — pre-trade cost/executability gate (Almgren-Chriss)
+- `src/risk/concentration_guard.py` — sector, correlation, beta portfolio checks
+- `src/analytics/` — setup funnel, book scoreboard, latency tracker, daily review, replay harness
+
+## Eight Desks
+
+1. **Momentum / Intraday** — Production Candidate
+2. **Event-Driven / Catalyst** — Pilot (pharma FDA, earnings, congress, 13F)
+3. **Exhaustion / Mean Reversion** — Experimental
+4. **Swing / Multi-Day** — Early Pilot
+5. **Options** — Research/Pilot (high caution)
+6. **Core Holdings / Index** — Future Build (VOO, VUG, QQQM, VTI, SCHD, VYM)
+7. **Risk / Hedging** — Future Build
+8. **Cash Management** — Future Build
+
+## Operating Principles
+
+- **Every desk must earn capital.** Not attention. Not excitement. Capital.
+- **Paper mode = broad enablement for data collection.** Everything on. Let evidence decide.
+- **Production = only proven desks.** Positive expectancy over 50+ trades minimum.
+- **No silent drop-offs.** Every candidate exits the pipeline with a logged state.
+- **One active setup per symbol per mode.** No duplicated setup churn.
+- **Broker is truth.** Internal state syncs to broker, not the other way around.
+- **Mode, book, and play-state are three separate axes.** Never blur them.
+
+## Play-State Taxonomy (Use These Exact Strings)
+
+```
+trade_now | wait_for_trigger | broker_blocked | execution_unfavorable |
+capital_blocked | shadow_only | mode_conflict | data_insufficient | expired
+```
+
+## Ratchet Settings (Profit Factory — Paper Account)
+
+- Hard stop: -0.75%
+- Activation: +0.3%
+- Trail: 1.0%
+- Min hold: 2 minutes
+- Floor: 0.1%
+- Philosophy: get green, never give it back
+
+## Current Environment
+
+- **Paper account** — everything enabled for data collection
+- Position size: 8% from .env
+- Position cap: 40
+- Auto-entry: ON (all sessions including extended hours)
+- All strategy books: ENABLED
+- Options pilot: all books whitelisted, 55% min confidence
+- No opening delay
+
+## What NOT To Do
+
+- Do not add new signal sources before the workflow is clean
+- Do not disable strategy books without explicit human approval
+- Do not let any blocking state become a silent sink — log structured fields
+- Do not confuse "enabled in paper" with "proven for production"
+- Do not modify the ratchet or risk settings without discussing with the user first
+- Do not treat reconstructed broker fills as clean analytics data
+
+## Success Criterion
+
+Success is not measured by how many modules are added. Success is measured by whether Velox converts more high-quality setups into protected trades while producing cleaner attribution about why it did or did not act.
+
+## The Mission
+
+$25k → $5M. Deploy capital with conviction. Protect gains aggressively. Compound daily. Every desk earns its place. Velox Capital.
