@@ -227,7 +227,39 @@ This is evolutionary optimization applied to trading. Instead of guessing which 
 
 A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, and its own performance metrics. Velox needs the same structure.
 
-### Desk 1: Momentum / Intraday (Active Now)
+### Capital Hierarchy (Order of Priority)
+
+1. Maintain emergency cash reserve (minimum 10% of equity)
+2. Maintain hedge minimum if session context shows risk_off
+3. Fund proven active desks up to their risk budget
+4. Sweep excess realized gains to core index book (Desk 6)
+5. Experimental desks receive capped risk capital only
+6. No desk may pull capital from core holdings without explicit human approval
+
+### Desk Graduation Framework
+
+Every desk must earn its budget. Labels:
+
+| Stage | Meaning | Capital Access |
+|-------|---------|---------------|
+| **Research** | Idea only, no trades | None |
+| **Shadow** | Paper tracking, no real orders | None |
+| **Pilot** | Live trades, capped at 5% of active capital | Minimal |
+| **Production** | Proven positive expectancy over 50+ trades | Full budget |
+| **Scaled** | Sustained production, eligible for budget increase | Up to 2x budget |
+
+Graduation rules: positive expectancy over 50 trades, max drawdown < desk limit, win rate above desk-specific threshold. Demotion rules: negative expectancy over 30 trades, max drawdown breached, or kill switch triggered.
+
+### Desk Kill Switches
+
+Each desk auto-downgrades if:
+- Expectancy negative over rolling 30 trades → production → pilot
+- Max drawdown exceeds desk limit → pilot → shadow
+- Implementation shortfall > 2x estimated for 20+ trades → pilot → shadow
+- Broker-blocked rate > 50% of setups → shadow → off
+- Trigger miss rate > 80% over 50 setups → shadow → off
+
+### Desk 1: Momentum / Intraday — PRODUCTION CANDIDATE
 **Strategy:** Buy strength, sell weakness. Tight ratchet, quick in and out.
 **Edge:** Speed of signal processing across 8+ data sources.
 **Best regime:** Risk-on trending days.
@@ -235,7 +267,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 **Books:** momentum_long, momentum_short, social_momentum_long/short
 **Infrastructure:** Scanner, classifier, jury/council, profit ratchet.
 
-### Desk 2: Event-Driven / Catalyst (Active Now)
+### Desk 2: Event-Driven / Catalyst — PILOT
 **Strategy:** Position ahead of known catalysts. Hold through event. Asymmetric payoff.
 **Edge:** Pharma FDA dates, earnings calendar, congress filings, 13F changes.
 **Best regime:** Any -- catalysts are regime-independent.
@@ -259,7 +291,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 - When multiple top funds converge on the same name → higher conviction
 - Funds to track: Berkshire Hathaway, Bridgewater, Renaissance Technologies, Citadel, Pershing Square, Appaloosa, Third Point, Greenlight Capital, Soros Fund Management, Viking Global
 
-### Desk 3: Exhaustion / Mean Reversion (Active Now)
+### Desk 3: Exhaustion / Mean Reversion — EXPERIMENTAL
 **Strategy:** Short overextended runners after they lose momentum. Fade the euphoria.
 **Edge:** Pattern recognition on exhaustion signals (VWAP loss, range contraction, volume decel).
 **Best regime:** Volatile days with big movers. Natural hedge against momentum desk.
@@ -267,7 +299,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 **Books:** fade_runner, exhaustion_fade_short
 **Infrastructure:** Mode classifier, loosened triggers (just shipped).
 
-### Desk 4: Swing / Multi-Day (Partially Built)
+### Desk 4: Swing / Multi-Day — EARLY PILOT
 **Strategy:** Enter quality setups, hold 2-10 days. Wider stops, bigger targets.
 **Edge:** Patience. Most bots can't hold overnight. We can with EOD partial exit.
 **Best regime:** Trending markets with sector rotation.
@@ -275,7 +307,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 **Books:** watchlist_long/short, swing plays
 **Infrastructure:** EOD partial exit (just shipped), sector rotation model, overnight context.
 
-### Desk 5: Options (Infrastructure Exists, Needs Tuning)
+### Desk 5: Options — RESEARCH/PILOT (HIGH CAUTION)
 **Strategy:** Defined-risk bets for leverage and hedging.
 **Edge:** Asymmetric payoff on catalysts. Income generation on core holdings.
 **Best regime:** Any -- different option strategies for different regimes.
@@ -288,7 +320,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 - Iron condors: sell premium on range-bound names during choppy regime
 **Infrastructure:** Options engine (live, pilot mode), Unusual Whales options flow, Polygon options data (upgrade needed for full chain).
 
-### Desk 6: Core Holdings / Index (To Build)
+### Desk 6: Core Holdings / Index — FUTURE BUILD
 **Strategy:** Long-term compounding through low-cost index funds and dividend growth.
 **Edge:** Discipline. Systematic DCA. Rebalancing. Tax efficiency.
 **Best regime:** All -- this is the permanent allocation.
@@ -307,7 +339,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 - Dividends reinvested per allocation weights
 - Tax-loss harvest near year-end (swap VOO↔IVV, VTI↔ITOT)
 
-### Desk 7: Risk / Hedging (To Build)
+### Desk 7: Risk / Hedging — FUTURE BUILD
 **Strategy:** Portfolio protection during regime transitions and tail events.
 **Edge:** Session context detects risk-off before positions bleed.
 **Risk budget:** 5% of active capital (insurance cost).
@@ -318,7 +350,7 @@ A real hedge fund runs multiple desks. Each desk has a strategy, a risk budget, 
 - Inverse ETFs (SQQQ, SH) as temporary hedges during fast selloffs
 **Infrastructure:** Session context (VIX, term structure, SKEW already built). Concentration guard (beta/delta monitoring).
 
-### Desk 8: Cash Management (To Build)
+### Desk 8: Cash Management — FUTURE BUILD
 **Strategy:** Optimal allocation of capital across all desks.
 **Edge:** Never over-deployed, never under-deployed. Dynamic based on regime and opportunity.
 **Rules:**
@@ -377,6 +409,52 @@ No financial advisor. No 17 brokerages. No guessing. Data-driven portfolio manag
 
 The infrastructure exists today to support all of this. The scanner feeds, the classifier, the state machine, the SQLite store, the session context, the book system, the ratchet -- they're all designed for multi-strategy portfolio management. What remains is connecting the pieces and proving each desk one at a time.
 
-**The path:** Prove Desk 1 (momentum) → Add Desk 2 (catalyst) → Add Desk 6 (index core) → Layer in Desks 3-5 and 7-8 → Launch competitor bot → Deploy real capital → Velox Capital LLC.
+### Benchmark Framework
 
-That's the hedge fund in a box.
+Different desks need different benchmarks. "Beat SPY" is the headline, not the internal metric.
+
+| Desk | Benchmark | How Measured |
+|------|-----------|-------------|
+| Momentum | Cash + implementation shortfall adjusted expectancy | Net P&L after slippage vs zero |
+| Catalyst | Event basket baseline (avg catalyst move) | Did we capture more than the avg FDA/earnings move? |
+| Exhaustion | Win rate on fades vs random short timing | Better timing than entering at arbitrary points? |
+| Swing | Buy-and-hold of the same names over same period | Did active management add alpha over just holding? |
+| Options | Premium collected vs premium lost + hedging cost | Net options P&L after theta/gamma |
+| Core Index | SPY / blended ETF benchmark | Tracking error, are we keeping up? |
+| Hedging | Portfolio drawdown reduction | Did hedges reduce drawdowns vs unhedged portfolio? |
+| Cash Management | T-bill yield / sweep baseline | Is cash earning more than sitting idle? |
+
+### Index Layer Operating Policy
+
+When Desk 6 goes live, these rules govern it:
+
+- **What counts as "profits to sweep":** Realized gains only, after all desk P&L is settled for the day
+- **New cash deposits:** Split per target allocation immediately, don't wait for sweep
+- **DCA trigger:** Both -- weekly schedule AND threshold-based (cash > $500 unallocated)
+- **If Tier 1 is down but new cash arrives:** New cash still gets DCA'd into index. Active losses don't eat index capital.
+- **Rebalancing:** Quarterly, sells overweight to buy underweight. Creates taxable events -- track and offset with harvesting.
+- **Core holdings NEVER fund active trading losses.** Active desks have their own budget. If they lose it, they get smaller, not funded by index sales.
+- **Minimum reserve:** DCA pauses if cash reserve drops below 10% of total equity
+
+### Tax Awareness (Phase 4+)
+
+High-turnover Desk 1 will produce short-term capital gains. The system needs to:
+- Track realized gains by holding period (short-term vs long-term)
+- Core holdings held >1 year get favorable long-term treatment
+- Tax-loss harvesting: swap VOO↔IVV, VTI↔ITOT to realize losses without losing exposure
+- Wash sale tracking: don't rebuy within 30 days of a loss harvest
+- Year-end report: total tax liability estimate for planning
+
+This is complex and deserves its own implementation phase. Not hand-waved.
+
+### Paper Account Mode vs Production
+
+**Current state:** Everything enabled for data collection. All desks active. No capital constraints. This is correct for paper -- the goal is to learn which desks earn their budget.
+
+**When transitioning to real money:** Every desk that hasn't graduated to at least Pilot status gets turned off. Only desks with proven positive expectancy over 50+ paper trades get real capital. The vision stays the same; the deployment is staged by evidence.
+
+---
+
+**The path:** Prove Desk 1 (momentum) → Graduate Desk 2 (catalyst) → Build Desk 6 (index core) → Graduate Desks 3-5 from data → Layer in Desks 7-8 → Launch competitor bot → Deploy real capital → Velox Capital.
+
+Every desk must earn capital. Not attention. Not excitement. Capital.
