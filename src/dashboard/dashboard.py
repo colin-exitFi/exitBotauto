@@ -383,6 +383,16 @@ def _build_book_scoreboard_rows() -> List[Dict]:
         for row in ((analytics.get("book_report", {}) or {}).get("books", []) or [])
         if isinstance(row, dict)
     }
+    runtime_books = {}
+    if _bot and getattr(_bot, "book_scoreboard", None):
+        try:
+            runtime_books = {
+                str(row.get("strategy_tag", "") or ""): dict(row)
+                for row in ((_bot.book_scoreboard.get_summary() or {}).get("books", []) or [])
+                if isinstance(row, dict)
+            }
+        except Exception:
+            runtime_books = {}
     live_context = _book_live_position_context()
     books: Dict[str, Dict] = {}
 
@@ -433,11 +443,27 @@ def _build_book_scoreboard_rows() -> List[Dict]:
         row["recommended_action"] = report_row.get("recommended_action", row.get("recommended_action", "observe"))
         row["control_state"] = report_row.get("control_state", row.get("control_state", "active"))
         row["status_reason"] = report_row.get("status_reason", row.get("status_reason", ""))
+        runtime_row = runtime_books.get(strategy_tag, {})
+        if runtime_row:
+            row["realized_pnl"] = round(float(runtime_row.get("realized_pnl", row.get("realized_pnl", 0)) or 0), 2)
+            row["trade_count"] = int(runtime_row.get("trade_count", row.get("trade_count", 0)) or 0)
+            row["expectancy"] = round(
+                float(runtime_row.get("expectancy_per_trade", row.get("expectancy", 0)) or 0),
+                2,
+            )
+            row["open_position_count"] = int(
+                runtime_row.get("open_position_count", row.get("open_position_count", 0)) or 0
+            )
+            row["unrealized_pnl"] = round(
+                float(runtime_row.get("unrealized_pnl", row.get("unrealized_pnl", 0)) or 0),
+                2,
+            )
 
     for strategy_tag, live_row in live_context.items():
         row = _ensure_row(strategy_tag)
-        row["open_position_count"] = int(live_row.get("open_position_count", 0) or 0)
-        row["unrealized_pnl"] = round(float(live_row.get("unrealized_pnl", 0) or 0), 2)
+        if strategy_tag not in runtime_books:
+            row["open_position_count"] = int(live_row.get("open_position_count", 0) or 0)
+            row["unrealized_pnl"] = round(float(live_row.get("unrealized_pnl", 0) or 0), 2)
 
     primary_order = {tag: idx for idx, tag in enumerate(PRIMARY_BOOKS)}
     rows = list(books.values())

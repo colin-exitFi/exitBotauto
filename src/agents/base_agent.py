@@ -11,6 +11,7 @@ from loguru import logger
 import httpx
 
 from config import settings
+from src.ai.provider_health import get_provider_health_tracker
 
 
 # ── Per-provider rate limiters ─────────────────────────────────────
@@ -41,6 +42,7 @@ _PROVIDER_LIMITS: Dict[str, int] = {
 }
 
 TIMEOUT = 45
+_provider_health = get_provider_health_tracker()
 
 
 def get_api_stats() -> Dict:
@@ -336,9 +338,12 @@ def parse_json(text: str) -> dict:
 
 async def call_claude(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Claude Sonnet and return parsed JSON."""
+    started = time.time()
     if not settings.ANTHROPIC_API_KEY:
+        _provider_health.record_failure("claude", error="missing_api_key")
         return None
     if not await _await_rate_limit_slot("claude"):
+        _provider_health.record_failure("claude", error="rate_limit_backoff")
         return None
     model = getattr(settings, 'CLAUDE_MODEL', 'claude-sonnet-4-5-20250929')
     try:
@@ -362,17 +367,31 @@ async def call_claude(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
             _api_calls["claude"] += 1
             _record_api_usage("claude", payload)
             text = payload["content"][0]["text"]
-            return parse_json(text)
+            parsed = parse_json(text)
+            latency_ms = int((time.time() - started) * 1000)
+            if parsed:
+                _provider_health.record_success("claude", latency_ms=latency_ms)
+            else:
+                _provider_health.record_failure("claude", error="invalid_json", latency_ms=latency_ms)
+            return parsed
     except Exception as e:
+        _provider_health.record_failure(
+            "claude",
+            error=str(e),
+            latency_ms=int((time.time() - started) * 1000),
+        )
         logger.error(f"Claude API error: {e}")
         return None
 
 
 async def call_claude_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
     """Call Claude Sonnet and return plain text."""
+    started = time.time()
     if not settings.ANTHROPIC_API_KEY:
+        _provider_health.record_failure("claude", error="missing_api_key")
         return None
     if not await _await_rate_limit_slot("claude"):
+        _provider_health.record_failure("claude", error="rate_limit_backoff")
         return None
     model = getattr(settings, 'CLAUDE_MODEL', 'claude-sonnet-4-5-20250929')
     try:
@@ -395,17 +414,31 @@ async def call_claude_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
             _roll_usage_day_if_needed()
             _api_calls["claude"] += 1
             _record_api_usage("claude", payload)
-            return str(payload["content"][0]["text"]).strip()
+            result = str(payload["content"][0]["text"]).strip()
+            latency_ms = int((time.time() - started) * 1000)
+            if result:
+                _provider_health.record_success("claude", latency_ms=latency_ms)
+            else:
+                _provider_health.record_failure("claude", error="empty_response", latency_ms=latency_ms)
+            return result
     except Exception as e:
+        _provider_health.record_failure(
+            "claude",
+            error=str(e),
+            latency_ms=int((time.time() - started) * 1000),
+        )
         logger.error(f"Claude API error: {e}")
         return None
 
 
 async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call GPT-5.2 and return parsed JSON."""
+    started = time.time()
     if not settings.OPENAI_API_KEY:
+        _provider_health.record_failure("gpt", error="missing_api_key")
         return None
     if not await _await_rate_limit_slot("gpt"):
+        _provider_health.record_failure("gpt", error="rate_limit_backoff")
         return None
     model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.4')
     try:
@@ -429,19 +462,33 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
             _provider_external_rate_limit_hits["gpt"] = 0
             _record_api_usage("gpt", payload)
             text = payload["choices"][0]["message"]["content"]
-            return parse_json(text)
+            parsed = parse_json(text)
+            latency_ms = int((time.time() - started) * 1000)
+            if parsed:
+                _provider_health.record_success("gpt", latency_ms=latency_ms)
+            else:
+                _provider_health.record_failure("gpt", error="invalid_json", latency_ms=latency_ms)
+            return parsed
     except Exception as e:
         if _is_http_rate_limit_error(e):
             _register_provider_backoff("gpt", e, fallback_seconds=12)
+        _provider_health.record_failure(
+            "gpt",
+            error=str(e),
+            latency_ms=int((time.time() - started) * 1000),
+        )
         logger.error(f"GPT API error: {e}")
         return None
 
 
 async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
     """Call GPT and return plain text."""
+    started = time.time()
     if not settings.OPENAI_API_KEY:
+        _provider_health.record_failure("gpt", error="missing_api_key")
         return None
     if not await _await_rate_limit_slot("gpt"):
+        _provider_health.record_failure("gpt", error="rate_limit_backoff")
         return None
     model = getattr(settings, 'OPENAI_MODEL', 'gpt-5.4')
     try:
@@ -464,19 +511,33 @@ async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
             _api_calls["gpt"] += 1
             _provider_external_rate_limit_hits["gpt"] = 0
             _record_api_usage("gpt", payload)
-            return str(payload["choices"][0]["message"]["content"]).strip()
+            result = str(payload["choices"][0]["message"]["content"]).strip()
+            latency_ms = int((time.time() - started) * 1000)
+            if result:
+                _provider_health.record_success("gpt", latency_ms=latency_ms)
+            else:
+                _provider_health.record_failure("gpt", error="empty_response", latency_ms=latency_ms)
+            return result
     except Exception as e:
         if _is_http_rate_limit_error(e):
             _register_provider_backoff("gpt", e, fallback_seconds=12)
+        _provider_health.record_failure(
+            "gpt",
+            error=str(e),
+            latency_ms=int((time.time() - started) * 1000),
+        )
         logger.error(f"GPT API error: {e}")
         return None
 
 
 async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
     """Call Grok-4 via xAI and return parsed JSON."""
+    started = time.time()
     if not settings.XAI_API_KEY:
+        _provider_health.record_failure("grok", error="missing_api_key")
         return None
     if not await _await_rate_limit_slot("grok"):
+        _provider_health.record_failure("grok", error="rate_limit_backoff")
         return None
     model = getattr(settings, 'XAI_MODEL', 'grok-4-0709')
     try:
@@ -500,8 +561,19 @@ async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
             _api_calls["grok"] += 1
             _record_api_usage("grok", payload)
             text = payload["choices"][0]["message"]["content"]
-            return parse_json(text)
+            parsed = parse_json(text)
+            latency_ms = int((time.time() - started) * 1000)
+            if parsed:
+                _provider_health.record_success("grok", latency_ms=latency_ms)
+            else:
+                _provider_health.record_failure("grok", error="invalid_json", latency_ms=latency_ms)
+            return parsed
     except Exception as e:
+        _provider_health.record_failure(
+            "grok",
+            error=str(e),
+            latency_ms=int((time.time() - started) * 1000),
+        )
         logger.error(f"Grok API error: {e}")
         return None
 

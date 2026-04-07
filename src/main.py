@@ -68,7 +68,10 @@ from src.ai.game_film import GameFilm
 from src.ai.position_manager import PositionManager
 from src.ai import trade_history
 from src.ai.post_exit_tracker import check_post_exit_prices
+from src.ai.provider_health import get_provider_health_tracker
+from src.analytics.book_scoreboard import BookScoreboard
 from src.analytics.daily_review import build_daily_review
+from src.analytics.latency_tracker import LatencyTracker
 from src.agents.jury import JuryVerdict
 from src.agents import risk_agent as book_risk_agent
 from src.agents.risk_agent import STRATEGY_MAX_POSITIONS
@@ -161,6 +164,7 @@ class TradingBot:
         self._tomorrow_thesis_cache = None
         self._tomorrow_thesis_cache_at = 0.0
         self._last_daily_review_date: Optional[str] = None
+        self._last_book_scoreboard_refresh_at = 0.0
 
         # Components (initialized in initialize())
         self.alpaca_client: AlpacaClient = None
@@ -176,6 +180,9 @@ class TradingBot:
         self.options_monitor: OptionsMonitor = None
         self.reconciler: Optional[Reconciler] = None
         self.overnight_context: Optional[OvernightContext] = None
+        self.book_scoreboard: Optional[BookScoreboard] = None
+        self.latency_tracker: Optional[LatencyTracker] = None
+        self.provider_health = None
 
         # AI layers
         self.observer: Observer = None
@@ -262,6 +269,29 @@ class TradingBot:
                 "Jury reliability is reduced until providers recover."
             )
         return status
+
+    def _refresh_provider_health_layer(self):
+        provider_health = getattr(self, "provider_health", None)
+        if not provider_health or not isinstance(getattr(self, "ai_layers", None), dict):
+            return
+        try:
+            self.ai_layers["provider_health"] = provider_health.get_dashboard_status()
+            self.ai_layers["provider_health_policy"] = provider_health.get_policy()
+        except Exception as e:
+            logger.debug(f"Provider health layer refresh failed: {e}")
+
+    def _refresh_book_scoreboard(self):
+        scoreboard = getattr(self, "book_scoreboard", None)
+        if not scoreboard:
+            return
+        try:
+            trades = trade_history.load_all()
+            positions = self.entry_manager.get_positions() if self.entry_manager else []
+            funnel_summary = self.state_store.get_funnel_summary() if getattr(self, "state_store", None) else None
+            scoreboard.refresh(trades, positions, funnel_summary)
+            self._last_book_scoreboard_refresh_at = time.time()
+        except Exception as e:
+            logger.debug(f"Book scoreboard refresh failed: {e}")
 
     async def initialize(self):
         """Initialize all components."""
@@ -431,6 +461,9 @@ class TradingBot:
             polygon_client=self.polygon_client,
             alpaca_client=self.alpaca_client,
         )
+        self.provider_health = get_provider_health_tracker()
+        self.book_scoreboard = BookScoreboard()
+        self.latency_tracker = LatencyTracker()
 
         # Options engine
         from src.options.options_engine import OptionsEngine
@@ -486,7 +519,8 @@ class TradingBot:
             "last_short_block_reason": None,
             "last_uw_stream_signal": None,
         }
-        self.ai_layers["provider_health"] = await self._provider_health_check()
+        await self._provider_health_check()
+        self._refresh_provider_health_layer()
 
         # ── Fail-Closed Startup: broker is canonical ──────────────────
         self._broker_ready = False
@@ -583,6 +617,8 @@ class TradingBot:
         if saved_ai:
             self.ai_layers.update(saved_ai)
             self._repair_last_consensus_snapshot()
+        self._refresh_provider_health_layer()
+        self._refresh_book_scoreboard()
 
         # Dashboard
         start_dashboard(bot=self)
@@ -700,6 +736,7 @@ class TradingBot:
                 now = time.time()
                 session_type = self._current_session_type_label(self._entry_session_label())
                 self._roll_daily_state_if_needed()
+                self._refresh_provider_health_layer()
 
                 # Sync equity from Alpaca every 60s
                 if now - last_equity_sync >= 60 and self.alpaca_client:
@@ -1660,6 +1697,10 @@ class TradingBot:
         """Run AI layers on their own intervals, concurrently with trading."""
         while self.running:
             try:
+                self._refresh_provider_health_layer()
+                if (time.time() - float(getattr(self, "_last_book_scoreboard_refresh_at", 0.0) or 0.0)) >= 300:
+                    self._refresh_book_scoreboard()
+
                 # Observer (every 10 min)
                 obs = await self.observer.run(self)
                 if obs:
@@ -1732,12 +1773,19 @@ class TradingBot:
             funnel_summary = None
             if hasattr(self, "state_store") and self.state_store:
                 funnel_summary = self.state_store.get_funnel_summary()
+            book_summary = {}
+            if getattr(self, "book_scoreboard", None):
+                self._refresh_book_scoreboard()
+                book_summary = self.book_scoreboard.get_summary() or {}
             review = build_daily_review(
                 date_str=today_str,
                 session_snapshot=session_snap,
                 funnel_summary=funnel_summary,
+                book_scores=book_summary.get("books", []),
+                mode_scores=book_summary.get("modes", []),
                 trades_today=today_trades,
                 shadow_trades=shadow_trades,
+                provider_snapshot=self.provider_health.get_snapshot() if getattr(self, "provider_health", None) else None,
             )
             review_dir = _DATA_DIR / "daily_reviews"
             review_dir.mkdir(parents=True, exist_ok=True)
@@ -3495,6 +3543,16 @@ class TradingBot:
         if not bool(getattr(settings, "MODE_CLASSIFIER_AUTO_ENTER", False)):
             return False, "classifier_auto_disabled", ""
 
+        provider_health = getattr(self, "provider_health", None)
+        if provider_health:
+            try:
+                provider_policy = provider_health.get_policy() or {}
+                candidate["provider_health_policy"] = provider_policy
+                if not provider_policy.get("auto_enter_allowed", True):
+                    return False, f"provider_policy:{provider_policy.get('mode', 'unknown')}", ""
+            except Exception as e:
+                logger.debug(f"Provider health policy lookup failed: {e}")
+
         detail = getattr(verdict, "consensus_detail", {}) or {}
         agreement = str(detail.get("agreement", "") or "").lower()
         if agreement in {"adversary_veto", "risk_block"}:
@@ -3560,6 +3618,11 @@ class TradingBot:
             positions = self.entry_manager.get_positions() if self.entry_manager else {}
             conc = self.concentration_guard.evaluate(candidate, positions)
             candidate["concentration_report"] = conc.to_dict()
+            logger.info(
+                f"🧲 CONCENTRATION {candidate.get('symbol', '')}: allowed={conc.new_entry_allowed} "
+                f"blocker={conc.dominant_blocker or conc.new_entry_reason or 'none'} "
+                f"beta={conc.portfolio_beta:.2f} size_adj={conc.size_adjustment:.2f}"
+            )
             if not conc.new_entry_allowed:
                 return False, f"concentration:{conc.dominant_blocker}", auto_decision
 
@@ -4722,6 +4785,12 @@ class TradingBot:
                     candidate["executability_report"] = _exec_report.to_dict()
                     candidate["execution_quality_score"] = _exec_report.execution_quality_score
                     candidate["edge_survives_cost"] = _exec_report.edge_survives_cost
+                    logger.info(
+                        f"💰 PRE-TRADE {symbol}: verdict={_exec_report.execution_verdict} "
+                        f"edge={_exec_report.expected_edge_bps:.0f}bps "
+                        f"cost={_exec_report.estimated_implementation_shortfall_bps:.0f}bps "
+                        f"quality={_exec_report.execution_quality_score:.2f}"
+                    )
                 except Exception as e:
                     logger.debug(f"PreTradeCost eval failed for {symbol}: {e}")
 
@@ -5585,6 +5654,11 @@ class TradingBot:
 
         recorded_keys.add(trade_key)
         trade_history.record_trade(trade_record)
+        if getattr(self, "latency_tracker", None):
+            try:
+                self.latency_tracker.record_from_trade(trade_record)
+            except Exception as e:
+                logger.debug(f"Latency tracker record failed for {symbol}: {e}")
         self._record_setup_snapshot(
             trade_record,
             "cooldown",

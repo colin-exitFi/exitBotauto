@@ -97,7 +97,7 @@ class BookScoreboard:
     def refresh(
         self,
         trades: List[Dict],
-        open_positions: Optional[Dict[str, Dict]] = None,
+        open_positions: Optional[Dict[str, Dict] | List[Dict]] = None,
         funnel_summary: Optional[Dict] = None,
     ):
         self.book_scores = self._compute_book_scores(trades, open_positions)
@@ -106,12 +106,14 @@ class BookScoreboard:
     def _compute_book_scores(
         self,
         trades: List[Dict],
-        open_positions: Optional[Dict[str, Dict]],
+        open_positions: Optional[Dict[str, Dict] | List[Dict]],
     ) -> List[BookScore]:
         by_book: Dict[str, List[Dict]] = defaultdict(list)
         for t in trades:
             tag = str(t.get("strategy_tag", "unknown") or "unknown")
             by_book[tag].append(t)
+
+        position_rows = self._iter_open_positions(open_positions)
 
         scores = []
         for tag, book_trades in by_book.items():
@@ -133,12 +135,12 @@ class BookScoreboard:
             givebacks = [float(t.get("giveback_pct", 0) or 0) for t in book_trades if float(t.get("giveback_pct", 0) or 0) > 0]
             score.giveback_rate = sum(givebacks) / max(1, len(givebacks)) if givebacks else 0.0
 
-            if open_positions:
-                count = sum(1 for p in open_positions.values() if str(p.get("strategy_tag", "") or "") == tag)
+            if position_rows:
+                count = sum(1 for p in position_rows if str(p.get("strategy_tag", "") or "") == tag)
                 score.open_position_count = count
                 score.capital_allocated = sum(
                     abs(float(p.get("notional", 0) or 0))
-                    for p in open_positions.values()
+                    for p in position_rows
                     if str(p.get("strategy_tag", "") or "") == tag
                 )
 
@@ -189,6 +191,16 @@ class BookScoreboard:
             scores.append(score)
 
         return sorted(scores, key=lambda s: s.expectancy_per_trade, reverse=True)
+
+    @staticmethod
+    def _iter_open_positions(
+        open_positions: Optional[Dict[str, Dict] | List[Dict]],
+    ) -> List[Dict]:
+        if isinstance(open_positions, dict):
+            return [dict(row or {}) for row in open_positions.values()]
+        if isinstance(open_positions, list):
+            return [dict(row or {}) for row in open_positions]
+        return []
 
     def get_summary(self) -> Dict:
         return {
