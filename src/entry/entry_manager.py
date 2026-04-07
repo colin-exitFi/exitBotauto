@@ -47,6 +47,17 @@ class EntryManager:
         self._load_brokerage_positions()
         logger.info("Entry manager initialized")
 
+    def _persist_position_state(self):
+        """Persist tracked positions immediately after broker-facing mutations."""
+        try:
+            self._recently_removed_positions = self._prune_recently_removed_positions(
+                getattr(self, "_recently_removed_positions", {}) or {}
+            )
+            persistence.save_positions(self.positions)
+            persistence.save_recently_removed_positions(self._recently_removed_positions)
+        except Exception as e:
+            logger.debug(f"Could not persist entry-manager position state: {e}")
+
     def is_market_open(self) -> bool:
         """Check if US stock market is open including extended hours (4:00 AM - 8:00 PM ET)."""
         from pytz import timezone as tz
@@ -934,6 +945,7 @@ class EntryManager:
         position.update(self._extract_setup_metadata(sentiment_data))
         position["symbol_state"] = "live_position"
         self.positions[symbol] = position
+        self._persist_position_state()
         if extended:
             logger.success(
                 f"📋 LIMIT ORDER PLACED: {actual_qty:.4f} {symbol} @ ${price:.2f} "
@@ -1291,6 +1303,7 @@ class EntryManager:
         position.update(self._extract_setup_metadata(sentiment_data))
         position["symbol_state"] = "live_position"
         self.positions[symbol] = position
+        self._persist_position_state()
         stop_info = (
             f" 🛡️ stop=${hard_stop_price:.2f}"
             if position["hard_stop_order_id"]
@@ -1480,6 +1493,7 @@ class EntryManager:
                 logger.warning(f"Could not recover existing protection orders: {e}")
 
             logger.success(f"Loaded {len(self.positions)} existing positions from Alpaca")
+            self._persist_position_state()
         except Exception as e:
             logger.error(f"Failed to load brokerage positions: {e}")
 
@@ -1728,6 +1742,8 @@ class EntryManager:
                 f"(current ${cur_price:.2f}, P&L ${p.get('open_pnl', 0):.2f}, entry={entry_time_source}, reload={reload_reason})"
             )
             updates += 1
+        if updates:
+            self._persist_position_state()
         return updates
 
     def get_positions(self) -> List[Dict]:
@@ -1757,10 +1773,7 @@ class EntryManager:
             self._recently_removed_positions = self._prune_recently_removed_positions(
                 self._recently_removed_positions
             )
-            try:
-                persistence.save_recently_removed_positions(self._recently_removed_positions)
-            except Exception:
-                logger.debug(f"Could not persist removed position snapshot for {symbol}")
+            self._persist_position_state()
 
     def update_peak_price(self, symbol: str, current_price: float):
         """Update favorable excursion tracking for ratchet logic."""
