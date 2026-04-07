@@ -5875,14 +5875,23 @@ class TradingBot:
 
     async def _ensure_hard_stop(self, position: dict, open_orders_by_symbol: Dict[str, List[Dict]], current_price: float):
         symbol = position.get("symbol", "?")
-        if not self.alpaca_client or self._entry_session_label() != "regular":
+        if not self.alpaca_client:
             position.setdefault("order_state", {})["hard_stop"] = "software_managed"
             return
 
-        qty = int(float(position.get("quantity", 0) or 0))
-        if qty < 1:
-            logger.debug(f"🛡️ {symbol}: hard stop skip — qty={qty} < 1")
-            return
+        is_regular = self._entry_session_label() == "regular"
+        if not is_regular:
+            position.setdefault("order_state", {})["session_protection"] = "software_managed"
+
+        qty = float(position.get("quantity", 0) or 0)
+        int_qty = int(qty)
+        if int_qty < 1:
+            if qty > 0.01 and is_regular:
+                int_qty = 1
+            else:
+                position.setdefault("order_state", {})["hard_stop"] = "software_managed"
+                return
+        qty = int_qty
 
         exit_side = self._position_exit_side(position)
         hard_stop_id = str(position.get("hard_stop_order_id", "") or "")
@@ -6669,9 +6678,17 @@ class TradingBot:
                 closed_orders = []
 
         for pos in positions:
+            symbol = pos.get("symbol", "")
+            if symbol in alpaca_symbols:
+                entry_state = (pos.get("order_state") or {}).get("entry", "")
+                if entry_state in ("open", "pending_new", "new", "accepted", ""):
+                    pos.setdefault("order_state", {})["entry"] = "filled"
+                    if not pos.get("fill_timestamp"):
+                        import time as _time
+                        pos["fill_timestamp"] = pos.get("entry_time") or _time.time()
+                        pos["fill_timestamp_source"] = "broker_sync_forced"
             if pos.get("fill_timestamp"):
                 continue
-            symbol = pos.get("symbol", "")
             if not symbol:
                 continue
             side = pos.get("side", "long")
