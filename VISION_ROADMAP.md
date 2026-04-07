@@ -16,43 +16,68 @@ A real hedge fund managing $200k doesn't just momentum scalp. They run:
 6. **Risk Management** -- portfolio-level VaR, correlation monitoring, drawdown limits
 7. **Cash Management** -- when to deploy, when to hold cash, rebalancing schedule
 
-## Where We Are Today (April 2026)
+## Where We Are Today (April 7, 2026)
 
-### Working
-- Momentum scalping (continuation_long/short)
-- Profit ratchet exit system
-- Multi-source scanner (8+ data feeds)
-- AI jury/council for trade decisions
-- Broker integration (Alpaca)
-- Session context (macro regime awareness)
-- Pre-trade cost estimation
-- Symbol state machine + SQLite persistence
-- Trigger engine for pending setups
-- Dashboard
+### Working & Proven
+- Multi-source scanner (8+ data feeds: Alpaca, Polygon, StockTwits, UW, Congress, EDGAR, Pharma, Grok X)
+- AI jury/council for trade decisions (Claude + GPT + Grok)
+- Broker integration (Alpaca paper account)
+- Session context (VIX, rates, yield curve, SKEW, sector rotation, overnight bias)
+- Pre-trade cost estimation (Almgren-Chriss market impact, slippage, edge-vs-cost)
+- Symbol state machine + SQLite persistence (32k+ transitions, 84k+ funnel events)
+- Trigger engine for pending setups (206 pending setups tracked)
+- Dashboard with live positions and analytics
+- Daily operating review (auto-generates at 4:15 PM ET, 5 days of reviews saved)
+- Setup funnel tracking full pipeline: scan → classify → trigger → cost → enter → exit
 
-### Just Shipped (Tonight)
-- Catalyst hold mode (pharma/earnings/congress)
-- Exhaustion fade shorts (loosened triggers)
-- EOD partial exit (swing positions keep 40% overnight)
-- Options pilot (all books whitelisted)
-- Sector rotation signal integration
-- Dust automation
-- Daily operating review
-- UW whale flow enabled
-- Profit factory ratchet settings
+### Active Desks (Paper, Data Collection Mode)
+- **Desk 1: Momentum** — Production Candidate. continuation_long/short. Profit factory ratchet (-0.75% stop, 0.3% activation, 1% trail, 2min hold). 124 trades in 5 days.
+- **Desk 2: Catalyst** — Pilot. catalyst_hold mode for pharma FDA, earnings, congress. Wider -5% stop, dead money disabled.
+- **Desk 3: Exhaustion Fades** — Experimental. Loosened triggers (VWAP loss, range contraction). 3 trades so far.
+- **Desk 4: Swing** — Early Pilot. EOD partial exit keeps 40% overnight. Multi-day holds enabled.
+- **Desk 5: Options** — Research/Pilot. All books whitelisted, 55% min confidence. 2 trades.
+- **UW Whale Flow** — Enabled. 83 trades via uw_flow_long book.
+- **Sector Rotation** — Candidates tagged hot/cold from SectorRotationModel.
+
+### Critical Bugs Fixed (April 7)
+- Hard stops were NOT being placed on broker-synced positions (entry state stuck at "open"). 44% of losses ($126/week) from unprotected positions. **FIXED: force entry confirmation for all broker-confirmed positions.**
+- Reconciler creating phantom losing trades from broker activity. 31% of losses ($89/week). **FIXED: reconstructed trades with P&L < -$5 blocked from trade history.**
+- Exit agent killing positions within the hard stop range. 8% of losses ($22/week). **FIXED: exit agent backs off when position is losing but above stop level.**
+- Dashboard showing phantom P&L (AAPL +$154 ghost). **FIXED: dashboard reads clean analytics.**
+- VIX reading stale FRED data (30.6 vs actual 24.5). **FIXED: Polygon live data first, FRED fallback.**
+- Position sizing crushed by allocator and risk agent stacking reductions. **FIXED: .env 8% respected, allocator advisory only.**
+
+### 5-Day Performance (Paper)
+- Starting equity: $26,863
+- Current equity: $26,533
+- Week change: -$330 (-1.2%)
+- Of that: ~$237 (69%) was from bugs now fixed, ~$104 (31%) was real trading friction
+- 124 trades, 37% win rate, avg winner +$2.48, avg loser -$5.91
+- Only profitable book: social_momentum_long (+$20, 77.8% win rate, 9 trades)
+
+### Operational Infrastructure
+- SQLite StateStore: pending setups, state transitions, funnel events, session snapshots
+- Shadow trade tracking for all blocked candidates
+- Dust auto-cleanup via dust_policy
+- Reconciliation canary deduplication
+- Book-to-mode mapping
+- Provider health tracking
+- Latency budget monitoring
+- Replay harness for post-trade diagnostics
 
 ### Not Yet Built
-- Index fund accumulation layer
+- Index fund accumulation layer (Desk 6: VOO, VUG, QQQM, VTI, SCHD, VYM)
+- Portfolio rebalancing / DCA logic
 - Dividend capture/reinvestment
-- Portfolio rebalancing
-- Multi-day position management (proper swing trading)
-- Options strategies beyond single-leg
-- Hedging / portfolio protection
-- Cash allocation logic
+- Options strategies beyond single-leg (covered calls, spreads, hedges)
+- Hedging desk (SPY puts, VIX calls, inverse ETFs)
+- Cash allocation logic (capital waterfall between desks)
+- Scale-in on conviction / Scale-out on profit milestones
+- 13F follower book (Berkshire, Bridgewater, Renaissance position tracking)
 - Competitor bot (A/B testing)
 - Real money transition controls
 - Tax-loss harvesting
-- Performance reporting (vs S&P benchmark)
+- Performance reporting vs SPY benchmark
 
 ---
 
