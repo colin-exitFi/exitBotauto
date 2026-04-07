@@ -412,6 +412,7 @@ class TradingBot:
 
         # SQLite-backed state store — durable runtime persistence
         self.state_store = StateStore()
+        self.session_context._state_store = self.state_store
 
         # Symbol state machine — enforces lifecycle transitions, prevents duplicates
         self.symbol_state_tracker = SymbolStateTracker(state_store=self.state_store)
@@ -2293,8 +2294,8 @@ class TradingBot:
                 price = float(price or 0)
                 if price > 0:
                     return price
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Shadow price lookup via Alpaca failed for {symbol}: {e}")
         polygon_client = getattr(self, "polygon_client", None)
         if polygon_client:
             try:
@@ -2302,8 +2303,9 @@ class TradingBot:
                 price = float(price or 0)
                 if price > 0:
                     return price
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Shadow price lookup via Polygon failed for {symbol}: {e}")
+        logger.warning(f"👻 Shadow follow-up price unavailable for {symbol} — both Alpaca and Polygon returned 0")
         return 0.0
 
     def _persist_shadow_record(self, record: Dict):
@@ -2676,6 +2678,11 @@ class TradingBot:
         snapshot_id = record_setup_snapshot(payload)
         return snapshot_id
 
+    _SHADOW_BLOCK_STATES = frozenset({
+        "broker_blocked", "execution_unfavorable", "capital_blocked",
+        "shadow_only", "mode_conflict", "data_insufficient",
+    })
+
     def _record_candidate_block(
         self,
         candidate: Dict,
@@ -2699,6 +2706,29 @@ class TradingBot:
         payload["no_trade_reason"] = str(reason or "").strip() or payload.get("no_trade_reason")
         if symbol_state in {"broker_blocked", "capital_blocked", "data_insufficient", "mode_conflict", "shadow_only"}:
             payload["timing_state"] = symbol_state
+
+        if symbol_state in self._SHADOW_BLOCK_STATES:
+            strategy_tag = str(payload.get("strategy_tag", "unknown") or "unknown")
+            shadow_record = {
+                "symbol": symbol,
+                "strategy_tag": strategy_tag,
+                "direction": self._shadow_direction_for_strategy(strategy_tag),
+                "signal_tier": payload.get("signal_tier", "tier_2"),
+                "entry_quality": payload.get("entry_quality", "neutral"),
+                "signal_price": round(float(payload.get("price", 0) or 0), 4),
+                "spread_pct": float(payload.get("spread_pct", 0) or 0),
+                "range_pct": float(payload.get("range_pct", 0) or 0),
+                "timestamp": time.time(),
+                "block_reason": str(reason or ""),
+                "block_state": symbol_state,
+                "price_1h": None,
+                "price_4h": None,
+                "price_eod": None,
+                "mfe": None,
+                "mae": None,
+            }
+            self._persist_shadow_record(shadow_record)
+
         return self._record_setup_snapshot(payload, symbol_state, verdict=verdict, extra=extra)
 
     def _pending_setup_candidate_snapshot(self, candidate: Dict) -> Dict:
@@ -4802,23 +4832,7 @@ class TradingBot:
             )
             disabled_strategy = self._extract_disabled_strategy(pre_risk_brief)
             if disabled_strategy:
-                shadow_record = {
-                    "symbol": symbol,
-                    "strategy_tag": disabled_strategy,
-                    "direction": self._shadow_direction_for_strategy(disabled_strategy),
-                    "signal_tier": candidate.get("signal_tier", "tier_2"),
-                    "entry_quality": candidate.get("entry_quality", "neutral"),
-                    "signal_price": round(signal_price, 4),
-                    "spread_pct": float(candidate.get("spread_pct", 0) or 0),
-                    "range_pct": float(candidate.get("range_pct", 0) or 0),
-                    "timestamp": time.time(),
-                    "price_1h": None,
-                    "price_4h": None,
-                    "price_eod": None,
-                    "mfe": None,
-                    "mae": None,
-                }
-                self._persist_shadow_record(shadow_record)
+                candidate["strategy_tag"] = disabled_strategy
                 self._record_candidate_block(candidate, "shadow_only", f"strategy_disabled:{disabled_strategy}")
                 logger.info(
                     f"👻 SHADOW {symbol}: {disabled_strategy} disabled — hypothetical entry @ ${signal_price:.2f} "

@@ -196,6 +196,14 @@ class Reconciler:
             t.setdefault("anomaly_flags", [])
             if "broker_reconstructed" not in t.get("anomaly_flags", []):
                 t["anomaly_flags"].append("broker_reconstructed")
+            trade_pnl = round(float(t.get("pnl", 0) or 0), 2)
+            if str(t.get("reason", "") or "").lower() == "broker_fill_reconstructed" and trade_pnl < -5.0:
+                logger.warning(
+                    f"🚫 Skipping phantom reconstructed trade: {t.get('symbol')} "
+                    f"pnl=${trade_pnl:.2f} (threshold=-$5) — not adding to trade history"
+                )
+                skipped_duplicates += 1
+                continue
             trade_history.record_trade(t)
             existing_keys.add(key)
             existing.append(t)

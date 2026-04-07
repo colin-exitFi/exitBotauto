@@ -142,6 +142,26 @@ class ExitAgent:
 
             await asyncio.sleep(120)
 
+    @staticmethod
+    def _within_hard_stop_range(pos: Dict, pnl_pct: float, hold_seconds: float) -> bool:
+        """Position is losing but hasn't breached the hard stop — let the stop do its job.
+
+        Returns False (not guarded) when:
+        - Position is profitable (pnl_pct >= 0)
+        - Position has been held > 24h (dead money — exit agent can act)
+        - P&L has already breached past the hard stop
+        """
+        if pnl_pct >= 0:
+            return False
+        if hold_seconds >= 24 * 3600:
+            return False
+        try:
+            from src.exit.profit_ratchet import ProfitRatchet
+            hard_stop_pct = float(pos.get("hard_stop_pct") or ProfitRatchet.HARD_STOP_PCT)
+        except Exception:
+            hard_stop_pct = -3.0
+        return pnl_pct > hard_stop_pct
+
     async def _evaluate_position(self, pos: Dict) -> Optional[Dict]:
         """Evaluate a single position using AI."""
         symbol = pos.get("symbol", "")
@@ -224,6 +244,14 @@ class ExitAgent:
             if action["new_trail_pct"] is not None:
                 action["new_trail_pct"] = max(0.5, min(5.0, float(action["new_trail_pct"])))
 
+            if action["action"] in ("EXIT_NOW", "TIGHTEN") and self._within_hard_stop_range(pos, pnl_pct, hold_seconds):
+                logger.info(
+                    f"🚪 Exit Agent {symbol}: overriding {action['action']} → HOLD "
+                    f"(pnl {pnl_pct:+.1f}% within hard stop range, let stop do its job)"
+                )
+                action["action"] = "HOLD"
+                action["reasoning"] = f"Overridden: pnl {pnl_pct:+.1f}% within hard stop range"
+
             if action["action"] != "HOLD":
                 logger.info(f"🚪 Exit Agent {symbol}: {action['action']} — {action['reasoning']}")
 
@@ -243,7 +271,11 @@ class ExitAgent:
     def _rule_based_fallback_action(pos: Dict, current_price: float, pnl_pct: float, hold_seconds: float) -> Dict:
         """Safety fallback when Claude is unavailable or returns invalid output."""
         current_trail = max(0.5, min(5.0, float(pos.get("trail_pct", 3.0) or 3.0)))
+        in_hard_stop_range = ExitAgent._within_hard_stop_range(pos, pnl_pct, hold_seconds)
+
         if pos.get("protection_failed") or pnl_pct <= -3.0:
+            if in_hard_stop_range:
+                return DEFAULT_ACTION
             return {
                 "action": "EXIT_NOW",
                 "new_trail_pct": None,
@@ -256,6 +288,8 @@ class ExitAgent:
                 "reasoning": "Rule-based profit lock while AI unavailable",
             }
         if hold_seconds >= 4 * 3600 and pnl_pct < 0:
+            if in_hard_stop_range:
+                return DEFAULT_ACTION
             return {
                 "action": "TIGHTEN",
                 "new_trail_pct": min(current_trail, 1.5),
@@ -353,16 +387,25 @@ class ExitAgent:
         if pos.get("exit_pending"):
             return False
 
+        pnl_pct = float(action.get("pnl_pct", 0.0) or 0.0)
+        hold_seconds = max(0.0, float(action.get("hold_seconds", 0.0) or 0.0))
+
+        if self._within_hard_stop_range(pos, pnl_pct, hold_seconds):
+            logger.info(
+                f"🚪 Exit Agent blocking EXIT_NOW execution for {pos.get('symbol', '?')}: "
+                f"pnl {pnl_pct:+.1f}% within hard stop range"
+            )
+            return False
+
         min_confirms = max(1, int(getattr(settings, "EXIT_AGENT_EXIT_NOW_CONFIRMATIONS", 2) or 2))
         if count < min_confirms:
             return False
 
-        hold_minutes = max(0.0, float(action.get("hold_seconds", 0.0) or 0.0) / 60.0)
+        hold_minutes = hold_seconds / 60.0
         min_hold_minutes = float(getattr(settings, "EXIT_AGENT_EXIT_NOW_MIN_HOLD_MINUTES", 3.0) or 3.0)
         if hold_minutes < min_hold_minutes:
             return False
 
-        pnl_pct = float(action.get("pnl_pct", 0.0) or 0.0)
         max_pnl_pct = float(getattr(settings, "EXIT_AGENT_EXIT_NOW_MAX_PNL_PCT", 0.5) or 0.5)
         return pnl_pct <= max_pnl_pct
 

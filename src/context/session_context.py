@@ -212,12 +212,14 @@ class SessionContext:
         finnhub_client=None,
         overnight_context=None,
         sector_model=None,
+        state_store=None,
     ):
         self._fred = fred_client
         self._polygon = polygon_client
         self._finnhub = finnhub_client
         self._overnight = overnight_context
         self._sector = sector_model
+        self._state_store = state_store
         self._snapshot = SessionContextSnapshot()
         self._last_refresh = 0.0
 
@@ -260,6 +262,13 @@ class SessionContext:
             f"overnight={snap.overnight_index_bias} "
             f"conf={snap.regime_confidence:.2f}"
         )
+
+        if self._state_store:
+            try:
+                self._state_store.save_session_snapshot(snap.to_dict())
+            except Exception as e:
+                logger.debug(f"SessionContext snapshot save to SQLite failed: {e}")
+
         return snap
 
     def _populate_overnight(self, snap: SessionContextSnapshot):
