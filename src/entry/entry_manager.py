@@ -599,6 +599,19 @@ class EntryManager:
             self.last_order_error = "price_unavailable"
             return None
         signal_timestamp = float(sentiment_data.get("signal_timestamp", time.time()) or time.time())
+        signal_price_orig = float(sentiment_data.get("signal_price", price) or price)
+        signal_age = time.time() - signal_timestamp
+        hold_style = str(sentiment_data.get("holding_horizon", "intraday") or "intraday").lower()
+        stale_limit = 60 if hold_style == "intraday" else 300
+        if signal_age > stale_limit and signal_price_orig > 0:
+            drift_pct = abs(price - signal_price_orig) / signal_price_orig * 100
+            if drift_pct > 0.5:
+                logger.warning(
+                    f"⚠️ STALE ENTRY ABORT {symbol}: signal is {signal_age:.0f}s old, "
+                    f"price drifted {drift_pct:.2f}% (${signal_price_orig:.2f}→${price:.2f})"
+                )
+                self.last_order_error = "stale_signal_price_drift"
+                return None
 
         # Consensus already ran in main loop — use the modifier passed in sentiment_data
         consensus_size_modifier = sentiment_data.get("consensus_size_modifier", 1.0)
@@ -965,6 +978,19 @@ class EntryManager:
             self.last_order_error = "price_unavailable"
             return None
         signal_timestamp = float(sentiment_data.get("signal_timestamp", time.time()) or time.time())
+        signal_price_orig = float(sentiment_data.get("signal_price", price) or price)
+        signal_age = time.time() - signal_timestamp
+        hold_style = str(sentiment_data.get("holding_horizon", "intraday") or "intraday").lower()
+        stale_limit = 60 if hold_style == "intraday" else 300
+        if signal_age > stale_limit and signal_price_orig > 0:
+            drift_pct = abs(price - signal_price_orig) / signal_price_orig * 100
+            if drift_pct > 0.5:
+                logger.warning(
+                    f"⚠️ STALE SHORT ABORT {symbol}: signal is {signal_age:.0f}s old, "
+                    f"price drifted {drift_pct:.2f}% (${signal_price_orig:.2f}→${price:.2f})"
+                )
+                self.last_order_error = "stale_signal_price_drift"
+                return None
 
         # Get buying power
         balances = await asyncio.get_event_loop().run_in_executor(
