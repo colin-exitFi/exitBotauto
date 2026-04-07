@@ -373,6 +373,17 @@ def _book_live_position_context() -> Dict[str, Dict]:
     return books
 
 
+def _book_shadow_context() -> Dict[str, Dict]:
+    books: Dict[str, Dict] = {}
+    for shadow_trade in _load_shadow_trades():
+        strategy_tag = normalize_strategy_tag(shadow_trade.get("strategy_tag", "unknown"), fallback="unknown")
+        if is_artifact_strategy_tag(strategy_tag):
+            continue
+        row = books.setdefault(strategy_tag, {"shadow_count": 0})
+        row["shadow_count"] += 1
+    return books
+
+
 def _build_book_scoreboard_rows() -> List[Dict]:
     from src.ai import trade_history
 
@@ -394,6 +405,7 @@ def _build_book_scoreboard_rows() -> List[Dict]:
         except Exception:
             runtime_books = {}
     live_context = _book_live_position_context()
+    shadow_context = _book_shadow_context()
     books: Dict[str, Dict] = {}
 
     def _ensure_row(strategy_tag: str) -> Dict:
@@ -406,6 +418,7 @@ def _build_book_scoreboard_rows() -> List[Dict]:
                 "unrealized_pnl": 0.0,
                 "open_position_count": 0,
                 "trade_count": 0,
+                "shadow_count": 0,
                 "win_rate_pct": 0.0,
                 "avg_win": None,
                 "avg_loss": None,
@@ -464,6 +477,10 @@ def _build_book_scoreboard_rows() -> List[Dict]:
         if strategy_tag not in runtime_books:
             row["open_position_count"] = int(live_row.get("open_position_count", 0) or 0)
             row["unrealized_pnl"] = round(float(live_row.get("unrealized_pnl", 0) or 0), 2)
+
+    for strategy_tag, shadow_row in shadow_context.items():
+        row = _ensure_row(strategy_tag)
+        row["shadow_count"] = int(shadow_row.get("shadow_count", 0) or 0)
 
     primary_order = {tag: idx for idx, tag in enumerate(PRIMARY_BOOKS)}
     rows = list(books.values())
@@ -3849,7 +3866,7 @@ function renderBookScoreboard(rows) {
       <td>${Number(row.open_position_count || 0)}<div class="book-sub">${esc(humanizeKey(row.control_state || 'active'))}</div></td>
       <td class="${cls(realized)}">${fmt(realized)}</td>
       <td class="${cls(unrealized)}">${fmt(unrealized)}</td>
-      <td>${Number(row.trade_count || 0)}</td>
+      <td>${Number(row.trade_count || 0)}${Number(row.shadow_count || 0) > 0 ? `<div class="book-sub">${Number(row.shadow_count || 0)} shadow</div>` : ''}</td>
       <td>${Number(row.win_rate_pct || 0).toFixed(1)}%</td>
       <td class="${cls(Number(row.expectancy || 0))}">${fmt(Number(row.expectancy || 0))}</td>
       <td>${pf}</td>

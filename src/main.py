@@ -5036,10 +5036,6 @@ class TradingBot:
                     )
                     continue
 
-            candidate["strategy_tag"] = normalize_strategy_tag(
-                self._derive_strategy_tag(candidate, direction),
-                fallback="unknown",
-            )
             candidate = self._prepare_candidate_metadata(candidate)
 
             if candidate.get("strategy_tag") == "uw_flow_short" and agreement == "tier1_probe":
@@ -5286,9 +5282,49 @@ class TradingBot:
                 pos = await self.entry_manager.enter_short(symbol, sentiment_data)
             else:
                 pos = await self.entry_manager.enter_position(symbol, sentiment_data)
-            if direction == "SHORT" and not pos:
+            if not pos:
                 order_reason = getattr(self.entry_manager, "last_order_error", "") or "entry_execution_failed"
-                self._record_short_verdict_block(symbol, order_reason, "execution")
+                broker_block_reasons = {
+                    "broker_or_polygon_unavailable",
+                    "broker_unavailable",
+                    "entry_order_failed",
+                    "halted",
+                }
+                capital_block_reasons = {
+                    "duplicate_position",
+                    "below_min_notional",
+                    "position_size_zero",
+                }
+                execution_block_reasons = {
+                    "price_unavailable",
+                    "stale_signal_price_drift",
+                    "chase_prevention",
+                }
+                if order_reason in broker_block_reasons or order_reason.startswith("alpaca_"):
+                    block_state = "broker_blocked"
+                elif order_reason in capital_block_reasons:
+                    block_state = "capital_blocked"
+                elif order_reason in execution_block_reasons:
+                    block_state = "execution_unfavorable"
+                else:
+                    block_state = "execution_unfavorable"
+
+                logger.warning(f"⛔ ENTRY EXECUTION {symbol}: {direction} failed ({order_reason})")
+                log_activity("trade", f"⛔ ENTRY EXECUTION: {symbol} {direction} failed ({order_reason})")
+                self._record_candidate_block(
+                    candidate,
+                    block_state,
+                    f"entry_execution:{order_reason}",
+                    verdict=verdict,
+                    extra={
+                        "entry_execution_failed": True,
+                        "entry_execution_reason": order_reason,
+                        "entry_direction": direction,
+                    },
+                )
+                if direction == "SHORT":
+                    self._record_short_verdict_block(symbol, order_reason, "execution")
+                continue
             if pos:
                 pos["setup_id"] = candidate.get("setup_id", pos.get("setup_id"))
                 pos["setup_mode"] = candidate.get("setup_mode", pos.get("setup_mode", "invalid"))

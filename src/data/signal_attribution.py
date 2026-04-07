@@ -5,6 +5,8 @@ Used by scanner ranking and trade attribution paths to avoid drift.
 
 from typing import Dict, List, Optional
 
+from src.data.strategy_tags import normalize_strategy_tag
+
 
 def extract_signal_sources(candidate: Dict) -> List[str]:
     """Build normalized signal source tags from scanner candidate fields."""
@@ -46,6 +48,35 @@ def derive_strategy_tag(candidate: Dict, direction: Optional[str] = None) -> str
     dir_raw = (direction or candidate.get("side", "long") or "long")
     dir_norm = str(dir_raw).strip().lower()
     is_short = dir_norm in ("short", "sell_short")
+    raw_existing_tag = str(candidate.get("strategy_tag") or "").strip().lower()
+    existing_tag = (
+        normalize_strategy_tag(raw_existing_tag, fallback="unknown", allow_artifacts=True)
+        if raw_existing_tag
+        else ""
+    )
+
+    # Preserve an explicit book family when a prior stage already assigned one.
+    if existing_tag == "congress_follow":
+        return "congress_follow"
+    if existing_tag == "pharma_catalyst":
+        return "pharma_catalyst"
+    if existing_tag == "fade_short":
+        return "fade_short"
+    if existing_tag.startswith("copy_trader_"):
+        return "copy_trader_short" if is_short else "copy_trader_long"
+    if existing_tag.startswith("watchlist_"):
+        return "watchlist_short" if is_short else "watchlist_long"
+    if existing_tag.startswith("uw_flow_"):
+        return "uw_flow_short" if is_short else "uw_flow_long"
+    if existing_tag.startswith("social_momentum_"):
+        return "social_momentum_short" if is_short else "social_momentum_long"
+    if existing_tag.startswith("momentum_"):
+        return "momentum_short" if is_short else "momentum_long"
+    if existing_tag and existing_tag != "unknown":
+        return existing_tag
+
+    if "congress" in src:
+        return "congress_follow"
 
     if candidate.get("fade_signal") or "fade" in src:
         return "fade_short"
@@ -72,4 +103,3 @@ def derive_strategy_tag(candidate: Dict, direction: Optional[str] = None) -> str
     if is_short:
         return "momentum_short"
     return "momentum_long"
-
