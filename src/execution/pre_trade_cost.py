@@ -117,6 +117,7 @@ def estimate_slippage(
     is_momentum: bool,
 ) -> float:
     """Estimate slippage in basis points."""
+    spread_pct = max(0.0, float(spread_pct or 0.0))
     base = (spread_pct / 2.0) * 100
     rvol = max(0.01, relative_volume)
     volume_penalty = max(0.0, (1.0 / rvol) - 1.0) * 10.0
@@ -191,7 +192,7 @@ class PreTradeCostEstimator:
         now = time.time()
         reasons: List[str] = []
 
-        spread_pct = float(candidate.get("spread_pct", 0.0) or 0.0)
+        spread_pct = max(0.0, float(candidate.get("spread_pct", 0.0) or 0.0))
         volume = float(candidate.get("volume", 0) or 0)
         avg_volume = float(candidate.get("avg_volume", candidate.get("average_volume", 0)) or 0)
         price = float(candidate.get("price", candidate.get("entry_price", 0)) or 0)
@@ -320,6 +321,7 @@ class PreTradeCostEstimator:
     def _compute_liquidity_score(avg_volume: float, spread_pct: float, price: float) -> float:
         if avg_volume <= 0 or price <= 0:
             return 0.1
+        spread_pct = max(0.0, float(spread_pct or 0.0))
         adv_notional = avg_volume * price
         vol_score = min(1.0, adv_notional / 5_000_000)
         spread_score = max(0.0, 1.0 - (spread_pct / 1.0))
