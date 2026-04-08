@@ -1318,9 +1318,20 @@ class TradingBot:
 
                 # Save thesis
                 if thesis:
+                    thesis_payload = dict(thesis)
+                    thesis_payload["generated_at_ts"] = now
+                    thesis_payload["generated_at"] = datetime.now().isoformat()
+                    thesis_payload["watchlist_count"] = len(self.watchlist)
                     thesis_file = Path(__file__).parent.parent / "data" / "tomorrow_thesis.json"
                     with open(thesis_file, "w") as f:
-                        json.dump(thesis, f, indent=2)
+                        json.dump(thesis_payload, f, indent=2)
+                    thesis = thesis_payload
+                    self._tomorrow_thesis_cache = dict(thesis_payload)
+                    self._tomorrow_thesis_cache_at = now
+                    state["market_bias"] = thesis_payload.get("market_bias", "unknown")
+                    state["thesis_updated_at"] = now
+                    state["watchlist_updated_at"] = now
+                    state["watchlist_count"] = len(self.watchlist)
 
                 # 7. POST-EARNINGS REACTION CHECK
                 # Check AH price action for today's earnings — remove/flip bad reactions
@@ -1810,16 +1821,71 @@ class TradingBot:
 
         thesis_file = Path(__file__).parent.parent / "data" / "tomorrow_thesis.json"
         thesis: Dict = {}
+        thesis_mtime = 0.0
         try:
             if thesis_file.exists():
+                thesis_mtime = float(thesis_file.stat().st_mtime or 0.0)
                 thesis = json.loads(thesis_file.read_text())
         except Exception as e:
             logger.debug(f"Tomorrow thesis load failed: {e}")
             thesis = {}
 
+        if thesis:
+            if thesis_mtime > 0 and not thesis.get("generated_at_ts"):
+                thesis["generated_at_ts"] = thesis_mtime
+            if thesis.get("generated_at_ts") and not thesis.get("generated_at"):
+                try:
+                    thesis["generated_at"] = datetime.fromtimestamp(
+                        float(thesis.get("generated_at_ts") or 0.0)
+                    ).isoformat()
+                except Exception:
+                    pass
+
         self._tomorrow_thesis_cache = dict(thesis)
         self._tomorrow_thesis_cache_at = now
         return dict(thesis)
+
+    @staticmethod
+    def _market_bias_to_regime(bias: str) -> str:
+        label = str(bias or "").strip().lower()
+        if label in {"bullish", "risk_on", "up", "positive"}:
+            return "risk_on"
+        if label in {"bearish", "risk_off", "down", "negative"}:
+            return "risk_off"
+        return "mixed"
+
+    def _get_thesis_bias_context(self) -> Dict:
+        thesis = self._load_tomorrow_thesis() or {}
+        thesis_file = Path(__file__).parent.parent / "data" / "tomorrow_thesis.json"
+        generated_at_ts = self._to_float_safe(thesis.get("generated_at_ts", 0.0), 0.0)
+        if generated_at_ts <= 0.0:
+            try:
+                if thesis_file.exists():
+                    generated_at_ts = float(thesis_file.stat().st_mtime or 0.0)
+            except Exception:
+                generated_at_ts = 0.0
+
+        now = time.time()
+        age_hours = ((now - generated_at_ts) / 3600.0) if generated_at_ts > 0 else None
+        max_age_hours = float(getattr(settings, "TOMORROW_THESIS_MAX_AGE_HOURS", 36.0) or 36.0)
+        market_bias = str(thesis.get("market_bias", "unknown") or "unknown").strip().lower()
+        market_regime = self._market_bias_to_regime(market_bias)
+        fresh = bool(thesis) and age_hours is not None and age_hours <= max_age_hours
+        if fresh:
+            summary = f"thesis={market_bias} age={age_hours:.1f}h"
+        elif age_hours is None:
+            summary = "thesis=unavailable"
+        else:
+            summary = f"thesis=stale age={age_hours:.1f}h"
+
+        return {
+            "market_bias": market_bias or "unknown",
+            "market_regime": market_regime,
+            "fresh": fresh,
+            "age_hours": round(age_hours, 2) if age_hours is not None else None,
+            "generated_at": thesis.get("generated_at"),
+            "summary": summary,
+        }
 
     @staticmethod
     def _candidate_has_uw_confirmation(candidate: Dict, direction: str) -> bool:
@@ -2086,6 +2152,11 @@ class TradingBot:
         risk_cap_pct: float,
     ) -> float:
         target_size_pct = TradingBot._target_size_pct_for_candidate(candidate, verdict)
+        regime_size_multiplier = max(
+            0.1,
+            min(1.25, float(candidate.get("regime_size_multiplier", 1.0) or 1.0)),
+        )
+        target_size_pct *= regime_size_multiplier
         risk_cap = max(0.0, float(risk_cap_pct or 0) or 0.0)
         tier_size = max(0.0, float(tier_size_pct or 0) or 0.0)
         strategy_tag = normalize_strategy_tag(candidate.get("strategy_tag", "unknown"), fallback="unknown")
@@ -3095,26 +3166,38 @@ class TradingBot:
             or getattr(self, "scan_regime_raw", "")
             or "mixed"
         ).lower()
+        thesis_bias = self._get_thesis_bias_context()
+        thesis_regime = str(thesis_bias.get("market_regime", "mixed") or "mixed").lower()
         if _regime in ("mixed", ""):
-            try:
-                _bias = self.get_overnight_bias_context(refresh=False)
-                _avg_chg = float(_bias.get("avg_change_pct", 0) or 0)
-                if _avg_chg <= -1.0:
-                    _regime = "risk_off"
-                elif _avg_chg >= 1.0:
-                    _regime = "risk_on"
-            except Exception:
-                pass
+            if thesis_bias.get("fresh") and thesis_regime in {"risk_on", "risk_off"}:
+                _regime = thesis_regime
+            else:
+                try:
+                    _bias = self.get_overnight_bias_context(refresh=False)
+                    _avg_chg = float(_bias.get("avg_change_pct", 0) or 0)
+                    if _avg_chg <= -1.0:
+                        _regime = "risk_off"
+                    elif _avg_chg >= 1.0:
+                        _regime = "risk_on"
+                except Exception:
+                    pass
         prepared["market_regime"] = _regime
+        prepared["thesis_bias"] = thesis_bias.get("market_bias", "unknown")
+        prepared["thesis_regime"] = thesis_regime
+        prepared["thesis_fresh"] = bool(thesis_bias.get("fresh"))
         prepared["uw_flow_summary"] = str(prepared.get("uw_flow_summary") or self._build_uw_flow_summary(prepared))
         session_label = self._entry_session_label()
         prepared["extended_hours"] = session_label in {"pre", "after"}
         prepared["session_type"] = self._current_session_type_label(session_label)
         prepared["entry_quality"] = str(prepared.get("entry_quality") or self._derive_entry_quality(prepared))
-        prepared["overnight_context"] = str(
+        overnight_context = str(
             prepared.get("overnight_context")
             or OvernightContext.format_summary(self.get_overnight_bias_context())
-        )
+        ).strip()
+        thesis_summary = str(thesis_bias.get("summary", "") or "").strip()
+        if thesis_summary and thesis_summary not in overnight_context:
+            overnight_context = f"{overnight_context} | {thesis_summary}" if overnight_context else thesis_summary
+        prepared["overnight_context"] = overnight_context
 
         if self.sector_model:
             symbol = str(prepared.get("symbol") or "").upper()
@@ -5042,22 +5125,35 @@ class TradingBot:
                 )
                 continue
 
+            candidate = self._prepare_candidate_metadata(candidate)
+
             direction = verdict.decision
 
-            # Regime-aware entry restriction: in risk_off, long entries need higher conviction
+            # Regime-aware sizing pressure: keep all books live for data collection,
+            # but lean sizing toward the tape and fresh overnight thesis when conviction is light.
             market_regime = str(candidate.get("market_regime", "mixed") or "mixed").lower()
+            regime_size_multiplier = min(
+                1.0,
+                float(candidate.get("regime_size_multiplier", 1.0) or 1.0),
+            )
+            regime_reason_codes = list(candidate.get("regime_reason_codes", []) or [])
             if direction == "BUY" and market_regime == "risk_off":
                 regime_min_conf = float(getattr(settings, "RISK_OFF_LONG_MIN_CONFIDENCE", 70) or 70)
                 if verdict.confidence < regime_min_conf:
-                    logger.warning(
-                        f"🛡️ REGIME GATE {symbol}: BUY blocked in risk_off regime "
-                        f"(confidence {verdict.confidence:.0f}% < {regime_min_conf:.0f}% threshold)"
+                    risk_off_long_mult = float(getattr(settings, "RISK_OFF_LONG_SIZE_MULT", 0.55) or 0.55)
+                    regime_size_multiplier = min(regime_size_multiplier, risk_off_long_mult)
+                    regime_reason_codes.append(
+                        f"risk_off_long_reduce:{verdict.confidence:.0f}:required_{regime_min_conf:.0f}"
+                    )
+                    logger.info(
+                        f"🛡️ REGIME PRESSURE {symbol}: BUY kept live in risk_off regime "
+                        f"at {risk_off_long_mult:.2f}x size "
+                        f"(confidence {verdict.confidence:.0f}% < {regime_min_conf:.0f}%)"
                     )
                     log_activity(
                         "trade",
-                        f"🛡️ REGIME GATE: {symbol} BUY blocked — risk_off needs {regime_min_conf:.0f}%+ confidence",
+                        f"🛡️ REGIME PRESSURE: {symbol} BUY reduced — risk_off tape, {verdict.confidence:.0f}% conf",
                     )
-                    continue
             if direction == "SHORT" and market_regime == "risk_on":
                 index_avg_change_pct = self._to_float_safe(candidate.get("index_avg_change_pct", 0.0), 0.0)
                 strong_risk_on_threshold = float(
@@ -5073,42 +5169,50 @@ class TradingBot:
                 }
                 setup_mode = str(candidate.get("setup_mode", "") or "").lower()
                 if index_avg_change_pct >= strong_risk_on_threshold and setup_mode not in allowed_short_modes:
-                    reason = (
-                        f"risk_on_short_block:index_avg_change_{index_avg_change_pct:.2f}:"
+                    risk_on_short_mult = float(getattr(settings, "RISK_ON_SHORT_SIZE_MULT", 0.45) or 0.45)
+                    regime_size_multiplier = min(regime_size_multiplier, risk_on_short_mult)
+                    regime_reason_codes.append(
+                        f"risk_on_short_reduce:index_avg_change_{index_avg_change_pct:.2f}:"
                         f"setup_mode_{setup_mode or 'unknown'}"
                     )
-                    logger.warning(
-                        f"🛡️ REGIME GATE {symbol}: SHORT blocked in strong risk_on tape "
+                    logger.info(
+                        f"🛡️ REGIME PRESSURE {symbol}: SHORT kept live in strong risk_on tape "
+                        f"at {risk_on_short_mult:.2f}x size "
                         f"(index_avg_change={index_avg_change_pct:+.2f}% >= {strong_risk_on_threshold:.2f}%, "
                         f"mode={setup_mode or 'unknown'})"
                     )
                     log_activity(
                         "trade",
-                        f"🛡️ REGIME GATE: {symbol} SHORT blocked — broad tape {index_avg_change_pct:+.2f}% risk_on",
+                        f"🛡️ REGIME PRESSURE: {symbol} SHORT reduced — broad tape {index_avg_change_pct:+.2f}% risk_on",
                     )
-                    self._record_candidate_block(candidate, "mode_conflict", reason, verdict=verdict)
-                    self._record_short_verdict_block(symbol, "risk_on_short_block", "regime")
-                    continue
                 if index_avg_change_pct >= strong_risk_on_threshold and setup_mode in allowed_short_modes:
                     fade_min_conf = float(getattr(settings, "RISK_ON_FADE_SHORT_MIN_CONFIDENCE", 65) or 65)
                     if verdict.confidence < fade_min_conf:
-                        reason = (
-                            f"risk_on_fade_short_confidence:{verdict.confidence:.0f}:required_{fade_min_conf:.0f}"
+                        fade_short_mult = float(
+                            getattr(settings, "RISK_ON_FADE_SHORT_LOW_CONF_SIZE_MULT", 0.70) or 0.70
                         )
-                        logger.warning(
-                            f"🛡️ REGIME GATE {symbol}: fade SHORT blocked in strong risk_on tape "
+                        regime_size_multiplier = min(regime_size_multiplier, fade_short_mult)
+                        regime_reason_codes.append(
+                            f"risk_on_fade_short_reduce:{verdict.confidence:.0f}:required_{fade_min_conf:.0f}"
+                        )
+                        logger.info(
+                            f"🛡️ REGIME PRESSURE {symbol}: fade SHORT kept live in strong risk_on tape "
+                            f"at {fade_short_mult:.2f}x size "
                             f"(confidence {verdict.confidence:.0f}% < {fade_min_conf:.0f}%, "
                             f"index_avg_change={index_avg_change_pct:+.2f}%)"
                         )
                         log_activity(
                             "trade",
-                            f"🛡️ REGIME GATE: {symbol} fade SHORT blocked — needs {fade_min_conf:.0f}%+ confidence",
+                            f"🛡️ REGIME PRESSURE: {symbol} fade SHORT reduced — needs cleaner tape or higher confidence",
                         )
-                        self._record_candidate_block(candidate, "mode_conflict", reason, verdict=verdict)
-                        self._record_short_verdict_block(symbol, "risk_on_fade_short_low_confidence", "regime")
-                        continue
-
-            candidate = self._prepare_candidate_metadata(candidate)
+            if regime_size_multiplier < 1.0:
+                candidate["regime_size_multiplier"] = min(
+                    regime_size_multiplier,
+                    float(candidate.get("regime_size_multiplier", 1.0) or 1.0),
+                )
+                candidate["regime_reason_codes"] = list(dict.fromkeys(regime_reason_codes))
+                if str(candidate.get("size_posture", "normal") or "normal").lower() != "zero":
+                    candidate["size_posture"] = "reduced"
 
             if candidate.get("strategy_tag") == "uw_flow_short" and agreement == "tier1_probe":
                 logger.info(f"📉 PROBE BLOCK {symbol}: uw_flow_short requires 2-of-3 jury agreement")
@@ -5152,6 +5256,8 @@ class TradingBot:
             sentiment_data["market_regime"] = candidate.get("market_regime", "mixed")
             sentiment_data["entry_model_votes"] = votes
             sentiment_data["risk_constraints_applied"] = list(risk_brief.get("constraint_flags", []) or [])
+            sentiment_data["regime_size_multiplier"] = float(candidate.get("regime_size_multiplier", 1.0) or 1.0)
+            sentiment_data["regime_reason_codes"] = list(candidate.get("regime_reason_codes", []) or [])
             sentiment_data["entry_reason_code"] = f"jury_{agreement}"
             sentiment_data["uw_flow_summary"] = candidate.get("uw_flow_summary", "")
             sentiment_data["extended_hours"] = bool(candidate.get("extended_hours"))
