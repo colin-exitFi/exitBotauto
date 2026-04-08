@@ -2895,6 +2895,29 @@ class TradingBot:
                 if key not in enriched or enriched.get(key) in (None, "", 0, 0.0):
                     enriched[key] = value
 
+        avg_volume = self._to_float_safe(enriched.get("avg_volume", enriched.get("average_volume", 0.0)), 0.0)
+        current_volume = self._to_float_safe(enriched.get("volume", enriched.get("minute_vol", 0.0)), 0.0)
+        volume_spike = self._to_float_safe(enriched.get("volume_spike", 0.0), 0.0)
+        if symbol and (avg_volume <= 0.0 or volume_spike <= 0.0):
+            if isinstance(snapshot, dict):
+                avg_volume = max(avg_volume, self._to_float_safe(snapshot.get("prev_volume", 0.0), 0.0))
+                current_volume = max(current_volume, self._to_float_safe(snapshot.get("volume", 0.0), 0.0))
+            if avg_volume <= 0.0 and self.polygon_client and hasattr(self.polygon_client, "get_avg_volume"):
+                try:
+                    avg_volume = self._to_float_safe(
+                        await asyncio.get_event_loop().run_in_executor(
+                            None, self.polygon_client.get_avg_volume, symbol, 20
+                        ),
+                        0.0,
+                    )
+                except Exception:
+                    avg_volume = 0.0
+            if avg_volume > 0.0:
+                enriched["avg_volume"] = avg_volume
+                enriched["average_volume"] = avg_volume
+                if current_volume > 0.0:
+                    enriched["volume_spike"] = round(current_volume / avg_volume, 3)
+
         price = float(enriched.get("price", 0) or 0)
         tech_missing = any(enriched.get(key) is None for key in ("range_pct", "rolling_vwap_pct", "rsi_14", "vol_accel"))
         if symbol and price > 0 and tech_missing and self.polygon_client:
@@ -6008,14 +6031,12 @@ class TradingBot:
             position.setdefault("order_state", {})["session_protection"] = "software_managed"
 
         qty = float(position.get("quantity", 0) or 0)
-        int_qty = int(qty)
-        if int_qty < 1:
-            if qty > 0.01 and is_regular:
-                int_qty = 1
-            else:
-                position.setdefault("order_state", {})["hard_stop"] = "software_managed"
-                return
-        qty = int_qty
+        if qty < 1:
+            # Alpaca does not reliably accept broker-side stop orders for fractional share leftovers.
+            # Keep protection software-managed instead of spamming futile 1-share stop attempts.
+            position.setdefault("order_state", {})["hard_stop"] = "software_managed"
+            return
+        qty = int(qty)
 
         exit_side = self._position_exit_side(position)
         hard_stop_id = str(position.get("hard_stop_order_id", "") or "")

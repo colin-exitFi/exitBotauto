@@ -30,7 +30,7 @@ MARKET CONTEXT:
 - Setup mode: {mode}
 - Direction constraint: {direction_constraint}
 - Today's move: {change_pct:+.1f}%
-- Volume: {volume_spike:.1f}x average
+- Volume: {volume_context}
 - Market regime: {market_regime}
 - Entry quality: {entry_quality}
 - Range position: {range_pct:.0f}% of day range
@@ -50,6 +50,7 @@ YOUR RULES:
   * "Recent trades have been losing"
   * "The data is incomplete"
   * "I'd want to see more confirmation"
+- Missing or stale volume context alone is NOT a valid fatal flaw.
 - If you cannot find a specific kill reason, you MUST set veto=false.
 - risk_score 0-100: how risky is this trade? Higher = more risk = smaller position size.
   50 is normal risk. Above 70 means significant concern. Below 30 means low risk.
@@ -84,6 +85,30 @@ def _format_brief(brief: Dict) -> str:
     return ", ".join(parts[:8]) if parts else "No data"
 
 
+def _format_volume_context(candidate: Dict) -> str:
+    try:
+        volume_spike = float(candidate.get("volume_spike", 0) or 0)
+    except Exception:
+        volume_spike = 0.0
+    if volume_spike > 0:
+        return f"{volume_spike:.1f}x average"
+
+    try:
+        avg_volume = float(candidate.get("avg_volume", candidate.get("average_volume", 0)) or 0)
+    except Exception:
+        avg_volume = 0.0
+    try:
+        live_volume = float(candidate.get("volume", candidate.get("minute_vol", 0)) or 0)
+    except Exception:
+        live_volume = 0.0
+
+    if avg_volume > 0 and live_volume <= 0:
+        return "average available, live volume pending"
+    if avg_volume > 0:
+        return "average available, live volume unclear"
+    return "unknown"
+
+
 async def evaluate(
     symbol: str,
     price: float,
@@ -104,7 +129,7 @@ async def evaluate(
         mode=mode,
         direction_constraint=direction_constraint,
         change_pct=float(candidate.get("change_pct", 0) or 0),
-        volume_spike=float(candidate.get("volume_spike", 0) or 0),
+        volume_context=_format_volume_context(candidate),
         market_regime=candidate.get("market_regime", "mixed"),
         entry_quality=candidate.get("entry_quality", "neutral"),
         range_pct=float(candidate.get("range_pct", 50) or 50),

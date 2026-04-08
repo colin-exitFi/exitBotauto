@@ -23,7 +23,7 @@ Your job is to find the HIGHEST-CONVICTION play on this stock RIGHT NOW.
 CLASSIFIED SETUP: {mode} ({direction_constraint})
 SYMBOL: {symbol} @ ${price:.2f}
 TODAY'S MOVE: {change_pct:+.1f}%
-VOLUME: {volume_spike:.1f}x average
+VOLUME: {volume_context}
 ENTRY QUALITY: {entry_quality}
 RANGE POSITION: {range_pct:.0f}% of day range
 MARKET REGIME: {market_regime}
@@ -78,6 +78,30 @@ def _format_brief(brief: Dict) -> str:
     return ", ".join(parts[:8]) if parts else "No data"
 
 
+def _format_volume_context(candidate: Dict) -> str:
+    try:
+        volume_spike = float(candidate.get("volume_spike", 0) or 0)
+    except Exception:
+        volume_spike = 0.0
+    if volume_spike > 0:
+        return f"{volume_spike:.1f}x average"
+
+    try:
+        avg_volume = float(candidate.get("avg_volume", candidate.get("average_volume", 0)) or 0)
+    except Exception:
+        avg_volume = 0.0
+    try:
+        live_volume = float(candidate.get("volume", candidate.get("minute_vol", 0)) or 0)
+    except Exception:
+        live_volume = 0.0
+
+    if avg_volume > 0 and live_volume <= 0:
+        return "average available, live volume pending"
+    if avg_volume > 0:
+        return "average available, live volume unclear"
+    return "unknown"
+
+
 async def evaluate(
     symbol: str,
     price: float,
@@ -93,7 +117,7 @@ async def evaluate(
         mode=mode,
         direction_constraint=direction_constraint,
         change_pct=float(candidate.get("change_pct", 0) or 0),
-        volume_spike=float(candidate.get("volume_spike", 0) or 0),
+        volume_context=_format_volume_context(candidate),
         entry_quality=candidate.get("entry_quality", "neutral"),
         range_pct=float(candidate.get("range_pct", 50) or 50),
         market_regime=candidate.get("market_regime", "mixed"),
