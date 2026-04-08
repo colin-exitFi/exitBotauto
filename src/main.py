@@ -5058,6 +5058,55 @@ class TradingBot:
                         f"🛡️ REGIME GATE: {symbol} BUY blocked — risk_off needs {regime_min_conf:.0f}%+ confidence",
                     )
                     continue
+            if direction == "SHORT" and market_regime == "risk_on":
+                index_avg_change_pct = self._to_float_safe(candidate.get("index_avg_change_pct", 0.0), 0.0)
+                strong_risk_on_threshold = float(
+                    getattr(settings, "RISK_ON_SHORT_BLOCK_INDEX_AVG_PCT", 1.75) or 1.75
+                )
+                allowed_short_modes = {
+                    mode.strip().lower()
+                    for mode in str(
+                        getattr(settings, "RISK_ON_SHORT_ALLOW_MODES", "exhaustion_fade_short")
+                        or "exhaustion_fade_short"
+                    ).split(",")
+                    if mode.strip()
+                }
+                setup_mode = str(candidate.get("setup_mode", "") or "").lower()
+                if index_avg_change_pct >= strong_risk_on_threshold and setup_mode not in allowed_short_modes:
+                    reason = (
+                        f"risk_on_short_block:index_avg_change_{index_avg_change_pct:.2f}:"
+                        f"setup_mode_{setup_mode or 'unknown'}"
+                    )
+                    logger.warning(
+                        f"🛡️ REGIME GATE {symbol}: SHORT blocked in strong risk_on tape "
+                        f"(index_avg_change={index_avg_change_pct:+.2f}% >= {strong_risk_on_threshold:.2f}%, "
+                        f"mode={setup_mode or 'unknown'})"
+                    )
+                    log_activity(
+                        "trade",
+                        f"🛡️ REGIME GATE: {symbol} SHORT blocked — broad tape {index_avg_change_pct:+.2f}% risk_on",
+                    )
+                    self._record_candidate_block(candidate, "mode_conflict", reason, verdict=verdict)
+                    self._record_short_verdict_block(symbol, "risk_on_short_block", "regime")
+                    continue
+                if index_avg_change_pct >= strong_risk_on_threshold and setup_mode in allowed_short_modes:
+                    fade_min_conf = float(getattr(settings, "RISK_ON_FADE_SHORT_MIN_CONFIDENCE", 65) or 65)
+                    if verdict.confidence < fade_min_conf:
+                        reason = (
+                            f"risk_on_fade_short_confidence:{verdict.confidence:.0f}:required_{fade_min_conf:.0f}"
+                        )
+                        logger.warning(
+                            f"🛡️ REGIME GATE {symbol}: fade SHORT blocked in strong risk_on tape "
+                            f"(confidence {verdict.confidence:.0f}% < {fade_min_conf:.0f}%, "
+                            f"index_avg_change={index_avg_change_pct:+.2f}%)"
+                        )
+                        log_activity(
+                            "trade",
+                            f"🛡️ REGIME GATE: {symbol} fade SHORT blocked — needs {fade_min_conf:.0f}%+ confidence",
+                        )
+                        self._record_candidate_block(candidate, "mode_conflict", reason, verdict=verdict)
+                        self._record_short_verdict_block(symbol, "risk_on_fade_short_low_confidence", "regime")
+                        continue
 
             candidate = self._prepare_candidate_metadata(candidate)
 
