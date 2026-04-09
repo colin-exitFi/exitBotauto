@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from src.entry.entry_manager import EntryManager
 
@@ -225,6 +226,31 @@ class EntrySizingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(broker.limit_short_calls[0][0], "AAPL")
         self.assertTrue(broker.limit_short_calls[0][3])
         self.assertTrue(pos.get("extended_hours_entry"))
+
+    async def test_paper_mode_skips_duplicate_extended_hours_size_reduction_when_presized(self):
+        broker = _DummyBroker()
+        entry = EntryManager(
+            alpaca_client=broker,
+            polygon_client=_DummyPolygon(),
+            risk_manager=_DummyRisk(),
+        )
+        entry.is_extended_hours = lambda: True
+
+        sentiment_data = {
+            "score": 0.4,
+            "strategy_tag": "momentum_long",
+            "signal_sources": ["polygon"],
+            "consensus_size_modifier": 0.5,
+        }
+
+        with patch("src.entry.entry_manager.settings.PAPER_MODE_SKIP_DUPLICATE_EXTENDED_HOURS_SIZE_REDUCTION", True), \
+             patch("src.entry.entry_manager.settings.PAPER_MODE", True), \
+             patch("src.entry.entry_manager.settings.ALPACA_PAPER", True):
+            pos = await entry.enter_position("AAPL", sentiment_data)
+
+        self.assertIsNotNone(pos)
+        self.assertAlmostEqual(float(pos.get("notional", 0)), 500.0, places=2)
+        self.assertEqual(float(pos.get("quantity", 0)), 5.0)
 
 
 if __name__ == "__main__":

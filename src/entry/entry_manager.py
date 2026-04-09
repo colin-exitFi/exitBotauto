@@ -545,6 +545,14 @@ class EntryManager:
             notional *= size_mult
         return notional
 
+    @staticmethod
+    def _skip_duplicate_extended_hours_size_reduction(sentiment_data: Dict) -> bool:
+        return bool(
+            getattr(settings, "PAPER_MODE_SKIP_DUPLICATE_EXTENDED_HOURS_SIZE_REDUCTION", False)
+            and (getattr(settings, "PAPER_MODE", False) or getattr(settings, "ALPACA_PAPER", False))
+            and "consensus_size_modifier" in (sentiment_data or {})
+        )
+
     async def can_enter(self, symbol: str, sentiment_score: float, current_positions: List[Dict]) -> bool:
         """Check all entry conditions including persistent controls."""
         self.last_order_error = ""
@@ -663,7 +671,7 @@ class EntryManager:
         if adjusted_notional is None:
             return None
         notional = adjusted_notional
-        if extended:
+        if extended and not self._skip_duplicate_extended_hours_size_reduction(sentiment_data):
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
         equity = getattr(self.risk, 'equity', None) if self.risk else None
         if equity is None:
@@ -1033,7 +1041,7 @@ class EntryManager:
         if adjusted_notional is None:
             return None
         notional = adjusted_notional
-        if extended:
+        if extended and not self._skip_duplicate_extended_hours_size_reduction(sentiment_data):
             notional *= settings.EXTENDED_HOURS_SIZE_MULT
         equity = getattr(self.risk, 'equity', None) if self.risk else None
         if equity is None:

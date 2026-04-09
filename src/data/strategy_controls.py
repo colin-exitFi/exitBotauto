@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Set
 
+from config import settings
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 CONTROLS_FILE = DATA_DIR / "strategy_controls.json"
@@ -24,6 +25,13 @@ _DEFAULT_CONTROLS = {
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _paper_mode_ignores_size_reductions() -> bool:
+    return bool(
+        getattr(settings, "PAPER_MODE_IGNORE_CONTROL_PLANE_SIZE_REDUCTIONS", False)
+        and (getattr(settings, "PAPER_MODE", False) or getattr(settings, "ALPACA_PAPER", False))
+    )
 
 
 def _normalize_controls(raw: Dict = None) -> Dict:
@@ -193,12 +201,13 @@ def get_size_multiplier(tag: str, controls: Dict) -> float:
         return 1.0
 
     multiplier = 1.0
-    reduction = normalized["size_reductions"].get(tag)
-    if isinstance(reduction, dict):
-        try:
-            multiplier *= float(reduction.get("multiplier", 1.0) or 1.0)
-        except Exception:
-            pass
+    if not _paper_mode_ignores_size_reductions():
+        reduction = normalized["size_reductions"].get(tag)
+        if isinstance(reduction, dict):
+            try:
+                multiplier *= float(reduction.get("multiplier", 1.0) or 1.0)
+            except Exception:
+                pass
 
     probation = normalized["probation"].get(tag)
     if isinstance(probation, dict) and str(probation.get("status", "active")) == "active":

@@ -47,6 +47,18 @@ ALPACA_API_KEY = _env("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = _env("ALPACA_SECRET_KEY")
 ALPACA_PAPER = _env("ALPACA_PAPER", "true").lower() in ("true", "1", "yes")
 PAPER_MODE = _env("PAPER_MODE", "true" if ALPACA_PAPER else "false").lower() in ("true", "1", "yes")
+PAPER_MODE_IGNORE_CONTROL_PLANE_SIZE_REDUCTIONS = _env(
+    "PAPER_MODE_IGNORE_CONTROL_PLANE_SIZE_REDUCTIONS",
+    "true",
+).lower() in ("true", "1", "yes")
+PAPER_MODE_SKIP_SOFT_RISK_SIZE_REDUCTIONS = _env(
+    "PAPER_MODE_SKIP_SOFT_RISK_SIZE_REDUCTIONS",
+    "true",
+).lower() in ("true", "1", "yes")
+PAPER_MODE_SKIP_DUPLICATE_EXTENDED_HOURS_SIZE_REDUCTION = _env(
+    "PAPER_MODE_SKIP_DUPLICATE_EXTENDED_HOURS_SIZE_REDUCTION",
+    "true",
+).lower() in ("true", "1", "yes")
 
 # Polygon
 POLYGON_API_KEY = _env("POLYGON_API_KEY")

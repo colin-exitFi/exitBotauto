@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from config import settings
 from src.ai.game_film import GameFilm
 from src.data import strategy_controls
 from src.entry.entry_manager import EntryManager
@@ -75,7 +76,25 @@ class GameFilmGraduatedTests(unittest.TestCase):
         )
 
         self.assertIn("fade_runner", strategy_controls.get_effective_disabled(controls))
-        self.assertEqual(strategy_controls.get_size_multiplier("watch_me", controls), 0.5)
+        with patch.object(settings, "PAPER_MODE_IGNORE_CONTROL_PLANE_SIZE_REDUCTIONS", False), \
+             patch.object(settings, "PAPER_MODE", True), \
+             patch.object(settings, "ALPACA_PAPER", True):
+            self.assertEqual(strategy_controls.get_size_multiplier("watch_me", controls), 0.5)
+
+    def test_strategy_controls_ignores_size_reductions_in_paper_mode(self):
+        controls = strategy_controls.apply_recommendations(
+            {
+                "size_reductions": [{"strategy_tag": "watch_me", "size_multiplier": 0.5, "reason": "watch"}],
+                "probation_candidates": [{"strategy_tag": "retry_me", "probation_size_mult": 0.25, "reason": "retry"}],
+            },
+            strategy_controls.load_controls(),
+        )
+
+        with patch.object(settings, "PAPER_MODE_IGNORE_CONTROL_PLANE_SIZE_REDUCTIONS", True), \
+             patch.object(settings, "PAPER_MODE", True), \
+             patch.object(settings, "ALPACA_PAPER", True):
+            self.assertEqual(strategy_controls.get_size_multiplier("watch_me", controls), 1.0)
+            self.assertEqual(strategy_controls.get_size_multiplier("retry_me", controls), 0.25)
 
     def test_entry_manager_blocks_disabled_strategy(self):
         manager = EntryManager(alpaca_client=None, polygon_client=None, risk_manager=None)

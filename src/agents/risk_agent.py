@@ -49,6 +49,13 @@ def _heat_bucket(heat_pct: float) -> str:
     return "low"
 
 
+def _paper_mode_skip_soft_size_reducers() -> bool:
+    return bool(
+        getattr(settings, "PAPER_MODE_SKIP_SOFT_RISK_SIZE_REDUCTIONS", False)
+        and (getattr(settings, "PAPER_MODE", False) or getattr(settings, "ALPACA_PAPER", False))
+    )
+
+
 async def analyze(
     symbol: str,
     price: float,
@@ -74,6 +81,7 @@ async def analyze(
         env_size = float(getattr(settings, "POSITION_SIZE_PCT", 0) or 0)
         tier_size_pct = max(0.0, min(10.0, env_size if env_size > 0 else float(tier.get("size_pct", 1.0) or 1.0)))
         size_cap_pct = tier_size_pct
+        skip_soft_reducers = _paper_mode_skip_soft_size_reducers()
         constraint_flags: List[str] = []
         can_trade = True
 
@@ -132,22 +140,24 @@ async def analyze(
             size_cap_pct *= 0.7
             constraint_flags.append("size_reduced_warm_heat")
 
-        if consecutive_losses >= 5:
-            size_cap_pct *= 0.35
-            constraint_flags.append("size_reduced_loss_streak")
-        elif consecutive_losses >= 3:
-            size_cap_pct *= 0.5
-            constraint_flags.append("size_reduced_consecutive_losses")
-        elif consecutive_losses >= 2:
-            size_cap_pct *= 0.75
-            constraint_flags.append("size_reduced_recent_losses")
+        if not skip_soft_reducers:
+            if consecutive_losses >= 5:
+                size_cap_pct *= 0.35
+                constraint_flags.append("size_reduced_loss_streak")
+            elif consecutive_losses >= 3:
+                size_cap_pct *= 0.5
+                constraint_flags.append("size_reduced_consecutive_losses")
+            elif consecutive_losses >= 2:
+                size_cap_pct *= 0.75
+                constraint_flags.append("size_reduced_recent_losses")
 
-        if signal_tier == "tier_3":
-            size_cap_pct *= 0.5
-            constraint_flags.append("size_reduced_tier3")
-        elif signal_tier == "tier_2":
-            size_cap_pct *= 0.85
-            constraint_flags.append("size_reduced_tier2")
+        if not skip_soft_reducers:
+            if signal_tier == "tier_3":
+                size_cap_pct *= 0.5
+                constraint_flags.append("size_reduced_tier3")
+            elif signal_tier == "tier_2":
+                size_cap_pct *= 0.85
+                constraint_flags.append("size_reduced_tier2")
 
         spread_pct = float((signals or {}).get("spread_pct", 0) or 0)
         if spread_pct >= 5.0:
@@ -179,13 +189,15 @@ async def analyze(
                 size_cap_pct *= float(getattr(settings, "EXTENDED_HOURS_SIZE_MULT", 0.5) or 0.5)
                 constraint_flags.append("size_reduced_extended_hours")
 
-        if strategy_tag in STRATEGY_SIZE_CAPS:
+        if not skip_soft_reducers and strategy_tag in STRATEGY_SIZE_CAPS:
             strategy_cap = float(STRATEGY_SIZE_CAPS[strategy_tag] or 0)
             if 0 < strategy_cap < size_cap_pct:
                 constraint_flags.append(f"size_capped_{strategy_tag}")
             size_cap_pct = min(size_cap_pct, strategy_cap)
 
         eq_mult = float(ENTRY_QUALITY_SIZE_MULT.get(entry_quality, 1.0) or 1.0)
+        if skip_soft_reducers and entry_quality == "neutral":
+            eq_mult = 1.0
         if eq_mult < 1.0:
             size_cap_pct *= eq_mult
             constraint_flags.append(f"size_reduced_entry_{entry_quality}")
