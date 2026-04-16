@@ -3428,8 +3428,14 @@ class TradingBot:
             allow_new_entries = False
             reasons.extend(list(trust.get("degraded_mode_reasons", []) or ["degraded_mode_pause"]))
         if protection_failed:
-            allow_new_entries = False
-            reasons.append("protection_failed")
+            if getattr(settings, "PAPER_MODE", False) or getattr(settings, "ALPACA_PAPER", False):
+                logger.warning(
+                    f"⚠️ protection_failed on {protection_failed} — paper mode, entries allowed "
+                    f"(software-managed protection active)"
+                )
+            else:
+                allow_new_entries = False
+                reasons.append("protection_failed")
         if len(unprotected) > 0:
             logger.debug(f"Unprotected positions (informational only): {unprotected}")
             # v2.2: no longer blocks entries. Ratchet + hard stops handle protection.
@@ -5125,8 +5131,6 @@ class TradingBot:
                 )
                 continue
 
-            candidate = self._prepare_candidate_metadata(candidate)
-
             direction = verdict.decision
 
             # Regime-aware sizing pressure: keep all books live for data collection,
@@ -6187,9 +6191,9 @@ class TradingBot:
 
         qty = float(position.get("quantity", 0) or 0)
         if qty < 1:
-            # Alpaca does not reliably accept broker-side stop orders for fractional share leftovers.
-            # Keep protection software-managed instead of spamming futile 1-share stop attempts.
             position.setdefault("order_state", {})["hard_stop"] = "software_managed"
+            if position.get("protection_failed"):
+                position["protection_failed"] = False
             return
         qty = int(qty)
 
@@ -6230,6 +6234,8 @@ class TradingBot:
             if abs(current_stop_price - stop_price) < 0.01:
                 position["hard_stop_order_id"] = active_order.get("id", position.get("hard_stop_order_id"))
                 position.setdefault("order_state", {})["hard_stop"] = "placed"
+                if position.get("protection_failed"):
+                    position["protection_failed"] = False
                 return
             if active_order.get("id"):
                 cancelled = await self._cancel_order_and_confirm(str(active_order.get("id") or ""))
@@ -6253,7 +6259,11 @@ class TradingBot:
             position["hard_stop_price"] = stop_price
             position["hard_stop_order_id"] = order.get("id", "")
             position.setdefault("order_state", {})["hard_stop"] = "placed"
-            logger.info(f"🛡️ Hard stop placed for {symbol} @ ${stop_price:.2f}")
+            if position.get("protection_failed"):
+                position["protection_failed"] = False
+                logger.info(f"🛡️ Hard stop placed for {symbol} @ ${stop_price:.2f} (protection_failed cleared)")
+            else:
+                logger.info(f"🛡️ Hard stop placed for {symbol} @ ${stop_price:.2f}")
         else:
             broker_error = {}
             if hasattr(self.alpaca_client, "pop_order_error"):
@@ -6795,6 +6805,8 @@ class TradingBot:
                 if cancelled_hard_stops:
                     logger.info(f"🧹 {sym}: canceled {cancelled_hard_stops} superseded hard stop(s); ratchet now owns protection")
                 position.setdefault("order_state", {})["hard_stop"] = "superseded_by_ratchet"
+                if position.get("protection_failed"):
+                    position["protection_failed"] = False
             else:
                 await self._ensure_hard_stop(position, open_orders_by_symbol, current_price)
 
