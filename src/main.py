@@ -203,6 +203,8 @@ class TradingBot:
         """
         Validate jury providers before entering the market loop.
         This surfaces configuration/quota/model failures explicitly at startup.
+        In Lite mode, only the enabled providers are checked — no panic log
+        about disabled providers being "degraded."
         """
         from src.agents.base_agent import call_claude, call_gpt, call_grok
 
@@ -210,7 +212,15 @@ class TradingBot:
             'Return only JSON: {"decision":"SKIP","size_pct":0,"trail_pct":3,'
             '"reasoning":"health_check","confidence":1}'
         )
-        checks = [("claude", call_claude), ("gpt", call_gpt), ("grok", call_grok)]
+        all_checks = [
+            ("claude", call_claude, True),  # always required
+            ("gpt", call_gpt, getattr(settings, "OPENAI_API_ENABLED", True)),
+            ("grok", call_grok, getattr(settings, "XAI_API_ENABLED", True)),
+        ]
+        checks = [(name, caller) for name, caller, enabled in all_checks if enabled]
+        skipped = [name for name, _, enabled in all_checks if not enabled]
+        if skipped:
+            logger.info(f"🪶 Provider health check: skipping disabled providers {skipped}")
         status: Dict[str, Dict] = {}
         rate_limited_providers: List[str] = []
 
