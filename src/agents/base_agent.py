@@ -432,6 +432,8 @@ async def call_claude_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
 
 
 async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
+    if not getattr(settings, "OPENAI_API_ENABLED", True):
+        return None
     """Call GPT-5.2 and return parsed JSON."""
     started = time.time()
     if not settings.OPENAI_API_KEY:
@@ -482,6 +484,8 @@ async def call_gpt(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
 
 
 async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
+    if not getattr(settings, "OPENAI_API_ENABLED", True):
+        return None
     """Call GPT and return plain text."""
     started = time.time()
     if not settings.OPENAI_API_KEY:
@@ -531,6 +535,8 @@ async def call_gpt_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
 
 
 async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
+    if not getattr(settings, "XAI_API_ENABLED", True):
+        return None
     """Call Grok-4 via xAI and return parsed JSON."""
     started = time.time()
     if not settings.XAI_API_KEY:
@@ -579,6 +585,8 @@ async def call_grok(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
 
 
 async def call_perplexity(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
+    if not getattr(settings, "PERPLEXITY_API_ENABLED", True):
+        return None
     """Call Perplexity sonar-pro and return parsed JSON."""
     if not settings.PERPLEXITY_API_KEY:
         return None
@@ -612,6 +620,8 @@ async def call_perplexity(prompt: str, max_tokens: int = 600) -> Optional[Dict]:
 
 
 async def call_perplexity_text(prompt: str, max_tokens: int = 900) -> Optional[str]:
+    if not getattr(settings, "PERPLEXITY_API_ENABLED", True):
+        return None
     """Call Perplexity and return plain text."""
     if not settings.PERPLEXITY_API_KEY:
         return None

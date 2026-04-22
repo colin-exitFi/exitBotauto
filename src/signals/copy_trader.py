@@ -48,7 +48,11 @@ class CopyTraderMonitor:
     """Monitor high-signal traders through X filtered stream with polling fallback."""
 
     def __init__(self):
-        self._bearer = getattr(settings, "X_BEARER_TOKEN", "")
+        self._bearer = (
+            getattr(settings, "X_BEARER_TOKEN", "")
+            if getattr(settings, "X_API_ENABLED", True)
+            else ""
+        )
         self._mode = str(getattr(settings, "COPY_TRADER_MODE", "auto") or "auto").lower()
         if self._mode not in ("auto", "poll", "stream"):
             self._mode = "auto"

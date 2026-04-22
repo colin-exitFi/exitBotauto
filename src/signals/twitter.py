@@ -19,7 +19,7 @@ class TwitterSentimentClient:
     """Fetch cashtag sentiment and engagement from Twitter/X API v2."""
 
     def __init__(self):
-        self._bearer = settings.X_BEARER_TOKEN
+        self._bearer = settings.X_BEARER_TOKEN if getattr(settings, "X_API_ENABLED", True) else ""
         self._session = requests.Session()
         self._session.headers.update({
             "Authorization": f"Bearer {self._bearer}",

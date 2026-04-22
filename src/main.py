@@ -295,6 +295,11 @@ class TradingBot:
 
     async def initialize(self):
         """Initialize all components."""
+        if getattr(settings, "VELOX_LITE", False):
+            logger.warning(
+                "🪶 VELOX_LITE=true — all paid/external APIs disabled (X, UW, Polygon, xAI, OpenAI, Perplexity). "
+                "Running on Alpaca + Anthropic + free feeds only."
+            )
         logger.info("⚡ Initializing Velox...")
 
         # Alpaca broker
@@ -303,7 +308,7 @@ class TradingBot:
             logger.warning("Alpaca init failed — running in monitor-only mode")
             self.alpaca_client = None
 
-        # Polygon market data
+        # Polygon market data (Alpaca-only when POLYGON_API_ENABLED=false)
         self.polygon_client = PolygonClient()
         if not self.polygon_client.initialize():
             logger.error("Polygon init failed — cannot scan. Exiting.")
@@ -315,14 +320,23 @@ class TradingBot:
 
         # Signal sources
         self.stocktwits_client = StockTwitsClient()
-        self.twitter_client = TwitterSentimentClient()
-        self.copy_trader_monitor = CopyTraderMonitor()
-        if (
-            getattr(self.copy_trader_monitor, "start_stream", None)
-            and str(getattr(self.copy_trader_monitor, "_mode", "auto")) in ("auto", "stream")
-        ):
-            self.copy_trader_monitor.start_stream()
-            logger.info("📡 X copy trader stream started")
+
+        # X / Twitter API — the single biggest historical cost center.
+        # Gated by X_API_ENABLED (auto-false when VELOX_LITE=true).
+        if getattr(settings, "X_API_ENABLED", True):
+            self.twitter_client = TwitterSentimentClient()
+            self.copy_trader_monitor = CopyTraderMonitor()
+            if (
+                getattr(self.copy_trader_monitor, "start_stream", None)
+                and str(getattr(self.copy_trader_monitor, "_mode", "auto")) in ("auto", "stream")
+            ):
+                self.copy_trader_monitor.start_stream()
+                logger.info("📡 X copy trader stream started")
+        else:
+            logger.info("🪶 X API disabled — twitter_client + copy_trader_monitor skipped")
+            self.twitter_client = None
+            self.copy_trader_monitor = None
+
         self.human_intel_store = HumanIntelStore()
         self.fred_client = FredClient()
         self.finnhub_client = FinnhubClient()
@@ -359,17 +373,18 @@ class TradingBot:
         # ARK daily trade notifications
         self.ark_trades = ArkTradesScanner()
 
-        # Unusual Whales REST client
-        self.unusual_whales = UnusualWhalesClient()
-
-        # Unusual options activity scanner
-        self.options_scanner = UnusualOptionsScanner(uw_client=self.unusual_whales)
-
-        # Congressional trading scanner
-        self.congress_scanner = CongressScanner(uw_client=self.unusual_whales)
-
-        # Unusual Whales realtime stream
-        self.unusual_whales_stream = UnusualWhalesStream(rest_client=self.unusual_whales)
+        # Unusual Whales — $375/mo. Gated by UW_API_ENABLED (auto-false in Lite).
+        if getattr(settings, "UW_API_ENABLED", True):
+            self.unusual_whales = UnusualWhalesClient()
+            self.options_scanner = UnusualOptionsScanner(uw_client=self.unusual_whales)
+            self.congress_scanner = CongressScanner(uw_client=self.unusual_whales)
+            self.unusual_whales_stream = UnusualWhalesStream(rest_client=self.unusual_whales)
+        else:
+            logger.info("🪶 Unusual Whales disabled — uw_client, options_scanner, congress_scanner, uw_stream skipped")
+            self.unusual_whales = None
+            self.options_scanner = None
+            self.congress_scanner = None
+            self.unusual_whales_stream = None
 
         # Short interest / squeeze detector
         self.short_scanner = ShortInterestScanner()
@@ -384,9 +399,14 @@ class TradingBot:
         # Dynamic watchlist (built overnight, used during trading)
         self.watchlist = DynamicWatchlist()
 
-        # Grok X/Twitter trending scanner
-        from src.signals.grok_x_trending import GrokXTrending
-        self.grok_x_trending = GrokXTrending()
+        # Grok X/Twitter trending scanner — xAI Grok-4 reasoning tokens.
+        # Gated by XAI_API_ENABLED (auto-false in Lite).
+        if getattr(settings, "XAI_API_ENABLED", True):
+            from src.signals.grok_x_trending import GrokXTrending
+            self.grok_x_trending = GrokXTrending()
+        else:
+            logger.info("🪶 xAI disabled — grok_x_trending skipped")
+            self.grok_x_trending = None
 
         # Scanner (with StockTwits + Pharma + Fade + Grok X)
         self.scanner = Scanner(
@@ -637,8 +657,9 @@ class TradingBot:
         await self.trade_stream.start()
 
         # Unusual Whales realtime stream: live flow alerts + dark pool prints
-        self.unusual_whales_stream.set_signal_callback(self._on_unusual_whales_signal)
-        await self.unusual_whales_stream.start()
+        if self.unusual_whales_stream is not None:
+            self.unusual_whales_stream.set_signal_callback(self._on_unusual_whales_signal)
+            await self.unusual_whales_stream.start()
 
         # Fetch initial earnings calendar
         try:

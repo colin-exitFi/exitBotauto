@@ -30,11 +30,17 @@ class SentimentAnalyzer:
 
     def __init__(self):
         self._vader = VADER() if HAS_VADER else None
-        self._x_bearer = settings.X_BEARER_TOKEN
-        self._pplx_key = settings.PERPLEXITY_API_KEY
+        # Respect per-provider enable flags so VELOX_LITE mutes all external calls
+        # regardless of whether keys are present in .env.
+        self._x_bearer = settings.X_BEARER_TOKEN if getattr(settings, "X_API_ENABLED", True) else ""
+        self._pplx_key = settings.PERPLEXITY_API_KEY if getattr(settings, "PERPLEXITY_API_ENABLED", True) else ""
         self._session = requests.Session()
         self._cache: Dict[str, Dict] = {}  # symbol -> last result
-        logger.info("Sentiment analyzer initialized" + (" (VADER loaded)" if HAS_VADER else " (no VADER)"))
+        mode = []
+        if self._x_bearer: mode.append("X")
+        if self._pplx_key: mode.append("Perplexity")
+        if HAS_VADER: mode.append("VADER")
+        logger.info(f"Sentiment analyzer initialized ({', '.join(mode) or 'neutral-only, no external APIs'})")
 
     async def analyze(self, symbol: str) -> Dict:
         """Analyze sentiment for a stock symbol."""

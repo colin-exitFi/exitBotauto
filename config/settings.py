@@ -32,6 +32,13 @@ def _env_csv_set(key: str, default: str = "") -> set[str]:
     }
 
 
+# ── Lite / Cost-Control Mode ──────────────────────────────────────
+# When VELOX_LITE=true, every paid/external API is disabled at init time,
+# regardless of whether a key is present in .env. This is the single master
+# switch for "run on a shoestring: Alpaca + Anthropic + free feeds only".
+# Per-provider switches let you re-enable one thing at a time when you fund it.
+VELOX_LITE = _env("VELOX_LITE", "false").lower() in ("true", "1", "yes")
+
 # ── API Keys ──────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = _env("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = _env("OPENAI_API_KEY")
@@ -41,6 +48,19 @@ PERPLEXITY_API_KEY = _env("PERPLEXITY_API_KEY")
 X_BEARER_TOKEN = _env("X_BEARER_TOKEN")
 X_CONSUMER_KEY = _env("X_CONSUMER_KEY")
 X_CONSUMER_SECRET = _env("X_CONSUMER_SECRET")
+
+# Per-provider enable flags. Default: enabled if a key/token is present.
+# VELOX_LITE globally forces all of these to False regardless of keys.
+# Explicit _ENABLED overrides still work (so you can re-enable one at a time).
+def _enabled_flag(name: str, default_enabled: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is not None:
+        return str(raw).strip().lower() in ("true", "1", "yes")
+    return default_enabled and not VELOX_LITE
+
+X_API_ENABLED = _enabled_flag("X_API_ENABLED", bool(X_BEARER_TOKEN))
+OPENAI_API_ENABLED = _enabled_flag("OPENAI_API_ENABLED", bool(OPENAI_API_KEY))
+PERPLEXITY_API_ENABLED = _enabled_flag("PERPLEXITY_API_ENABLED", bool(PERPLEXITY_API_KEY))
 
 # Alpaca
 ALPACA_API_KEY = _env("ALPACA_API_KEY")
@@ -62,7 +82,9 @@ PAPER_MODE_SKIP_DUPLICATE_EXTENDED_HOURS_SIZE_REDUCTION = _env(
 
 # Polygon
 POLYGON_API_KEY = _env("POLYGON_API_KEY")
+POLYGON_API_ENABLED = _enabled_flag("POLYGON_API_ENABLED", bool(POLYGON_API_KEY))
 UW_API_TOKEN = _env("UW_API_TOKEN")
+UW_API_ENABLED = _enabled_flag("UW_API_ENABLED", bool(UW_API_TOKEN))
 UW_STREAM_MODE = _env("UW_STREAM_MODE", "auto").lower()
 UW_STREAM_URL = _env("UW_STREAM_URL", "wss://api.unusualwhales.com/socket")
 UW_STREAM_STALE_SECONDS = _env_int("UW_STREAM_STALE_SECONDS", 90)
@@ -213,6 +235,7 @@ JURY_MIN_SPACING_SECONDS = _env_float("JURY_MIN_SPACING_SECONDS", 0.10)
 OPENAI_MODEL = _env("OPENAI_MODEL", "gpt-5.4")
 CLAUDE_MODEL = _env("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 XAI_API_KEY = _env("XAI_API_KEY", "")
+XAI_API_ENABLED = _enabled_flag("XAI_API_ENABLED", bool(XAI_API_KEY))
 XAI_MODEL = _env("XAI_MODEL", "grok-4-fast-reasoning")
 PERPLEXITY_MODEL = _env("PERPLEXITY_MODEL", "sonar-pro")
 JURY_RETRO_ENABLED = _env("JURY_RETRO_ENABLED", "true").lower() in ("true", "1", "yes")

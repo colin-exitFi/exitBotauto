@@ -34,9 +34,16 @@ class PolygonClient:
         self._unsupported_symbols = set()
 
     def initialize(self) -> bool:
-        if not self.api_key:
-            logger.error("POLYGON_API_KEY not set")
-            return False
+        if not self.api_key or not getattr(settings, "POLYGON_API_ENABLED", True):
+            # Lite / Alpaca-only mode: Polygon REST disabled. get_price() will
+            # route through Alpaca (set via set_alpaca_client). Methods that
+            # Alpaca doesn't cover (gainers/losers/bars) return empty lists.
+            self.api_key = ""
+            logger.warning(
+                "Polygon disabled (no key or POLYGON_API_ENABLED=false) — "
+                "using Alpaca-only market data. Gainers/losers/historical bars unavailable."
+            )
+            return True
         if HAS_POLYGON_SDK:
             try:
                 self._client = PolygonRESTClient(api_key=self.api_key)
@@ -57,7 +64,9 @@ class PolygonClient:
             time.sleep(wait)
 
     def _rest_get(self, path: str, params: Dict = None) -> Optional[Dict]:
-        """GET request with rate-limit handling."""
+        """GET request with rate-limit handling. No-op when Polygon disabled."""
+        if not self.api_key:
+            return None  # Lite mode: caller falls through to Alpaca / empty
         self._wait_rate_limit()
         url = f"{self.BASE_URL}{path}"
         try:
