@@ -583,6 +583,35 @@ class TradingBot:
                 logger.info(f"Restored {restored_count} broker-confirmed positions from disk")
             if ghost_count:
                 logger.warning(f"Tombstoned {ghost_count} ghost positions not found on broker")
+        # Clear stale protection_failed flags at startup. In paper mode this is
+        # always safe; in live mode, clear only when qty < 1 (software-managed)
+        # or when there is already an active hard stop. The flag is a transient
+        # entry-time marker and should never silently freeze the pipeline across
+        # a restart before _ensure_hard_stop has had a chance to run.
+        paper_mode_clear = bool(
+            getattr(settings, "PAPER_MODE", False) or getattr(settings, "ALPACA_PAPER", False)
+        )
+        cleared_protection_flags = 0
+        for _pos in self.entry_manager.get_positions() or []:
+            if not _pos.get("protection_failed"):
+                continue
+            try:
+                _qty = float(_pos.get("quantity", 0) or 0)
+            except Exception:
+                _qty = 0.0
+            has_active_stop = bool(
+                _pos.get("has_trailing_stop")
+                or _pos.get("hard_stop_order_id")
+                or (_pos.get("order_state") or {}).get("hard_stop") in {"placed", "software_managed", "superseded_by_ratchet"}
+            )
+            if paper_mode_clear or _qty < 1 or has_active_stop:
+                _pos["protection_failed"] = False
+                cleared_protection_flags += 1
+        if cleared_protection_flags:
+            logger.info(
+                f"🩹 Startup reset: cleared stale protection_failed on {cleared_protection_flags} "
+                f"position(s) (paper_mode={paper_mode_clear}) — entry pipeline will re-check on next cycle"
+            )
         self._cache_broker_position_symbols(self.entry_manager.get_positions())
 
         # Options positions: restore + reconcile with broker snapshot
@@ -730,6 +759,37 @@ class TradingBot:
         last_equity_sync = 0
         last_state_save = 0
         last_reconciliation = 0
+        last_pipeline_heartbeat = 0.0
+        pipeline_heartbeat_interval = max(
+            60.0,
+            float(getattr(settings, "ENTRY_PIPELINE_HEARTBEAT_SECONDS", 300.0) or 300.0),
+        )
+        # Loud startup announcement so operator can distinguish a healthy
+        # "no candidates" day from an entry pipeline that is silently gated.
+        try:
+            _startup_guard = self._get_operating_guardrails()
+            _startup_reasons = _startup_guard.get("reasons", []) or []
+            _startup_ready = bool(getattr(self, "_broker_ready", False))
+            if _startup_guard.get("allow_new_entries", True) and _startup_ready:
+                logger.success(
+                    f"✅ Entry pipeline OPEN at startup — broker_ready={_startup_ready} "
+                    f"recon={_startup_guard.get('reconciliation_status', 'unknown')}"
+                )
+                log_activity("system", "✅ Entry pipeline OPEN at startup")
+            else:
+                _reason_txt = ",".join(_startup_reasons) or (
+                    "broker_not_ready" if not _startup_ready else "unknown"
+                )
+                logger.warning(
+                    f"⛔ Entry pipeline GATED at startup — broker_ready={_startup_ready} "
+                    f"reasons={_reason_txt}"
+                )
+                log_activity(
+                    "system",
+                    f"⛔ Entry pipeline GATED at startup: {_reason_txt}",
+                )
+        except Exception as _startup_e:
+            logger.debug(f"Startup pipeline heartbeat failed: {_startup_e}")
 
         try:
             while self.running:
@@ -738,11 +798,34 @@ class TradingBot:
                 self._roll_daily_state_if_needed()
                 self._refresh_provider_health_layer()
 
+                # ── ENTRY PIPELINE HEARTBEAT ────────────────────────
+                # Periodically surface why the pipeline is (not) accepting
+                # entries, so a silent halt is never invisible again.
+                if now - last_pipeline_heartbeat >= pipeline_heartbeat_interval:
+                    last_pipeline_heartbeat = now
+                    try:
+                        self._emit_entry_pipeline_heartbeat()
+                    except Exception as _hb_e:
+                        logger.debug(f"Entry pipeline heartbeat failed: {_hb_e}")
+
                 # Sync equity from Alpaca every 60s
                 if now - last_equity_sync >= 60 and self.alpaca_client:
                     last_equity_sync = now
                     try:
                         acct = self.alpaca_client.get_account()
+                        if acct and acct.get("equity"):
+                            # Self-heal broker-readiness: if startup probe failed but the
+                            # broker is now reachable, re-enable the entry pipeline
+                            # instead of staying silently halted until restart.
+                            if not getattr(self, "_broker_ready", False):
+                                self._broker_ready = True
+                                logger.success(
+                                    "🔁 Broker health recovered — entries re-enabled"
+                                )
+                                log_activity(
+                                    "system",
+                                    "🔁 Broker health recovered — entries re-enabled",
+                                )
                         self.risk_manager.update_equity(
                             acct.get("equity", self.risk_manager.equity),
                             daytrade_count=acct.get("daytrade_count"),
@@ -755,6 +838,10 @@ class TradingBot:
                             self.risk_manager.update_options_exposure(self.options_engine.get_options_positions())
                     except Exception as e:
                         logger.debug(f"Equity sync error: {e}")
+                        if not getattr(self, "_broker_ready", False):
+                            logger.warning(
+                                f"Broker still unreachable — entries remain BLOCKED: {e}"
+                            )
 
                 market_open = self.entry_manager.is_market_open()
                 if not market_open:
@@ -3450,6 +3537,56 @@ class TradingBot:
             "protection_failed_symbols": protection_failed,
             "reasons": sorted(set(reasons)),
         }
+
+    def _emit_entry_pipeline_heartbeat(self) -> None:
+        """Log a compact snapshot of whether new entries are currently allowed
+        and, if not, which guardrails are blocking. Heartbeats are logged at
+        INFO when healthy and WARNING when gated so a silently halted pipeline
+        is always visible in the operator log stream.
+        """
+        broker_ready = bool(getattr(self, "_broker_ready", False))
+        positions = []
+        try:
+            if self.entry_manager:
+                positions = self.entry_manager.get_positions() or []
+        except Exception:
+            positions = []
+        try:
+            guardrails = self._get_operating_guardrails()
+        except Exception as e:
+            logger.warning(f"⚠️ Heartbeat: _get_operating_guardrails failed: {e}")
+            return
+        risk_halted = False
+        try:
+            if self.risk_manager and hasattr(self.risk_manager, "get_status"):
+                risk_halted = bool((self.risk_manager.get_status() or {}).get("trading_halted"))
+        except Exception:
+            risk_halted = False
+
+        allow_entries = bool(guardrails.get("allow_new_entries", True)) and broker_ready
+        reasons = list(guardrails.get("reasons", []) or [])
+        if not broker_ready:
+            reasons.insert(0, "broker_not_ready")
+        protection_failed = list(guardrails.get("protection_failed_symbols", []) or [])
+        unprotected = list(guardrails.get("unprotected_symbols", []) or [])
+        payload = (
+            f"allow_entries={allow_entries} broker_ready={broker_ready} "
+            f"risk_halted={risk_halted} positions={len(positions)} "
+            f"recon={guardrails.get('reconciliation_status', 'unknown')} "
+            f"protection_failed={protection_failed} unprotected={unprotected} "
+            f"reasons={reasons}"
+        )
+        if allow_entries:
+            logger.info(f"💓 PIPELINE HEARTBEAT: {payload}")
+        else:
+            logger.warning(f"🛑 PIPELINE HEARTBEAT (GATED): {payload}")
+            try:
+                log_activity(
+                    "system",
+                    f"🛑 Entry pipeline gated: {','.join(str(r) for r in reasons) or 'unknown'}",
+                )
+            except Exception:
+                pass
 
     def _log_guardrail_block(self, prefix: str, reasons: list):
         # Avoid per-cycle log floods when guardrail reasons are unchanged.
