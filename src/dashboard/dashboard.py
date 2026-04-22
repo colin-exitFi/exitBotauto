@@ -1146,6 +1146,7 @@ async def get_ai_status():
         "short_verdicts_blocked": ai.get("short_verdicts_blocked", 0),
         "last_short_block_reason": ai.get("last_short_block_reason"),
         "provider_health": ai.get("provider_health", {}),
+        "lite_mode": ai.get("lite_mode", {}),
     }
 
 
@@ -2871,9 +2872,12 @@ td strong{color:var(--accent-2);font-weight:700}
   <div class="card full priority-card operator-deck" id="operatorDeck">
     <div class="deck-top">
       <div class="deck-title">
-        <div class="deck-kicker">Operator Deck</div>
+        <div class="deck-kicker" id="deckKicker">Operator Deck</div>
         <h2>Run the machine from the top down.</h2>
         <div class="deck-lead" id="operatorLead">Loading the current capital, risk, and execution picture...</div>
+        <div id="liteModeBanner" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(163,113,57,0.12);border:1px solid rgba(163,113,57,0.35);border-radius:6px;color:#c9a977;font-size:13px;">
+          🪶 <strong>Velox Lite</strong> — <span id="liteModeDetail">paid feeds disabled (X, UW, Polygon). Single-desk momentum only.</span>
+        </div>
       </div>
       <div class="deck-pill-row" id="operatorPills"></div>
     </div>
@@ -3811,13 +3815,19 @@ function renderProviderHealthGrid(providerHealth) {
   if (!rows.length) return '<span style="color:#9e8e76">No providers reporting.</span>';
   return `<div class="provider-health-grid">${rows.map(([name, st]) => {
     const ok = !!(st && st.ok);
+    const disabled = !!(st && st.disabled);
     const latency = (st && typeof st.latency_ms === 'number') ? `${st.latency_ms}ms` : '—';
     const err = (st && st.error) ? String(st.error) : '';
-    return `<div class="provider-pill ${ok ? 'ok' : 'fail'}">
+    // A disabled provider is not a failure — show it as a muted "Disabled"
+    // pill distinct from the red "Degraded" used for actual errors.
+    const pillClass = disabled ? 'disabled' : (ok ? 'ok' : 'fail');
+    const stateLabel = disabled ? 'Disabled' : (ok ? 'Operational' : 'Degraded');
+    const detailLabel = disabled ? 'Turned off in config' : err;
+    return `<div class="provider-pill ${pillClass}" style="${disabled ? 'opacity:0.55' : ''}">
       <div class="provider-name">${esc(name)}</div>
-      <div class="provider-state">${ok ? 'Operational' : 'Degraded'}</div>
-      <div class="provider-latency">${esc(latency)}</div>
-      ${err ? `<div class="provider-detail">${esc(err)}</div>` : ''}
+      <div class="provider-state">${stateLabel}</div>
+      <div class="provider-latency">${disabled ? '—' : esc(latency)}</div>
+      ${detailLabel ? `<div class="provider-detail">${esc(detailLabel)}</div>` : ''}
     </div>`;
   }).join('')}</div>`;
 }
@@ -4171,6 +4181,23 @@ async function refresh() {
   const ai = await api('/api/ai-status');
   if (ai) {
     $('aiEnabled').innerHTML = ai.enabled ? statusPill('Active', 'good') : statusPill('Disabled', 'bad');
+    // Lite mode banner — render in the operator deck header when active
+    const liteBannerEl = document.getElementById('liteModeBanner');
+    const liteDetailEl = document.getElementById('liteModeDetail');
+    const kickerEl = document.getElementById('deckKicker');
+    const lite = ai.lite_mode || {};
+    if (liteBannerEl && lite.active) {
+      const disabledList = (lite.disabled_providers || []).join(', ') || 'none';
+      const enabledList = (lite.enabled_providers || []).join(', ') || 'none';
+      if (liteDetailEl) {
+        liteDetailEl.textContent = `Disabled: ${disabledList}. Active: ${enabledList}. Single-desk momentum — earning its budget before paid signals come back.`;
+      }
+      liteBannerEl.style.display = 'block';
+      if (kickerEl) kickerEl.textContent = 'Operator Deck · Velox Lite';
+    } else if (liteBannerEl) {
+      liteBannerEl.style.display = 'none';
+      if (kickerEl) kickerEl.textContent = 'Operator Deck';
+    }
     if (ai.enabled) {
       let html = '<div class="ai-grid">';
       html += aiBriefCardHtml('Observer', 'Market Read', ai.last_observation, 'observer');

@@ -287,6 +287,27 @@ class TradingBot:
         try:
             self.ai_layers["provider_health"] = provider_health.get_dashboard_status()
             self.ai_layers["provider_health_policy"] = provider_health.get_policy()
+            # Lite mode summary so the dashboard can render the 🪶 banner
+            # without having to infer it from per-provider flags.
+            disabled = []
+            enabled = []
+            for label, flag in [
+                ("X", "X_API_ENABLED"),
+                ("Polygon", "POLYGON_API_ENABLED"),
+                ("UW", "UW_API_ENABLED"),
+                ("OpenAI", "OPENAI_API_ENABLED"),
+                ("Grok", "XAI_API_ENABLED"),
+                ("Perplexity", "PERPLEXITY_API_ENABLED"),
+            ]:
+                if bool(getattr(settings, flag, True)):
+                    enabled.append(label)
+                else:
+                    disabled.append(label)
+            self.ai_layers["lite_mode"] = {
+                "active": bool(getattr(settings, "VELOX_LITE", False)),
+                "enabled_providers": enabled,
+                "disabled_providers": disabled,
+            }
         except Exception as e:
             logger.debug(f"Provider health layer refresh failed: {e}")
 
@@ -306,9 +327,22 @@ class TradingBot:
     async def initialize(self):
         """Initialize all components."""
         if getattr(settings, "VELOX_LITE", False):
+            # Dynamically report which providers are enabled vs disabled so
+            # the banner tells the truth even when individual _ENABLED flags
+            # override the master switch.
+            disabled, enabled = [], []
+            for label, flag in [
+                ("X", "X_API_ENABLED"),
+                ("Polygon", "POLYGON_API_ENABLED"),
+                ("UW", "UW_API_ENABLED"),
+                ("OpenAI", "OPENAI_API_ENABLED"),
+                ("xAI", "XAI_API_ENABLED"),
+                ("Perplexity", "PERPLEXITY_API_ENABLED"),
+            ]:
+                (enabled if bool(getattr(settings, flag, True)) else disabled).append(label)
             logger.warning(
-                "🪶 VELOX_LITE=true — all paid/external APIs disabled (X, UW, Polygon, xAI, OpenAI, Perplexity). "
-                "Running on Alpaca + Anthropic + free feeds only."
+                f"🪶 VELOX_LITE=true — disabled: {', '.join(disabled) or 'none'}. "
+                f"Active paid providers: {', '.join(enabled) or 'none (Anthropic + Alpaca only)'}."
             )
         logger.info("⚡ Initializing Velox...")
 

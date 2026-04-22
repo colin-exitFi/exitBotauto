@@ -62,19 +62,47 @@ class ProviderHealthTracker:
         if error:
             self._last_error[p] = str(error)
 
+    def _enabled_providers(self) -> tuple:
+        """Return the subset of PROVIDERS enabled via *_API_ENABLED flags.
+        Prevents disabled providers from counting as 'failed' in the degradation policy."""
+        try:
+            from config import settings as _settings
+        except Exception:  # pragma: no cover
+            return self.PROVIDERS
+        flag_map = {
+            "claude": True,  # Claude is always required
+            "gpt": bool(getattr(_settings, "OPENAI_API_ENABLED", True)),
+            "grok": bool(getattr(_settings, "XAI_API_ENABLED", True)),
+        }
+        return tuple(p for p in self.PROVIDERS if flag_map.get(p, True))
+
     def healthy_count(self) -> int:
         now = time.time()
         count = 0
-        for p in self.PROVIDERS:
+        for p in self._enabled_providers():
             last = self._last_success.get(p, 0)
             if (now - last) < self.HEALTH_WINDOW:
                 count += 1
         return count
 
     def get_policy(self) -> Dict:
+        enabled = self._enabled_providers()
         count = self.healthy_count()
-        policy = dict(DEGRADATION_POLICY.get(count, DEGRADATION_POLICY[0]))
+        # Degradation is relative to enabled providers, not the hard-coded 3.
+        # If only Claude is enabled and it's healthy, that's normal mode, not
+        # "no_discretionary" like the old code assumed.
+        if len(enabled) == 0:
+            policy = dict(DEGRADATION_POLICY[0])
+        elif count == len(enabled):
+            policy = dict(DEGRADATION_POLICY[3])  # all enabled providers healthy
+        elif count >= max(1, len(enabled) - 1):
+            policy = dict(DEGRADATION_POLICY[2])  # one down out of enabled set
+        elif count >= 1:
+            policy = dict(DEGRADATION_POLICY[1])
+        else:
+            policy = dict(DEGRADATION_POLICY[0])
         policy["healthy_providers"] = count
+        policy["enabled_providers"] = list(enabled)
         return policy
 
     def get_snapshot(self) -> Dict:
@@ -97,13 +125,28 @@ class ProviderHealthTracker:
         }
 
     def get_dashboard_status(self) -> Dict[str, Dict]:
+        # Lazy import to avoid a circular ref at module load time.
+        try:
+            from config import settings as _settings
+        except Exception:  # pragma: no cover
+            _settings = None
+
+        provider_enable_flag = {
+            "claude": True,  # Claude is required for Velox to run at all
+            "gpt": bool(getattr(_settings, "OPENAI_API_ENABLED", True)) if _settings else True,
+            "grok": bool(getattr(_settings, "XAI_API_ENABLED", True)) if _settings else True,
+        }
+
         providers = (self.get_snapshot() or {}).get("providers", {}) or {}
         status: Dict[str, Dict] = {}
         for name, row in providers.items():
+            enabled = bool(provider_enable_flag.get(name, True))
             healthy = bool(row.get("healthy"))
             last_success_seconds_ago = row.get("last_success_seconds_ago")
             detail = ""
-            if not healthy:
+            if not enabled:
+                detail = "disabled_in_config"
+            elif not healthy:
                 if row.get("last_error"):
                     detail = str(row.get("last_error") or "")
                 elif last_success_seconds_ago is None:
@@ -112,6 +155,8 @@ class ProviderHealthTracker:
                     detail = f"stale:{last_success_seconds_ago}s"
             status[name] = {
                 "ok": healthy,
+                "enabled": enabled,
+                "disabled": not enabled,
                 "latency_ms": row.get("last_latency_ms"),
                 "error": detail,
                 "failure_count": int(row.get("failure_count", 0) or 0),
